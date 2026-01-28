@@ -2,23 +2,20 @@
 
 # MISSION STEP 1: PUSH TO GITHUB
 # ---------------------------------------------------------
-# Run these commands one by one in your terminal to sync with your repo:
-
-# If 'origin' already exists, you might need: git remote remove origin
 git remote add origin https://github.com/TEARN1/TheResident.git
 git add .
 git commit -m "Deployment Mission: Stage 1 - GitHub"
-git push -u origin main
+git push -u origin master
 
 # MISSION STEP 2: PREPARE GOOGLE CLOUD
 # ---------------------------------------------------------
-# 1. Open 'Google Cloud SDK Shell' from your Start Menu
-# 2. Run: gcloud auth login
-# 3. Run: gcloud projects list (Copy your PROJECT_ID)
+# Set the Project ID (Using ID instead of Number)
+gcloud config set project the-resident-485213
 
-# MISSION STEP 3: BUILD & DEPLOY (DOCKER TO CLOUD RUN)
+# Enable required APIs
+gcloud services enable cloudbuild.googleapis.com run.googleapis.com containerregistry.googleapis.com
+
+# MISSION STEP 3: BUILD & DEPLOY
 # ---------------------------------------------------------
-# Replace YOUR_PROJECT_ID below with your actual ID before running:
-
-gcloud builds submit --tag gcr.io/754529663410/the-resident
-gcloud run deploy the-resident --image gcr.io/754529663410/the-resident --platform managed --region us-central1 --allow-unauthenticated --port 3000
+gcloud builds submit --tag gcr.io/the-resident-485213/the-resident
+gcloud run deploy the-resident --image gcr.io/the-resident-485213/the-resident --platform managed --region us-central1 --allow-unauthenticated --port 3000
