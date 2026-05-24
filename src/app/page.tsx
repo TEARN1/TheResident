@@ -18,18 +18,18 @@ export default function Home() {
         <div className={styles.logo}>
           THE RESIDENT
         </div>
-        <div className={styles.navLinks}>
-          <Link href="/auth/login" className={styles.link}>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <Link href="/auth" style={{ color: '#fff', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
             Log In
           </Link>
-          <Link href="/auth/signup" className="btn-gold">
+          <Link href="/auth" className="btn-gold">
             Join The Elite
           </Link>
         </div>
       </nav>
 
       {/* Hero */}
-      <div className={styles.hero}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '0 1rem' }}>
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -56,7 +56,7 @@ export default function Home() {
           transition={{ delay: 0.8, duration: 0.8 }}
           className={styles.ctaGroup}
         >
-          <Link href="/auth/signup" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Link href="/auth" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             Begin Application <ArrowRight size={16} />
           </Link>
         </motion.div>

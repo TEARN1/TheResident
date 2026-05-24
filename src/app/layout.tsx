@@ -4,6 +4,7 @@ import './globals.css'
 import CustomCursor from './components/ui/CustomCursor'
 import ScrollProgress from './components/ui/ScrollProgress'
 import GoldParticles from './components/ui/GoldParticles'
+import { ReduxProvider } from '../store/provider'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -30,12 +31,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${playfair.variable} ${montserrat.variable}`}>
       <body>
-        <CustomCursor />
-        <ScrollProgress />
-        <GoldParticles />
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          {children}
-        </div>
+        <ReduxProvider>
+          <CustomCursor />
+          <ScrollProgress />
+          <GoldParticles />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            {children}
+          </div>
+        </ReduxProvider>
       </body>
     </html>
   )
