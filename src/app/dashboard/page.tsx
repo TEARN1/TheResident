@@ -31,13 +31,12 @@ import {
   Shield, LogOut, Home, Search, Plus, Check, X, AlertTriangle, 
   Wifi, Car, FileText, Send, MapPin, Eye, 
   User as UserIcon, Users, CheckCircle2, Terminal, Info,
-  Phone, Star, DollarSign, Calendar, Clock, Briefcase, Upload,
-  ShieldCheck, FileCode, CheckCircle, Zap, Copy
+  Star, Calendar, Clock, Briefcase, Upload,
+  ShieldCheck, FileCode, Zap, Copy
 } from 'lucide-react'
 import { 
   cleanScriptTags, 
   containsSQLi, 
-  containsXSS,
   containsCommandInjection,
   containsPathTraversal,
   containsSSRF,
@@ -53,7 +52,6 @@ export default function DashboardPage() {
   
   // Select state from Redux store
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
-  const isLoaded = useSelector((state: RootState) => state.auth.isLoaded)
   const listings = useSelector((state: RootState) => state.listings.items)
   const requests = useSelector((state: RootState) => state.requests.items)
   const securityLogs = useSelector((state: RootState) => state.security.logs)
@@ -544,12 +542,7 @@ export default function DashboardPage() {
     setTimeout(() => setAlertNotification(null), 5000)
   }
 
-  // Request Handyman Service Callout (B2B/P2B Landlord/Tenant Action)
-  const handleRequestService = (businessName: string) => {
-    if (!logApiAccess(`Request handyman service`)) return
-    setAlertNotification(`Callout request dispatched to ${businessName}. They will call you on your registered mobile number shortly.`)
-    setTimeout(() => setAlertNotification(null), 5000)
-  }
+
 
   // Real-time Sanitization Preview handler
   const handleSanitizationCheck = (val: string) => {
@@ -884,6 +877,7 @@ export default function DashboardPage() {
                           whileHover={{ y: -4, borderColor: '#D4AF37' }}
                         >
                           <div style={cardImageWrapperStyle}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={item.images[0]} alt={item.title} style={cardImageStyle} />
                             <span style={priceTagStyle}>{item.price} {item.currency}/mo</span>
                           </div>
@@ -1086,6 +1080,7 @@ export default function DashboardPage() {
                     {services.map(srv => (
                       <div key={srv.id} className="glass-panel" style={cardStyle}>
                         <div style={cardImageWrapperStyle}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={srv.image} alt={srv.businessName} style={cardImageStyle} />
                           <span style={priceTagStyle}>{srv.priceEstimate}</span>
                         </div>
@@ -1358,6 +1353,7 @@ export default function DashboardPage() {
                       listings.filter(l => l.landlordId === currentUser.id).map(item => (
                         <div key={item.id} className="glass-panel" style={cardStyle}>
                           <div style={cardImageWrapperStyle}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={item.images[0]} alt={item.title} style={cardImageStyle} />
                             <span style={priceTagStyle}>{item.price} {item.currency}/mo</span>
                           </div>
@@ -1398,7 +1394,7 @@ export default function DashboardPage() {
                           <div style={reqSummaryStyle}>
                             <p style={reqTitleStyle}>{req.tenantName} wants to rent</p>
                             <p style={reqSubTitleStyle}>{req.listingTitle}</p>
-                            <p style={reqMsgStyle}>"{req.message}"</p>
+                            <p style={reqMsgStyle}>&quot;{req.message}&quot;</p>
                           </div>
                           
                           <div style={reqActionsStyle}>
@@ -1467,6 +1463,7 @@ export default function DashboardPage() {
                     {services.map(srv => (
                       <div key={srv.id} className="glass-panel" style={cardStyle}>
                         <div style={cardImageWrapperStyle}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={srv.image} alt={srv.businessName} style={cardImageStyle} />
                           <span style={priceTagStyle}>{srv.priceEstimate}</span>
                         </div>
@@ -1537,7 +1534,7 @@ export default function DashboardPage() {
                                   <strong>{disp.serviceName}</strong>
                                   <span style={badgeStyleStyle(disp.status)}>{disp.status.toUpperCase()}</span>
                                 </div>
-                                <p style={{ fontSize: '0.8rem', color: '#bbb', margin: '0 0 0.4rem 0' }}>"{disp.message}"</p>
+                                <p style={{ fontSize: '0.8rem', color: '#bbb', margin: '0 0 0.4rem 0' }}>&quot;{disp.message}&quot;</p>
                                 <span style={{ fontSize: '0.75rem', color: '#888' }}>Sent: {disp.timestamp}</span>
                               </div>
                             ))}
@@ -1576,7 +1573,7 @@ export default function DashboardPage() {
                                       <strong>From: {disp.senderName} ({disp.senderRole.toUpperCase()})</strong>
                                       <span style={badgeStyleStyle(disp.status)}>{disp.status.toUpperCase()}</span>
                                     </div>
-                                    <p style={{ fontSize: '0.8rem', color: '#bbb', margin: '0 0 0.6rem 0' }}>"{disp.message}"</p>
+                                    <p style={{ fontSize: '0.8rem', color: '#bbb', margin: '0 0 0.6rem 0' }}>&quot;{disp.message}&quot;</p>
                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                       {disp.status === 'pending' && (
                                         <button className="btn-primary" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }} onClick={() => handleUpdateDispatchStatus(disp.id, 'accepted')}>Accept Order</button>
@@ -2467,7 +2464,7 @@ export default function DashboardPage() {
                   
                   <div style={verifyCardStyle}>
                     <h4 style={verifyTitleStyle}><UserIcon size={16} style={{ marginRight: 6 }} /> Tenant Profile</h4>
-                    <p style={verifyBioStyle}>"{mockApplicantProfile.bio}"</p>
+                    <p style={verifyBioStyle}>&quot;{mockApplicantProfile.bio}&quot;</p>
                     
                     <div style={verifyGridStyle}>
                       <div style={verifyDetailStyle}>
@@ -2513,10 +2510,9 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   </div>
-
                   <div style={applyMsgBoxStyle}>
                     <p style={applyMsgHeaderStyle}>Applicant Cover Message:</p>
-                    <p style={applyMsgTextStyle}>"{activeRequest.message}"</p>
+                    <p style={applyMsgTextStyle}>&quot;{activeRequest.message}&quot;</p>
                   </div>
 
                   <div style={verifyActionsRowStyle}>
@@ -2569,7 +2565,7 @@ export default function DashboardPage() {
               <p style={applySummaryTitleStyle}>Submit completion verification document for: {selectedDispatchForProof.serviceName}</p>
               <div style={profileSummaryGridStyle}>
                 <p>Client: <span style={boldValueStyle}>{selectedDispatchForProof.senderName}</span></p>
-                <p>Request: <span style={boldValueStyle}>"{selectedDispatchForProof.message}"</span></p>
+                <p>Request: <span style={boldValueStyle}>&quot;{selectedDispatchForProof.message}&quot;</span></p>
               </div>
             </div>
 
@@ -3672,11 +3668,6 @@ const serviceRatingBadgeStyle: React.CSSProperties = {
   alignItems: 'center'
 }
 
-const servicePriceEstimateStyle: React.CSSProperties = {
-  fontSize: '0.8rem',
-  color: '#ccc',
-  margin: '0.2rem 0 0 0'
-}
 
 const topAlertBannerStyle: React.CSSProperties = {
   position: 'fixed',
