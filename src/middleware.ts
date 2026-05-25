@@ -7,7 +7,7 @@ const RATE_LIMIT_MAX = 60 // max requests per minute
 const WINDOW_MS = 60 * 1000 // 1 minute
 
 export function middleware(request: NextRequest) {
-  const ip = (request as any).ip || request.headers.get('x-forwarded-for') || 'local-ip'
+  const ip = (request as NextRequest & { ip?: string }).ip || request.headers.get('x-forwarded-for') || 'local-ip'
   const url = request.nextUrl.clone()
 
   // 1. Rate Limiting Check

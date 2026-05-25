@@ -1,6 +1,6 @@
 'use client'
 import { motion } from 'framer-motion'
-import { ArrowRight, Key, Shield, Star, Lock, Crown } from 'lucide-react'
+import { ArrowRight, Shield, Lock, Crown } from 'lucide-react'
 import Link from 'next/link'
 import styles from './page.module.css'
 
