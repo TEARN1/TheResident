@@ -32,7 +32,7 @@ jobs:
       run: npm run lint
 
     - name: Run Security Sandboxes Unit Tests
-      run: node --experimental-strip-types src/utils/security.test.ts
+      run: npm run test
 
     - name: Run Next.js Production Build
       run: npm run build
