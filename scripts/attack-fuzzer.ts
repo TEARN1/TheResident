@@ -20,6 +20,7 @@ import {
   containsSSRF,
   containsLDAPi,
   containsXXE,
+  containsSSTI,
   validateUploadedFile,
   validateJWTStructure,
   checkPasswordStrength,
@@ -418,6 +419,26 @@ function generateXXEPayloads(): string[] {
   return payloads
 }
 
+function generateSSTIPayloads(): string[] {
+  const payloads: string[] = []
+  payloads.push('{{7*7}}')
+  payloads.push('${7*7}')
+  payloads.push('#{7*7}')
+  payloads.push('<%= 7*7 %>')
+  payloads.push('{{constructor.constructor("return process")()}}')
+  payloads.push('{{this.constructor.prototype}}')
+  payloads.push('{{[].constructor.prototype}}')
+  payloads.push('${class.forName("java.lang.Runtime")}')
+  payloads.push('${T(java.lang.Runtime).getRuntime().exec("id")}')
+  payloads.push('{{["__proto__"]["polluted"]="yes"}}')
+  
+  for (let i = 0; i < 500; i++) {
+    payloads.push(`{{ ${i} * ${i} }}`)
+    payloads.push(`\${ ${i} * ${i} }`)
+  }
+  return payloads
+}
+
 function generateFileUploadPayloads(): Array<{ name: string; shouldBeBlocked: boolean }> {
   const payloads: Array<{ name: string; shouldBeBlocked: boolean }> = []
   
@@ -662,6 +683,14 @@ function runFuzzer(): FuzzerStats {
     } catch { stats.errors++ }
   }
 
+  // ===== SSTI Attacks =====
+  const sstiPayloads = generateSSTIPayloads()
+  for (const p of sstiPayloads) {
+    try {
+      recordResult('SSTI', p, containsSSTI(p), true)
+    } catch { stats.errors++ }
+  }
+
   // ===== File Upload Attacks =====
   const filePayloads = generateFileUploadPayloads()
   for (const fp of filePayloads) {
@@ -699,7 +728,7 @@ function runFuzzer(): FuzzerStats {
   const allPayloads = [
     ...xssPayloads, ...sqliPayloads, ...pathPayloads, ...cmdPayloads,
     ...nosqlPayloads, ...headerPayloads, ...redirectPayloads, ...protoPayloads,
-    ...ssrfPayloads, ...ldapPayloads, ...xxePayloads
+    ...ssrfPayloads, ...ldapPayloads, ...xxePayloads, ...sstiPayloads
   ]
   for (const p of allPayloads) {
     try {

@@ -350,6 +350,26 @@ export const containsXXE = (input: string): boolean => {
 }
 
 // ---------------------------------------------------------------------------
+// 11b. Server-Side Template Injection (SSTI) Protection
+// ---------------------------------------------------------------------------
+
+export const containsSSTI = (input: string): boolean => {
+  const patterns = [
+    /\{\{\s*\d+\s*\*\s*\d+\s*\}\}/g,               // Basic template multiplication checks like {{7*7}} or {{ 9 * 9 }}
+    /\$\{\s*\d+\s*\*\s*\d+\s*\}/g,                 // JSTL/FreeMarker like ${7*7}
+    /#\{\s*\d+\s*\*\s*\d+\s*\}/g,                 // JSF/EL like #{7*7}
+    /\{\{[\s\S]*?\bconstructor\b/gi,               // constructor property anywhere inside {{ ... }}
+    /\$\{[\s\S]*?\bconstructor\b/gi,               // constructor property anywhere inside ${ ... }
+    /\$\{\s*T\s*\(/g,                             // Spring SpEL like ${T(java.lang...)}
+    /\$\{\s*class\./g,                            // Java class injection
+    /<%=\s*[^%]*%>/g,                             // ERB/JSP evaluation like <%= ... %>
+    /\{\{\s*[^}]*\['__proto__'\]/gi,               // prototype bypasses inside template braces
+    /\{\{\s*[^}]*__proto__/gi,
+  ]
+  return patterns.some(p => p.test(input))
+}
+
+// ---------------------------------------------------------------------------
 // 12. CSRF Token Generation & Validation
 // ---------------------------------------------------------------------------
 
@@ -636,6 +656,7 @@ export const scanInput = (input: string): SecurityScanResult => {
   if (containsSSRF(input)) threats.push('SSRF')
   if (containsLDAPi(input)) threats.push('LDAP_INJECTION')
   if (containsXXE(input)) threats.push('XXE')
+  if (containsSSTI(input)) threats.push('SSTI')
 
   return { safe: threats.length === 0, threats }
 }
