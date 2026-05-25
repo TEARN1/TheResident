@@ -156,7 +156,7 @@ export const containsPathTraversal = (input: string): boolean => {
 // ---------------------------------------------------------------------------
 
 export const containsCommandInjection = (input: string): boolean => {
-  const cmds = 'ls|cat|rm|mv|cp|chmod|chown|wget|curl|nc|ncat|bash|sh|zsh|powershell|cmd'
+  const cmds = 'ls|cat|rm|mv|cp|chmod|chown|wget|curl|nc|ncat|bash|sh|zsh|powershell|cmd|id|whoami|uname|hostname|ping|ifconfig|ipconfig|netstat'
   const patterns = [
     new RegExp(`;\\s*(${cmds})\\b`, 'gi'),
     new RegExp(`\\|\\s*(${cmds})\\b`, 'gi'),
@@ -164,6 +164,9 @@ export const containsCommandInjection = (input: string): boolean => {
     /\$\([^)]*\)/g,          // $() command substitution
     new RegExp(`&&\\s*(${cmds})\\b`, 'gi'),
     new RegExp(`\\|\\|\\s*(${cmds})\\b`, 'gi'),
+    new RegExp(`[\\r\\n]\\s*(${cmds})\\b`, 'gi'), // Newlines/Carriage returns
+    new RegExp(`%0[ad]\\s*(${cmds})\\b`, 'gi'),    // URL-encoded CR/LF
+    new RegExp(`(?:&|\\|&)\\s*(${cmds})\\b`, 'gi'), // Ampersand or background pipe execution
     />\s*\/dev\//gi,         // Redirect to devices
     />\s*\/tmp\//gi,         // Write to tmp
     /\beval\s*\(/gi,         // eval() calls
@@ -198,6 +201,12 @@ export const containsNoSQLi = (input: string): boolean => {
     /\$nor\b/gi,
     /\$elemMatch\b/gi,
     /\$lookup\b/gi,
+    /\$expr\b/gi,
+    /\$jsonSchema\b/gi,
+    /\$mod\b/gi,
+    /\$type\b/gi,
+    /\$text\b/gi,
+    /\$search\b/gi,
     /\bfunction\s*\(\s*\)/gi, // JS function injection
     /\bthis\s*\./gi,
     /\bdb\.\w+\.\w+/gi,       // db.collection.method pattern
@@ -284,6 +293,15 @@ export const containsSSRF = (input: string): boolean => {
     /gopher:\/\//gi,                          // Gopher protocol SSRF
     /dict:\/\//gi,                            // DICT protocol
     /ftp:\/\/127/gi,                          // FTP loopback
+    // Alternate representations (Decimal, Octal, Hex) of loopback & link-local
+    /2130706433/g,                            // 127.0.0.1 in decimal
+    /2852039166/g,                            // 169.254.169.254 in decimal
+    /0x7f000001/gi,                           // 127.0.0.1 in hex (flat)
+    /0x7f\.0x0\.0x0\.0x1/gi,                   // 127.0.0.1 in hex (dotted)
+    /017700000001/g,                          // 127.0.0.1 in octal (flat)
+    /0177\.0000\.0000\.0001/g,                 // 127.0.0.1 in octal (dotted)
+    /0xa9feafea/gi,                           // 169.254.169.254 in hex
+    /0251\.0376\.0251\.0376/g,                 // 169.254.169.254 in octal
   ]
   return patterns.some(p => p.test(input))
 }
