@@ -12,10 +12,7 @@ import {
   updateRequestStatus, 
   addLog, 
   incrementApiCall, 
-  resetApiCounts,
   bookSeat,
-  addRoommateSeeker,
-  addLiftClub,
   addService,
   deleteService,
   addDispatch,
@@ -27,12 +24,13 @@ import {
   Listing, 
   RoomRequest,
   HandymanService,
-  ServiceDispatch
+  ServiceDispatch,
+  UtilityToken
 } from '../../store'
 import { 
   Shield, LogOut, Home, Search, Plus, Check, X, AlertTriangle, 
-  Wifi, Car, FileText, Lock, Send, MapPin, Eye, RefreshCw, 
-  User as UserIcon, Users, CheckCircle2, Terminal, Info, Heart,
+  Wifi, Car, FileText, Send, MapPin, Eye, 
+  User as UserIcon, Users, CheckCircle2, Terminal, Info,
   Phone, Star, DollarSign, Calendar, Clock, Briefcase, Upload,
   ShieldCheck, FileCode, CheckCircle, Zap, Copy
 } from 'lucide-react'
@@ -272,7 +270,7 @@ export default function DashboardPage() {
   }
 
   // Utility token: Tenant buys a voucher
-  const handleBuyUtilityToken = (token: any) => {
+  const handleBuyUtilityToken = (token: UtilityToken) => {
     if (currentUser.role === 'visitor') {
       setAlertNotification('Guest mode restriction: Please register or log in to buy prepaid vouchers!')
       setTimeout(() => setAlertNotification(null), 4000)
@@ -863,7 +861,7 @@ export default function DashboardPage() {
                       <div style={filterFieldStyle}>
                         <select 
                           value={filterBathroom} 
-                          onChange={(e) => setFilterBathroom(e.target.value as any)}
+                          onChange={(e) => setFilterBathroom(e.target.value as 'all' | 'shared' | 'private' | 'ensuite')}
                           style={filterSelectStyle}
                         >
                           <option value="all">Any Bathroom</option>
@@ -946,7 +944,7 @@ export default function DashboardPage() {
                         <label style={filterLabelStyle}>Gender Search</label>
                         <select 
                           value={roommateSearchGender} 
-                          onChange={(e) => setRoommateSearchGender(e.target.value as any)}
+                          onChange={(e) => setRoommateSearchGender(e.target.value as 'all' | 'men' | 'women')}
                           style={filterSelectStyle}
                         >
                           <option value="all">All Roommates</option>
@@ -979,7 +977,7 @@ export default function DashboardPage() {
                             <span style={priceTagLabelStyle}>{rm.budget} {rm.currency}/mo</span>
                           </div>
                           <p style={cardLocationStyle}><MapPin size={12} style={{ marginRight: 4 }} /> {rm.suburb}, {rm.location}</p>
-                          <p style={cardDescStyle}>"{rm.bio}"</p>
+                          <p style={cardDescStyle}>&quot;{rm.bio}&quot;</p>
                           <div style={chipsWrapperStyle}>
                             <span style={chipStyle}>Gender: {rm.gender.toUpperCase()}</span>
                             <span style={chipStyle}>Kids: {rm.childrenCount}</span>
@@ -1158,7 +1156,7 @@ export default function DashboardPage() {
                                   <strong>{disp.serviceName}</strong>
                                   <span style={badgeStyleStyle(disp.status)}>{disp.status.toUpperCase()}</span>
                                 </div>
-                                <p style={{ fontSize: '0.8rem', color: '#bbb', margin: '0 0 0.4rem 0' }}>"{disp.message}"</p>
+                                <p style={{ fontSize: '0.8rem', color: '#bbb', margin: '0 0 0.4rem 0' }}>&quot;{disp.message}&quot;</p>
                                 <span style={{ fontSize: '0.75rem', color: '#888' }}>Sent: {disp.timestamp}</span>
                               </div>
                             ))}
@@ -1197,7 +1195,7 @@ export default function DashboardPage() {
                                       <strong>From: {disp.senderName} ({disp.senderRole.toUpperCase()})</strong>
                                       <span style={badgeStyleStyle(disp.status)}>{disp.status.toUpperCase()}</span>
                                     </div>
-                                    <p style={{ fontSize: '0.8rem', color: '#bbb', margin: '0 0 0.6rem 0' }}>"{disp.message}"</p>
+                                    <p style={{ fontSize: '0.8rem', color: '#bbb', margin: '0 0 0.6rem 0' }}>&quot;{disp.message}&quot;</p>
                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                       {disp.status === 'pending' && (
                                         <button className="btn-primary" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }} onClick={() => handleUpdateDispatchStatus(disp.id, 'accepted')}>Accept Order</button>
@@ -1383,7 +1381,7 @@ export default function DashboardPage() {
                         </div>
                       ))
                     ) : (
-                      <div style={emptyStateStyle}>No listed rooms. Click "List a New Room" to add properties.</div>
+                      <div style={emptyStateStyle}>No listed rooms. Click &quot;List a New Room&quot; to add properties.</div>
                     )}
                   </div>
                 </div>
@@ -2097,7 +2095,7 @@ export default function DashboardPage() {
                   <label style={labelStyleStyle}>Bathroom Style</label>
                   <select 
                     value={newBathroom} 
-                    onChange={(e) => setNewBathroom(e.target.value as any)}
+                    onChange={(e) => setNewBathroom(e.target.value as 'shared' | 'private' | 'ensuite')}
                     style={modalSelectStyle}
                   >
                     <option value="shared">Shared Bathroom</option>
@@ -2110,7 +2108,7 @@ export default function DashboardPage() {
                   <label style={labelStyleStyle}>Gender Preference</label>
                   <select 
                     value={newGenderPref} 
-                    onChange={(e) => setNewGenderPref(e.target.value as any)}
+                    onChange={(e) => setNewGenderPref(e.target.value as 'men' | 'women' | 'couple' | 'any')}
                     style={modalSelectStyle}
                   >
                     <option value="any">Any Welcomed</option>
@@ -2264,7 +2262,7 @@ export default function DashboardPage() {
                   <label style={labelStyleStyle}>Service Category</label>
                   <select 
                     value={bizCategory} 
-                    onChange={(e) => setBizCategory(e.target.value as any)}
+                    onChange={(e) => setBizCategory(e.target.value as HandymanService['category'])}
                     style={modalSelectStyle}
                   >
                     <option value="Plumbing">Plumbing Services</option>

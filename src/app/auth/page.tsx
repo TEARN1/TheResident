@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { loginUser, registerFailedAttempt, resetFailedAttempts, addLog, RootState } from '../../store'
-import { Shield, User as UserIcon, Lock, Heart, Users, FileText, CheckCircle, AlertTriangle } from 'lucide-react'
-import { cleanScriptTags, containsXSS, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
+import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle } from 'lucide-react'
+import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 
 // SHA-256 Hashing helper using Web Crypto API
 async function sha256(message: string): Promise<string> {
