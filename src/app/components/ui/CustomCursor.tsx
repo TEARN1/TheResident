@@ -19,11 +19,17 @@ export default function CustomCursor() {
 
         const handleMouseOver = (e: MouseEvent) => {
             const target = e.target as HTMLElement
-            if (target.tagName === 'BUTTON' || target.tagName === 'A' || target.closest('button') || target.closest('a')) {
-                setIsHovering(true)
-            } else {
-                setIsHovering(false)
-            }
+            if (!target) return
+            const isClickable = 
+                target.tagName === 'BUTTON' || 
+                target.tagName === 'A' || 
+                target.closest('button') || 
+                target.closest('a') ||
+                target.getAttribute('role') === 'button' ||
+                target.closest('[role="button"]') ||
+                target.style.cursor === 'pointer' ||
+                window.getComputedStyle(target).cursor === 'pointer'
+            setIsHovering(!!isClickable)
         }
 
         window.addEventListener('mousemove', moveCursor)

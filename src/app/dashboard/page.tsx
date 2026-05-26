@@ -44,7 +44,7 @@ import {
   User as UserIcon, Users, CheckCircle2, Terminal, Info,
   Star, Calendar, Clock, Briefcase, Upload,
   ShieldCheck, FileCode, Zap, Copy,
-  MessageSquare, Gavel, Award, Megaphone, Wrench
+  MessageSquare, Gavel, Award, Megaphone, Wrench, Loader
 } from 'lucide-react'
 import { 
   cleanScriptTags, 
@@ -58,9 +58,83 @@ import {
   validateUploadedFile as validateUploadedFileUtil 
 } from '../../utils/security'
 
+const formatCurrency = (amount: number, currencyCode: string = 'ZAR') => {
+  if (currencyCode === 'ZAR') return `R ${amount}`
+  if (currencyCode === 'GBP') return `£${amount}`
+  return `${amount} ${currencyCode}`
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const dispatch = useDispatch()
+
+  // Geolocation States
+  const [locationLoading, setLocationLoading] = useState(false)
+
+  // Geolocation Handler
+  const handleGetLiveLocation = (
+    setLocation: (loc: string) => void,
+    setSuburb?: (sub: string) => void
+  ) => {
+    if (!navigator.geolocation) {
+      setAlertNotification('Geolocation is not supported by your browser.')
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+
+    setLocationLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+            { headers: { 'Accept-Language': 'en' } }
+          )
+          if (!res.ok) throw new Error('OSM Reverse Geocode failed')
+          const data = await res.json()
+          
+          const addr = data.address || {}
+          const resolvedSuburb = addr.suburb || addr.neighbourhood || addr.village || addr.quarter || addr.city_district || ''
+          const resolvedCity = addr.city || addr.town || addr.municipality || addr.state || ''
+          const resolvedCountry = addr.country || ''
+          
+          let cityCountryStr = resolvedCity
+          if (resolvedCountry) {
+            cityCountryStr = cityCountryStr ? `${cityCountryStr}, ${resolvedCountry}` : resolvedCountry
+          }
+
+          if (cityCountryStr) {
+            setLocation(cityCountryStr)
+          } else {
+            setLocation(`Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}`)
+          }
+
+          if (setSuburb && resolvedSuburb) {
+            setSuburb(resolvedSuburb)
+          }
+          
+          setAlertNotification('Live location resolved successfully!')
+          setTimeout(() => setAlertNotification(null), 3000)
+        } catch {
+          setLocation(`Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}`)
+          if (setSuburb) {
+            setSuburb('')
+          }
+          setAlertNotification('Location resolved to coordinates (reverse geocoding failed).')
+          setTimeout(() => setAlertNotification(null), 4000)
+        } finally {
+          setLocationLoading(false)
+        }
+      },
+      (error) => {
+        setLocationLoading(false)
+        setAlertNotification(`Geolocation failed: ${error.message}`)
+        setTimeout(() => setAlertNotification(null), 4000)
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    )
+  }
   
   // Select state from Redux store
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
@@ -716,10 +790,10 @@ export default function DashboardPage() {
       ip: '127.0.0.1',
       action: `Rented tool: ${tool.title}`,
       type: 'auth_success',
-      details: `User ${currentUser.name} rented tool from ${tool.ownerName}. Cost: ${tool.pricePerDay} ZAR.`
+      details: `User ${currentUser.name} rented tool from ${tool.ownerName}. Cost: ${formatCurrency(tool.pricePerDay, 'ZAR')}.`
     }))
 
-    setAlertNotification(`Successfully hired ${tool.title}! ${tool.pricePerDay} ZAR deducted from wallet.`)
+    setAlertNotification(`Successfully hired ${tool.title}! ${formatCurrency(tool.pricePerDay, 'ZAR')} deducted from wallet.`)
     setTimeout(() => setAlertNotification(null), 5000)
   }
 
@@ -960,12 +1034,12 @@ export default function DashboardPage() {
           </div>
           <div style={walletBalanceDisplayStyle}>
             <span style={{ fontSize: '0.7rem', color: '#aaa', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>My Wallet Balance</span>
-            <strong style={{ fontSize: '1.2rem', color: '#D4AF37' }}>{currentUser?.balance || 0} ZAR</strong>
+            <strong style={{ fontSize: '1.2rem', color: '#D4AF37' }}>{formatCurrency(currentUser?.balance || 0, 'ZAR')}</strong>
           </div>
         </div>
 
         {/* Sub-tab navigation */}
-        <div style={{ display: 'flex', gap: '0.5rem', margin: '1.2rem 0', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="responsive-tabs" style={{ display: 'flex', gap: '0.5rem', margin: '1.2rem 0', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
           <button 
             style={communitySubTab === 'notices' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
             onClick={() => setCommunitySubTab('notices')}
@@ -994,7 +1068,7 @@ export default function DashboardPage() {
 
         {/* Sub-tab 1: Notices & Events */}
         {communitySubTab === 'notices' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
+          <div className="responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
             {/* Notices List */}
             <div>
               <h3 style={{ ...panelTitleStyle, marginTop: 0 }}>Community Bulletins</h3>
@@ -1117,7 +1191,7 @@ export default function DashboardPage() {
                   <div style={{ ...cardBodyStyle, gap: '0.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#fff' }}>{tool.title}</h4>
-                      <span style={{ color: '#D4AF37', fontWeight: 'bold' }}>{tool.pricePerDay} ZAR / day</span>
+                      <span style={{ color: '#D4AF37', fontWeight: 'bold' }}>{formatCurrency(tool.pricePerDay, tool.currency)} / day</span>
                     </div>
                     <p style={{ margin: 0, fontSize: '0.75rem', color: '#aaa' }}>
                       <strong>Owner:</strong> {tool.ownerName} | <strong>Location:</strong> {tool.location}
@@ -1168,7 +1242,7 @@ export default function DashboardPage() {
 
         {/* Sub-tab 3: Chore Scheduler */}
         {communitySubTab === 'chores' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
+          <div className="responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
             {/* Chores Table */}
             <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
               <h3 style={{ ...panelTitleStyle, borderBottom: 'none', marginTop: 0 }}>Weekly Roommate Chores Rota</h3>
@@ -1356,13 +1430,13 @@ export default function DashboardPage() {
       )}
 
       {/* Header Bar */}
-      <header style={navbarStyle}>
+      <header className="responsive-navbar" style={navbarStyle}>
         <div style={logoWrapperStyle}>
           <Shield size={24} color="#D4AF37" />
           <span style={logoTextStyle}>THE RESIDENT</span>
         </div>
         
-        <div style={userInfoStyle}>
+        <div className="responsive-navbar-user" style={userInfoStyle}>
           <span style={roleBadgeStyle}>{currentUser.role.toUpperCase()}</span>
           <span style={userNameStyle}>{currentUser.name}</span>
           
@@ -1381,7 +1455,7 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Layout Area */}
-      <div style={mainContentGridStyle}>
+      <div className="responsive-main-grid" style={mainContentGridStyle}>
         
         {/* LEFT COLUMN: Workspace tabs and directory grids */}
         <div style={workspaceColumnStyle}>
@@ -1396,7 +1470,7 @@ export default function DashboardPage() {
                 </div>
               )}
               {/* Workspace Navigation Tabs */}
-              <div style={tabHeaderContainerStyle}>
+              <div className="responsive-tabs" style={tabHeaderContainerStyle}>
                 <button 
                   style={tenantTab === 'rooms' ? activeTabBtnStyle : inactiveTabBtnStyle}
                   onClick={() => setTenantTab('rooms')}
@@ -1439,7 +1513,7 @@ export default function DashboardPage() {
               {tenantTab === 'rooms' && (
                 <div>
                   <div className="glass-panel" style={filterPanelStyle}>
-                    <div style={filterRowStyle}>
+                    <div className="responsive-filter-row" style={filterRowStyle}>
                       <div style={searchWrapperStyle}>
                         <Search size={18} color="#D4AF37" style={{ marginLeft: 8 }} />
                         <input 
@@ -1466,10 +1540,34 @@ export default function DashboardPage() {
                           }}
                           style={searchFieldStyle}
                         />
+                        <button
+                          type="button"
+                          onClick={() => handleGetLiveLocation(setSearchLocation)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#D4AF37',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '6px',
+                            marginRight: '6px',
+                            opacity: locationLoading ? 0.6 : 1
+                          }}
+                          title="Use Live Geolocation"
+                          disabled={locationLoading}
+                        >
+                          {locationLoading ? (
+                            <Loader size={16} className="animate-spin" />
+                          ) : (
+                            <MapPin size={16} />
+                          )}
+                        </button>
                       </div>
                       
                       <div style={filterFieldStyle}>
-                        <label style={filterLabelStyle}>Max Price: {filterPrice} ZAR/GBP</label>
+                        <label style={filterLabelStyle}>Max Price: {formatCurrency(filterPrice, 'ZAR')} / {formatCurrency(Math.round(filterPrice / 20), 'GBP')}</label>
                         <input 
                           type="range" 
                           min={500} 
@@ -1555,7 +1653,7 @@ export default function DashboardPage() {
                           <div style={cardImageWrapperStyle}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={item.images[0]} alt={item.title} style={cardImageStyle} />
-                            <span style={priceTagStyle}>{item.price} {item.currency}/mo</span>
+                            <span style={priceTagStyle}>{formatCurrency(item.price, item.currency)}/mo</span>
                           </div>
                           
                           <div style={cardBodyStyle}>
@@ -1624,7 +1722,7 @@ export default function DashboardPage() {
                       </div>
 
                       <div style={filterFieldStyle}>
-                        <label style={filterLabelStyle}>Max Share Budget: {roommateSearchBudget} ZAR/GBP</label>
+                        <label style={filterLabelStyle}>Max Share Budget: {formatCurrency(roommateSearchBudget, 'ZAR')} / {formatCurrency(Math.round(roommateSearchBudget / 20), 'GBP')}</label>
                         <input 
                           type="range" 
                           min={300} 
@@ -1644,7 +1742,7 @@ export default function DashboardPage() {
                         <div style={cardBodyStyle}>
                           <div style={roommateTitleRowStyle}>
                             <h3 style={cardTitleStyle}>{rm.name}</h3>
-                            <span style={priceTagLabelStyle}>{rm.budget} {rm.currency}/mo</span>
+                            <span style={priceTagLabelStyle}>{formatCurrency(rm.budget, rm.currency)}/mo</span>
                           </div>
                           <p style={cardLocationStyle}><MapPin size={12} style={{ marginRight: 4 }} /> {rm.suburb}, {rm.location}</p>
                           <p style={cardDescStyle}>&quot;{rm.bio}&quot;</p>
@@ -1681,7 +1779,7 @@ export default function DashboardPage() {
                       <div style={liftDetailsColStyle}>
                         <div style={liftHeaderStyle}>
                           <h4 style={liftDriverTitleStyle}>{lift.driverName}</h4>
-                          <span style={liftPriceBadgeStyle}>{lift.pricePerSeat} {lift.currency} / seat</span>
+                          <span style={liftPriceBadgeStyle}>{formatCurrency(lift.pricePerSeat, lift.currency)} / seat</span>
                         </div>
                         <p style={liftRouteStyle}><MapPin size={14} style={{ marginRight: 6 }} /> <strong>From:</strong> {lift.origin} ➔ <strong>To:</strong> {lift.destination}</p>
                         <div style={liftTimeBlockStyle}>
@@ -1903,7 +2001,7 @@ export default function DashboardPage() {
                     </div>
                     <div style={walletBalanceDisplayStyle}>
                       <span style={{ fontSize: '0.7rem', color: '#aaa', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>My Wallet Balance</span>
-                      <strong style={{ fontSize: '1.2rem', color: '#D4AF37' }}>{currentUser.balance} ZAR</strong>
+                      <strong style={{ fontSize: '1.2rem', color: '#D4AF37' }}>{formatCurrency(currentUser.balance, 'ZAR')}</strong>
                     </div>
                   </div>
 
@@ -1916,7 +2014,7 @@ export default function DashboardPage() {
                           <div style={{ ...cardBodyStyle, gap: '0.6rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#fff' }}>Prepaid Electricity</h4>
-                              <span style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '1.1rem' }}>{token.price} ZAR</span>
+                              <span style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '1.1rem' }}>{formatCurrency(token.price, token.currency)}</span>
                             </div>
                             <p style={{ margin: 0, fontSize: '0.8rem', color: '#bbb' }}>
                               <strong>Meter No:</strong> {token.meterNumber}
@@ -1970,7 +2068,7 @@ export default function DashboardPage() {
                               </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                              <strong style={{ color: '#fff' }}>{token.price} ZAR</strong>
+                              <strong style={{ color: '#fff' }}>{formatCurrency(token.price, token.currency)}</strong>
                             </div>
                           </div>
                         ))}
@@ -1993,7 +2091,7 @@ export default function DashboardPage() {
             /* ================= LANDLORD WORKSPACE ================= */
             <div>
               {/* Workspace Navigation Tabs */}
-              <div style={tabHeaderContainerStyle}>
+              <div className="responsive-tabs" style={tabHeaderContainerStyle}>
                 <button 
                   style={landlordTab === 'portfolio' ? activeTabBtnStyle : inactiveTabBtnStyle}
                   onClick={() => setLandlordTab('portfolio')}
@@ -2043,7 +2141,7 @@ export default function DashboardPage() {
                           <div style={cardImageWrapperStyle}>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={item.images[0]} alt={item.title} style={cardImageStyle} />
-                            <span style={priceTagStyle}>{item.price} {item.currency}/mo</span>
+                            <span style={priceTagStyle}>{formatCurrency(item.price, item.currency)}/mo</span>
                           </div>
                           
                           <div style={cardBodyStyle}>
@@ -2298,7 +2396,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div style={{ ...gridStyle, gridTemplateColumns: '1.2fr 1.8fr', gap: '2rem', marginTop: '1.5rem' }}>
+                  <div className="responsive-two-col" style={{ ...gridStyle, gridTemplateColumns: '1.2fr 1.8fr', gap: '2rem', marginTop: '1.5rem' }}>
                     
                     {/* Left Form: Create Token */}
                     <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px' }}>
@@ -2317,7 +2415,7 @@ export default function DashboardPage() {
                         </div>
 
                         <div style={inputGroupStyle}>
-                          <label style={labelStyleStyle}>Voucher Price (ZAR)</label>
+                          <label style={labelStyleStyle}>Voucher Price (R)</label>
                           <input 
                             type="number" 
                             required 
@@ -2382,7 +2480,7 @@ export default function DashboardPage() {
                                 )}
                               </div>
                               <div style={{ textAlign: 'right' }}>
-                                <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{token.price} ZAR</strong>
+                                <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{formatCurrency(token.price, token.currency)}</strong>
                               </div>
                             </div>
                           ))}
@@ -2691,7 +2789,17 @@ export default function DashboardPage() {
 
               <div style={rowStyleStyle}>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyleStyle}>City / Country</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={labelStyleStyle}>City / Country</label>
+                    <button 
+                      type="button" 
+                      onClick={() => handleGetLiveLocation(setNewLocation, setNewSuburb)}
+                      style={{ background: 'transparent', border: 'none', color: '#D4AF37', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                      title="Auto-fill Location via Geolocation"
+                    >
+                      <MapPin size={12} /> Use Live Location
+                    </button>
+                  </div>
                   <input 
                     type="text" 
                     required 
@@ -2986,7 +3094,7 @@ export default function DashboardPage() {
                   <input 
                     type="text" 
                     required 
-                    placeholder="e.g. From 250 ZAR / hour, 400 ZAR / trip" 
+                    placeholder="e.g. From R 250 / hour, R 400 / trip" 
                     value={bizPrice}
                     onChange={(e) => setBizPrice(e.target.value)}
                     style={modalInputStyle}
@@ -2996,7 +3104,17 @@ export default function DashboardPage() {
 
               <div style={rowStyleStyle}>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyleStyle}>Location City/Country</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={labelStyleStyle}>Location City/Country</label>
+                    <button 
+                      type="button" 
+                      onClick={() => handleGetLiveLocation(setBizLocation, setBizSuburb)}
+                      style={{ background: 'transparent', border: 'none', color: '#D4AF37', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                      title="Auto-fill Location via Geolocation"
+                    >
+                      <MapPin size={12} /> Use Live Location
+                    </button>
+                  </div>
                   <input 
                     type="text" 
                     required 
@@ -3327,7 +3445,7 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyleStyle}>Price per Day (ZAR)</label>
+                  <label style={labelStyleStyle}>Price per Day (R)</label>
                   <input 
                     type="number" 
                     required 
@@ -3341,7 +3459,7 @@ export default function DashboardPage() {
 
               <div style={rowStyleStyle}>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyleStyle}>Required Deposit (ZAR)</label>
+                  <label style={labelStyleStyle}>Required Deposit (R)</label>
                   <input 
                     type="number" 
                     required 
@@ -3352,7 +3470,17 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div style={inputGroupStyle}>
-                  <label style={labelStyleStyle}>Collection Location</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={labelStyleStyle}>Collection Location</label>
+                    <button 
+                      type="button" 
+                      onClick={() => handleGetLiveLocation(setToolLocation)}
+                      style={{ background: 'transparent', border: 'none', color: '#D4AF37', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                      title="Auto-fill Location via Geolocation"
+                    >
+                      <MapPin size={12} /> Use Live Location
+                    </button>
+                  </div>
                   <input 
                     type="text" 
                     required 

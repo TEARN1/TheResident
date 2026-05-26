@@ -267,6 +267,7 @@ export default function AuthPage() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
+        className="responsive-glass-panel"
         style={glassPanelStyle}
       >
         <div style={headerStyle}>
@@ -519,7 +520,7 @@ export default function AuthPage() {
                   </div>
                 </div>
 
-                <div style={preferenceGridStyle}>
+                <div className="responsive-pref-grid" style={preferenceGridStyle}>
                   <div style={checkboxWrapperStyle}>
                     <input 
                       type="checkbox" 

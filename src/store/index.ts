@@ -291,7 +291,7 @@ const initialServices: HandymanService[] = [
     rating: 4.8,
     contactNumber: '+27 72 456 7890',
     websiteUrl: 'https://sipho-plumbing.co.za',
-    priceEstimate: 'From 250 ZAR / hour',
+    priceEstimate: 'From R 250 / hour',
     description: 'Expert backroom leak repairs, geyser installations, and prepaid tap fittings.',
     image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=600&q=80',
     reviewsCount: 14
@@ -306,7 +306,7 @@ const initialServices: HandymanService[] = [
     rating: 4.9,
     contactNumber: '+27 82 999 1234',
     websiteUrl: '',
-    priceEstimate: 'From 400 ZAR / Trip',
+    priceEstimate: 'From R 400 / Trip',
     description: 'Reliable bakkie hire for moving furniture, room luggage, and building supplies. Help with loading included.',
     image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80',
     reviewsCount: 28
@@ -321,7 +321,7 @@ const initialServices: HandymanService[] = [
     rating: 4.7,
     contactNumber: '+27 61 777 8888',
     websiteUrl: 'https://social.com/lerato-movers',
-    priceEstimate: '150 ZAR / Day assistance',
+    priceEstimate: 'R 150 / Day assistance',
     description: 'Local student helpers to assist you pack, unpack, load, and clean during your room relocations.',
     image: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&w=600&q=80',
     reviewsCount: 9
