@@ -44,7 +44,7 @@ import {
   User as UserIcon, Users, CheckCircle2, Terminal, Info,
   Star, Calendar, Clock, Briefcase, Upload,
   ShieldCheck, FileCode, Zap, Copy,
-  MessageSquare, Gavel, Award, Megaphone, Wrench, Loader
+  MessageSquare, Gavel, Award, Megaphone, Wrench, Loader, Menu
 } from 'lucide-react'
 import { 
   cleanScriptTags, 
@@ -70,6 +70,7 @@ export default function DashboardPage() {
 
   // Geolocation States
   const [locationLoading, setLocationLoading] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // Geolocation Handler
   const handleGetLiveLocation = (
@@ -1420,7 +1421,7 @@ export default function DashboardPage() {
   const tenantRequests = requests.filter(req => req.tenantId === currentUser?.id)
 
   return (
-    <div style={dashboardContainerStyle}>
+    <div className="dashboard-wrapper">
       {/* Alert Top Banner */}
       {alertNotification && (
         <div style={topAlertBannerStyle}>
@@ -1429,85 +1430,335 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Header Bar */}
-      <header className="responsive-navbar" style={navbarStyle}>
-        <div style={logoWrapperStyle}>
+      {/* Mobile Drawer Sidebar Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="sidebar-backdrop" 
+          onClick={() => setIsSidebarOpen(false)} 
+        />
+      )}
+
+      {/* LEFT NAVIGATION PANEL (Sidebar) */}
+      <aside className={`sidebar-container ${isSidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-logo">
           <Shield size={24} color="#D4AF37" />
-          <span style={logoTextStyle}>THE RESIDENT</span>
-        </div>
-        
-        <div className="responsive-navbar-user" style={userInfoStyle}>
-          <span style={roleBadgeStyle}>{currentUser.role.toUpperCase()}</span>
-          <span style={userNameStyle}>{currentUser.name}</span>
-          
+          <span className="sidebar-logo-text">THE RESIDENT</span>
           <button 
-            style={secConsoleToggleStyle} 
+            className="mobile-menu-btn" 
+            onClick={() => setIsSidebarOpen(false)}
+            style={{ 
+              background: 'transparent', 
+              border: 'none', 
+              color: '#aaa', 
+              marginLeft: 'auto',
+              cursor: 'pointer',
+              padding: '0.2rem'
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Profile Card / Widget */}
+        <div className="sidebar-profile">
+          <div className="sidebar-profile-info">
+            <div className="sidebar-profile-avatar">
+              {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+            </div>
+            <div className="sidebar-profile-details">
+              <span className="sidebar-profile-name">{currentUser.name}</span>
+              <span className="sidebar-profile-role">{currentUser.role.toUpperCase()}</span>
+            </div>
+          </div>
+          <div className="sidebar-wallet">
+            <span className="sidebar-wallet-title">Wallet</span>
+            <span className="sidebar-wallet-value">{formatCurrency(currentUser.balance || 0, 'ZAR')}</span>
+          </div>
+        </div>
+
+        {/* Primary Navigation List */}
+        <nav className="sidebar-nav">
+          {currentUser.role === 'tenant' || currentUser.role === 'visitor' ? (
+            <>
+              <button 
+                className={`sidebar-nav-item ${tenantTab === 'rooms' ? 'active' : ''}`}
+                onClick={() => {
+                  setTenantTab('rooms')
+                  setIsSidebarOpen(false)
+                }}
+              >
+                <Home size={16} /> Verified Rooms
+              </button>
+              <button 
+                className={`sidebar-nav-item ${tenantTab === 'roommates' ? 'active' : ''}`}
+                onClick={() => {
+                  setTenantTab('roommates')
+                  setIsSidebarOpen(false)
+                }}
+              >
+                <Users size={16} /> Roommate Matcher
+              </button>
+              <button 
+                className={`sidebar-nav-item ${tenantTab === 'lifts' ? 'active' : ''}`}
+                onClick={() => {
+                  setTenantTab('lifts')
+                  setIsSidebarOpen(false)
+                }}
+              >
+                <Car size={16} /> Lift Clubs
+              </button>
+              <button 
+                className={`sidebar-nav-item ${tenantTab === 'handymen' ? 'active' : ''}`}
+                onClick={() => {
+                  setTenantTab('handymen')
+                  setIsSidebarOpen(false)
+                }}
+              >
+                <Briefcase size={16} /> Handyman Services
+              </button>
+              <button 
+                className={`sidebar-nav-item ${tenantTab === 'utilities' ? 'active' : ''}`}
+                onClick={() => {
+                  setTenantTab('utilities')
+                  setIsSidebarOpen(false)
+                }}
+              >
+                <Zap size={16} /> Prepaid Utilities
+              </button>
+              <button 
+                className={`sidebar-nav-item ${tenantTab === 'community' ? 'active' : ''}`}
+                onClick={() => {
+                  setTenantTab('community')
+                }}
+              >
+                <MessageSquare size={16} /> Community Hub
+              </button>
+              {tenantTab === 'community' && (
+                <div className="sidebar-subnav">
+                  <button 
+                    className={`sidebar-subnav-item ${communitySubTab === 'notices' ? 'active' : ''}`}
+                    onClick={() => {
+                      setCommunitySubTab('notices')
+                      setIsSidebarOpen(false)
+                    }}
+                  >
+                    📣 Notice Board
+                  </button>
+                  <button 
+                    className={`sidebar-subnav-item ${communitySubTab === 'tools' ? 'active' : ''}`}
+                    onClick={() => {
+                      setCommunitySubTab('tools')
+                      setIsSidebarOpen(false)
+                    }}
+                  >
+                    🔧 Tool Library
+                  </button>
+                  <button 
+                    className={`sidebar-subnav-item ${communitySubTab === 'chores' ? 'active' : ''}`}
+                    onClick={() => {
+                      setCommunitySubTab('chores')
+                      setIsSidebarOpen(false)
+                    }}
+                  >
+                    📅 Chore Rota
+                  </button>
+                  <button 
+                    className={`sidebar-subnav-item ${communitySubTab === 'disputes' ? 'active' : ''}`}
+                    onClick={() => {
+                      setCommunitySubTab('disputes')
+                      setIsSidebarOpen(false)
+                    }}
+                  >
+                    ⚖️ Mediation Board
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <button 
+                className={`sidebar-nav-item ${landlordTab === 'portfolio' ? 'active' : ''}`}
+                onClick={() => {
+                  setLandlordTab('portfolio')
+                  setIsSidebarOpen(false)
+                }}
+              >
+                <Home size={16} /> My Properties
+              </button>
+              <button 
+                className={`sidebar-nav-item ${landlordTab === 'requests' ? 'active' : ''}`}
+                onClick={() => {
+                  setLandlordTab('requests')
+                  setIsSidebarOpen(false)
+                }}
+              >
+                <FileText size={16} /> Applications ({landlordRequests.filter(r => r.status === 'pending').length})
+              </button>
+              <button 
+                className={`sidebar-nav-item ${landlordTab === 'maintenance' ? 'active' : ''}`}
+                onClick={() => {
+                  setLandlordTab('maintenance')
+                  setIsSidebarOpen(false)
+                }}
+              >
+                <Briefcase size={16} /> B2B Network
+              </button>
+              <button 
+                className={`sidebar-nav-item ${landlordTab === 'utilities' ? 'active' : ''}`}
+                onClick={() => {
+                  setLandlordTab('utilities')
+                  setIsSidebarOpen(false)
+                }}
+              >
+                <Zap size={16} /> Manage Utilities
+              </button>
+              <button 
+                className={`sidebar-nav-item ${landlordTab === 'community' ? 'active' : ''}`}
+                onClick={() => {
+                  setLandlordTab('community')
+                }}
+              >
+                <MessageSquare size={16} /> Community Hub
+              </button>
+              {landlordTab === 'community' && (
+                <div className="sidebar-subnav">
+                  <button 
+                    className={`sidebar-subnav-item ${communitySubTab === 'notices' ? 'active' : ''}`}
+                    onClick={() => {
+                      setCommunitySubTab('notices')
+                      setIsSidebarOpen(false)
+                    }}
+                  >
+                    📣 Notice Board
+                  </button>
+                  <button 
+                    className={`sidebar-subnav-item ${communitySubTab === 'tools' ? 'active' : ''}`}
+                    onClick={() => {
+                      setCommunitySubTab('tools')
+                      setIsSidebarOpen(false)
+                    }}
+                  >
+                    🔧 Tool Library
+                  </button>
+                  <button 
+                    className={`sidebar-subnav-item ${communitySubTab === 'chores' ? 'active' : ''}`}
+                    onClick={() => {
+                      setCommunitySubTab('chores')
+                      setIsSidebarOpen(false)
+                    }}
+                  >
+                    📅 Chore Rota
+                  </button>
+                  <button 
+                    className={`sidebar-subnav-item ${communitySubTab === 'disputes' ? 'active' : ''}`}
+                    onClick={() => {
+                      setCommunitySubTab('disputes')
+                      setIsSidebarOpen(false)
+                    }}
+                  >
+                    ⚖️ Mediation Board
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </nav>
+
+        {/* Footer controls: Security Labs toggle & Logout */}
+        <div className="sidebar-footer">
+          <button 
+            className={`sidebar-nav-item ${showSecurityConsole ? 'active' : ''}`}
             onClick={() => setShowSecurityConsole(!showSecurityConsole)}
             title="Toggle Ethical Hacking Sandbox"
           >
             <Terminal size={16} /> Security Labs
           </button>
-          
-          <button onClick={handleLogout} style={logoutButtonStyle} title="Log Out">
-            <LogOut size={16} />
+          <button 
+            className="sidebar-nav-item"
+            onClick={handleLogout}
+            title="Log Out"
+          >
+            <LogOut size={16} /> Log Out
           </button>
         </div>
-      </header>
+      </aside>
 
-      {/* Main Layout Area */}
-      <div className="responsive-main-grid" style={mainContentGridStyle}>
-        
-        {/* LEFT COLUMN: Workspace tabs and directory grids */}
-        <div style={workspaceColumnStyle}>
+      {/* RIGHT-SIDE MAIN CONTENT AREA */}
+      <div className="dashboard-main-content">
+        {/* Mobile top-bar header */}
+        <header className="dashboard-top-bar">
+          <button 
+            className="mobile-menu-btn" 
+            onClick={() => setIsSidebarOpen(true)}
+            style={{ 
+              background: 'transparent', 
+              border: 'none', 
+              color: '#fff', 
+              cursor: 'pointer', 
+              marginRight: '1rem' 
+            }}
+          >
+            <Menu size={24} />
+          </button>
           
-          {currentUser.role === 'tenant' || currentUser.role === 'visitor' ? (
-            /* ================= TENANT WORKSPACE ================= */
-            <div>
-              {currentUser.role === 'visitor' && (
-                <div style={guestBannerStyle}>
-                  <Info size={16} color="#D4AF37" style={{ marginRight: 8 }} />
-                  <span>You are currently in <strong>Visitor Guest Mode</strong>. Feel free to explore verified rooms, roommate profiles, and handyman services. <button onClick={handleLogout} style={guestRegisterLinkStyle}>Register / Login</button> to unlock full privileges like requesting rooms, messaging roommates, booking lift clubs, and scheduling handymen!</span>
-                </div>
-              )}
-              {/* Workspace Navigation Tabs */}
-              <div className="responsive-tabs" style={tabHeaderContainerStyle}>
-                <button 
-                  style={tenantTab === 'rooms' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setTenantTab('rooms')}
-                >
-                  <Home size={14} style={{ marginRight: 6 }} /> Verified Rooms
-                </button>
-                <button 
-                  style={tenantTab === 'roommates' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setTenantTab('roommates')}
-                >
-                  <Users size={14} style={{ marginRight: 6 }} /> Roommate Matcher
-                </button>
-                <button 
-                  style={tenantTab === 'lifts' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setTenantTab('lifts')}
-                >
-                  <Car size={14} style={{ marginRight: 6 }} /> Lift Clubs
-                </button>
-                <button 
-                  style={tenantTab === 'handymen' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setTenantTab('handymen')}
-                >
-                  <Briefcase size={14} style={{ marginRight: 6 }} /> Handyman Services
-                </button>
-                <button 
-                  style={tenantTab === 'utilities' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setTenantTab('utilities')}
-                >
-                  <Zap size={14} style={{ marginRight: 6 }} /> Prepaid Utilities
-                </button>
-                <button 
-                  style={tenantTab === 'community' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setTenantTab('community')}
-                >
-                  <MessageSquare size={14} style={{ marginRight: 6 }} /> Community Hub
-                </button>
-              </div>
+          <h2 className="dashboard-section-title">
+            {(() => {
+              if (currentUser.role === 'tenant' || currentUser.role === 'visitor') {
+                if (tenantTab === 'rooms') return 'Verified Rooms'
+                if (tenantTab === 'roommates') return 'Roommate Matcher'
+                if (tenantTab === 'lifts') return 'Lift Clubs'
+                if (tenantTab === 'handymen') return 'Handyman Services'
+                if (tenantTab === 'utilities') return 'Prepaid Utilities'
+                if (tenantTab === 'community') {
+                  if (communitySubTab === 'notices') return 'Community Hub - Notice Board'
+                  if (communitySubTab === 'tools') return 'Community Hub - Tool Library'
+                  if (communitySubTab === 'chores') return 'Community Hub - Chore Rota'
+                  if (communitySubTab === 'disputes') return 'Community Hub - Mediation Board'
+                }
+              } else {
+                if (landlordTab === 'portfolio') return 'My Properties'
+                if (landlordTab === 'requests') return 'Applications Received'
+                if (landlordTab === 'maintenance') return 'B2B Maintenance Network'
+                if (landlordTab === 'utilities') return 'Manage Utilities'
+                if (landlordTab === 'community') {
+                  if (communitySubTab === 'notices') return 'Community Hub - Notice Board'
+                  if (communitySubTab === 'tools') return 'Community Hub - Tool Library'
+                  if (communitySubTab === 'chores') return 'Community Hub - Chore Rota'
+                  if (communitySubTab === 'disputes') return 'Community Hub - Mediation Board'
+                }
+              }
+              return 'Dashboard'
+            })()}
+          </h2>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', letterSpacing: '1px' }} className="mobile-menu-btn">
+              {currentUser.role}
+            </span>
+            <div style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.2)', padding: '0.4rem 0.8rem', borderRadius: '8px', color: '#D4AF37', fontWeight: 'bold', fontSize: '0.9rem' }}>
+              Wallet: {formatCurrency(currentUser.balance || 0, 'ZAR')}
+            </div>
+          </div>
+        </header>
+
+        {/* Dashboard Page Body */}
+        <div className="dashboard-page-body">
+          {/* Main content grid */}
+          <div className="responsive-main-grid" style={{ 
+            ...mainContentGridStyle, 
+            gridTemplateColumns: showSecurityConsole ? '3fr 1.5fr' : '1fr' 
+          }}>
+            {/* LEFT COLUMN: Workspace tabs and directory grids */}
+            <div style={workspaceColumnStyle}>
+              {currentUser.role === 'tenant' || currentUser.role === 'visitor' ? (
+                /* ================= TENANT WORKSPACE ================= */
+                <div>
+                  {currentUser.role === 'visitor' && (
+                    <div style={guestBannerStyle}>
+                      <Info size={16} color="#D4AF37" style={{ marginRight: 8 }} />
+                      <span>You are currently in <strong>Visitor Guest Mode</strong>. Feel free to explore verified rooms, roommate profiles, and handyman services. <button onClick={handleLogout} style={guestRegisterLinkStyle}>Register / Login</button> to unlock full privileges like requesting rooms, messaging roommates, booking lift clubs, and scheduling handymen!</span>
+                    </div>
+                  )}
 
               {/* TAB 1: Rooms Listings */}
               {tenantTab === 'rooms' && (
@@ -2090,39 +2341,6 @@ export default function DashboardPage() {
           ) : (
             /* ================= LANDLORD WORKSPACE ================= */
             <div>
-              {/* Workspace Navigation Tabs */}
-              <div className="responsive-tabs" style={tabHeaderContainerStyle}>
-                <button 
-                  style={landlordTab === 'portfolio' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setLandlordTab('portfolio')}
-                >
-                  <Home size={14} style={{ marginRight: 6 }} /> My Properties
-                </button>
-                <button 
-                  style={landlordTab === 'requests' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setLandlordTab('requests')}
-                >
-                  <FileText size={14} style={{ marginRight: 6 }} /> Applications Received ({landlordRequests.filter(r => r.status === 'pending').length})
-                </button>
-                <button 
-                  style={landlordTab === 'maintenance' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setLandlordTab('maintenance')}
-                >
-                  <Briefcase size={14} style={{ marginRight: 6 }} /> B2B Maintenance Network
-                </button>
-                <button 
-                  style={landlordTab === 'utilities' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setLandlordTab('utilities')}
-                >
-                  <Zap size={14} style={{ marginRight: 6 }} /> Manage Utilities
-                </button>
-                <button 
-                  style={landlordTab === 'community' ? activeTabBtnStyle : inactiveTabBtnStyle}
-                  onClick={() => setLandlordTab('community')}
-                >
-                  <MessageSquare size={14} style={{ marginRight: 6 }} /> Community Hub
-                </button>
-              </div>
 
               {/* TAB 1: Properties Portfolio */}
               {landlordTab === 'portfolio' && (
@@ -2746,7 +2964,9 @@ export default function DashboardPage() {
 
         </div>
 
-      </div>
+      </div> {/* Closing responsive-main-grid */}
+      </div> {/* Closing dashboard-page-body */}
+      </div> {/* Closing dashboard-main-content */}
 
       {/* ================= MODAL: CREATE LISTING ================= */}
       {showCreateModal && (
@@ -3603,83 +3823,6 @@ const loadingStyle: React.CSSProperties = {
   letterSpacing: '2px'
 }
 
-const dashboardContainerStyle: React.CSSProperties = {
-  background: '#0d0d0d',
-  minHeight: '100vh',
-  width: '100%',
-  color: '#ededed',
-  fontFamily: 'var(--font-body), sans-serif',
-  boxSizing: 'border-box'
-}
-
-const navbarStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '1rem 2rem',
-  background: 'rgba(255, 255, 255, 0.02)',
-  borderBottom: '1px solid rgba(212, 175, 55, 0.1)',
-  backdropFilter: 'blur(10px)'
-}
-
-const logoWrapperStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.8rem'
-}
-
-const logoTextStyle: React.CSSProperties = {
-  fontSize: '1.3rem',
-  letterSpacing: '3px',
-  fontFamily: 'var(--font-heading), serif',
-  color: '#D4AF37'
-}
-
-const userInfoStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '1rem'
-}
-
-const roleBadgeStyle: React.CSSProperties = {
-  background: 'rgba(212, 175, 55, 0.15)',
-  border: '1px solid #D4AF37',
-  color: '#D4AF37',
-  borderRadius: '20px',
-  padding: '0.2rem 0.8rem',
-  fontSize: '0.7rem',
-  fontWeight: 'bold',
-  letterSpacing: '1px'
-}
-
-const userNameStyle: React.CSSProperties = {
-  fontSize: '0.9rem',
-  fontWeight: 'bold'
-}
-
-const secConsoleToggleStyle: React.CSSProperties = {
-  background: 'rgba(255, 255, 255, 0.05)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  color: '#aaa',
-  borderRadius: '6px',
-  padding: '0.4rem 0.8rem',
-  cursor: 'pointer',
-  fontSize: '0.8rem',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '6px',
-  transition: 'all 0.3s ease'
-}
-
-const logoutButtonStyle: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: '#f43f5e',
-  cursor: 'pointer',
-  padding: '0.5rem',
-  display: 'flex',
-  alignItems: 'center'
-}
 
 const mainContentGridStyle: React.CSSProperties = {
   display: 'grid',
@@ -4507,12 +4650,6 @@ const inputGroupStyle: React.CSSProperties = {
 }
 
 // B2B & P2P Custom Styling declarations
-const tabHeaderContainerStyle: React.CSSProperties = {
-  display: 'flex',
-  borderBottom: '1px solid rgba(255,255,255,0.06)',
-  gap: '10px',
-  marginBottom: '1rem'
-}
 
 const activeTabBtnStyle: React.CSSProperties = {
   background: 'rgba(212,175,55,0.08)',
