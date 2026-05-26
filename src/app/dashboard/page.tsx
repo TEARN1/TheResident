@@ -20,19 +20,31 @@ import {
   addToken,
   buyToken,
   deductBalance,
+  addTool,
+  rentTool,
+  returnTool,
+  completeChore,
+  addNoticeEvent,
+  rsvpToEvent,
+  addDispute,
+  updateDisputeStatus,
   RootState, 
   Listing, 
   RoomRequest,
   HandymanService,
   ServiceDispatch,
-  UtilityToken
+  UtilityToken,
+  ToolItem,
+  CommunityDispute,
+  NoticeEvent
 } from '../../store'
 import { 
   Shield, LogOut, Home, Search, Plus, Check, X, AlertTriangle, 
   Wifi, Car, FileText, Send, MapPin, Eye, 
   User as UserIcon, Users, CheckCircle2, Terminal, Info,
   Star, Calendar, Clock, Briefcase, Upload,
-  ShieldCheck, FileCode, Zap, Copy
+  ShieldCheck, FileCode, Zap, Copy,
+  MessageSquare, Gavel, Award, Megaphone, Wrench
 } from 'lucide-react'
 import { 
   cleanScriptTags, 
@@ -64,9 +76,17 @@ export default function DashboardPage() {
   const dispatches = useSelector((state: RootState) => state.networking.dispatches)
   const utilityTokens = useSelector((state: RootState) => state.utilities.tokens)
 
+  // Community Hub collections
+  const communityTools = useSelector((state: RootState) => state.community.tools)
+  const communityChores = useSelector((state: RootState) => state.community.chores)
+  const communityNotices = useSelector((state: RootState) => state.community.notices)
+  const communityDisputes = useSelector((state: RootState) => state.community.disputes)
+  const reputationScores = useSelector((state: RootState) => state.community.reputationScores)
+
   // Sub-tabs
-  const [tenantTab, setTenantTab] = useState<'rooms' | 'roommates' | 'lifts' | 'handymen' | 'utilities'>('rooms')
-  const [landlordTab, setLandlordTab] = useState<'portfolio' | 'requests' | 'maintenance' | 'utilities'>('portfolio')
+  const [tenantTab, setTenantTab] = useState<'rooms' | 'roommates' | 'lifts' | 'handymen' | 'utilities' | 'community'>('rooms')
+  const [landlordTab, setLandlordTab] = useState<'portfolio' | 'requests' | 'maintenance' | 'utilities' | 'community'>('portfolio')
+  const [communitySubTab, setCommunitySubTab] = useState<'notices' | 'tools' | 'chores' | 'disputes'>('notices')
 
   // Landlord Utility Form States
   const [utilityMeter, setUtilityMeter] = useState('')
@@ -95,6 +115,31 @@ export default function DashboardPage() {
   const [selectedDispatchForProof, setSelectedDispatchForProof] = useState<ServiceDispatch | null>(null)
   const [proofFileName, setProofFileName] = useState('')
   const [proofFileError, setProofFileError] = useState<string | null>(null)
+
+  // Community Notice Board States
+  const [noticeTitle, setNoticeTitle] = useState('')
+  const [noticeDesc, setNoticeDesc] = useState('')
+  const [noticeType, setNoticeType] = useState<'notice' | 'event'>('notice')
+  const [noticeEventDate, setNoticeEventDate] = useState('')
+
+  // Community Tool Share States
+  const [showToolRegModal, setShowToolRegModal] = useState(false)
+  const [toolTitle, setToolTitle] = useState('')
+  const [toolDesc, setToolDesc] = useState('')
+  const [toolPrice, setToolPrice] = useState<number>(30)
+  const [toolDeposit, setToolDeposit] = useState<number>(100)
+  const [toolLocation, setToolLocation] = useState('Ivory Park Ext 2')
+
+  // Community Dispute States
+  const [showDisputeModal, setShowDisputeModal] = useState(false)
+  const [disputeTitle, setDisputeTitle] = useState('')
+  const [disputeDesc, setDisputeDesc] = useState('')
+  const [disputeCategory, setDisputeCategory] = useState<'Noise' | 'Messiness' | 'Utility overuse' | 'Chore avoidance' | 'Security breach' | 'Other'>('Noise')
+  const [disputeAgainst, setDisputeAgainst] = useState('')
+
+  // Mediation States
+  const [resolvingDisputeId, setResolvingDisputeId] = useState<string | null>(null)
+  const [resolutionText, setResolutionText] = useState('')
 
   // Load session from cookie on startup or redirect if missing
   useEffect(() => {
@@ -542,6 +587,223 @@ export default function DashboardPage() {
     setTimeout(() => setAlertNotification(null), 5000)
   }
 
+  // Post Community Notice or Event
+  const handlePostNotice = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (currentUser.role === 'visitor') {
+      setAlertNotification('Guest mode restriction: Please register or log in to post announcements!')
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+    if (!logApiAccess('Post community announcement')) return
+
+    const cleanTitle = cleanScriptTags(noticeTitle)
+    const cleanDesc = cleanScriptTags(noticeDesc)
+
+    const scanTitle = scanInput(cleanTitle)
+    const scanDesc = scanInput(cleanDesc)
+
+    if (!scanTitle.safe || !scanDesc.safe) {
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: 'Notice posting blocked: Malicious content',
+        type: 'xss_blocked',
+        details: `Blocked title: "${noticeTitle}" or description: "${noticeDesc}"`
+      }))
+      setAlertNotification('Security Block: Malicious scripts/SQL detected in notice fields!')
+      setTimeout(() => setAlertNotification(null), 5000)
+      return
+    }
+
+    const newNotice: NoticeEvent = {
+      id: `not-${Date.now()}`,
+      title: cleanTitle,
+      description: cleanDesc,
+      type: noticeType,
+      postedBy: currentUser.name,
+      postedById: currentUser.id,
+      timestamp: new Date().toISOString(),
+      eventDate: noticeType === 'event' ? noticeEventDate || 'TBD' : undefined,
+      rsvps: []
+    }
+
+    dispatch(addNoticeEvent(newNotice))
+    setNoticeTitle('')
+    setNoticeDesc('')
+    setNoticeEventDate('')
+    setAlertNotification('Notice posted successfully to the community wall!')
+    setTimeout(() => setAlertNotification(null), 4000)
+  }
+
+  // RSVP to Event
+  const handleRSVPToEvent = (noticeId: string) => {
+    if (currentUser.role === 'visitor') {
+      setAlertNotification('Guest mode restriction: Please register or log in to RSVP!')
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+    if (!logApiAccess('RSVP to community event')) return
+    dispatch(rsvpToEvent({ noticeId, userName: currentUser.name }))
+  }
+
+  // Register a Tool in P2P Tool Sharing
+  const handleRegisterTool = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (currentUser.role === 'visitor') {
+      setAlertNotification('Guest mode restriction: Please register or log in to list tools!')
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+    if (!logApiAccess('Register tool for rent')) return
+
+    const cleanTitle = cleanScriptTags(toolTitle)
+    const cleanDesc = cleanScriptTags(toolDesc)
+
+    const newTool: ToolItem = {
+      id: `tool-${Date.now()}`,
+      ownerId: currentUser.id,
+      ownerName: currentUser.name,
+      title: cleanTitle,
+      description: cleanDesc,
+      pricePerDay: toolPrice,
+      currency: 'ZAR',
+      deposit: toolDeposit,
+      location: toolLocation,
+      status: 'available'
+    }
+
+    dispatch(addTool(newTool))
+    setShowToolRegModal(false)
+    setToolTitle('')
+    setToolDesc('')
+    setToolPrice(30)
+    setToolDeposit(100)
+    setAlertNotification('Your tool has been registered and is available for hire!')
+    setTimeout(() => setAlertNotification(null), 4000)
+  }
+
+  // Rent a Tool
+  const handleRentTool = (tool: ToolItem) => {
+    if (currentUser.role === 'visitor') {
+      setAlertNotification('Guest mode restriction: Please register or log in to hire tools!')
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+    if (currentUser.id === tool.ownerId) {
+      setAlertNotification('You cannot rent your own tool!')
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+    if (currentUser.balance < tool.pricePerDay) {
+      setAlertNotification('Insufficient funds in your wallet to rent this tool!')
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+    if (!logApiAccess('Rent tool from neighbor')) return
+
+    dispatch(deductBalance(tool.pricePerDay))
+    const returnDate = new Date()
+    returnDate.setDate(returnDate.getDate() + 1)
+    
+    dispatch(rentTool({
+      toolId: tool.id,
+      rentedBy: currentUser.id,
+      rentedByName: currentUser.name,
+      rentedUntil: returnDate.toLocaleDateString()
+    }))
+
+    dispatch(addLog({
+      ip: '127.0.0.1',
+      action: `Rented tool: ${tool.title}`,
+      type: 'auth_success',
+      details: `User ${currentUser.name} rented tool from ${tool.ownerName}. Cost: ${tool.pricePerDay} ZAR.`
+    }))
+
+    setAlertNotification(`Successfully hired ${tool.title}! ${tool.pricePerDay} ZAR deducted from wallet.`)
+    setTimeout(() => setAlertNotification(null), 5000)
+  }
+
+  // Return a rented tool
+  const handleReturnTool = (toolId: string, toolTitleStr: string) => {
+    if (!logApiAccess('Return rented tool')) return
+    dispatch(returnTool(toolId))
+    setAlertNotification(`Tool "${toolTitleStr}" returned successfully!`)
+    setTimeout(() => setAlertNotification(null), 4000)
+  }
+
+  // Complete Chore task
+  const handleCompleteChore = (choreId: string, taskName: string) => {
+    if (currentUser.role === 'visitor') {
+      setAlertNotification('Guest mode restriction: Please register or log in to complete tasks!')
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+    if (!logApiAccess('Complete assigned chore')) return
+    
+    dispatch(completeChore({
+      choreId,
+      completedAt: new Date().toISOString()
+    }))
+
+    setAlertNotification(`Awesome! Task "${taskName}" completed. You earned +10 Reputation Points!`)
+    setTimeout(() => setAlertNotification(null), 4000)
+  }
+
+  // File Dispute/Mediation request
+  const handleCreateDispute = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (currentUser.role === 'visitor') {
+      setAlertNotification('Guest mode restriction: Please register or log in to file disputes!')
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+    if (!logApiAccess('File community dispute')) return
+
+    const cleanTitle = cleanScriptTags(disputeTitle)
+    const cleanDesc = cleanScriptTags(disputeDesc)
+
+    const newDispute: CommunityDispute = {
+      id: `disp-${Date.now()}`,
+      title: cleanTitle,
+      description: cleanDesc,
+      category: disputeCategory,
+      reportedBy: currentUser.name,
+      reportedById: currentUser.id,
+      againstUser: disputeAgainst || 'Unspecified Resident',
+      againstUserId: `against-${Date.now()}`,
+      mediatorId: 'landlord-1',
+      mediatorName: 'Amahle Nkwali',
+      status: 'pending',
+      timestamp: new Date().toLocaleDateString()
+    }
+
+    dispatch(addDispute(newDispute))
+    setShowDisputeModal(false)
+    setDisputeTitle('')
+    setDisputeDesc('')
+    setDisputeAgainst('')
+    setAlertNotification('Dispute logged successfully. Landlord mediator has been notified.')
+    setTimeout(() => setAlertNotification(null), 5000)
+  }
+
+  // Mediate/Resolve Dispute (Landlord only)
+  const handleResolveDispute = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!resolvingDisputeId) return
+    if (!logApiAccess('Resolve community dispute')) return
+
+    dispatch(updateDisputeStatus({
+      disputeId: resolvingDisputeId,
+      status: 'resolved',
+      resolutionDetails: resolutionText
+    }))
+
+    setResolvingDisputeId(null)
+    setResolutionText('')
+    setAlertNotification('Dispute has been officially marked as resolved.')
+    setTimeout(() => setAlertNotification(null), 4000)
+  }
+
 
 
   // Real-time Sanitization Preview handler
@@ -672,8 +934,416 @@ export default function DashboardPage() {
     return true
   })
 
-  const landlordRequests = requests.filter(req => req.landlordId === currentUser.id)
-  const tenantRequests = requests.filter(req => req.tenantId === currentUser.id)
+  // Helper to render the Community Hub contents (Notice Board, Tool Share, Chore Rota, Disputes)
+  const renderCommunityHubContents = () => {
+    const activeSubTabBtnStyle = {
+      ...activeTabBtnStyle,
+      padding: '0.4rem 0.8rem',
+      fontSize: '0.8rem',
+      borderRadius: '4px'
+    }
+    const inactiveSubTabBtnStyle = {
+      ...inactiveTabBtnStyle,
+      padding: '0.4rem 0.8rem',
+      fontSize: '0.8rem',
+      borderRadius: '4px'
+    }
+
+    return (
+      <div>
+        <div style={landlordHeaderRowStyle}>
+          <div>
+            <h2 style={sectionHeaderStyle}>Co-Living Community Hub</h2>
+            <p style={{ ...p2pDescStyle, margin: '0.2rem 0 0 0', color: '#888' }}>
+              Connect with fellow residents, rent shared tools, coordinate chore rotations, and resolve disputes.
+            </p>
+          </div>
+          <div style={walletBalanceDisplayStyle}>
+            <span style={{ fontSize: '0.7rem', color: '#aaa', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>My Wallet Balance</span>
+            <strong style={{ fontSize: '1.2rem', color: '#D4AF37' }}>{currentUser?.balance || 0} ZAR</strong>
+          </div>
+        </div>
+
+        {/* Sub-tab navigation */}
+        <div style={{ display: 'flex', gap: '0.5rem', margin: '1.2rem 0', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <button 
+            style={communitySubTab === 'notices' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
+            onClick={() => setCommunitySubTab('notices')}
+          >
+            <Megaphone size={14} style={{ marginRight: 6 }} /> Notice Board & Events
+          </button>
+          <button 
+            style={communitySubTab === 'tools' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
+            onClick={() => setCommunitySubTab('tools')}
+          >
+            <Wrench size={14} style={{ marginRight: 6 }} /> Tool Library (P2P)
+          </button>
+          <button 
+            style={communitySubTab === 'chores' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
+            onClick={() => setCommunitySubTab('chores')}
+          >
+            <Award size={14} style={{ marginRight: 6 }} /> Chore Scheduler
+          </button>
+          <button 
+            style={communitySubTab === 'disputes' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
+            onClick={() => setCommunitySubTab('disputes')}
+          >
+            <Gavel size={14} style={{ marginRight: 6 }} /> Disputes & Mediation
+          </button>
+        </div>
+
+        {/* Sub-tab 1: Notices & Events */}
+        {communitySubTab === 'notices' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
+            {/* Notices List */}
+            <div>
+              <h3 style={{ ...panelTitleStyle, marginTop: 0 }}>Community Bulletins</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {communityNotices.map(notice => (
+                  <div key={notice.id} className="glass-panel" style={{ padding: '1.2rem', borderRadius: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ 
+                        fontSize: '0.65rem', 
+                        fontWeight: 'bold', 
+                        padding: '0.1rem 0.4rem', 
+                        borderRadius: '4px',
+                        background: notice.type === 'event' ? 'rgba(212, 175, 55, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                        border: `1px solid ${notice.type === 'event' ? '#D4AF37' : '#3b82f6'}`,
+                        color: notice.type === 'event' ? '#D4AF37' : '#3b82f6'
+                      }}>
+                        {notice.type.toUpperCase()}
+                      </span>
+                      <span style={{ fontSize: '0.7rem', color: '#888' }}>
+                        Posted: {new Date(notice.timestamp).toLocaleDateString()} by {notice.postedBy}
+                      </span>
+                    </div>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '0.95rem' }}>{notice.title}</h4>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#ccc', lineHeight: '1.4' }}>{notice.description}</p>
+                    
+                    {notice.type === 'event' && (
+                      <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.8rem', color: '#D4AF37' }}>
+                          📅 <strong>Date:</strong> {notice.eventDate}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#888' }}>
+                            {notice.rsvps.length} attending {notice.rsvps.length > 0 && `(${notice.rsvps.join(', ')})`}
+                          </span>
+                          <button 
+                            className="btn-gold" 
+                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                            onClick={() => handleRSVPToEvent(notice.id)}
+                          >
+                            {notice.rsvps.includes(currentUser?.name || '') ? 'Cancel RSVP' : 'RSVP'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Post Notice Form */}
+            <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px', height: 'fit-content' }}>
+              <h3 style={{ ...panelTitleStyle, borderBottom: 'none', marginBottom: '1rem', marginTop: 0 }}>Post Announcement</h3>
+              <form onSubmit={handlePostNotice} style={formStyleStyle}>
+                <div style={inputGroupStyle}>
+                  <label style={labelStyleStyle}>Announcement Title</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="e.g. Water cut this Thursday / Found key ring" 
+                    value={noticeTitle}
+                    onChange={(e) => setNoticeTitle(e.target.value)}
+                    style={modalInputStyle}
+                  />
+                </div>
+                <div style={inputGroupStyle}>
+                  <label style={labelStyleStyle}>Post Type</label>
+                  <select 
+                    value={noticeType}
+                    onChange={(e) => setNoticeType(e.target.value as 'notice' | 'event')}
+                    style={modalSelectStyle}
+                  >
+                    <option value="notice">General Notice</option>
+                    <option value="event">Community Event / RSVP</option>
+                  </select>
+                </div>
+                {noticeType === 'event' && (
+                  <div style={inputGroupStyle}>
+                    <label style={labelStyleStyle}>Event Date / Time</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Saturday, 30 May at 2:00 PM" 
+                      value={noticeEventDate}
+                      onChange={(e) => setNoticeEventDate(e.target.value)}
+                      style={modalInputStyle}
+                    />
+                  </div>
+                )}
+                <div style={inputGroupStyle}>
+                  <label style={labelStyleStyle}>Details / Description</label>
+                  <textarea 
+                    rows={3} 
+                    required 
+                    placeholder="Write announcement details here..." 
+                    value={noticeDesc}
+                    onChange={(e) => setNoticeDesc(e.target.value)}
+                    style={modalTextareaStyle}
+                  />
+                </div>
+                <button type="submit" className="btn-gold" style={{ ...modalSubmitBtnStyle, marginTop: '0.5rem' }}>
+                  Publish to Notice Board
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Sub-tab 2: Tool Sharing */}
+        {communitySubTab === 'tools' && (
+          <div>
+            <div style={landlordHeaderRowStyle}>
+              <h3 style={{ ...panelTitleStyle, borderBottom: 'none', margin: 0 }}>Available Tool Sharing Library</h3>
+              <button className="btn-gold" onClick={() => setShowToolRegModal(true)}>
+                <Plus size={14} style={{ marginRight: 6 }} /> Register a Tool for Hire
+              </button>
+            </div>
+            
+            <div style={{ ...gridStyle, marginTop: '1.2rem' }}>
+              {communityTools.map(tool => (
+                <div key={tool.id} className="glass-panel" style={cardStyle}>
+                  <div style={{ ...cardBodyStyle, gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#fff' }}>{tool.title}</h4>
+                      <span style={{ color: '#D4AF37', fontWeight: 'bold' }}>{tool.pricePerDay} ZAR / day</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#aaa' }}>
+                      <strong>Owner:</strong> {tool.ownerName} | <strong>Location:</strong> {tool.location}
+                    </p>
+                    <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#ccc', minHeight: '36px' }}>{tool.description}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                      <span style={{ 
+                        fontSize: '0.65rem', 
+                        fontWeight: 'bold', 
+                        borderRadius: '4px', 
+                        padding: '0.1rem 0.3rem',
+                        background: tool.status === 'available' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                        border: `1px solid ${tool.status === 'available' ? '#22c55e' : '#ef4444'}`,
+                        color: tool.status === 'available' ? '#22c55e' : '#ef4444'
+                      }}>
+                        {tool.status.toUpperCase()}
+                      </span>
+                      {tool.status === 'available' ? (
+                        <button 
+                          className="btn-gold" 
+                          style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                          onClick={() => handleRentTool(tool)}
+                        >
+                          Hire Tool
+                        </button>
+                      ) : (
+                        tool.rentedBy === currentUser?.id ? (
+                          <button 
+                            className="btn-primary" 
+                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', background: '#ef4444' }}
+                            onClick={() => handleReturnTool(tool.id, tool.title)}
+                          >
+                            Return Tool
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '0.7rem', color: '#888' }}>
+                            Hired by {tool.rentedByName} until {tool.rentedUntil}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sub-tab 3: Chore Scheduler */}
+        {communitySubTab === 'chores' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
+            {/* Chores Table */}
+            <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
+              <h3 style={{ ...panelTitleStyle, borderBottom: 'none', marginTop: 0 }}>Weekly Roommate Chores Rota</h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#D4AF37' }}>
+                      <th style={{ padding: '0.6rem 0.4rem' }}>Day</th>
+                      <th style={{ padding: '0.6rem 0.4rem' }}>Roommate</th>
+                      <th style={{ padding: '0.6rem 0.4rem' }}>Task</th>
+                      <th style={{ padding: '0.6rem 0.4rem' }}>Status</th>
+                      <th style={{ padding: '0.6rem 0.4rem', textAlign: 'right' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {communityChores.map(chore => (
+                      <tr key={chore.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td style={{ padding: '0.6rem 0.4rem', fontWeight: 'bold' }}>{chore.dayOfWeek}</td>
+                        <td style={{ padding: '0.6rem 0.4rem' }}>{chore.roommateName}</td>
+                        <td style={{ padding: '0.6rem 0.4rem', color: '#ccc' }}>{chore.taskName}</td>
+                        <td style={{ padding: '0.6rem 0.4rem' }}>
+                          <span style={{ 
+                            fontSize: '0.6rem', 
+                            padding: '0.1rem 0.3rem', 
+                            borderRadius: '3px',
+                            background: chore.status === 'completed' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                            border: `1px solid ${chore.status === 'completed' ? '#22c55e' : '#ef4444'}`,
+                            color: chore.status === 'completed' ? '#22c55e' : '#ef4444'
+                          }}>
+                            {chore.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.6rem 0.4rem', textAlign: 'right' }}>
+                          {chore.status === 'pending' && chore.roommateId === currentUser?.id && (
+                            <button 
+                              className="btn-gold" 
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                              onClick={() => handleCompleteChore(chore.id, chore.taskName)}
+                            >
+                              Done
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Scoreboard */}
+            <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px', height: 'fit-content' }}>
+              <h3 style={{ ...panelTitleStyle, borderBottom: 'none', marginTop: 0, color: '#D4AF37' }}>🏅 Reputation Leaderboard</h3>
+              <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 1rem 0' }}>Complete your assigned chores on time to earn +10 reputation points!</p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {Object.entries(reputationScores)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([uId, score], idx) => {
+                    const uName = uId === 'tenant-100' ? 'Global Tenant' : uId === 'rm-1' ? 'Lerato Modise' : 'Unknown Resident'
+                    return (
+                      <div key={uId} style={{ display: 'flex', justifyItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 0.8rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <strong style={{ color: '#D4AF37', marginRight: '0.8rem' }}>#{idx + 1}</strong>
+                        <span style={{ color: '#fff', fontSize: '0.8rem' }}>{uName}</span>
+                        <span style={{ marginLeft: 'auto', fontWeight: 'bold', color: '#22c55e', fontSize: '0.8rem' }}>{score} XP</span>
+                      </div>
+                    )
+                  })
+                }
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sub-tab 4: Disputes Board */}
+        {communitySubTab === 'disputes' && (
+          <div>
+            <div style={landlordHeaderRowStyle}>
+              <h3 style={{ ...panelTitleStyle, borderBottom: 'none', margin: 0 }}>Mediation & Conflict Resolution Ledger</h3>
+              {currentUser?.role !== 'landlord' && (
+                <button className="btn-gold" onClick={() => setShowDisputeModal(true)}>
+                  <Plus size={14} style={{ marginRight: 6 }} /> Report a Dispute / Issue
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.2rem' }}>
+              {communityDisputes.length > 0 ? (
+                communityDisputes.map(dispute => (
+                  <div key={dispute.id} className="glass-panel" style={{ padding: '1.2rem', borderRadius: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <span style={{ 
+                          fontSize: '0.6rem', 
+                          fontWeight: 'bold', 
+                          borderRadius: '4px', 
+                          padding: '0.1rem 0.3rem',
+                          background: dispute.status === 'resolved' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          border: `1px solid ${dispute.status === 'resolved' ? '#22c55e' : '#ef4444'}`,
+                          color: dispute.status === 'resolved' ? '#22c55e' : '#ef4444'
+                        }}>
+                          {dispute.status.toUpperCase()}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: '#D4AF37' }}>
+                          Category: <strong>{dispute.category}</strong>
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#888' }}>
+                        Filed: {dispute.timestamp}
+                      </span>
+                    </div>
+
+                    <h4 style={{ margin: '0 0 0.4rem 0', color: '#fff', fontSize: '0.95rem' }}>{dispute.title}</h4>
+                    <p style={{ margin: '0 0 0.8rem 0', fontSize: '0.8rem', color: '#ccc', lineHeight: '1.4' }}>
+                      <strong>Details:</strong> {dispute.description}
+                    </p>
+
+                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '6px', fontSize: '0.75rem' }}>
+                      <p style={{ margin: '0 0 0.3rem 0', color: '#888' }}>
+                        <strong>Complainant:</strong> {dispute.reportedBy} | <strong>Against:</strong> {dispute.againstUser}
+                      </p>
+                      <p style={{ margin: 0, color: '#888' }}>
+                        <strong>Assigned Mediator:</strong> {dispute.mediatorName} (Landlord)
+                      </p>
+                    </div>
+
+                    {dispute.status === 'resolved' && dispute.resolutionDetails && (
+                      <div style={{ marginTop: '0.8rem', background: 'rgba(34, 197, 94, 0.05)', border: '1px dashed #22c55e', padding: '0.8rem', borderRadius: '6px', fontSize: '0.8rem' }}>
+                        <strong style={{ color: '#22c55e' }}>✅ Resolution Action Taken by Mediator:</strong>
+                        <p style={{ margin: '0.2rem 0 0 0', color: '#ccc' }}>&quot;{dispute.resolutionDetails}&quot;</p>
+                      </div>
+                    )}
+
+                    {dispute.status === 'pending' && currentUser?.role === 'landlord' && (
+                      <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.8rem' }}>
+                        {resolvingDisputeId === dispute.id ? (
+                          <form onSubmit={handleResolveDispute}>
+                            <textarea 
+                              rows={2}
+                              required
+                              placeholder="Describe mediation actions or resolution details..."
+                              value={resolutionText}
+                              onChange={(e) => setResolutionText(e.target.value)}
+                              style={modalTextareaStyle}
+                            />
+                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                              <button type="submit" className="btn-gold" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}>Submit Resolution</button>
+                              <button type="button" className="btn-primary" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }} onClick={() => setResolvingDisputeId(null)}>Cancel</button>
+                            </div>
+                          </form>
+                        ) : (
+                          <button 
+                            className="btn-gold" 
+                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                            onClick={() => setResolvingDisputeId(dispute.id)}
+                          >
+                            Resolve Dispute / Add Mediation Details
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div style={emptyStateStyle}>No disputes filed. This community is peaceful!</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const landlordRequests = requests.filter(req => req.landlordId === currentUser?.id)
+  const tenantRequests = requests.filter(req => req.tenantId === currentUser?.id)
 
   return (
     <div style={dashboardContainerStyle}>
@@ -756,6 +1426,12 @@ export default function DashboardPage() {
                   onClick={() => setTenantTab('utilities')}
                 >
                   <Zap size={14} style={{ marginRight: 6 }} /> Prepaid Utilities
+                </button>
+                <button 
+                  style={tenantTab === 'community' ? activeTabBtnStyle : inactiveTabBtnStyle}
+                  onClick={() => setTenantTab('community')}
+                >
+                  <MessageSquare size={14} style={{ marginRight: 6 }} /> Community Hub
                 </button>
               </div>
 
@@ -1305,6 +1981,12 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
+              {/* TAB 6: Community Hub */}
+              {tenantTab === 'community' && (
+                <div>
+                  {renderCommunityHubContents()}
+                </div>
+              )}
 
             </div>
           ) : (
@@ -1335,6 +2017,12 @@ export default function DashboardPage() {
                   onClick={() => setLandlordTab('utilities')}
                 >
                   <Zap size={14} style={{ marginRight: 6 }} /> Manage Utilities
+                </button>
+                <button 
+                  style={landlordTab === 'community' ? activeTabBtnStyle : inactiveTabBtnStyle}
+                  onClick={() => setLandlordTab('community')}
+                >
+                  <MessageSquare size={14} style={{ marginRight: 6 }} /> Community Hub
                 </button>
               </div>
 
@@ -1704,6 +2392,12 @@ export default function DashboardPage() {
                       )}
                     </div>
                   </div>
+                </div>
+              )}
+              {/* TAB 5: Community Hub */}
+              {landlordTab === 'community' && (
+                <div>
+                  {renderCommunityHubContents()}
                 </div>
               )}
 
@@ -2599,6 +3293,165 @@ export default function DashboardPage() {
                 style={modalSubmitBtnStyle}
               >
                 Validate Document & Complete Contract
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ================= MODAL: REGISTER A TOOL ================= */}
+      {showToolRegModal && (
+        <div style={modalBackdropStyle}>
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="glass-panel" 
+            style={modalPanelStyle}
+          >
+            <div style={modalHeaderStyle}>
+              <h3>Register a Tool for Shared Rent</h3>
+              <button onClick={() => setShowToolRegModal(false)} style={closeBtnStyle}><X size={16} /></button>
+            </div>
+
+            <form onSubmit={handleRegisterTool} style={formStyleStyle}>
+              <div style={rowStyleStyle}>
+                <div style={inputGroupStyle}>
+                  <label style={labelStyleStyle}>Tool Name / Title</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="e.g. Cordless Lawn Mower" 
+                    value={toolTitle}
+                    onChange={(e) => setToolTitle(e.target.value)}
+                    style={modalInputStyle}
+                  />
+                </div>
+                <div style={inputGroupStyle}>
+                  <label style={labelStyleStyle}>Price per Day (ZAR)</label>
+                  <input 
+                    type="number" 
+                    required 
+                    min={5}
+                    value={toolPrice}
+                    onChange={(e) => setToolPrice(parseInt(e.target.value) || 0)}
+                    style={modalInputStyle}
+                  />
+                </div>
+              </div>
+
+              <div style={rowStyleStyle}>
+                <div style={inputGroupStyle}>
+                  <label style={labelStyleStyle}>Required Deposit (ZAR)</label>
+                  <input 
+                    type="number" 
+                    required 
+                    min={0}
+                    value={toolDeposit}
+                    onChange={(e) => setToolDeposit(parseInt(e.target.value) || 0)}
+                    style={modalInputStyle}
+                  />
+                </div>
+                <div style={inputGroupStyle}>
+                  <label style={labelStyleStyle}>Collection Location</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={toolLocation}
+                    onChange={(e) => setToolLocation(e.target.value)}
+                    style={modalInputStyle}
+                  />
+                </div>
+              </div>
+
+              <div style={inputGroupStyle}>
+                <label style={labelStyleStyle}>Tool Description / Condition</label>
+                <textarea 
+                  rows={3} 
+                  required 
+                  placeholder="Describe tool condition, battery status, accessories included, and safe handling guidelines..."
+                  value={toolDesc}
+                  onChange={(e) => setToolDesc(e.target.value)}
+                  style={modalTextareaStyle}
+                />
+              </div>
+
+              <button type="submit" className="btn-gold" style={modalSubmitBtnStyle}>
+                Publish Tool Listing
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ================= MODAL: REPORT A DISPUTE ================= */}
+      {showDisputeModal && (
+        <div style={modalBackdropStyle}>
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="glass-panel" 
+            style={modalPanelStyle}
+          >
+            <div style={modalHeaderStyle}>
+              <h3>File Community Dispute / Mediation Request</h3>
+              <button onClick={() => setShowDisputeModal(false)} style={closeBtnStyle}><X size={16} /></button>
+            </div>
+
+            <form onSubmit={handleCreateDispute} style={formStyleStyle}>
+              <div style={rowStyleStyle}>
+                <div style={inputGroupStyle}>
+                  <label style={labelStyleStyle}>Dispute Title</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="e.g. Loud music past 11 PM / Kitchen cleanliness issue" 
+                    value={disputeTitle}
+                    onChange={(e) => setDisputeTitle(e.target.value)}
+                    style={modalInputStyle}
+                  />
+                </div>
+                <div style={inputGroupStyle}>
+                  <label style={labelStyleStyle}>Incident Category</label>
+                  <select 
+                    value={disputeCategory}
+                    onChange={(e) => setDisputeCategory(e.target.value as 'Noise' | 'Messiness' | 'Utility overuse' | 'Chore avoidance' | 'Security breach' | 'Other')}
+                    style={modalSelectStyle}
+                  >
+                    <option value="Noise">Noise Disturbance</option>
+                    <option value="Messiness">Messiness / Cleanliness</option>
+                    <option value="Utility overuse">Utility Overuse</option>
+                    <option value="Chore avoidance">Chore Avoidance</option>
+                    <option value="Security breach">Security Breach</option>
+                    <option value="Other">Other Community Issue</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={inputGroupStyle}>
+                <label style={labelStyleStyle}>Against Resident (Name / Room No.)</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Tenant in Room 3B / John Doe" 
+                  value={disputeAgainst}
+                  onChange={(e) => setDisputeAgainst(e.target.value)}
+                  style={modalInputStyle}
+                />
+              </div>
+
+              <div style={inputGroupStyle}>
+                <label style={labelStyleStyle}>Detailed Incident Description</label>
+                <textarea 
+                  rows={4} 
+                  required 
+                  placeholder="Please describe what happened, dates, attempts to speak to them directly, and desired resolution..."
+                  value={disputeDesc}
+                  onChange={(e) => setDisputeDesc(e.target.value)}
+                  style={modalTextareaStyle}
+                />
+              </div>
+
+              <button type="submit" className="btn-gold" style={modalSubmitBtnStyle}>
+                File Mediation Request
               </button>
             </form>
           </motion.div>

@@ -139,6 +139,60 @@ export interface UtilityToken {
   purchasedAt?: string
 }
 
+export interface ToolItem {
+  id: string
+  ownerId: string
+  ownerName: string
+  title: string
+  description: string
+  pricePerDay: number
+  currency: string
+  deposit: number
+  location: string
+  status: 'available' | 'rented'
+  rentedBy?: string
+  rentedByName?: string
+  rentedUntil?: string
+}
+
+export interface CommunityDispute {
+  id: string
+  title: string
+  description: string
+  category: 'Noise' | 'Messiness' | 'Utility overuse' | 'Chore avoidance' | 'Security breach' | 'Other'
+  reportedBy: string
+  reportedById: string
+  againstUser: string
+  againstUserId: string
+  mediatorId: string
+  mediatorName: string
+  status: 'pending' | 'mediating' | 'resolved'
+  resolutionDetails?: string
+  timestamp: string
+}
+
+export interface ChoreAssignment {
+  id: string
+  roommateId: string
+  roommateName: string
+  taskName: string
+  dayOfWeek: string
+  status: 'pending' | 'completed'
+  completedAt?: string
+}
+
+export interface NoticeEvent {
+  id: string
+  title: string
+  description: string
+  type: 'notice' | 'event'
+  postedBy: string
+  postedById: string
+  timestamp: string
+  eventDate?: string
+  rsvps: string[]
+}
+
 // Mock listings, roommates, lifts, services
 const initialListings: Listing[] = [
   {
@@ -467,6 +521,180 @@ const utilitiesSlice = createSlice({
   }
 })
 
+// Community Hub Mock Data
+const initialTools: ToolItem[] = [
+  {
+    id: 'tool-1',
+    ownerId: 'landlord-1',
+    ownerName: 'Amahle Nkwali',
+    title: 'Heavy Duty Power Drill',
+    description: '18V cordless drill with full masonry drill bit set. Great for putting up shelves.',
+    pricePerDay: 50,
+    currency: 'ZAR',
+    deposit: 100,
+    location: 'Ivory Park Ext 2',
+    status: 'available'
+  },
+  {
+    id: 'tool-2',
+    ownerId: 'tenant-100',
+    ownerName: 'Global Tenant',
+    title: 'Aluminium Extension Ladder',
+    description: '3.8m telescoping ladder, lightweight and easy to transport.',
+    pricePerDay: 30,
+    currency: 'ZAR',
+    deposit: 150,
+    location: 'Ivory Park Ext 2',
+    status: 'available'
+  }
+]
+
+const initialChores: ChoreAssignment[] = [
+  {
+    id: 'chore-1',
+    roommateId: 'tenant-100',
+    roommateName: 'Global Tenant',
+    taskName: 'Take out trash bins & recycling',
+    dayOfWeek: 'Monday',
+    status: 'pending'
+  },
+  {
+    id: 'chore-2',
+    roommateId: 'rm-1',
+    roommateName: 'Lerato Modise',
+    taskName: 'Clean kitchen counters & stove',
+    dayOfWeek: 'Wednesday',
+    status: 'pending'
+  },
+  {
+    id: 'chore-3',
+    roommateId: 'tenant-100',
+    roommateName: 'Global Tenant',
+    taskName: 'Sweep and mop shared passage',
+    dayOfWeek: 'Friday',
+    status: 'completed',
+    completedAt: '2026-05-24T18:00:00Z'
+  }
+]
+
+const initialNotices: NoticeEvent[] = [
+  {
+    id: 'not-1',
+    title: 'Ivory Park Loadshedding Update',
+    description: 'Eskom announced Stage 2 loadshedding. Our block will be off from 18:00 to 20:30 tonight. Charge your devices.',
+    type: 'notice',
+    postedBy: 'Amahle Nkwali',
+    postedById: 'landlord-1',
+    timestamp: '2026-05-25T10:00:00Z',
+    rsvps: []
+  },
+  {
+    id: 'not-2',
+    title: 'Weekend Social Braai / Potluck',
+    description: 'Let us meet at the communal courtyard on Saturday at 14:00. Bring your own meat and drinks. Salad will be provided!',
+    type: 'event',
+    postedBy: 'Amahle Nkwali',
+    postedById: 'landlord-1',
+    timestamp: '2026-05-25T12:00:00Z',
+    eventDate: 'Saturday, 30 May 2026',
+    rsvps: ['Lerato Modise']
+  }
+]
+
+const initialDisputes: CommunityDispute[] = [
+  {
+    id: 'disp-1',
+    title: 'Unwashed pots left overnight',
+    description: 'Pots and dishes were left in the kitchen sink for two days. Attracts pests and blocks others.',
+    category: 'Messiness',
+    reportedBy: 'Lerato Modise',
+    reportedById: 'rm-1',
+    againstUser: 'Global Tenant',
+    againstUserId: 'tenant-100',
+    mediatorId: 'landlord-1',
+    mediatorName: 'Amahle Nkwali',
+    status: 'pending',
+    timestamp: '2026-05-25T15:30:00Z'
+  }
+]
+
+const communitySlice = createSlice({
+  name: 'community',
+  initialState: {
+    tools: initialTools,
+    chores: initialChores,
+    notices: initialNotices,
+    disputes: initialDisputes,
+    reputationScores: {
+      'tenant-100': 40,
+      'rm-1': 50
+    } as Record<string, number>
+  },
+  reducers: {
+    addTool: (state, action: PayloadAction<ToolItem>) => {
+      state.tools.push(action.payload)
+    },
+    rentTool: (state, action: PayloadAction<{ toolId: string; rentedBy: string; rentedByName: string; rentedUntil: string }>) => {
+      const tool = state.tools.find(t => t.id === action.payload.toolId)
+      if (tool && tool.status === 'available') {
+        tool.status = 'rented'
+        tool.rentedBy = action.payload.rentedBy
+        tool.rentedByName = action.payload.rentedByName
+        tool.rentedUntil = action.payload.rentedUntil
+      }
+    },
+    returnTool: (state, action: PayloadAction<string>) => {
+      const tool = state.tools.find(t => t.id === action.payload)
+      if (tool && tool.status === 'rented') {
+        tool.status = 'available'
+        tool.rentedBy = undefined
+        tool.rentedByName = undefined
+        tool.rentedUntil = undefined
+      }
+    },
+    addChore: (state, action: PayloadAction<ChoreAssignment>) => {
+      state.chores.push(action.payload)
+    },
+    completeChore: (state, action: PayloadAction<{ choreId: string; completedAt: string }>) => {
+      const chore = state.chores.find(c => c.id === action.payload.choreId)
+      if (chore && chore.status === 'pending') {
+        chore.status = 'completed'
+        chore.completedAt = action.payload.completedAt
+        const rId = chore.roommateId
+        state.reputationScores[rId] = (state.reputationScores[rId] || 0) + 10
+      }
+    },
+    resetChoreWeek: (state, action: PayloadAction<ChoreAssignment[]>) => {
+      state.chores = action.payload
+    },
+    addNoticeEvent: (state, action: PayloadAction<NoticeEvent>) => {
+      state.notices.unshift(action.payload)
+    },
+    rsvpToEvent: (state, action: PayloadAction<{ noticeId: string; userName: string }>) => {
+      const notice = state.notices.find(n => n.id === action.payload.noticeId)
+      if (notice && notice.type === 'event') {
+        if (!notice.rsvps.includes(action.payload.userName)) {
+          notice.rsvps.push(action.payload.userName)
+        } else {
+          notice.rsvps = notice.rsvps.filter(u => u !== action.payload.userName)
+        }
+      }
+    },
+    addDispute: (state, action: PayloadAction<CommunityDispute>) => {
+      state.disputes.unshift(action.payload)
+    },
+    updateDisputeStatus: (state, action: PayloadAction<{ disputeId: string; status: 'pending' | 'mediating' | 'resolved'; resolutionDetails?: string }>) => {
+      const dispute = state.disputes.find(d => d.id === action.payload.disputeId)
+      if (dispute) {
+        dispute.status = action.payload.status
+        if (action.payload.resolutionDetails) {
+          dispute.resolutionDetails = action.payload.resolutionDetails
+        }
+      }
+    }
+  }
+})
+
 // Action Exports
 export const { loginUser, logoutUser, registerFailedAttempt, resetFailedAttempts, updateProfile, updatePreferences, deductBalance, addBalance } = authSlice.actions
 export const { addListing, deleteListing } = listingsSlice.actions
@@ -474,6 +702,18 @@ export const { addRequest, updateRequestStatus } = requestsSlice.actions
 export const { addLog, incrementApiCall, resetApiCounts } = securitySlice.actions
 export const { addRoommateSeeker, addLiftClub, addService, deleteService, bookSeat, addDispatch, updateDispatchStatus } = networkingSlice.actions
 export const { addToken, buyToken } = utilitiesSlice.actions
+export const {
+  addTool,
+  rentTool,
+  returnTool,
+  addChore,
+  completeChore,
+  resetChoreWeek,
+  addNoticeEvent,
+  rsvpToEvent,
+  addDispute,
+  updateDisputeStatus
+} = communitySlice.actions
 
 // Store Creation
 export const store = configureStore({
@@ -483,7 +723,8 @@ export const store = configureStore({
     requests: requestsSlice.reducer,
     security: securitySlice.reducer,
     networking: networkingSlice.reducer,
-    utilities: utilitiesSlice.reducer
+    utilities: utilitiesSlice.reducer,
+    community: communitySlice.reducer
   }
 })
 
