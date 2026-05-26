@@ -34,5 +34,8 @@ jobs:
     - name: Run Security Sandboxes Unit Tests
       run: npm run test
 
+    - name: Run 280,000+ Attack Security Fuzzer Stress Test
+      run: npm run fuzzer
+
     - name: Run Next.js Production Build
       run: npm run build

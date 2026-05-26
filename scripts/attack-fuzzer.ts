@@ -8,6 +8,7 @@
 // Run: node --experimental-strip-types scripts/attack-fuzzer.ts
 // ============================================================================
 
+import * as fs from 'fs'
 import {
   containsXSS,
   containsSQLi,
@@ -841,6 +842,55 @@ if (results.bypassed === 0) {
 }
 console.log('═══════════════════════════════════════════════════════════')
 
+if (process.env.GITHUB_STEP_SUMMARY) {
+  try {
+    let summaryMarkdown = `
+# 🛡️ The Resident - Security Fuzzer Stress Test Report
+
+| Metric | Value |
+| --- | --- |
+| ⏱ **Duration** | ${duration}s |
+| 🎯 **Total Attacks Fired** | ${results.totalAttacks.toLocaleString()} |
+| 🛡 **Attacks Blocked** | ${results.blocked.toLocaleString()} |
+| ⚠️ **Bypasses** | **${results.bypassed}** |
+| 🟡 **False Positives** | ${results.falsePositives} |
+| ❌ **Errors** | ${results.errors} |
+| 🏆 **Block Rate** | **${blockRate}%** |
+
+## 📊 Per-Category Breakdown
+
+| Status | Category | Blocked / Total | Block Rate |
+| :---: | :--- | :---: | :---: |
+`;
+
+    for (const [cat, data] of categories) {
+      const catRate = data.total > 0 ? ((data.blocked / data.total) * 100).toFixed(1) : '100.0';
+      const status = data.bypassed === 0 ? '✅' : '❌';
+      summaryMarkdown += `| ${status} | **${cat}** | ${data.blocked.toLocaleString()} / ${data.total.toLocaleString()} | ${catRate}% |\n`;
+    }
+
+    if (results.bypasses.length > 0) {
+      summaryMarkdown += `
+### ⚠️ Bypass Details (Malicious payloads that evaded detection)
+\`\`\`
+`;
+      for (const bp of results.bypasses) {
+        summaryMarkdown += `[${bp.category}] ${bp.payload}\n`;
+      }
+      summaryMarkdown += `\`\`\`\n`;
+      
+      // Output native GitHub Actions workflow commands for error annotations
+      for (const bp of results.bypasses) {
+        console.log(`::error file=src/utils/security.ts::[FUZZER BYPASS - ${bp.category}] Payload bypassed security check: ${bp.payload}`);
+      }
+    }
+
+    fs.writeFileSync(process.env.GITHUB_STEP_SUMMARY, summaryMarkdown);
+  } catch (err) {
+    console.error('Failed to write to GITHUB_STEP_SUMMARY:', err);
+  }
+}
+
 if (results.bypassed > 0) {
-  process.exit(1)
+  process.exit(1);
 }
