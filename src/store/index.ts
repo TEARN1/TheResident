@@ -227,6 +227,8 @@ export interface NoticeEvent {
   timestamp: string
   eventDate?: string
   rsvps: string[]
+  vibes?: string[]
+  echos?: string[]
 }
 
 // Mock listings, roommates, lifts, services
@@ -698,7 +700,9 @@ const initialNotices: NoticeEvent[] = [
     postedBy: 'Amahle Nkwali',
     postedById: 'landlord-1',
     timestamp: '2026-05-25T10:00:00Z',
-    rsvps: []
+    rsvps: [],
+    vibes: [],
+    echos: []
   },
   {
     id: 'not-2',
@@ -709,7 +713,9 @@ const initialNotices: NoticeEvent[] = [
     postedById: 'landlord-1',
     timestamp: '2026-05-25T12:00:00Z',
     eventDate: 'Saturday, 30 May 2026',
-    rsvps: ['Lerato Modise']
+    rsvps: ['Lerato Modise'],
+    vibes: [],
+    echos: []
   }
 ]
 
@@ -840,6 +846,63 @@ const communitySlice = createSlice({
         }
       }
     },
+    vibeNotice: (state, action: PayloadAction<{ noticeId: string; userName: string }>) => {
+      const noticeId = toUUID(action.payload.noticeId)
+      const notice = state.notices.find(n => toUUID(n.id) === noticeId)
+      if (notice) {
+        if (!notice.vibes) notice.vibes = []
+        if (!notice.vibes.includes(action.payload.userName)) {
+          notice.vibes.push(action.payload.userName)
+        } else {
+          notice.vibes = notice.vibes.filter(u => u !== action.payload.userName)
+        }
+      }
+    },
+    echoNotice: (state, action: PayloadAction<{ noticeId: string; userName: string }>) => {
+      const noticeId = toUUID(action.payload.noticeId)
+      const notice = state.notices.find(n => toUUID(n.id) === noticeId)
+      if (notice) {
+        if (!notice.echos) notice.echos = []
+        if (!notice.echos.includes(action.payload.userName)) {
+          notice.echos.push(action.payload.userName)
+        } else {
+          notice.echos = notice.echos.filter(u => u !== action.payload.userName)
+        }
+      }
+    },
+    vibeNoticeRollback: (state, action: PayloadAction<{ noticeId: string; userName: string }>) => {
+      const noticeId = toUUID(action.payload.noticeId)
+      const notice = state.notices.find(n => toUUID(n.id) === noticeId)
+      if (notice && notice.vibes) {
+        if (notice.vibes.includes(action.payload.userName)) {
+          notice.vibes = notice.vibes.filter(u => u !== action.payload.userName)
+        } else {
+          notice.vibes.push(action.payload.userName)
+        }
+      }
+    },
+    echoNoticeRollback: (state, action: PayloadAction<{ noticeId: string; userName: string }>) => {
+      const noticeId = toUUID(action.payload.noticeId)
+      const notice = state.notices.find(n => toUUID(n.id) === noticeId)
+      if (notice && notice.echos) {
+        if (notice.echos.includes(action.payload.userName)) {
+          notice.echos = notice.echos.filter(u => u !== action.payload.userName)
+        } else {
+          notice.echos.push(action.payload.userName)
+        }
+      }
+    },
+    rsvpNoticeRollback: (state, action: PayloadAction<{ noticeId: string; userName: string }>) => {
+      const noticeId = toUUID(action.payload.noticeId)
+      const notice = state.notices.find(n => toUUID(n.id) === noticeId)
+      if (notice && notice.type === 'event') {
+        if (notice.rsvps.includes(action.payload.userName)) {
+          notice.rsvps = notice.rsvps.filter(u => u !== action.payload.userName)
+        } else {
+          notice.rsvps.push(action.payload.userName)
+        }
+      }
+    },
     addDispute: (state, action: PayloadAction<CommunityDispute>) => {
       const dispute = { ...action.payload }
       dispute.id = toUUID(dispute.id)
@@ -857,6 +920,44 @@ const communitySlice = createSlice({
           dispute.resolutionDetails = action.payload.resolutionDetails
         }
       }
+    }
+  }
+})
+
+// Notifications Slice
+export interface AppNotification {
+  id: string
+  title: string
+  message: string
+  read: boolean
+  timestamp: string
+}
+
+const notificationsSlice = createSlice({
+  name: 'notifications',
+  initialState: {
+    items: [] as AppNotification[],
+    virtualCount: 0
+  },
+  reducers: {
+    addNotification: (state, action: PayloadAction<Omit<AppNotification, 'id' | 'timestamp'>>) => {
+      state.items.unshift({
+        ...action.payload,
+        id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        timestamp: new Date().toISOString()
+      })
+      if (state.items.length > 50) {
+        state.items.pop()
+      }
+    },
+    floodNotifications: (state, action: PayloadAction<number>) => {
+      state.virtualCount += action.payload
+    },
+    markAllNotificationsRead: (state) => {
+      state.virtualCount = 0
+      state.items.forEach(item => {
+        item.read = true
+      })
     }
   }
 })
@@ -904,9 +1005,20 @@ export const {
   resetChoreWeek,
   addNoticeEvent,
   rsvpToEvent,
+  vibeNotice,
+  echoNotice,
+  vibeNoticeRollback,
+  echoNoticeRollback,
+  rsvpNoticeRollback,
   addDispute,
   updateDisputeStatus
 } = communitySlice.actions
+
+export const {
+  addNotification,
+  floodNotifications,
+  markAllNotificationsRead
+} = notificationsSlice.actions
 
 // Async Thunk to fetch live data from Supabase
 export const fetchSupabaseData = createAsyncThunk(
@@ -1126,7 +1238,9 @@ export const fetchSupabaseData = createAsyncThunk(
           postedById: item.posted_by_id,
           timestamp: item.created_at || new Date().toISOString(),
           eventDate: item.event_date || undefined,
-          rsvps: item.rsvps || []
+          rsvps: item.rsvps || [],
+          vibes: item.vibes || [],
+          echos: item.echos || []
         }))
         dispatch(setNotices(mappedNotices))
       }
@@ -1140,10 +1254,31 @@ export const fetchSupabaseData = createAsyncThunk(
 // Background synchronization middleware for Supabase mirror
 import { Middleware } from 'redux'
 
+const dbUpdate = async (table: string, payload: Record<string, unknown>, eqCol?: string, eqVal?: unknown) => {
+  const isKilled = (typeof window !== 'undefined' && (window as unknown as { __networkKilled?: boolean }).__networkKilled) || 
+                   (typeof global !== 'undefined' && (global as unknown as { __networkKilled?: boolean }).__networkKilled);
+  if (isKilled) {
+    throw new Error("Network offline (simulated)");
+  }
+  if (supabase) {
+    if (eqCol && eqVal !== undefined) {
+      const { error } = await supabase.from(table).update(payload).eq(eqCol, eqVal);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from(table).insert(payload);
+      if (error) throw error;
+    }
+  } else {
+    // Simulated DB latency
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+};
+
 export const supabaseSyncMiddleware: Middleware<false, RootState> = store => next => async action => {
   const result = next(action)
   
-  if (!supabase) return result
+  const isSim = typeof global !== 'undefined' && (global as unknown as { __simulationMode?: boolean }).__simulationMode
+  if (!supabase && !isSim) return result
 
   const state = store.getState()
   const currentUser = state.auth.currentUser
@@ -1154,73 +1289,75 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
       const user = action.payload
       const uuid = toUUID(user.id)
 
-      // Ensure user exists in shared public.profiles
-      await supabase.from('profiles').upsert({
-        id: uuid,
-        name: user.name,
-        email: user.email
-      })
-
-      // Fetch or create their resident_profile configuration
-      const { data: dbProfile } = await supabase
-        .from('resident_profiles')
-        .select('*')
-        .eq('id', uuid)
-        .single()
-
-      if (dbProfile) {
-        if (dbProfile.role === 'tenant') {
-          store.dispatch(updateProfile({
-            profile: {
-              bio: dbProfile.bio || '',
-              gender: (dbProfile.gender || 'any') as UserProfile['gender'],
-              childrenCount: dbProfile.children_count || 0,
-              employmentStatus: dbProfile.employment_status || '',
-              hasPets: !!dbProfile.has_pets,
-              verificationDocUrl: dbProfile.verification_doc_url || undefined
-            }
-          }))
-        } else if (dbProfile.role === 'landlord') {
-          store.dispatch(updatePreferences({
-            preferences: {
-              genderPreference: (dbProfile.landlord_gender_pref || 'any') as LandlordPreferences['genderPreference'],
-              childrenAllowed: !!dbProfile.landlord_children_allowed,
-              maxChildren: dbProfile.landlord_max_children || 0,
-              smokingAllowed: !!dbProfile.landlord_smoking_allowed,
-              petsAllowed: !!dbProfile.landlord_pets_allowed
-            }
-          }))
-        }
-        if (dbProfile.balance !== undefined && dbProfile.balance !== null) {
-          store.dispatch(setBalance(Number(dbProfile.balance)))
-        }
-      } else {
-        await supabase.from('resident_profiles').insert({
+      if (supabase) {
+        // Ensure user exists in shared public.profiles
+        await supabase.from('profiles').upsert({
           id: uuid,
-          role: user.role,
-          balance: user.balance,
-          bio: user.profile?.bio || null,
-          gender: user.profile?.gender || null,
-          children_count: user.profile?.childrenCount || 0,
-          employment_status: user.profile?.employmentStatus || null,
-          has_pets: !!user.profile?.hasPets,
-          verification_doc_url: user.profile?.verificationDocUrl || null,
-          landlord_gender_pref: user.preferences?.genderPreference || null,
-          landlord_children_allowed: user.preferences?.childrenAllowed !== false,
-          landlord_max_children: user.preferences?.maxChildren || 0,
-          landlord_smoking_allowed: !!user.preferences?.smokingAllowed,
-          landlord_pets_allowed: !!user.preferences?.petsAllowed
+          name: user.name,
+          email: user.email
         })
-      }
 
-      // Populate dashboard with all tables
-      const dispatch = store.dispatch as AppDispatch
-      dispatch(fetchSupabaseData())
+        // Fetch or create their resident_profile configuration
+        const { data: dbProfile } = await supabase
+          .from('resident_profiles')
+          .select('*')
+          .eq('id', uuid)
+          .single()
+
+        if (dbProfile) {
+          if (dbProfile.role === 'tenant') {
+            store.dispatch(updateProfile({
+              profile: {
+                bio: dbProfile.bio || '',
+                gender: (dbProfile.gender || 'any') as UserProfile['gender'],
+                childrenCount: dbProfile.children_count || 0,
+                employmentStatus: dbProfile.employment_status || '',
+                hasPets: !!dbProfile.has_pets,
+                verificationDocUrl: dbProfile.verification_doc_url || undefined
+              }
+            }))
+          } else if (dbProfile.role === 'landlord') {
+            store.dispatch(updatePreferences({
+              preferences: {
+                genderPreference: (dbProfile.landlord_gender_pref || 'any') as LandlordPreferences['genderPreference'],
+                childrenAllowed: !!dbProfile.landlord_children_allowed,
+                maxChildren: dbProfile.landlord_max_children || 0,
+                smokingAllowed: !!dbProfile.landlord_smoking_allowed,
+                petsAllowed: !!dbProfile.landlord_pets_allowed
+              }
+            }))
+          }
+          if (dbProfile.balance !== undefined && dbProfile.balance !== null) {
+            store.dispatch(setBalance(Number(dbProfile.balance)))
+          }
+        } else {
+          await supabase.from('resident_profiles').insert({
+            id: uuid,
+            role: user.role,
+            balance: user.balance,
+            bio: user.profile?.bio || null,
+            gender: user.profile?.gender || null,
+            children_count: user.profile?.childrenCount || 0,
+            employment_status: user.profile?.employmentStatus || null,
+            has_pets: !!user.profile?.hasPets,
+            verification_doc_url: user.profile?.verificationDocUrl || null,
+            landlord_gender_pref: user.preferences?.genderPreference || null,
+            landlord_children_allowed: user.preferences?.childrenAllowed !== false,
+            landlord_max_children: user.preferences?.maxChildren || 0,
+            landlord_smoking_allowed: !!user.preferences?.smokingAllowed,
+            landlord_pets_allowed: !!user.preferences?.petsAllowed
+          })
+        }
+
+        // Populate dashboard with all tables
+        const dispatch = store.dispatch as AppDispatch
+        dispatch(fetchSupabaseData())
+      }
     }
 
     if (updateProfile.match(action) && currentUser) {
       const { profile } = action.payload
-      await supabase.from('resident_profiles').update({
+      await dbUpdate('resident_profiles', {
         bio: profile.bio,
         gender: profile.gender,
         children_count: profile.childrenCount,
@@ -1228,35 +1365,35 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
         has_pets: profile.hasPets,
         verification_doc_url: profile.verificationDocUrl || null,
         updated_at: new Date().toISOString()
-      }).eq('id', toUUID(currentUser.id))
+      }, 'id', toUUID(currentUser.id))
     }
 
     if (updatePreferences.match(action) && currentUser) {
       const { preferences } = action.payload
-      await supabase.from('resident_profiles').update({
+      await dbUpdate('resident_profiles', {
         landlord_gender_pref: preferences.genderPreference,
         landlord_children_allowed: preferences.childrenAllowed,
         landlord_max_children: preferences.maxChildren,
         landlord_smoking_allowed: preferences.smokingAllowed,
         landlord_pets_allowed: preferences.petsAllowed,
         updated_at: new Date().toISOString()
-      }).eq('id', toUUID(currentUser.id))
+      }, 'id', toUUID(currentUser.id))
     }
 
     if ((deductBalance.match(action) || addBalance.match(action)) && currentUser) {
       const updatedBalance = store.getState().auth.currentUser?.balance
       if (updatedBalance !== undefined) {
-        await supabase.from('resident_profiles').update({
+        await dbUpdate('resident_profiles', {
           balance: updatedBalance,
           updated_at: new Date().toISOString()
-        }).eq('id', toUUID(currentUser.id))
+        }, 'id', toUUID(currentUser.id))
       }
     }
 
     // 2. Sync Room Listings
     if (addListing.match(action)) {
       const listing = action.payload
-      await supabase.from('listings').insert({
+      await dbUpdate('listings', {
         id: toUUID(listing.id),
         title: listing.title,
         description: listing.description,
@@ -1283,13 +1420,13 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (deleteListing.match(action)) {
       const listingId = action.payload
-      await supabase.from('listings').delete().eq('id', toUUID(listingId))
+      await dbUpdate('listings', null, 'id', toUUID(listingId))
     }
 
     // 3. Sync Room Requests
     if (addRequest.match(action)) {
       const req = action.payload
-      await supabase.from('room_requests').insert({
+      await dbUpdate('room_requests', {
         id: toUUID(req.id),
         tenant_id: toUUID(req.tenantId),
         tenant_name: req.tenantName,
@@ -1304,15 +1441,13 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (updateRequestStatus.match(action)) {
       const { requestId, status } = action.payload
-      await supabase.from('room_requests').update({
-        status
-      }).eq('id', toUUID(requestId))
+      await dbUpdate('room_requests', { status }, 'id', toUUID(requestId))
     }
 
     // 4. Sync Roommate Seekers
     if (addRoommateSeeker.match(action)) {
       const seeker = action.payload
-      await supabase.from('roommate_seekers').upsert({
+      await dbUpdate('roommate_seekers', {
         id: toUUID(seeker.id),
         name: seeker.name,
         gender: seeker.gender,
@@ -1328,7 +1463,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     // 5. Sync Lift Clubs
     if (addLiftClub.match(action) && currentUser) {
       const lift = action.payload
-      await supabase.from('lift_clubs').insert({
+      await dbUpdate('lift_clubs', {
         id: toUUID(lift.id),
         driver_id: toUUID(currentUser.id),
         driver_name: lift.driverName,
@@ -1347,16 +1482,16 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
       const liftId = action.payload
       const matchedLift = store.getState().networking.lifts.find(l => toUUID(l.id) === toUUID(liftId))
       if (matchedLift) {
-        await supabase.from('lift_clubs').update({
+        await dbUpdate('lift_clubs', {
           available_seats: matchedLift.availableSeats
-        }).eq('id', toUUID(liftId))
+        }, 'id', toUUID(liftId))
       }
     }
 
     // 6. Sync Handyman Business Directory
     if (addService.match(action)) {
       const service = action.payload
-      await supabase.from('handyman_services').insert({
+      await dbUpdate('handyman_services', {
         id: toUUID(service.id),
         owner_id: toUUID(service.ownerId),
         business_name: service.businessName,
@@ -1375,13 +1510,13 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (deleteService.match(action)) {
       const serviceId = action.payload
-      await supabase.from('handyman_services').delete().eq('id', toUUID(serviceId))
+      await dbUpdate('handyman_services', null, 'id', toUUID(serviceId))
     }
 
     // 7. Sync Maintenance Callout Dispatches
     if (addDispatch.match(action)) {
       const disp = action.payload
-      await supabase.from('service_dispatches').insert({
+      await dbUpdate('service_dispatches', {
         id: toUUID(disp.id),
         service_id: toUUID(disp.serviceId),
         service_name: disp.serviceName,
@@ -1398,15 +1533,13 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (updateDispatchStatus.match(action)) {
       const { dispatchId, status } = action.payload
-      await supabase.from('service_dispatches').update({
-        status
-      }).eq('id', toUUID(dispatchId))
+      await dbUpdate('service_dispatches', { status }, 'id', toUUID(dispatchId))
     }
 
     // 8. Sync Prepaid Utility Vouchers
     if (addToken.match(action)) {
       const token = action.payload
-      await supabase.from('utility_tokens').insert({
+      await dbUpdate('utility_tokens', {
         id: toUUID(token.id),
         landlord_id: toUUID(token.landlordId),
         landlord_name: token.landlordName,
@@ -1420,17 +1553,17 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (buyToken.match(action)) {
       const { tokenId, buyerId, timestamp } = action.payload
-      await supabase.from('utility_tokens').update({
+      await dbUpdate('utility_tokens', {
         status: 'sold',
         purchased_by: toUUID(buyerId),
         purchased_at: timestamp
-      }).eq('id', toUUID(tokenId))
+      }, 'id', toUUID(tokenId))
     }
 
     // 9. Sync Tool Library Items
     if (addTool.match(action)) {
       const tool = action.payload
-      await supabase.from('tool_library').insert({
+      await dbUpdate('tool_library', {
         id: toUUID(tool.id),
         owner_id: toUUID(tool.ownerId),
         owner_name: tool.ownerName,
@@ -1446,28 +1579,28 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (rentTool.match(action)) {
       const { toolId, rentedBy, rentedByName, rentedUntil } = action.payload
-      await supabase.from('tool_library').update({
+      await dbUpdate('tool_library', {
         status: 'rented',
         rented_by: toUUID(rentedBy),
         rented_by_name: rentedByName,
         rented_until: rentedUntil
-      }).eq('id', toUUID(toolId))
+      }, 'id', toUUID(toolId))
     }
 
     if (returnTool.match(action)) {
       const toolId = action.payload
-      await supabase.from('tool_library').update({
+      await dbUpdate('tool_library', {
         status: 'available',
         rented_by: null,
         rented_by_name: null,
         rented_until: null
-      }).eq('id', toUUID(toolId))
+      }, 'id', toUUID(toolId))
     }
 
     // 10. Sync Chore Schedule
     if (addChore.match(action)) {
       const chore = action.payload
-      await supabase.from('chore_schedule').insert({
+      await dbUpdate('chore_schedule', {
         id: toUUID(chore.id),
         roommate_id: toUUID(chore.roommateId),
         roommate_name: chore.roommateName,
@@ -1479,17 +1612,19 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (completeChore.match(action)) {
       const { choreId, completedAt } = action.payload
-      await supabase.from('chore_schedule').update({
+      await dbUpdate('chore_schedule', {
         status: 'completed',
         completed_at: completedAt
-      }).eq('id', toUUID(choreId))
+      }, 'id', toUUID(choreId))
     }
 
     if (resetChoreWeek.match(action)) {
       const chores = action.payload
-      await supabase.from('chore_schedule').delete().filter('id', 'not.is', null)
+      if (supabase) {
+        await supabase.from('chore_schedule').delete().filter('id', 'not.is', null)
+      }
       for (const chore of chores) {
-        await supabase.from('chore_schedule').insert({
+        await dbUpdate('chore_schedule', {
           id: toUUID(chore.id),
           roommate_id: toUUID(chore.roommateId),
           roommate_name: chore.roommateName,
@@ -1503,7 +1638,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     // 11. Sync Notice Bulletins & Event RSVPs
     if (addNoticeEvent.match(action)) {
       const notice = action.payload
-      await supabase.from('notice_events').insert({
+      await dbUpdate('notice_events', {
         id: toUUID(notice.id),
         title: notice.title,
         description: notice.description,
@@ -1517,19 +1652,54 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     }
 
     if (rsvpToEvent.match(action)) {
-      const { noticeId } = action.payload
-      const notice = store.getState().community.notices.find(n => toUUID(n.id) === toUUID(noticeId))
-      if (notice) {
-        await supabase.from('notice_events').update({
-          rsvps: notice.rsvps.map(r => toUUID(r))
-        }).eq('id', toUUID(noticeId))
+      const { noticeId, userName } = action.payload
+      try {
+        const notice = store.getState().community.notices.find(n => toUUID(n.id) === toUUID(noticeId))
+        if (notice) {
+          await dbUpdate('notice_events', {
+            rsvps: notice.rsvps.map(r => toUUID(r))
+          }, 'id', toUUID(noticeId))
+        }
+      } catch (err) {
+        console.error("Supabase RSVP sync failed:", err)
+        store.dispatch(rsvpNoticeRollback({ noticeId, userName }))
+      }
+    }
+
+    if (vibeNotice.match(action)) {
+      const { noticeId, userName } = action.payload
+      try {
+        const notice = store.getState().community.notices.find(n => toUUID(n.id) === toUUID(noticeId))
+        if (notice) {
+          await dbUpdate('notice_events', {
+            vibes: notice.vibes || []
+          }, 'id', toUUID(noticeId))
+        }
+      } catch (err) {
+        console.error("Supabase Vibe sync failed:", err)
+        store.dispatch(vibeNoticeRollback({ noticeId, userName }))
+      }
+    }
+
+    if (echoNotice.match(action)) {
+      const { noticeId, userName } = action.payload
+      try {
+        const notice = store.getState().community.notices.find(n => toUUID(n.id) === toUUID(noticeId))
+        if (notice) {
+          await dbUpdate('notice_events', {
+            echos: notice.echos || []
+          }, 'id', toUUID(noticeId))
+        }
+      } catch (err) {
+        console.error("Supabase Echo sync failed:", err)
+        store.dispatch(echoNoticeRollback({ noticeId, userName }))
       }
     }
 
     // 12. Sync Community Disputes & Mediation Board
     if (addDispute.match(action)) {
       const dispute = action.payload
-      await supabase.from('community_disputes').insert({
+      await dbUpdate('community_disputes', {
         id: toUUID(dispute.id),
         title: dispute.title,
         description: dispute.description,
@@ -1547,10 +1717,10 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (updateDisputeStatus.match(action)) {
       const { disputeId, status, resolutionDetails } = action.payload
-      await supabase.from('community_disputes').update({
+      await dbUpdate('community_disputes', {
         status,
         resolution_details: resolutionDetails || null
-      }).eq('id', toUUID(disputeId))
+      }, 'id', toUUID(disputeId))
     }
 
   } catch (err) {
@@ -1569,7 +1739,8 @@ export const store = configureStore({
     security: securitySlice.reducer,
     networking: networkingSlice.reducer,
     utilities: utilitiesSlice.reducer,
-    community: communitySlice.reducer
+    community: communitySlice.reducer,
+    notifications: notificationsSlice.reducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -1585,6 +1756,7 @@ export interface RootState {
   networking: ReturnType<typeof networkingSlice.reducer>
   utilities: ReturnType<typeof utilitiesSlice.reducer>
   community: ReturnType<typeof communitySlice.reducer>
+  notifications: ReturnType<typeof notificationsSlice.reducer>
 }
 
 export type AppDispatch = typeof store.dispatch

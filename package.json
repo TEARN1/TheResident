@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx src/utils/security.test.ts",
-    "fuzzer": "tsx scripts/attack-fuzzer.ts"
+    "fuzzer": "tsx scripts/attack-fuzzer.ts",
+    "scale-test": "tsx scripts/scale-test.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.5.0",
