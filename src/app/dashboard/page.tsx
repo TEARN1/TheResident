@@ -48,7 +48,7 @@ import {
   User as UserIcon, Users, CheckCircle2, Terminal, Info,
   Star, Calendar, Clock, Briefcase, Upload,
   ShieldCheck, FileCode, Zap, Copy,
-  MessageSquare, Gavel, Award, Megaphone, Wrench, Loader, Menu
+  MessageSquare, Gavel, Award, Megaphone, Wrench, Loader, Menu, Sun, Moon
 } from 'lucide-react'
 import { 
   cleanScriptTags, 
@@ -340,6 +340,15 @@ export default function DashboardPage() {
     }, 300)
     return () => clearTimeout(handler)
   }, [searchInputValue])
+
+  // Theme State (Starts with 'day' theme by default)
+  const [theme, setTheme] = useState<'day' | 'night'>('day')
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', theme)
+    }
+  }, [theme])
 
   if (!currentUser) return <div style={loadingStyle}>Redirecting secure session...</div>
 
@@ -1913,6 +1922,14 @@ export default function DashboardPage() {
 
         {/* Footer controls: Security Labs toggle & Logout */}
         <div className="sidebar-footer">
+          <button 
+            className="sidebar-nav-item"
+            onClick={() => setTheme(theme === 'day' ? 'night' : 'day')}
+            title="Toggle Day/Night Theme"
+          >
+            {theme === 'day' ? <Moon size={16} /> : <Sun size={16} />}
+            <span>{theme === 'day' ? 'Night Theme' : 'Day Theme'}</span>
+          </button>
           <button 
             className={`sidebar-nav-item ${showSecurityConsole ? 'active' : ''}`}
             onClick={() => setShowSecurityConsole(!showSecurityConsole)}
@@ -4280,8 +4297,8 @@ export default function DashboardPage() {
 const loadingStyle: React.CSSProperties = {
   width: '100vw',
   height: '100vh',
-  background: '#0d0d0d',
-  color: '#D4AF37',
+  background: 'var(--background)',
+  color: 'var(--gold-primary)',
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
@@ -4334,8 +4351,8 @@ const filterRowStyle: React.CSSProperties = {
 const searchWrapperStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  background: 'rgba(0,0,0,0.3)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--glass-border)',
   borderRadius: '8px',
   flex: 2,
   padding: '0.4rem'
@@ -4344,7 +4361,7 @@ const searchWrapperStyle: React.CSSProperties = {
 const searchFieldStyle: React.CSSProperties = {
   background: 'transparent',
   border: 'none',
-  color: '#fff',
+  color: 'var(--foreground)',
   fontSize: '0.9rem',
   padding: '0.4rem 0.8rem',
   width: '100%',
@@ -4396,10 +4413,10 @@ const checkboxLabelStyle: React.CSSProperties = {
 }
 
 const filterSelectStyle: React.CSSProperties = {
-  background: 'rgba(0,0,0,0.3)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--glass-border)',
   borderRadius: '8px',
-  color: '#fff',
+  color: 'var(--foreground)',
   padding: '0.5rem',
   outline: 'none',
   fontSize: '0.8rem',
@@ -4554,7 +4571,7 @@ const panelTitleStyle: React.CSSProperties = {
   fontSize: '1.1rem',
   color: '#D4AF37',
   margin: '0 0 1.2rem 0',
-  borderBottom: '1px solid rgba(255,255,255,0.05)',
+  borderBottom: '1px solid var(--glass-border)',
   paddingBottom: '0.6rem'
 }
 
@@ -4568,8 +4585,8 @@ const reqRowStyle: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  background: 'rgba(255, 255, 255, 0.02)',
-  border: '1px solid rgba(255,255,255,0.04)',
+  background: 'var(--card-bg)',
+  border: '1px solid var(--glass-border)',
   borderRadius: '8px',
   padding: '1rem 1.2rem',
   gap: '1.5rem'
@@ -4582,7 +4599,7 @@ const reqSummaryStyle: React.CSSProperties = {
 const reqTitleStyle: React.CSSProperties = {
   fontSize: '0.95rem',
   fontWeight: 'bold',
-  color: '#fff',
+  color: 'var(--foreground)',
   margin: '0 0 0.2rem 0'
 }
 
@@ -4594,7 +4611,8 @@ const reqSubTitleStyle: React.CSSProperties = {
 
 const reqMsgStyle: React.CSSProperties = {
   fontSize: '0.8rem',
-  color: '#ccc',
+  color: 'var(--foreground)',
+  opacity: 0.8,
   fontStyle: 'italic',
   margin: 0
 }
@@ -4625,8 +4643,8 @@ const tenantReqListStyle: React.CSSProperties = {
 }
 
 const tenantReqCardStyle: React.CSSProperties = {
-  background: 'rgba(0,0,0,0.2)',
-  border: '1px solid rgba(255,255,255,0.04)',
+  background: 'var(--card-bg)',
+  border: '1px solid var(--glass-border)',
   borderRadius: '8px',
   padding: '0.8rem 1rem',
   display: 'flex',
@@ -4637,7 +4655,7 @@ const tenantReqCardStyle: React.CSSProperties = {
 const tenantReqTitleStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   fontWeight: 'bold',
-  color: '#fff',
+  color: 'var(--foreground)',
   margin: 0
 }
 
@@ -4898,11 +4916,11 @@ const rowStyleStyle: React.CSSProperties = {
 }
 
 const modalInputStyle: React.CSSProperties = {
-  background: 'rgba(0,0,0,0.4)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--glass-border)',
   borderRadius: '6px',
   padding: '0.6rem 0.8rem',
-  color: '#fff',
+  color: 'var(--foreground)',
   fontSize: '0.85rem',
   outline: 'none',
   width: '100%',
@@ -4910,11 +4928,11 @@ const modalInputStyle: React.CSSProperties = {
 }
 
 const modalTextareaStyle: React.CSSProperties = {
-  background: 'rgba(0,0,0,0.4)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--glass-border)',
   borderRadius: '6px',
   padding: '0.6rem 0.8rem',
-  color: '#fff',
+  color: 'var(--foreground)',
   fontSize: '0.85rem',
   outline: 'none',
   width: '100%',
@@ -4923,11 +4941,11 @@ const modalTextareaStyle: React.CSSProperties = {
 }
 
 const modalSelectStyle: React.CSSProperties = {
-  background: 'rgba(0,0,0,0.4)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--glass-border)',
   borderRadius: '6px',
   padding: '0.6rem 0.8rem',
-  color: '#fff',
+  color: 'var(--foreground)',
   fontSize: '0.85rem',
   outline: 'none',
   width: '100%',
@@ -4976,7 +4994,7 @@ const profileSummaryGridStyle: React.CSSProperties = {
 }
 
 const boldValueStyle: React.CSSProperties = {
-  color: '#fff',
+  color: 'var(--foreground)',
   fontWeight: 'bold'
 }
 

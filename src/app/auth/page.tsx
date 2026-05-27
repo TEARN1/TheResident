@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { loginUser, registerFailedAttempt, resetFailedAttempts, addLog, RootState } from '../../store'
-import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 
 // SHA-256 Hashing helper using Web Crypto API
@@ -19,6 +19,24 @@ async function sha256(message: string): Promise<string> {
 export default function AuthPage() {
   const router = useRouter()
   const dispatch = useDispatch()
+
+  const [theme, setTheme] = useState<'day' | 'night'>('day')
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const currentTheme = document.documentElement.getAttribute('data-theme') as 'day' | 'night' || 'day'
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTheme(currentTheme)
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'day' ? 'night' : 'day'
+    setTheme(nextTheme)
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', nextTheme)
+    }
+  }
 
   const failedAttempts = useSelector((state: RootState) => state.auth.failedAttempts)
   const lockedUntil = useSelector((state: RootState) => state.auth.lockedUntil)
@@ -255,6 +273,14 @@ export default function AuthPage() {
   return (
     <div style={containerStyle}>
       <div style={overlayStyle} />
+      
+      <button 
+        onClick={toggleTheme}
+        style={themeToggleStyle}
+        title="Toggle Day/Night Theme"
+      >
+        {theme === 'day' ? <Moon size={16} /> : <Sun size={16} />}
+      </button>
       
       {securityMessage && (
         <div style={alertStyle}>
@@ -585,7 +611,7 @@ const containerStyle: React.CSSProperties = {
   justifyContent: 'center',
   alignItems: 'center',
   padding: '2rem 1rem',
-  background: '#0d0d0d',
+  background: 'var(--background)',
   boxSizing: 'border-box',
   overflowX: 'hidden'
 }
@@ -596,9 +622,28 @@ const overlayStyle: React.CSSProperties = {
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundImage: 'radial-gradient(circle at 30% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 40%), radial-gradient(circle at 70% 80%, rgba(255, 105, 180, 0.05) 0%, transparent 40%)',
+  backgroundImage: 'radial-gradient(circle at 30% 20%, var(--gold-dim) 0%, transparent 40%), radial-gradient(circle at 70% 80%, rgba(255, 105, 180, 0.03) 0%, transparent 40%)',
   zIndex: 0,
   pointerEvents: 'none'
+}
+
+const themeToggleStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: '20px',
+  right: '20px',
+  zIndex: 10,
+  background: 'var(--glass-bg)',
+  border: '1px solid var(--glass-border)',
+  borderRadius: '50%',
+  width: '40px',
+  height: '40px',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  color: 'var(--gold-primary)',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  boxShadow: '0 4px 6px -1px var(--shadow-color)'
 }
 
 const glassPanelStyle: React.CSSProperties = {
@@ -606,14 +651,14 @@ const glassPanelStyle: React.CSSProperties = {
   zIndex: 1,
   width: '100%',
   maxWidth: '540px',
-  background: 'rgba(255, 255, 255, 0.03)',
+  background: 'var(--glass-bg)',
   backdropFilter: 'blur(16px)',
   WebkitBackdropFilter: 'blur(16px)',
-  border: '1px solid rgba(212, 175, 55, 0.2)',
-  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.8), 0 0 20px rgba(212,175,55,0.05)',
+  border: '1px solid var(--glass-border)',
+  boxShadow: '0 8px 32px 0 var(--shadow-color), 0 0 20px var(--gold-dim)',
   borderRadius: '16px',
   padding: '2.5rem',
-  color: '#ededed',
+  color: 'var(--foreground)',
   boxSizing: 'border-box'
 }
 
@@ -625,14 +670,15 @@ const headerStyle: React.CSSProperties = {
 const logoStyle: React.CSSProperties = {
   fontSize: '2rem',
   fontFamily: 'var(--font-heading), serif',
-  color: '#D4AF37',
+  color: 'var(--gold-primary)',
   letterSpacing: '4px',
   margin: '0 0 0.5rem 0'
 }
 
 const taglineStyle: React.CSSProperties = {
   fontSize: '0.85rem',
-  color: '#a0a0a0',
+  color: 'var(--foreground)',
+  opacity: 0.6,
   textTransform: 'uppercase',
   letterSpacing: '2px',
   margin: 0
@@ -640,7 +686,7 @@ const taglineStyle: React.CSSProperties = {
 
 const tabContainerStyle: React.CSSProperties = {
   display: 'flex',
-  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+  borderBottom: '1px solid var(--glass-border)',
   marginBottom: '1.5rem'
 }
 
@@ -648,8 +694,8 @@ const activeTabStyle: React.CSSProperties = {
   flex: 1,
   background: 'transparent',
   border: 'none',
-  borderBottom: '2px solid #D4AF37',
-  color: '#D4AF37',
+  borderBottom: '2px solid var(--gold-primary)',
+  color: 'var(--gold-primary)',
   padding: '0.75rem',
   fontFamily: 'var(--font-body)',
   fontSize: '0.9rem',
@@ -662,7 +708,8 @@ const inactiveTabStyle: React.CSSProperties = {
   flex: 1,
   background: 'transparent',
   border: 'none',
-  color: '#888',
+  color: 'var(--foreground)',
+  opacity: 0.5,
   padding: '0.75rem',
   fontFamily: 'var(--font-body)',
   fontSize: '0.9rem',
@@ -675,7 +722,7 @@ const errorContainerStyle: React.CSSProperties = {
   border: '1px solid #ef4444',
   borderRadius: '6px',
   padding: '0.8rem',
-  color: '#fff',
+  color: 'var(--foreground)',
   fontSize: '0.8rem',
   marginBottom: '1.5rem',
   display: 'flex',
@@ -697,17 +744,18 @@ const inputGroupStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   fontSize: '0.75rem',
-  color: '#c0c0c0',
+  color: 'var(--foreground)',
+  opacity: 0.8,
   textTransform: 'uppercase',
   letterSpacing: '1px'
 }
 
 const inputStyle: React.CSSProperties = {
-  background: 'rgba(0, 0, 0, 0.4)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--glass-border)',
   borderRadius: '6px',
   padding: '0.75rem',
-  color: '#fff',
+  color: 'var(--foreground)',
   fontFamily: 'var(--font-body)',
   fontSize: '0.9rem',
   outline: 'none',
@@ -717,11 +765,11 @@ const inputStyle: React.CSSProperties = {
 }
 
 const selectStyle: React.CSSProperties = {
-  background: 'rgba(0, 0, 0, 0.4)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--glass-border)',
   borderRadius: '6px',
   padding: '0.75rem',
-  color: '#fff',
+  color: 'var(--foreground)',
   fontFamily: 'var(--font-body)',
   fontSize: '0.9rem',
   outline: 'none',
@@ -731,11 +779,11 @@ const selectStyle: React.CSSProperties = {
 }
 
 const textareaStyle: React.CSSProperties = {
-  background: 'rgba(0, 0, 0, 0.4)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--glass-border)',
   borderRadius: '6px',
   padding: '0.75rem',
-  color: '#fff',
+  color: 'var(--foreground)',
   fontFamily: 'var(--font-body)',
   fontSize: '0.9rem',
   outline: 'none',
@@ -751,7 +799,7 @@ const rowStyle: React.CSSProperties = {
 }
 
 const profileSectionStyle: React.CSSProperties = {
-  borderTop: '1px dashed rgba(212, 175, 55, 0.2)',
+  borderTop: '1px dashed var(--glass-border)',
   paddingTop: '1.2rem',
   marginTop: '0.5rem',
   display: 'flex',
@@ -761,7 +809,7 @@ const profileSectionStyle: React.CSSProperties = {
 
 const sectionHeaderStyle: React.CSSProperties = {
   fontSize: '0.85rem',
-  color: '#D4AF37',
+  color: 'var(--gold-primary)',
   margin: '0 0 0.5rem 0',
   display: 'flex',
   alignItems: 'center'
@@ -779,12 +827,12 @@ const checkboxStyle: React.CSSProperties = {
   cursor: 'pointer',
   width: '18px',
   height: '18px',
-  accentColor: '#D4AF37'
+  accentColor: 'var(--gold-primary)'
 }
 
 const checkboxLabelStyle: React.CSSProperties = {
   fontSize: '0.85rem',
-  color: '#ededed',
+  color: 'var(--foreground)',
   cursor: 'pointer'
 }
 
@@ -812,17 +860,17 @@ const alertStyle: React.CSSProperties = {
   top: '20px',
   left: '50%',
   transform: 'translateX(-50%)',
-  background: 'rgba(13, 13, 13, 0.95)',
-  border: '1px solid #D4AF37',
+  background: 'var(--sidebar-bg)',
+  border: '1px solid var(--gold-primary)',
   borderRadius: '8px',
   padding: '1rem 1.5rem',
-  color: '#fff',
+  color: 'var(--foreground)',
   display: 'flex',
   alignItems: 'center',
   gap: '0.8rem',
   zIndex: 1000,
   fontSize: '0.85rem',
-  boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+  boxShadow: '0 4px 20px var(--shadow-color)',
   width: '90%',
   maxWidth: '500px'
 }

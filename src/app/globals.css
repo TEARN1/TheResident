@@ -1,6 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&family=Playfair+Display:wght@400..900&display=swap');
 
 :root {
+  --background: #f7f5f0;
+  --foreground: #1c1c1a;
+  --gold-primary: #af8d23;
+  --gold-hover: #8c6e17;
+  --gold-light: #fefcf7;
+  --gold-dim: rgba(175, 141, 35, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(175, 141, 35, 0.18);
+  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-body: 'Montserrat', sans-serif;
+  --sidebar-bg: #eae6db;
+  --topbar-bg: rgba(247, 245, 240, 0.85);
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --shadow-color: rgba(175, 141, 35, 0.1);
+}
+
+[data-theme='night'] {
   --background: #0a0a0a;
   --foreground: #ededed;
   --gold-primary: #D4AF37;
@@ -9,8 +27,11 @@
   --gold-dim: rgba(212, 175, 55, 0.1);
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.08);
-  --font-heading: 'Playfair Display', Georgia, serif;
-  --font-body: 'Montserrat', sans-serif;
+  --sidebar-bg: #0d0d0d;
+  --topbar-bg: rgba(10, 10, 10, 0.85);
+  --card-bg: rgba(255, 255, 255, 0.02);
+  --input-bg: rgba(255, 255, 255, 0.02);
+  --shadow-color: rgba(0, 0, 0, 0.5);
 }
 
 body {
@@ -47,7 +68,7 @@ a {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 6px -1px var(--shadow-color);
 }
 
 .btn-gold {
@@ -173,10 +194,10 @@ a {
   top: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(13, 13, 13, 0.95);
+  background: var(--sidebar-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(212, 175, 55, 0.15);
+  border-right: 1px solid var(--glass-border);
   padding: 1.5rem 1rem;
   z-index: 100;
   transition: transform 0.3s ease, background 0.3s ease;
@@ -201,8 +222,8 @@ a {
 }
 
 .sidebar-profile {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 12px;
   padding: 1rem 0.8rem;
   margin-bottom: 1.5rem;
@@ -237,7 +258,7 @@ a {
 .sidebar-profile-name {
   font-size: 0.9rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--foreground);
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -254,7 +275,7 @@ a {
 .sidebar-wallet {
   margin-top: 0.8rem;
   padding-top: 0.8rem;
-  border-top: 1px dashed rgba(255, 255, 255, 0.05);
+  border-top: 1px dashed var(--glass-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -307,15 +328,15 @@ a {
 }
 
 .sidebar-nav-item:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.05);
+  color: var(--gold-primary);
+  background: var(--gold-dim);
+  border-color: var(--glass-border);
 }
 
 .sidebar-nav-item.active {
   color: var(--gold-primary);
   background: var(--gold-dim);
-  border-color: rgba(212, 175, 55, 0.2);
+  border-color: var(--gold-primary);
   font-weight: 500;
 }
 
@@ -324,7 +345,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  border-left: 1.5px solid rgba(212, 175, 55, 0.15);
+  border-left: 1.5px solid var(--glass-border);
   padding-left: 0.8rem;
   margin-top: 0.2rem;
   margin-bottom: 0.5rem;
@@ -347,7 +368,7 @@ a {
 }
 
 .sidebar-subnav-item:hover {
-  color: #fff;
+  color: var(--gold-primary);
 }
 
 .sidebar-subnav-item.active {
@@ -358,7 +379,7 @@ a {
 .sidebar-footer {
   margin-top: auto;
   padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -378,10 +399,10 @@ a {
   justify-content: space-between;
   align-items: center;
   padding: 1.2rem 2rem;
-  background: rgba(10, 10, 10, 0.8);
+  background: var(--topbar-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+  border-bottom: 1px solid var(--glass-border);
   position: sticky;
   top: 0;
   z-index: 90;
@@ -390,7 +411,7 @@ a {
 .dashboard-section-title {
   font-size: 1.4rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--foreground);
 }
 
 .dashboard-page-body {

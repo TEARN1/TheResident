@@ -1254,7 +1254,7 @@ export const fetchSupabaseData = createAsyncThunk(
 // Background synchronization middleware for Supabase mirror
 import { Middleware } from 'redux'
 
-const dbUpdate = async (table: string, payload: Record<string, unknown>, eqCol?: string, eqVal?: unknown) => {
+const dbUpdate = async (table: string, payload: Record<string, unknown> | null, eqCol?: string, eqVal?: unknown) => {
   const isKilled = (typeof window !== 'undefined' && (window as unknown as { __networkKilled?: boolean }).__networkKilled) || 
                    (typeof global !== 'undefined' && (global as unknown as { __networkKilled?: boolean }).__networkKilled);
   if (isKilled) {
@@ -1262,11 +1262,18 @@ const dbUpdate = async (table: string, payload: Record<string, unknown>, eqCol?:
   }
   if (supabase) {
     if (eqCol && eqVal !== undefined) {
-      const { error } = await supabase.from(table).update(payload).eq(eqCol, eqVal);
-      if (error) throw error;
+      if (payload === null) {
+        const { error } = await supabase.from(table).delete().eq(eqCol, eqVal);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from(table).update(payload).eq(eqCol, eqVal);
+        if (error) throw error;
+      }
     } else {
-      const { error } = await supabase.from(table).insert(payload);
-      if (error) throw error;
+      if (payload) {
+        const { error } = await supabase.from(table).insert(payload);
+        if (error) throw error;
+      }
     }
   } else {
     // Simulated DB latency
