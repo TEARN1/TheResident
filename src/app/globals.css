@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&family=Playfair+Display:wght@400..900&display=swap');
 
-:root {
+:root,
+[data-theme='day'] {
   --background: #f7f5f0;
   --foreground: #1c1c1a;
   --gold-primary: #af8d23;
