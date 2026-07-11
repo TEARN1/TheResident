@@ -1980,8 +1980,36 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
       }, 'id', toUUID(ns.id))
     }
 
+    // 22. Notice Actions (Optimistic Sync)
+    if (vibeNotice.match(action)) {
+      const { noticeId } = action.payload
+      if (typeof globalThis !== 'undefined' && (globalThis as any).__networkKilled) {
+        await Promise.resolve()
+        throw new Error("Network offline (simulated)")
+      }
+      await dbUpdate('res_notice_events', {
+        created_at: new Date().toISOString()
+      }, 'id', toUUID(noticeId))
+    }
+
+    if (echoNotice.match(action)) {
+      const { noticeId } = action.payload
+      if (typeof globalThis !== 'undefined' && (globalThis as any).__networkKilled) {
+        await Promise.resolve()
+        throw new Error("Network offline (simulated)")
+      }
+      await dbUpdate('res_notice_events', {
+        created_at: new Date().toISOString()
+      }, 'id', toUUID(noticeId))
+    }
+
   } catch (err) {
     console.error('Error syncing with Supabase:', err)
+    if (vibeNotice.match(action)) {
+      store.dispatch(vibeNoticeRollback(action.payload))
+    } else if (echoNotice.match(action)) {
+      store.dispatch(echoNoticeRollback(action.payload))
+    }
   }
 
   return result
@@ -1991,10 +2019,12 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
 interface UIState {
   language: 'en' | 'zu' | 'xh' | 'af'
+  offlineQueue: Array<{ action: string; payload: any }>
 }
 
 const initialUIState: UIState = {
-  language: 'en'
+  language: 'en',
+  offlineQueue: []
 }
 
 const uiSlice = createSlice({
@@ -2003,11 +2033,17 @@ const uiSlice = createSlice({
   reducers: {
     setLanguage: (state, action: PayloadAction<'en' | 'zu' | 'xh' | 'af'>) => {
       state.language = action.payload
+    },
+    queueOfflineAction: (state, action: PayloadAction<{ action: string; payload: any }>) => {
+      state.offlineQueue.push(action.payload)
+    },
+    clearOfflineQueue: (state) => {
+      state.offlineQueue = []
     }
   }
 })
 
-export const { setLanguage } = uiSlice.actions
+export const { setLanguage, queueOfflineAction, clearOfflineQueue } = uiSlice.actions
 
 export const selectFilteredListings = createSelector(
   [

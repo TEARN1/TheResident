@@ -5,7 +5,7 @@
 // Enable simulation mode for Redux middleware sync checks offline
 (global as any).__simulationMode = true;
 
-import { store, vibeNotice, echoNotice, rsvpToEvent, floodNotifications, markAllNotificationsRead, selectFilteredListings, queueOfflineAction, clearOfflineQueue } from '../src/store/index.ts'
+import { store, vibeNotice, echoNotice, rsvpToEvent, floodNotifications, markAllNotificationsRead, selectFilteredListings, queueOfflineAction, clearOfflineQueue, setNotices } from '../src/store/index.ts'
 import { resilientFetchManager, secureFetch } from '../src/utils/secureApiClient.ts'
 import { t } from '../src/utils/i18n.ts'
 import { signVoucher, verifyVoucherSignature } from '../src/utils/security.ts'
@@ -88,6 +88,20 @@ test('Load Case 1: Auth Token Expiry Under Load & Silent Retry', async () => {
 test('Load Case 2: Optimistic UI Rollback Accuracy', async () => {
   console.log('\n[Case 2] Simulating Network Kill during Vibe/RSVP/Echo...');
   
+  // Seed state with a clean notice
+  const testNotice = {
+    id: '42f8c545-efba-460d-85fa-71fa84a3c10a',
+    title: 'Scale Test Notice',
+    description: 'Notice description',
+    postedBy: 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d',
+    postedByName: 'Landlord Joe',
+    timestamp: '2026-05-24',
+    vibes: [] as string[],
+    echos: [] as string[],
+    rsvps: [] as string[]
+  }
+  store.dispatch(setNotices([testNotice]))
+
   // Clean state notice
   const state = store.getState();
   const notice = state.community.notices[0];
