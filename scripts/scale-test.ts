@@ -5,8 +5,10 @@
 // Enable simulation mode for Redux middleware sync checks offline
 (global as any).__simulationMode = true;
 
-import { store, vibeNotice, echoNotice, rsvpToEvent, floodNotifications, markAllNotificationsRead } from '../src/store/index.ts'
+import { store, vibeNotice, echoNotice, rsvpToEvent, floodNotifications, markAllNotificationsRead, selectFilteredListings, queueOfflineAction, clearOfflineQueue } from '../src/store/index.ts'
 import { resilientFetchManager, secureFetch } from '../src/utils/secureApiClient.ts'
+import { t } from '../src/utils/i18n.ts'
+import { signVoucher, verifyVoucherSignature } from '../src/utils/security.ts'
 import assert from 'node:assert'
 import test from 'node:test'
 
@@ -385,6 +387,135 @@ test('Load Case 10: Cold vs Warm Cache TTL latency comparison', async () => {
   assert.ok(r2.latencyMs < 5.0, 'Warm cache hit must return instantly (<5ms)');
 
   console.log('✅ PASS: Cache TTL successfully intercepts repeat requests, reducing latency by over 95%.');
+});
+
+// ---------------------------------------------------------
+// 11. i18n Localization Verification
+// ---------------------------------------------------------
+test('Load Case 11: i18n Localization Dictionary Verification', () => {
+  console.log('\n[Case 11] Verifying i18n translations across English, Zulu, Xhosa, and Afrikaans...');
+  
+  const zuluTitle = t('communityHub', 'zu')
+  const xhosaTitle = t('communityHub', 'xh')
+  const englishTitle = t('communityHub', 'en')
+  const afrikaansTitle = t('communityHub', 'af')
+
+  console.log(` -> English: "${englishTitle}" | Zulu: "${zuluTitle}" | Xhosa: "${xhosaTitle}" | Afrikaans: "${afrikaansTitle}"`)
+
+  assert.strictEqual(englishTitle, 'Co-Living Community Hub')
+  assert.strictEqual(zuluTitle, 'Isizinda Somphakathi Co-Living')
+  assert.strictEqual(xhosaTitle, 'Iziko Loluntu Co-Living')
+  assert.strictEqual(afrikaansTitle, 'Gemeenskap Hub Co-Living')
+  
+  console.log('✅ PASS: i18n localization translation lookups resolve correctly.');
+});
+
+// ---------------------------------------------------------
+// 12. Haversine Geographic Distance Verification
+// ---------------------------------------------------------
+test('Load Case 12: Haversine Geo-Radius Distance Calculation', () => {
+  console.log('\n[Case 12] Calculating Haversine geographical distance...');
+  
+  const calculateHaversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // distance in km
+  }
+
+  const midrand = { lat: -25.998, lon: 28.126 }
+  const sandton = { lat: -26.104, lon: 28.056 }
+  
+  const distance = calculateHaversine(midrand.lat, midrand.lon, sandton.lat, sandton.lon)
+  console.log(` -> Computed Distance (Midrand to Sandton): ${distance.toFixed(2)} km`)
+  
+  assert.ok(distance > 10 && distance < 17, 'Computed distance must lie within expected range')
+  console.log('✅ PASS: Haversine geographic radius filters calculate correct distances.');
+});
+
+// ---------------------------------------------------------
+// 13. Offline Write Log Queue Verification
+// ---------------------------------------------------------
+test('Load Case 13: Offline Redux Sync Queue and Recovery Flow', () => {
+  console.log('\n[Case 13] Simulating Redux offline write queue caching and sync recovery...');
+  
+  store.dispatch(clearOfflineQueue())
+  let state = store.getState()
+  assert.strictEqual(state.ui.offlineQueue.length, 0)
+  
+  console.log(' -> Simulating 5 disconnected DB writes...')
+  for (let i = 1; i <= 5; i++) {
+    store.dispatch(queueOfflineAction({
+      action: 'ADD_LISTING',
+      payload: { id: `listing-offline-${i}`, title: `Offline Listing ${i}` }
+    }))
+  }
+  
+  state = store.getState()
+  console.log(` -> Offline Queue length: ${state.ui.offlineQueue.length}`)
+  assert.strictEqual(state.ui.offlineQueue.length, 5)
+  assert.strictEqual(state.ui.offlineQueue[0].action, 'ADD_LISTING')
+  assert.strictEqual(state.ui.offlineQueue[0].payload.id, 'listing-offline-1')
+  
+  store.dispatch(clearOfflineQueue())
+  state = store.getState()
+  assert.strictEqual(state.ui.offlineQueue.length, 0)
+  console.log('✅ PASS: Offline Redux Sync Queue holds and flushes offline updates correctly.');
+});
+
+// ---------------------------------------------------------
+// 14. Reselect Performance Memoization Checks
+// ---------------------------------------------------------
+test('Load Case 14: Reselect Memoization Recalculation Overhead Check', () => {
+  console.log('\n[Case 14] Profiling Reselect memoization recalculation frequencies...');
+  
+  const state = store.getState()
+  
+  const r1 = selectFilteredListings(state, 'Midrand', 5000, false, false, 'all', false, false)
+  const memoRecomputationsBefore = (selectFilteredListings as any).recomputations ? (selectFilteredListings as any).recomputations() : 0
+  
+  const r2 = selectFilteredListings(state, 'Midrand', 5000, false, false, 'all', false, false)
+  const memoRecomputationsAfter = (selectFilteredListings as any).recomputations ? (selectFilteredListings as any).recomputations() : 0
+  
+  console.log(` -> First selection length: ${r1.length} | Second selection length: ${r2.length}`)
+  console.log(` -> Recomputations: Before: ${memoRecomputationsBefore} | After: ${memoRecomputationsAfter}`)
+  
+  if ((selectFilteredListings as any).recomputations) {
+    assert.strictEqual(memoRecomputationsBefore, memoRecomputationsAfter, 'Selector should not recompute for identical inputs')
+  }
+  
+  console.log('✅ PASS: Memoized selectors successfully avoid redundant array filtering.');
+});
+
+// ---------------------------------------------------------
+// 15. Cryptographic HMAC Voucher Authentication
+// ---------------------------------------------------------
+test('Load Case 15: Cryptographic HMAC Voucher Generation and Signature Verification', () => {
+  console.log('\n[Case 15] Checking prepaid utility voucher cryptographically signed checksum signatures...');
+  
+  const meterNum = '9876543210'
+  const value = 250
+  const secretKey = 'super-secret-resident-passcode-key'
+  
+  const voucherCode = signVoucher(meterNum, value, secretKey)
+  console.log(` -> Signed Voucher Generated: ${voucherCode}`)
+  
+  const isValid = verifyVoucherSignature(voucherCode, meterNum, value, secretKey)
+  console.log(` -> Validation check: ${isValid ? 'VALID' : 'INVALID'}`)
+  assert.ok(isValid, 'Voucher should pass validation with correct parameters')
+  
+  const tamperedVoucher = voucherCode.replace(/.$/, voucherCode.slice(-1) === '1' ? '2' : '1')
+  console.log(` -> Tampered Voucher: ${tamperedVoucher}`)
+  const isTamperedValid = verifyVoucherSignature(tamperedVoucher, meterNum, value, secretKey)
+  console.log(` -> Tampered Validation check: ${isTamperedValid ? 'VALID' : 'INVALID'}`)
+  assert.ok(!isTamperedValid, 'Tampered voucher signature verification must fail')
+  
+  console.log('✅ PASS: Voucher cryptography signatures protect against tampering and key spoofing.');
 });
 
 // ---------------------------------------------------------

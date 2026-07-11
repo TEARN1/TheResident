@@ -23,7 +23,7 @@ export default function Home() {
             Log In
           </Link>
           <Link href="/auth" className="btn-gold">
-            Join The Elite
+            Join Your Suburb
           </Link>
         </div>
       </nav>
@@ -36,7 +36,7 @@ export default function Home() {
           transition={{ duration: 1, ease: 'easeOut' }}
           className={styles.title}
         >
-          Defined by <span className={styles.goldText}>Luxury</span>.<br />
+          Defined by <span className={styles.goldText}>Community</span>.<br />
           Secured by Trust.
         </motion.h1>
 
@@ -46,8 +46,8 @@ export default function Home() {
           transition={{ delay: 0.5, duration: 1 }}
           className={styles.subtitle}
         >
-          The exclusive marketplace connecting elite property owners with discerning residents.
-          Experience a new standard of living where privacy meets prestige.
+          The community-powered ecosystem connecting neighbors. 
+          Coordinate lift clubs, access spaza marketplaces, share tools, and keep your street safe.
         </motion.p>
 
         <motion.div
@@ -57,7 +57,7 @@ export default function Home() {
           className={styles.ctaGroup}
         >
           <Link href="/auth" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Begin Application <ArrowRight size={16} />
+            Enter Portal <ArrowRight size={16} />
           </Link>
         </motion.div>
       </div>
@@ -65,9 +65,9 @@ export default function Home() {
       {/* Features */}
       <div className={styles.featuresGrid}>
         {[
-          { icon: Shield, title: "Verified Identity", desc: "Rigorous vetting ensures you only interact with trusted individuals of equal standing." },
-          { icon: Crown, title: "Premium Portfolio", desc: "Access the world's most exclusive properties, unavailable on the open market." },
-          { icon: Lock, title: "Absolute Privacy", desc: "Your data is encrypted and your anonymity preserved until you choose otherwise." }
+          { icon: Shield, title: "Trusted Neighbors", desc: "Vibe check ratings and reputation scores ensure you only transact with verified local residents." },
+          { icon: Crown, title: "Local Listings", desc: "Find spaza shops, handyman services, secure rooms, and bakkie transport directly in your suburb." },
+          { icon: Lock, title: "Safety Net", desc: "Keep your street secure with coordinated mutual aid checks and real-time community panic alerts." }
         ].map((feature, i) => (
           <motion.div
             key={i}

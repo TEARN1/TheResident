@@ -458,4 +458,47 @@ a {
   display: none !important;
 }
 
+/* Layout classes to reduce inline style objects in React */
+.input-field {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--foreground);
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.input-field:focus {
+  border-color: var(--gold-primary);
+}
+
+.select-box {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--foreground);
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.tab-header {
+  font-family: var(--font-heading);
+  color: var(--gold-primary);
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Framer Motion Staggered lists styles */
+.motion-list-item {
+  will-change: transform, opacity;
+}
+
 

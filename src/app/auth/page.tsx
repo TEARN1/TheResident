@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
-import { loginUser, registerFailedAttempt, resetFailedAttempts, addLog, RootState } from '../../store'
+import { loginUser, registerFailedAttempt, resetFailedAttempts, addLog, RootState, toUUID } from '../../store'
+import { supabase } from '../../utils/supabase'
+import { resilientFetchManager } from '../../utils/secureApiClient'
 import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 
@@ -126,12 +128,18 @@ export default function AuthPage() {
       return
     }
 
-    // Hash the password to keep it secure
-    const hash = await sha256(password)
+    if (!supabase) {
+      setErrorMessage('Database offline / not configured.')
+      return
+    }
 
-    // Simulate incorrect password if it doesn't match a test value
-    // (We consider "securepass" as the only correct password for testing lockout)
-    if (password !== 'securepass') {
+    // Real Supabase Login
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+
+    if (error) {
       dispatch(registerFailedAttempt(email))
       const attempts = (failedAttempts[email] || 0) + 1
       
@@ -139,53 +147,60 @@ export default function AuthPage() {
         ip: '127.0.0.1',
         action: 'Failed login attempt recorded',
         type: 'auth_failed',
-        details: `Incorrect password entered for ${email}. Failed attempts: ${attempts}/5`
+        details: `Incorrect credentials entered for ${email}. Failed attempts: ${attempts}/5`
       }))
 
       if (attempts >= 5) {
         setErrorMessage('Brute force defense triggered. Account locked for 60 seconds.')
       } else {
-        setErrorMessage(`Invalid credentials. Attempt ${attempts} of 5 before account lockout. (Use password "securepass" to log in).`)
+        setErrorMessage(`Invalid credentials: ${error.message} (Attempt ${attempts} of 5 before account lockout).`)
       }
       return
     }
 
-    // Success login
-    const mockUser = {
-      id: role === 'tenant' ? 'tenant-100' : 'landlord-100',
-      name: role === 'tenant' ? 'Global Tenant' : 'Global Landlord',
-      email: email,
-      role: role,
-      passwordHash: hash,
-      balance: role === 'tenant' ? 850 : 4500,
-      profile: role === 'tenant' ? {
-        bio: 'Looking for a clean flat close to bus and tube stations.',
-        gender: 'any' as const,
-        childrenCount: 0,
-        employmentStatus: 'Employed',
-        hasPets: false
-      } : undefined,
-      preferences: role === 'landlord' ? {
-        genderPreference: 'any' as const,
-        childrenAllowed: true,
-        maxChildren: 2,
-        smokingAllowed: false,
-        petsAllowed: false
-      } : undefined
-    }
+    const session = data.session
+    const user = data.user
 
-    document.cookie = `session-token=mock-jwt-token; path=/; max-age=3600`
-    
-    dispatch(resetFailedAttempts(email))
-    dispatch(loginUser(mockUser))
-    dispatch(addLog({
-      ip: '127.0.0.1',
-      action: `Logged in safely: hash verified`,
-      type: 'auth_success',
-      details: `Email: ${email} | Hash: ${hash.substr(0, 16)}...`
-    }))
-    
-    router.push('/dashboard')
+    if (session && user) {
+      resilientFetchManager.setToken(session.access_token)
+      document.cookie = `session-token=${session.access_token}; path=/; max-age=3600`
+
+      // Fetch their res_profile role
+      const { data: dbProfile } = await supabase
+        .from('res_profiles')
+        .select('role')
+        .eq('id', toUUID(user.id))
+        .single()
+
+      let userRole = dbProfile?.role || role || 'visitor'
+
+      // If no res_profile exists, default/insert it
+      if (!dbProfile) {
+        await supabase.from('res_profiles').insert({
+          id: toUUID(user.id),
+          role: userRole,
+          bio: 'First login from The Resident'
+        })
+      }
+
+      dispatch(resetFailedAttempts(email))
+      dispatch(loginUser({
+        id: user.id,
+        name: user.user_metadata?.name || name || 'Resident User',
+        email: user.email!,
+        role: userRole as 'tenant' | 'landlord' | 'visitor',
+        balance: 0
+      }))
+
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: `Logged in safely: Supabase session authenticated`,
+        type: 'auth_success',
+        details: `Email: ${email}`
+      }))
+
+      router.push('/dashboard')
+    }
   }
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -199,54 +214,92 @@ export default function AuthPage() {
       return
     }
 
-    const sanitizedName = sanitizeInput(name)
-    const sanitizedBio = sanitizeInput(bio)
-    const hash = await sha256(password)
-
-    const newUser = {
-      id: role === 'tenant' ? `tenant-${Date.now()}` : `landlord-${Date.now()}`,
-      name: sanitizedName,
-      email: email,
-      role: role,
-      passwordHash: hash,
-      balance: role === 'tenant' ? 500 : 2500,
-      profile: role === 'tenant' ? {
-        bio: sanitizedBio || 'No biography details provided.',
-        gender,
-        childrenCount,
-        employmentStatus,
-        hasPets
-      } : undefined,
-      preferences: role === 'landlord' ? {
-        genderPreference,
-        childrenAllowed,
-        maxChildren,
-        smokingAllowed,
-        petsAllowed
-      } : undefined
+    if (!supabase) {
+      setErrorMessage('Database offline / not configured.')
+      return
     }
 
-    document.cookie = `session-token=mock-jwt-token; path=/; max-age=3600`
-    
-    dispatch(resetFailedAttempts(email))
-    dispatch(loginUser(newUser))
-    dispatch(addLog({
-      ip: '127.0.0.1',
-      action: `New account onboarded with password hash`,
-      type: 'auth_success',
-      details: `Created account for ${newUser.name}. Password hash generated: ${hash.substr(0, 16)}...`
-    }))
+    const sanitizedName = sanitizeInput(name)
+    const sanitizedBio = sanitizeInput(bio)
 
-    router.push('/dashboard')
+    // Real Supabase signup
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: sanitizedName
+        }
+      }
+    })
+
+    if (error) {
+      setErrorMessage(error.message)
+      return
+    }
+
+    const session = data.session
+    const user = data.user
+
+    if (user) {
+      const uuid = toUUID(user.id)
+      
+      // Upsert shared public.profiles first
+      await supabase.from('profiles').upsert({
+        id: uuid,
+        name: sanitizedName,
+        email: email
+      })
+
+      // Insert res_profiles configuration
+      await supabase.from('res_profiles').insert({
+        id: uuid,
+        role: role,
+        bio: sanitizedBio || null,
+        gender: role === 'tenant' ? gender : null,
+        children_count: role === 'tenant' ? childrenCount : 0,
+        employment_status: role === 'tenant' ? employmentStatus : null,
+        has_pets: role === 'tenant' ? hasPets : false,
+        landlord_gender_pref: role === 'landlord' ? genderPreference : null,
+        landlord_children_allowed: role === 'landlord' ? childrenAllowed : true,
+        landlord_max_children: role === 'landlord' ? maxChildren : 0,
+        landlord_smoking_allowed: role === 'landlord' ? smokingAllowed : false,
+        landlord_pets_allowed: role === 'landlord' ? petsAllowed : false
+      })
+
+      if (session) {
+        resilientFetchManager.setToken(session.access_token)
+        document.cookie = `session-token=${session.access_token}; path=/; max-age=3600`
+      }
+
+      dispatch(resetFailedAttempts(email))
+      dispatch(loginUser({
+        id: user.id,
+        name: sanitizedName,
+        email: email,
+        role: role,
+        balance: 0
+      }))
+
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: `New account onboarded: Supabase auth created`,
+        type: 'auth_success',
+        details: `Created account for ${sanitizedName}.`
+      }))
+
+      router.push('/dashboard')
+    }
   }
 
   const handleVisitorLogin = () => {
+    // Visitor guests don't have Supabase auth records, so we set a guest token
     const visitorUser = {
       id: 'visitor-guest',
       name: 'Guest Visitor',
       email: 'visitor@theresident.co.za',
       role: 'visitor' as const,
-      balance: 100,
+      balance: 0,
       profile: {
         bio: 'Browsing the directory as a guest.',
         gender: 'any' as const,

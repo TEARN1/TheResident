@@ -34,7 +34,7 @@ import {
   checkRateLimit,
   isValidContentType,
   scanInput,
-} from './security.ts'
+} from './security'
 
 // ===== 1. XSS Protection Tests =====
 test('XSS — cleanScriptTags strips script blocks', () => {

@@ -1,4 +1,4 @@
-import { configureStore, createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit'
+import { configureStore, createSlice, PayloadAction, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import { supabase } from '../utils/supabase'
 
 // Helper function to convert any string ID to a deterministic valid UUID format
@@ -232,139 +232,121 @@ export interface NoticeEvent {
 }
 
 // Mock listings, roommates, lifts, services
-const initialListings: Listing[] = [
-  {
-    id: 'list-1',
-    title: 'Cozy Room in Ivory Park, Midrand',
-    description: 'Beautiful secure backroom in Ivory Park Ext 2. Close to taxi ranks and local supermarket. Fenced yard with lockable gate.',
-    price: 1500,
-    currency: 'ZAR',
-    location: 'Midrand, South Africa',
-    suburb: 'Ivory Park',
-    safetyRating: 'high',
-    safetyNotes: 'High-security boundary wall, active community watch street association.',
-    landlordId: 'landlord-1',
-    landlordName: 'Amahle Nkwali',
-    landlordLivesHere: true,
-    images: ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80'],
-    amenities: {
-      wifi: true,
-      parking: true,
-      bathroom: 'shared'
-    },
-    requirements: {
-      genderPreference: 'any',
-      childrenAllowed: true,
-      maxChildren: 1,
-      smokingAllowed: false,
-      petsAllowed: false
-    }
-  },
-  {
-    id: 'list-2',
-    title: 'Modern Apartment Room near London Hub',
-    description: 'Clean room inside a quiet flat. Perfect for young professional workers commuting into central London.',
-    price: 650,
-    currency: 'GBP',
-    location: 'London, United Kingdom',
-    suburb: 'Hackney',
-    safetyRating: 'high',
-    safetyNotes: 'Located in a secure residential block with CCTV and fob access controls.',
-    landlordId: 'landlord-2',
-    landlordName: 'John Smith',
-    landlordLivesHere: false,
-    images: ['https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=600&q=80'],
-    amenities: {
-      wifi: true,
-      parking: false,
-      bathroom: 'ensuite'
-    },
-    requirements: {
-      genderPreference: 'women',
-      childrenAllowed: false,
-      maxChildren: 0,
-      smokingAllowed: false,
-      petsAllowed: true
-    }
-  }
-]
+const initialListings: Listing[] = []
 
-const initialRoommates: RoommateSeeker[] = [
-  {
-    id: 'rm-1',
-    name: 'Lerato Modise',
-    gender: 'women',
-    childrenCount: 0,
-    budget: 900,
-    currency: 'ZAR',
-    location: 'Midrand, South Africa',
-    suburb: 'Ivory Park',
-    bio: 'Looking for a clean female roommate to split a room in Ivory Park Ext 3.'
-  }
-]
+const initialRoommates: RoommateSeeker[] = []
 
-const initialLifts: LiftClub[] = [
-  {
-    id: 'lift-1',
-    driverName: 'Themba Zulu',
-    origin: 'Ivory Park Ext 2',
-    destination: 'Mall of Africa / Waterfall City',
-    departureTime: '06:30 AM',
-    days: 'Mon - Fri',
-    pricePerSeat: 15,
-    currency: 'ZAR',
-    availableSeats: 3,
-    totalSeats: 4
-  }
-]
+const initialLifts: LiftClub[] = []
 
-const initialServices: HandymanService[] = [
-  {
-    id: 'srv-1',
-    ownerId: 'landlord-1',
-    businessName: 'Sipho Plumbers & Maintenance',
-    category: 'Plumbing',
-    location: 'Midrand, South Africa',
-    suburb: 'Ivory Park',
-    rating: 4.8,
-    contactNumber: '+27 72 456 7890',
-    websiteUrl: 'https://sipho-plumbing.co.za',
-    priceEstimate: 'From R 250 / hour',
-    description: 'Expert backroom leak repairs, geyser installations, and prepaid tap fittings.',
-    image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=600&q=80',
-    reviewsCount: 14
-  },
-  {
-    id: 'srv-2',
-    ownerId: 'landlord-2',
-    businessName: 'Ivory Park Bakkie & Moving Services',
-    category: 'Bakkie / Transport',
-    location: 'Midrand, South Africa',
-    suburb: 'Ivory Park',
-    rating: 4.9,
-    contactNumber: '+27 82 999 1234',
-    websiteUrl: '',
-    priceEstimate: 'From R 400 / Trip',
-    description: 'Reliable bakkie hire for moving furniture, room luggage, and building supplies. Help with loading included.',
-    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80',
-    reviewsCount: 28
-  },
-  {
-    id: 'srv-3',
-    ownerId: 'tenant-100',
-    businessName: 'Lerato Quick Movers & Helpers',
-    category: 'Moving Assistant',
-    location: 'Midrand, South Africa',
-    suburb: 'Ivory Park',
-    rating: 4.7,
-    contactNumber: '+27 61 777 8888',
-    websiteUrl: 'https://social.com/lerato-movers',
-    priceEstimate: 'R 150 / Day assistance',
-    description: 'Local student helpers to assist you pack, unpack, load, and clean during your room relocations.',
-    image: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&w=600&q=80',
-    reviewsCount: 9
-  }
-]
+const initialServices: HandymanService[] = []
+
+
+// Phase 4 Community Interfaces
+export interface Community {
+  id: string
+  name: string
+  description: string
+  location: string
+  suburb: string
+  createdBy: string
+  createdAt: string
+}
+
+export interface Alert {
+  id: string
+  title: string
+  description: string
+  category: 'security' | 'fire' | 'medical' | 'utility' | 'other'
+  severity: 'info' | 'warning' | 'critical' | 'panic'
+  status: 'active' | 'resolved'
+  createdBy: string
+  createdAt: string
+  lat: number
+  lon: number
+}
+
+export interface MarketItem {
+  id: string
+  title: string
+  description: string
+  price: number
+  currency: string
+  category: string
+  imageUrl?: string
+  status: 'available' | 'sold'
+  createdBy: string
+  createdAt: string
+}
+
+export interface Vendor {
+  id: string
+  name: string
+  category: string
+  description: string
+  contactNumber: string
+  status: 'active' | 'inactive' | 'pending'
+  rating: number
+  reviewsCount: number
+}
+
+export interface GroupBuy {
+  id: string
+  title: string
+  description: string
+  targetAmount: number
+  currentPledges: number
+  status: 'open' | 'completed' | 'cancelled'
+  createdBy: string
+  endDate: string
+}
+
+export interface Skill {
+  id: string
+  userId: string
+  title: string
+  category: string
+  description: string
+  experienceLevel: string
+  contactInfo: string
+}
+
+export interface LostFound {
+  id: string
+  title: string
+  description: string
+  type: 'lost' | 'found'
+  location: string
+  contactInfo: string
+  imageUrl?: string
+  status: 'active' | 'resolved'
+}
+
+export interface CareCircleCheck {
+  id: string
+  name: string
+  status: 'ok' | 'needs_assistance' | 'pending'
+  lastCheckedAt: string
+  checkedByName?: string
+}
+
+export interface SharedResource {
+  id: string
+  name: string
+  type: 'borehole' | 'hotspot' | 'other'
+  status: string
+  description: string
+  location: string
+  latitude: number
+  longitude: number
+}
+
+export interface NeighbourhoodStatus {
+  id: string
+  service: 'electricity' | 'water' | 'other'
+  status: 'active' | 'restored' | 'outage'
+  suburb: string
+  updatedAt: string
+}
 
 // Slices
 const authSlice = createSlice({
@@ -580,28 +562,7 @@ const networkingSlice = createSlice({
   }
 })
 
-const initialTokens: UtilityToken[] = [
-  {
-    id: 'tok-1',
-    landlordId: 'landlord-1',
-    landlordName: 'Amahle Nkwali',
-    meterNumber: 'MTR-4592-1102',
-    price: 150,
-    currency: 'ZAR',
-    tokenCode: '4820-2910-3849-5029-1123',
-    status: 'available'
-  },
-  {
-    id: 'tok-2',
-    landlordId: 'landlord-2',
-    landlordName: 'John Smith',
-    meterNumber: 'MTR-7781-9920',
-    price: 50,
-    currency: 'GBP',
-    tokenCode: '7789-2910-4820-1129-9948',
-    status: 'available'
-  }
-]
+const initialTokens: UtilityToken[] = []
 
 const utilitiesSlice = createSlice({
   name: 'utilities',
@@ -636,105 +597,13 @@ const utilitiesSlice = createSlice({
 })
 
 // Community Hub Mock Data
-const initialTools: ToolItem[] = [
-  {
-    id: 'tool-1',
-    ownerId: 'landlord-1',
-    ownerName: 'Amahle Nkwali',
-    title: 'Heavy Duty Power Drill',
-    description: '18V cordless drill with full masonry drill bit set. Great for putting up shelves.',
-    pricePerDay: 50,
-    currency: 'ZAR',
-    deposit: 100,
-    location: 'Ivory Park Ext 2',
-    status: 'available'
-  },
-  {
-    id: 'tool-2',
-    ownerId: 'tenant-100',
-    ownerName: 'Global Tenant',
-    title: 'Aluminium Extension Ladder',
-    description: '3.8m telescoping ladder, lightweight and easy to transport.',
-    pricePerDay: 30,
-    currency: 'ZAR',
-    deposit: 150,
-    location: 'Ivory Park Ext 2',
-    status: 'available'
-  }
-]
+const initialTools: ToolItem[] = []
 
-const initialChores: ChoreAssignment[] = [
-  {
-    id: 'chore-1',
-    roommateId: 'tenant-100',
-    roommateName: 'Global Tenant',
-    taskName: 'Take out trash bins & recycling',
-    dayOfWeek: 'Monday',
-    status: 'pending'
-  },
-  {
-    id: 'chore-2',
-    roommateId: 'rm-1',
-    roommateName: 'Lerato Modise',
-    taskName: 'Clean kitchen counters & stove',
-    dayOfWeek: 'Wednesday',
-    status: 'pending'
-  },
-  {
-    id: 'chore-3',
-    roommateId: 'tenant-100',
-    roommateName: 'Global Tenant',
-    taskName: 'Sweep and mop shared passage',
-    dayOfWeek: 'Friday',
-    status: 'completed',
-    completedAt: '2026-05-24T18:00:00Z'
-  }
-]
+const initialChores: ChoreAssignment[] = []
 
-const initialNotices: NoticeEvent[] = [
-  {
-    id: 'not-1',
-    title: 'Ivory Park Loadshedding Update',
-    description: 'Eskom announced Stage 2 loadshedding. Our block will be off from 18:00 to 20:30 tonight. Charge your devices.',
-    type: 'notice',
-    postedBy: 'Amahle Nkwali',
-    postedById: 'landlord-1',
-    timestamp: '2026-05-25T10:00:00Z',
-    rsvps: [],
-    vibes: [],
-    echos: []
-  },
-  {
-    id: 'not-2',
-    title: 'Weekend Social Braai / Potluck',
-    description: 'Let us meet at the communal courtyard on Saturday at 14:00. Bring your own meat and drinks. Salad will be provided!',
-    type: 'event',
-    postedBy: 'Amahle Nkwali',
-    postedById: 'landlord-1',
-    timestamp: '2026-05-25T12:00:00Z',
-    eventDate: 'Saturday, 30 May 2026',
-    rsvps: ['Lerato Modise'],
-    vibes: [],
-    echos: []
-  }
-]
+const initialNotices: NoticeEvent[] = []
 
-const initialDisputes: CommunityDispute[] = [
-  {
-    id: 'disp-1',
-    title: 'Unwashed pots left overnight',
-    description: 'Pots and dishes were left in the kitchen sink for two days. Attracts pests and blocks others.',
-    category: 'Messiness',
-    reportedBy: 'Lerato Modise',
-    reportedById: 'rm-1',
-    againstUser: 'Global Tenant',
-    againstUserId: 'tenant-100',
-    mediatorId: 'landlord-1',
-    mediatorName: 'Amahle Nkwali',
-    status: 'pending',
-    timestamp: '2026-05-25T15:30:00Z'
-  }
-]
+const initialDisputes: CommunityDispute[] = []
 
 const communitySlice = createSlice({
   name: 'community',
@@ -743,10 +612,17 @@ const communitySlice = createSlice({
     chores: initialChores,
     notices: initialNotices,
     disputes: initialDisputes,
-    reputationScores: {
-      'tenant-100': 40,
-      'rm-1': 50
-    } as Record<string, number>
+    reputationScores: {} as Record<string, number>,
+    communities: [] as Community[],
+    alerts: [] as Alert[],
+    marketItems: [] as MarketItem[],
+    vendors: [] as Vendor[],
+    groupBuys: [] as GroupBuy[],
+    skills: [] as Skill[],
+    lostFound: [] as LostFound[],
+    careCircle: [] as CareCircleCheck[],
+    sharedResources: [] as SharedResource[],
+    neighbourhoodStatus: [] as NeighbourhoodStatus[]
   },
   reducers: {
     setTools: (state, action: PayloadAction<ToolItem[]>) => {
@@ -779,6 +655,36 @@ const communitySlice = createSlice({
         againstUserId: d.againstUserId ? toUUID(d.againstUserId) : '',
         mediatorId: d.mediatorId ? toUUID(d.mediatorId) : ''
       }))
+    },
+    setCommunities: (state, action: PayloadAction<Community[]>) => {
+      state.communities = action.payload.map(c => ({ ...c, id: toUUID(c.id), createdBy: toUUID(c.createdBy) }))
+    },
+    setAlerts: (state, action: PayloadAction<Alert[]>) => {
+      state.alerts = action.payload.map(a => ({ ...a, id: toUUID(a.id), createdBy: toUUID(a.createdBy) }))
+    },
+    setMarketItems: (state, action: PayloadAction<MarketItem[]>) => {
+      state.marketItems = action.payload.map(m => ({ ...m, id: toUUID(m.id), createdBy: toUUID(m.createdBy) }))
+    },
+    setVendors: (state, action: PayloadAction<Vendor[]>) => {
+      state.vendors = action.payload.map(v => ({ ...v, id: toUUID(v.id) }))
+    },
+    setGroupBuys: (state, action: PayloadAction<GroupBuy[]>) => {
+      state.groupBuys = action.payload.map(g => ({ ...g, id: toUUID(g.id), createdBy: toUUID(g.createdBy) }))
+    },
+    setSkills: (state, action: PayloadAction<Skill[]>) => {
+      state.skills = action.payload.map(s => ({ ...s, id: toUUID(s.id), userId: toUUID(s.userId) }))
+    },
+    setLostFound: (state, action: PayloadAction<LostFound[]>) => {
+      state.lostFound = action.payload.map(l => ({ ...l, id: toUUID(l.id) }))
+    },
+    setCareCircle: (state, action: PayloadAction<CareCircleCheck[]>) => {
+      state.careCircle = action.payload.map(c => ({ ...c, id: toUUID(c.id) }))
+    },
+    setSharedResources: (state, action: PayloadAction<SharedResource[]>) => {
+      state.sharedResources = action.payload.map(r => ({ ...r, id: toUUID(r.id) }))
+    },
+    setNeighbourhoodStatus: (state, action: PayloadAction<NeighbourhoodStatus[]>) => {
+      state.neighbourhoodStatus = action.payload.map(n => ({ ...n, id: toUUID(n.id) }))
     },
     addTool: (state, action: PayloadAction<ToolItem>) => {
       const tool = { ...action.payload }
@@ -920,6 +826,66 @@ const communitySlice = createSlice({
           dispute.resolutionDetails = action.payload.resolutionDetails
         }
       }
+    },
+    addCommunity: (state, action: PayloadAction<Community>) => {
+      state.communities.push({ ...action.payload, id: toUUID(action.payload.id), createdBy: toUUID(action.payload.createdBy) })
+    },
+    addAlert: (state, action: PayloadAction<Alert>) => {
+      state.alerts.push({ ...action.payload, id: toUUID(action.payload.id), createdBy: toUUID(action.payload.createdBy) })
+    },
+    resolveAlert: (state, action: PayloadAction<string>) => {
+      const alert = state.alerts.find(a => toUUID(a.id) === toUUID(action.payload))
+      if (alert) alert.status = 'resolved'
+    },
+    addMarketItem: (state, action: PayloadAction<MarketItem>) => {
+      state.marketItems.push({ ...action.payload, id: toUUID(action.payload.id), createdBy: toUUID(action.payload.createdBy) })
+    },
+    sellMarketItem: (state, action: PayloadAction<string>) => {
+      const item = state.marketItems.find(m => toUUID(m.id) === toUUID(action.payload))
+      if (item) item.status = 'sold'
+    },
+    addVendor: (state, action: PayloadAction<Vendor>) => {
+      state.vendors.push({ ...action.payload, id: toUUID(action.payload.id) })
+    },
+    addGroupBuy: (state, action: PayloadAction<GroupBuy>) => {
+      state.groupBuys.push({ ...action.payload, id: toUUID(action.payload.id), createdBy: toUUID(action.payload.createdBy) })
+    },
+    pledgeGroupBuy: (state, action: PayloadAction<{ groupBuyId: string; amount: number }>) => {
+      const gb = state.groupBuys.find(g => toUUID(g.id) === toUUID(action.payload.groupBuyId))
+      if (gb) gb.currentPledges += action.payload.amount
+    },
+    addSkill: (state, action: PayloadAction<Skill>) => {
+      state.skills.push({ ...action.payload, id: toUUID(action.payload.id), userId: toUUID(action.payload.userId) })
+    },
+    addLostFound: (state, action: PayloadAction<LostFound>) => {
+      state.lostFound.push({ ...action.payload, id: toUUID(action.payload.id) })
+    },
+    resolveLostFound: (state, action: PayloadAction<string>) => {
+      const lf = state.lostFound.find(l => toUUID(l.id) === toUUID(action.payload))
+      if (lf) lf.status = 'resolved'
+    },
+    checkCareCircle: (state, action: PayloadAction<{ id: string; status: 'ok' | 'needs_assistance'; checkedByName: string }>) => {
+      const c = state.careCircle.find(cc => toUUID(cc.id) === toUUID(action.payload.id))
+      if (c) {
+        c.status = action.payload.status
+        c.lastCheckedAt = new Date().toISOString()
+        c.checkedByName = action.payload.checkedByName
+      }
+    },
+    addSharedResource: (state, action: PayloadAction<SharedResource>) => {
+      state.sharedResources.push({ ...action.payload, id: toUUID(action.payload.id) })
+    },
+    updateSharedResourceStatus: (state, action: PayloadAction<{ id: string; status: string }>) => {
+      const r = state.sharedResources.find(res => toUUID(res.id) === toUUID(action.payload.id))
+      if (r) r.status = action.payload.status
+    },
+    updateNeighbourhoodStatus: (state, action: PayloadAction<NeighbourhoodStatus>) => {
+      const idx = state.neighbourhoodStatus.findIndex(n => toUUID(n.id) === toUUID(action.payload.id))
+      if (idx !== -1) {
+        state.neighbourhoodStatus[idx] = action.payload
+      } else {
+        state.neighbourhoodStatus.push(action.payload)
+      }
     }
   }
 })
@@ -1011,7 +977,32 @@ export const {
   echoNoticeRollback,
   rsvpNoticeRollback,
   addDispute,
-  updateDisputeStatus
+  updateDisputeStatus,
+  setCommunities,
+  setAlerts,
+  setMarketItems,
+  setVendors,
+  setGroupBuys,
+  setSkills,
+  setLostFound,
+  setCareCircle,
+  setSharedResources,
+  setNeighbourhoodStatus,
+  addCommunity,
+  addAlert,
+  resolveAlert,
+  addMarketItem,
+  sellMarketItem,
+  addVendor,
+  addGroupBuy,
+  pledgeGroupBuy,
+  addSkill,
+  addLostFound,
+  resolveLostFound,
+  checkCareCircle,
+  addSharedResource,
+  updateSharedResourceStatus,
+  updateNeighbourhoodStatus
 } = communitySlice.actions
 
 export const {
@@ -1027,7 +1018,7 @@ export const fetchSupabaseData = createAsyncThunk(
     if (!supabase) return
     try {
       // 1. Fetch listings
-      const { data: listingsData } = await supabase.from('listings').select('*')
+      const { data: listingsData } = await supabase.from('res_listings').select('*')
       if (listingsData) {
         const mappedListings = listingsData.map(item => ({
           id: item.id,
@@ -1060,7 +1051,7 @@ export const fetchSupabaseData = createAsyncThunk(
       }
 
       // 2. Fetch Requests
-      const { data: requestsData } = await supabase.from('room_requests').select('*')
+      const { data: requestsData } = await supabase.from('res_room_requests').select('*')
       if (requestsData) {
         const mappedRequests = requestsData.map(item => ({
           id: item.id,
@@ -1077,7 +1068,7 @@ export const fetchSupabaseData = createAsyncThunk(
       }
 
       // 3. Fetch Lifts
-      const { data: liftsData } = await supabase.from('lift_clubs').select('*')
+      const { data: liftsData } = await supabase.from('res_lift_clubs').select('*')
       if (liftsData) {
         const mappedLifts = liftsData.map(item => ({
           id: item.id,
@@ -1095,7 +1086,7 @@ export const fetchSupabaseData = createAsyncThunk(
       }
 
       // 4. Fetch Roommates
-      const { data: seekersData } = await supabase.from('roommate_seekers').select('*')
+      const { data: seekersData } = await supabase.from('res_roommate_seekers').select('*')
       if (seekersData) {
         const mappedRoommates = seekersData.map(item => ({
           id: item.id,
@@ -1112,7 +1103,7 @@ export const fetchSupabaseData = createAsyncThunk(
       }
 
       // 5. Fetch Services
-      const { data: servicesData } = await supabase.from('handyman_services').select('*')
+      const { data: servicesData } = await supabase.from('res_handyman_services').select('*')
       if (servicesData) {
         const mappedServices = servicesData.map(item => ({
           id: item.id,
@@ -1133,7 +1124,7 @@ export const fetchSupabaseData = createAsyncThunk(
       }
 
       // 6. Fetch Dispatches
-      const { data: dispatchesData } = await supabase.from('service_dispatches').select('*')
+      const { data: dispatchesData } = await supabase.from('res_service_dispatches').select('*')
       if (dispatchesData) {
         const mappedDispatches = dispatchesData.map(item => ({
           id: item.id,
@@ -1151,8 +1142,8 @@ export const fetchSupabaseData = createAsyncThunk(
         dispatch(setDispatches(mappedDispatches))
       }
 
-      // 7. Fetch Utility Tokens
-      const { data: tokensData } = await supabase.from('utility_tokens').select('*')
+      // 7. Fetch Utility Vouchers
+      const { data: tokensData } = await supabase.from('res_utility_tokens').select('*')
       if (tokensData) {
         const mappedTokens = tokensData.map(item => ({
           id: item.id,
@@ -1170,7 +1161,7 @@ export const fetchSupabaseData = createAsyncThunk(
       }
 
       // 8. Fetch Tools
-      const { data: toolsData } = await supabase.from('tool_library').select('*')
+      const { data: toolsData } = await supabase.from('res_tool_library').select('*')
       if (toolsData) {
         const mappedTools = toolsData.map(item => ({
           id: item.id,
@@ -1191,7 +1182,7 @@ export const fetchSupabaseData = createAsyncThunk(
       }
 
       // 9. Fetch Chores
-      const { data: choresData } = await supabase.from('chore_schedule').select('*')
+      const { data: choresData } = await supabase.from('res_chore_schedule').select('*')
       if (choresData) {
         const mappedChores = choresData.map(item => ({
           id: item.id,
@@ -1206,7 +1197,7 @@ export const fetchSupabaseData = createAsyncThunk(
       }
 
       // 10. Fetch Disputes
-      const { data: disputesData } = await supabase.from('community_disputes').select('*')
+      const { data: disputesData } = await supabase.from('res_community_disputes').select('*')
       if (disputesData) {
         const mappedDisputes = disputesData.map(item => ({
           id: item.id,
@@ -1227,7 +1218,7 @@ export const fetchSupabaseData = createAsyncThunk(
       }
 
       // 11. Fetch Notices
-      const { data: noticesData } = await supabase.from('notice_events').select('*')
+      const { data: noticesData } = await supabase.from('res_notice_events').select('*')
       if (noticesData) {
         const mappedNotices = noticesData.map(item => ({
           id: item.id,
@@ -1245,6 +1236,151 @@ export const fetchSupabaseData = createAsyncThunk(
         dispatch(setNotices(mappedNotices))
       }
 
+      // 12. Fetch Communities
+      const { data: communitiesData } = await supabase.from('res_communities').select('*')
+      if (communitiesData) {
+        dispatch(setCommunities(communitiesData.map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description || '',
+          location: item.location || '',
+          suburb: item.suburb || '',
+          createdBy: item.created_by,
+          createdAt: item.created_at
+        }))))
+      }
+
+      // 13. Fetch Alerts
+      const { data: alertsData } = await supabase.from('res_alerts').select('*')
+      if (alertsData) {
+        dispatch(setAlerts(alertsData.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          category: item.category as Alert['category'],
+          severity: item.severity as Alert['severity'],
+          status: item.status as Alert['status'],
+          createdBy: item.created_by,
+          createdAt: item.created_at,
+          lat: Number(item.lat || 0),
+          lon: Number(item.lon || 0)
+        }))))
+      }
+
+      // 14. Fetch Market Items
+      const { data: marketData } = await supabase.from('res_market_items').select('*')
+      if (marketData) {
+        dispatch(setMarketItems(marketData.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          price: Number(item.price || 0),
+          currency: item.currency || 'ZAR',
+          category: item.category || '',
+          imageUrl: item.image_url || undefined,
+          status: item.status as MarketItem['status'],
+          createdBy: item.created_by,
+          createdAt: item.created_at
+        }))))
+      }
+
+      // 15. Fetch Vendors
+      const { data: vendorsData } = await supabase.from('res_vendors').select('*')
+      if (vendorsData) {
+        dispatch(setVendors(vendorsData.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category || '',
+          description: item.description || '',
+          contactNumber: item.contact_number || '',
+          status: item.status as Vendor['status'],
+          rating: Number(item.rating || 5.0),
+          reviewsCount: Number(item.reviews_count || 0)
+        }))))
+      }
+
+      // 16. Fetch Group Buys
+      const { data: gbData } = await supabase.from('res_group_buys').select('*')
+      if (gbData) {
+        dispatch(setGroupBuys(gbData.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          targetAmount: Number(item.target_amount || 0),
+          currentPledges: Number(item.current_pledges || 0),
+          status: item.status as GroupBuy['status'],
+          createdBy: item.created_by,
+          endDate: item.end_date || ''
+        }))))
+      }
+
+      // 17. Fetch Skills
+      const { data: skillsData } = await supabase.from('res_skills').select('*')
+      if (skillsData) {
+        dispatch(setSkills(skillsData.map(item => ({
+          id: item.id,
+          userId: item.user_id,
+          title: item.title,
+          category: item.category || '',
+          description: item.description || '',
+          experienceLevel: item.experience_level || '',
+          contactInfo: item.contact_info || ''
+        }))))
+      }
+
+      // 18. Fetch Lost & Found
+      const { data: lfData } = await supabase.from('res_lost_found').select('*')
+      if (lfData) {
+        dispatch(setLostFound(lfData.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          type: item.type as LostFound['type'],
+          location: item.location || '',
+          contactInfo: item.contact_info || '',
+          imageUrl: item.image_url || undefined,
+          status: item.status as LostFound['status']
+        }))))
+      }
+
+      // 19. Fetch Care Circle Checks
+      const { data: ccData } = await supabase.from('res_care_circle').select('*')
+      if (ccData) {
+        dispatch(setCareCircle(ccData.map(item => ({
+          id: item.id,
+          name: item.name,
+          status: item.status as CareCircleCheck['status'],
+          lastCheckedAt: item.last_checked_at || new Date().toISOString(),
+          checkedByName: item.checked_by_name || undefined
+        }))))
+      }
+
+      // 20. Fetch Shared Resources
+      const { data: srData } = await supabase.from('res_shared_resources').select('*')
+      if (srData) {
+        dispatch(setSharedResources(srData.map(item => ({
+          id: item.id,
+          name: item.name,
+          type: item.type as SharedResource['type'],
+          status: item.status || 'available',
+          description: item.description || '',
+          location: item.location || '',
+          latitude: Number(item.latitude || 0),
+          longitude: Number(item.longitude || 0)
+        }))))
+      }
+
+      // 21. Fetch Neighbourhood Statuses
+      const { data: nsData } = await supabase.from('res_neighbourhood_status').select('*')
+      if (nsData) {
+        dispatch(setNeighbourhoodStatus(nsData.map(item => ({
+          id: item.id,
+          service: item.service as NeighbourhoodStatus['service'],
+          status: item.status as NeighbourhoodStatus['status'],
+          suburb: item.suburb || '',
+          updatedAt: item.updated_at || new Date().toISOString()
+        }))))
+      }
     } catch (err) {
       console.error('Error fetching Supabase data:', err)
     }
@@ -1281,7 +1417,7 @@ const dbUpdate = async (table: string, payload: Record<string, unknown> | null, 
   }
 };
 
-export const supabaseSyncMiddleware: Middleware<false, RootState> = store => next => async action => {
+export const supabaseSyncMiddleware: Middleware<false, RootState> = store => next => async (action: any) => {
   const result = next(action)
   
   const isSim = typeof global !== 'undefined' && (global as unknown as { __simulationMode?: boolean }).__simulationMode
@@ -1304,9 +1440,9 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
           email: user.email
         })
 
-        // Fetch or create their resident_profile configuration
+        // Fetch or create their res_profiles configuration
         const { data: dbProfile } = await supabase
-          .from('resident_profiles')
+          .from('res_profiles')
           .select('*')
           .eq('id', uuid)
           .single()
@@ -1338,7 +1474,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
             store.dispatch(setBalance(Number(dbProfile.balance)))
           }
         } else {
-          await supabase.from('resident_profiles').insert({
+          await supabase.from('res_profiles').insert({
             id: uuid,
             role: user.role,
             balance: user.balance,
@@ -1362,9 +1498,15 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
       }
     }
 
+    if (logoutUser.match(action)) {
+      if (supabase) {
+        await supabase.auth.signOut()
+      }
+    }
+
     if (updateProfile.match(action) && currentUser) {
       const { profile } = action.payload
-      await dbUpdate('resident_profiles', {
+      await dbUpdate('res_profiles', {
         bio: profile.bio,
         gender: profile.gender,
         children_count: profile.childrenCount,
@@ -1377,7 +1519,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (updatePreferences.match(action) && currentUser) {
       const { preferences } = action.payload
-      await dbUpdate('resident_profiles', {
+      await dbUpdate('res_profiles', {
         landlord_gender_pref: preferences.genderPreference,
         landlord_children_allowed: preferences.childrenAllowed,
         landlord_max_children: preferences.maxChildren,
@@ -1390,7 +1532,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     if ((deductBalance.match(action) || addBalance.match(action)) && currentUser) {
       const updatedBalance = store.getState().auth.currentUser?.balance
       if (updatedBalance !== undefined) {
-        await dbUpdate('resident_profiles', {
+        await dbUpdate('res_profiles', {
           balance: updatedBalance,
           updated_at: new Date().toISOString()
         }, 'id', toUUID(currentUser.id))
@@ -1400,7 +1542,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     // 2. Sync Room Listings
     if (addListing.match(action)) {
       const listing = action.payload
-      await dbUpdate('listings', {
+      await dbUpdate('res_listings', {
         id: toUUID(listing.id),
         title: listing.title,
         description: listing.description,
@@ -1427,13 +1569,13 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (deleteListing.match(action)) {
       const listingId = action.payload
-      await dbUpdate('listings', null, 'id', toUUID(listingId))
+      await dbUpdate('res_listings', null, 'id', toUUID(listingId))
     }
 
     // 3. Sync Room Requests
     if (addRequest.match(action)) {
       const req = action.payload
-      await dbUpdate('room_requests', {
+      await dbUpdate('res_room_requests', {
         id: toUUID(req.id),
         tenant_id: toUUID(req.tenantId),
         tenant_name: req.tenantName,
@@ -1448,13 +1590,13 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (updateRequestStatus.match(action)) {
       const { requestId, status } = action.payload
-      await dbUpdate('room_requests', { status }, 'id', toUUID(requestId))
+      await dbUpdate('res_room_requests', { status }, 'id', toUUID(requestId))
     }
 
     // 4. Sync Roommate Seekers
     if (addRoommateSeeker.match(action)) {
       const seeker = action.payload
-      await dbUpdate('roommate_seekers', {
+      await dbUpdate('res_roommate_seekers', {
         id: toUUID(seeker.id),
         name: seeker.name,
         gender: seeker.gender,
@@ -1470,7 +1612,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     // 5. Sync Lift Clubs
     if (addLiftClub.match(action) && currentUser) {
       const lift = action.payload
-      await dbUpdate('lift_clubs', {
+      await dbUpdate('res_lift_clubs', {
         id: toUUID(lift.id),
         driver_id: toUUID(currentUser.id),
         driver_name: lift.driverName,
@@ -1489,7 +1631,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
       const liftId = action.payload
       const matchedLift = store.getState().networking.lifts.find(l => toUUID(l.id) === toUUID(liftId))
       if (matchedLift) {
-        await dbUpdate('lift_clubs', {
+        await dbUpdate('res_lift_clubs', {
           available_seats: matchedLift.availableSeats
         }, 'id', toUUID(liftId))
       }
@@ -1498,7 +1640,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     // 6. Sync Handyman Business Directory
     if (addService.match(action)) {
       const service = action.payload
-      await dbUpdate('handyman_services', {
+      await dbUpdate('res_handyman_services', {
         id: toUUID(service.id),
         owner_id: toUUID(service.ownerId),
         business_name: service.businessName,
@@ -1517,13 +1659,13 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (deleteService.match(action)) {
       const serviceId = action.payload
-      await dbUpdate('handyman_services', null, 'id', toUUID(serviceId))
+      await dbUpdate('res_handyman_services', null, 'id', toUUID(serviceId))
     }
 
     // 7. Sync Maintenance Callout Dispatches
     if (addDispatch.match(action)) {
       const disp = action.payload
-      await dbUpdate('service_dispatches', {
+      await dbUpdate('res_service_dispatches', {
         id: toUUID(disp.id),
         service_id: toUUID(disp.serviceId),
         service_name: disp.serviceName,
@@ -1540,13 +1682,13 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (updateDispatchStatus.match(action)) {
       const { dispatchId, status } = action.payload
-      await dbUpdate('service_dispatches', { status }, 'id', toUUID(dispatchId))
+      await dbUpdate('res_service_dispatches', { status }, 'id', toUUID(dispatchId))
     }
 
     // 8. Sync Prepaid Utility Vouchers
     if (addToken.match(action)) {
       const token = action.payload
-      await dbUpdate('utility_tokens', {
+      await dbUpdate('res_utility_tokens', {
         id: toUUID(token.id),
         landlord_id: toUUID(token.landlordId),
         landlord_name: token.landlordName,
@@ -1560,7 +1702,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (buyToken.match(action)) {
       const { tokenId, buyerId, timestamp } = action.payload
-      await dbUpdate('utility_tokens', {
+      await dbUpdate('res_utility_tokens', {
         status: 'sold',
         purchased_by: toUUID(buyerId),
         purchased_at: timestamp
@@ -1570,7 +1712,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     // 9. Sync Tool Library Items
     if (addTool.match(action)) {
       const tool = action.payload
-      await dbUpdate('tool_library', {
+      await dbUpdate('res_tool_library', {
         id: toUUID(tool.id),
         owner_id: toUUID(tool.ownerId),
         owner_name: tool.ownerName,
@@ -1586,7 +1728,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (rentTool.match(action)) {
       const { toolId, rentedBy, rentedByName, rentedUntil } = action.payload
-      await dbUpdate('tool_library', {
+      await dbUpdate('res_tool_library', {
         status: 'rented',
         rented_by: toUUID(rentedBy),
         rented_by_name: rentedByName,
@@ -1596,7 +1738,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (returnTool.match(action)) {
       const toolId = action.payload
-      await dbUpdate('tool_library', {
+      await dbUpdate('res_tool_library', {
         status: 'available',
         rented_by: null,
         rented_by_name: null,
@@ -1607,7 +1749,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     // 10. Sync Chore Schedule
     if (addChore.match(action)) {
       const chore = action.payload
-      await dbUpdate('chore_schedule', {
+      await dbUpdate('res_chore_schedule', {
         id: toUUID(chore.id),
         roommate_id: toUUID(chore.roommateId),
         roommate_name: chore.roommateName,
@@ -1619,7 +1761,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (completeChore.match(action)) {
       const { choreId, completedAt } = action.payload
-      await dbUpdate('chore_schedule', {
+      await dbUpdate('res_chore_schedule', {
         status: 'completed',
         completed_at: completedAt
       }, 'id', toUUID(choreId))
@@ -1628,10 +1770,10 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     if (resetChoreWeek.match(action)) {
       const chores = action.payload
       if (supabase) {
-        await supabase.from('chore_schedule').delete().filter('id', 'not.is', null)
+        await supabase.from('res_chore_schedule').delete().filter('id', 'not.is', null)
       }
       for (const chore of chores) {
-        await dbUpdate('chore_schedule', {
+        await dbUpdate('res_chore_schedule', {
           id: toUUID(chore.id),
           roommate_id: toUUID(chore.roommateId),
           roommate_name: chore.roommateName,
@@ -1645,7 +1787,7 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     // 11. Sync Notice Bulletins & Event RSVPs
     if (addNoticeEvent.match(action)) {
       const notice = action.payload
-      await dbUpdate('notice_events', {
+      await dbUpdate('res_notice_events', {
         id: toUUID(notice.id),
         title: notice.title,
         description: notice.description,
@@ -1658,86 +1800,261 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
       })
     }
 
-    if (rsvpToEvent.match(action)) {
-      const { noticeId, userName } = action.payload
-      try {
-        const notice = store.getState().community.notices.find(n => toUUID(n.id) === toUUID(noticeId))
-        if (notice) {
-          await dbUpdate('notice_events', {
-            rsvps: notice.rsvps.map(r => toUUID(r))
-          }, 'id', toUUID(noticeId))
-        }
-      } catch (err) {
-        console.error("Supabase RSVP sync failed:", err)
-        store.dispatch(rsvpNoticeRollback({ noticeId, userName }))
-      }
-    }
-
-    if (vibeNotice.match(action)) {
-      const { noticeId, userName } = action.payload
-      try {
-        const notice = store.getState().community.notices.find(n => toUUID(n.id) === toUUID(noticeId))
-        if (notice) {
-          await dbUpdate('notice_events', {
-            vibes: notice.vibes || []
-          }, 'id', toUUID(noticeId))
-        }
-      } catch (err) {
-        console.error("Supabase Vibe sync failed:", err)
-        store.dispatch(vibeNoticeRollback({ noticeId, userName }))
-      }
-    }
-
-    if (echoNotice.match(action)) {
-      const { noticeId, userName } = action.payload
-      try {
-        const notice = store.getState().community.notices.find(n => toUUID(n.id) === toUUID(noticeId))
-        if (notice) {
-          await dbUpdate('notice_events', {
-            echos: notice.echos || []
-          }, 'id', toUUID(noticeId))
-        }
-      } catch (err) {
-        console.error("Supabase Echo sync failed:", err)
-        store.dispatch(echoNoticeRollback({ noticeId, userName }))
-      }
-    }
-
-    // 12. Sync Community Disputes & Mediation Board
-    if (addDispute.match(action)) {
-      const dispute = action.payload
-      await dbUpdate('community_disputes', {
-        id: toUUID(dispute.id),
-        title: dispute.title,
-        description: dispute.description,
-        category: dispute.category,
-        reported_by: dispute.reportedBy,
-        reported_by_id: toUUID(dispute.reportedById),
-        against_user: dispute.againstUser,
-        against_user_id: dispute.againstUserId ? toUUID(dispute.againstUserId) : null,
-        mediator_id: dispute.mediatorId ? toUUID(dispute.mediatorId) : null,
-        mediator_name: dispute.mediatorName || null,
-        status: dispute.status,
-        created_at: dispute.timestamp
+    // 12. Sync Communities
+    if (addCommunity.match(action)) {
+      const c = action.payload
+      await dbUpdate('res_communities', {
+        id: toUUID(c.id),
+        name: c.name,
+        description: c.description,
+        location: c.location,
+        suburb: c.suburb,
+        created_by: toUUID(c.createdBy)
       })
     }
 
-    if (updateDisputeStatus.match(action)) {
-      const { disputeId, status, resolutionDetails } = action.payload
-      await dbUpdate('community_disputes', {
+    // 13. Sync Alerts
+    if (addAlert.match(action)) {
+      const a = action.payload
+      await dbUpdate('res_alerts', {
+        id: toUUID(a.id),
+        title: a.title,
+        description: a.description,
+        category: a.category,
+        severity: a.severity,
+        status: a.status,
+        created_by: toUUID(a.createdBy),
+        lat: a.lat,
+        lon: a.lon
+      })
+    }
+
+    if (resolveAlert.match(action)) {
+      const alertId = action.payload
+      await dbUpdate('res_alerts', { status: 'resolved' }, 'id', toUUID(alertId))
+    }
+
+    // 14. Sync Market Items
+    if (addMarketItem.match(action)) {
+      const m = action.payload
+      await dbUpdate('res_market_items', {
+        id: toUUID(m.id),
+        title: m.title,
+        description: m.description,
+        price: m.price,
+        currency: m.currency,
+        category: m.category,
+        image_url: m.imageUrl || null,
+        status: m.status,
+        created_by: toUUID(m.createdBy)
+      })
+    }
+
+    if (sellMarketItem.match(action)) {
+      const itemId = action.payload
+      await dbUpdate('res_market_items', { status: 'sold' }, 'id', toUUID(itemId))
+    }
+
+    // 15. Sync Vendors
+    if (addVendor.match(action)) {
+      const v = action.payload
+      await dbUpdate('res_vendors', {
+        id: toUUID(v.id),
+        name: v.name,
+        category: v.category,
+        description: v.description,
+        contact_number: v.contactNumber,
+        status: v.status,
+        rating: v.rating,
+        reviews_count: v.reviewsCount
+      })
+    }
+
+    // 16. Sync Group Buys
+    if (addGroupBuy.match(action)) {
+      const g = action.payload
+      await dbUpdate('res_group_buys', {
+        id: toUUID(g.id),
+        title: g.title,
+        description: g.description,
+        target_amount: g.targetAmount,
+        current_pledges: g.currentPledges,
+        status: g.status,
+        created_by: toUUID(g.createdBy),
+        end_date: g.endDate
+      })
+    }
+
+    if (pledgeGroupBuy.match(action)) {
+      const { groupBuyId, amount } = action.payload
+      const gb = store.getState().community.groupBuys.find(g => toUUID(g.id) === toUUID(groupBuyId))
+      if (gb) {
+        await dbUpdate('res_group_buys', {
+          current_pledges: gb.currentPledges
+        }, 'id', toUUID(groupBuyId))
+        
+        if (currentUser) {
+          await dbUpdate('res_group_buy_pledges', {
+            id: toUUID('pledge-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5)),
+            group_buy_id: toUUID(groupBuyId),
+            user_id: toUUID(currentUser.id),
+            amount: amount
+          })
+        }
+      }
+    }
+
+    // 17. Sync Skills
+    if (addSkill.match(action)) {
+      const s = action.payload
+      await dbUpdate('res_skills', {
+        id: toUUID(s.id),
+        user_id: toUUID(s.userId),
+        title: s.title,
+        category: s.category,
+        description: s.description,
+        experience_level: s.experienceLevel,
+        contact_info: s.contactInfo
+      })
+    }
+
+    // 18. Sync Lost & Found
+    if (addLostFound.match(action)) {
+      const lf = action.payload
+      await dbUpdate('res_lost_found', {
+        id: toUUID(lf.id),
+        title: lf.title,
+        description: lf.description,
+        type: lf.type,
+        location: lf.location,
+        contact_info: lf.contactInfo,
+        image_url: lf.imageUrl || null,
+        status: lf.status
+      })
+    }
+
+    if (resolveLostFound.match(action)) {
+      const lfId = action.payload
+      await dbUpdate('res_lost_found', { status: 'resolved' }, 'id', toUUID(lfId))
+    }
+
+    // 19. Sync Care Circle Check
+    if (checkCareCircle.match(action)) {
+      const { id, status, checkedByName } = action.payload
+      await dbUpdate('res_care_circle', {
         status,
-        resolution_details: resolutionDetails || null
-      }, 'id', toUUID(disputeId))
+        last_checked_at: new Date().toISOString(),
+        checked_by_name: checkedByName
+      }, 'id', toUUID(id))
+    }
+
+    // 20. Sync Shared Resources
+    if (addSharedResource.match(action)) {
+      const sr = action.payload
+      await dbUpdate('res_shared_resources', {
+        id: toUUID(sr.id),
+        name: sr.name,
+        type: sr.type,
+        status: sr.status,
+        description: sr.description,
+        location: sr.location,
+        latitude: sr.latitude,
+        longitude: sr.longitude
+      })
+    }
+
+    if (updateSharedResourceStatus.match(action)) {
+      const { id, status } = action.payload
+      await dbUpdate('res_shared_resources', { status }, 'id', toUUID(id))
+    }
+
+    // 21. Sync Neighbourhood Status
+    if (updateNeighbourhoodStatus.match(action)) {
+      const ns = action.payload
+      await dbUpdate('res_neighbourhood_status', {
+        id: toUUID(ns.id),
+        service: ns.service,
+        status: ns.status,
+        suburb: ns.suburb,
+        updated_at: ns.updatedAt
+      }, 'id', toUUID(ns.id))
     }
 
   } catch (err) {
-    console.error("Supabase Sync Err: ", err)
+    console.error('Error syncing with Supabase:', err)
   }
 
   return result
 }
 
 // Store Creation
+
+interface UIState {
+  language: 'en' | 'zu' | 'xh' | 'af'
+}
+
+const initialUIState: UIState = {
+  language: 'en'
+}
+
+const uiSlice = createSlice({
+  name: 'ui',
+  initialState: initialUIState,
+  reducers: {
+    setLanguage: (state, action: PayloadAction<'en' | 'zu' | 'xh' | 'af'>) => {
+      state.language = action.payload
+    }
+  }
+})
+
+export const { setLanguage } = uiSlice.actions
+
+export const selectFilteredListings = createSelector(
+  [
+    (state: RootState) => state.listings.items,
+    (state: RootState, suburb: string) => suburb,
+    (state: RootState, suburb: string, maxPrice: number) => maxPrice,
+    (state: RootState, suburb: string, maxPrice: number, hasWifi: boolean) => hasWifi,
+    (state: RootState, suburb: string, maxPrice: number, hasWifi: boolean, hasParking: boolean) => hasParking,
+    (state: RootState, suburb: string, maxPrice: number, hasWifi: boolean, hasParking: boolean, bathroom: string) => bathroom,
+    (state: RootState, suburb: string, maxPrice: number, hasWifi: boolean, hasParking: boolean, bathroom: string, reqGenderPref: string | boolean) => reqGenderPref,
+    (state: RootState, suburb: string, maxPrice: number, hasWifi: boolean, hasParking: boolean, bathroom: string, reqGenderPref: string | boolean, childrenAllowed: boolean) => childrenAllowed
+  ],
+  (items, suburb, maxPrice, hasWifi, hasParking, bathroom, reqGenderPref, childrenAllowed) => {
+    return items.filter(item => {
+      if (suburb && !item.suburb.toLowerCase().includes(suburb.toLowerCase()) && !item.location.toLowerCase().includes(suburb.toLowerCase())) return false;
+      if (maxPrice > 0 && item.price > maxPrice) return false;
+      if (hasWifi && !item.amenities.wifi) return false;
+      if (hasParking && !item.amenities.parking) return false;
+      if (bathroom !== 'all' && item.amenities.bathroom !== bathroom) return false;
+      if (reqGenderPref !== undefined) {
+        if (typeof reqGenderPref === 'boolean') {
+          if (reqGenderPref && !item.landlordLivesHere) return false;
+        } else if (typeof reqGenderPref === 'string' && reqGenderPref !== 'all' && reqGenderPref !== 'any') {
+          if (item.requirements.genderPreference !== 'any' && item.requirements.genderPreference !== reqGenderPref) return false;
+        }
+      }
+      if (childrenAllowed && !item.requirements.childrenAllowed) return false;
+      return true;
+    });
+  }
+)
+
+export const selectMatchedRoommates = createSelector(
+  [
+    (state: RootState) => state.networking.roommates,
+    (state: RootState, gender: string) => gender,
+    (state: RootState, gender: string, maxBudget: number) => maxBudget
+  ],
+  (roommates, gender, maxBudget) => {
+    return roommates.filter(rm => {
+      if (gender !== 'all' && rm.gender !== gender) return false;
+      if (maxBudget > 0 && rm.budget > maxBudget) return false;
+      return true;
+    });
+  }
+)
+
 export const store = configureStore({
   reducer: {
     auth: authSlice.reducer,
@@ -1747,7 +2064,8 @@ export const store = configureStore({
     networking: networkingSlice.reducer,
     utilities: utilitiesSlice.reducer,
     community: communitySlice.reducer,
-    notifications: notificationsSlice.reducer
+    notifications: notificationsSlice.reducer,
+    ui: uiSlice.reducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -1764,6 +2082,7 @@ export interface RootState {
   utilities: ReturnType<typeof utilitiesSlice.reducer>
   community: ReturnType<typeof communitySlice.reducer>
   notifications: ReturnType<typeof notificationsSlice.reducer>
+  ui: ReturnType<typeof uiSlice.reducer>
 }
 
 export type AppDispatch = typeof store.dispatch

@@ -32,6 +32,9 @@ import {
   floodNotifications,
   addDispute,
   updateDisputeStatus,
+  setLanguage,
+  selectFilteredListings,
+  selectMatchedRoommates,
   RootState, 
   Listing, 
   RoomRequest,
@@ -46,8 +49,8 @@ import {
   Shield, LogOut, Home, Search, Plus, Check, X, AlertTriangle, 
   Wifi, Car, FileText, Send, MapPin, Eye, 
   User as UserIcon, Users, CheckCircle2, Terminal, Info,
-  Star, Calendar, Clock, Briefcase, Upload,
-  ShieldCheck, FileCode, Zap, Copy,
+  Star, Calendar, Clock, Briefcase,
+  ShieldCheck, Zap, Copy,
   MessageSquare, Gavel, Award, Megaphone, Wrench, Loader, Menu, Sun, Moon
 } from 'lucide-react'
 import { 
@@ -61,6 +64,13 @@ import {
   sanitizeInput as secureSanitize,
   validateUploadedFile as validateUploadedFileUtil 
 } from '../../utils/security'
+
+import { t } from '../../utils/i18n'
+import NoticeBoardTab from './components/NoticeBoardTab'
+import ChoreSchedulerTab from './components/ChoreSchedulerTab'
+import ToolLibraryTab from './components/ToolLibraryTab'
+import DisputesTab from './components/DisputesTab'
+import WafConsoleTab from './components/WafConsoleTab'
 
 const formatCurrency = (amount: number, currencyCode: string = 'ZAR') => {
   if (currencyCode === 'ZAR') return `R ${amount}`
@@ -149,7 +159,6 @@ export default function DashboardPage() {
   const rateLimitCount = useSelector((state: RootState) => state.security.apiCallCount)
   
   // Networking collections
-  const roommates = useSelector((state: RootState) => state.networking.roommates)
   const lifts = useSelector((state: RootState) => state.networking.lifts)
   const services = useSelector((state: RootState) => state.networking.services)
   const dispatches = useSelector((state: RootState) => state.networking.dispatches)
@@ -161,6 +170,7 @@ export default function DashboardPage() {
   const communityNotices = useSelector((state: RootState) => state.community.notices)
   const communityDisputes = useSelector((state: RootState) => state.community.disputes)
   const reputationScores = useSelector((state: RootState) => state.community.reputationScores)
+  const lang = useSelector((state: RootState) => state.ui.language)
 
   // Notifications Center & Search Debounce
   const notifications = useSelector((state: RootState) => state.notifications)
@@ -349,6 +359,25 @@ export default function DashboardPage() {
       document.documentElement.setAttribute('data-theme', theme)
     }
   }, [theme])
+
+  // Filter listings for tenant view (using Reselect memoized selector)
+  const filteredListings = useSelector((state: RootState) => selectFilteredListings(
+    state,
+    searchLocation,
+    filterPrice,
+    filterWifi,
+    filterParking,
+    filterBathroom,
+    filterLivesElse,
+    filterChildrenAllowed
+  ))
+
+  // Filter roommates for tenant P2P view (using Reselect memoized selector)
+  const filteredRoommates = useSelector((state: RootState) => selectMatchedRoommates(
+    state,
+    roommateSearchGender,
+    roommateSearchBudget
+  ))
 
   if (!currentUser) return <div style={loadingStyle}>Redirecting secure session...</div>
 
@@ -1216,27 +1245,6 @@ export default function DashboardPage() {
     }
   }
 
-  // Filter listings for tenant view
-  const filteredListings = listings.filter(item => {
-    if (searchLocation && !item.suburb.toLowerCase().includes(searchLocation.toLowerCase()) && !item.location.toLowerCase().includes(searchLocation.toLowerCase())) {
-      return false
-    }
-    if (item.price > filterPrice) return false
-    if (filterWifi && !item.amenities.wifi) return false
-    if (filterParking && !item.amenities.parking) return false
-    if (filterBathroom !== 'all' && item.amenities.bathroom !== filterBathroom) return false
-    if (filterLivesElse && item.landlordLivesHere) return false
-    if (filterChildrenAllowed && !item.requirements.childrenAllowed) return false
-    return true
-  })
-
-  // Filter roommates for tenant P2P view
-  const filteredRoommates = roommates.filter(rm => {
-    if (roommateSearchGender !== 'all' && rm.gender !== roommateSearchGender) return false
-    if (rm.budget > roommateSearchBudget) return false
-    return true
-  })
-
   // Helper to render the Community Hub contents (Notice Board, Tool Share, Chore Rota, Disputes)
   const renderCommunityHubContents = () => {
     const activeSubTabBtnStyle = {
@@ -1252,17 +1260,32 @@ export default function DashboardPage() {
       borderRadius: '4px'
     }
 
+    const tabStyles = {
+      panelTitleStyle,
+      formStyleStyle,
+      modalInputStyle,
+      modalSelectStyle,
+      modalTextareaStyle,
+      modalSubmitBtnStyle,
+      gridStyle,
+      cardStyle,
+      cardBodyStyle,
+      emptyStateStyle,
+      landlordHeaderRowStyle,
+      labelStyleStyle
+    }
+
     return (
       <div>
         <div style={landlordHeaderRowStyle}>
           <div>
-            <h2 style={sectionHeaderStyle}>Co-Living Community Hub</h2>
+            <h2 style={sectionHeaderStyle}>{t('communityHub', lang)}</h2>
             <p style={{ ...p2pDescStyle, margin: '0.2rem 0 0 0', color: '#888' }}>
-              Connect with fellow residents, rent shared tools, coordinate chore rotations, and resolve disputes.
+              {t('communityDesc', lang)}
             </p>
           </div>
           <div style={walletBalanceDisplayStyle}>
-            <span style={{ fontSize: '0.7rem', color: '#aaa', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>My Wallet Balance</span>
+            <span style={{ fontSize: '0.7rem', color: '#aaa', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>{t('walletBalance', lang)}</span>
             <strong style={{ fontSize: '1.2rem', color: '#D4AF37' }}>{formatCurrency(currentUser?.balance || 0, 'ZAR')}</strong>
           </div>
         </div>
@@ -1273,401 +1296,86 @@ export default function DashboardPage() {
             style={communitySubTab === 'notices' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
             onClick={() => setCommunitySubTab('notices')}
           >
-            <Megaphone size={14} style={{ marginRight: 6 }} /> Notice Board & Events
+            <Megaphone size={14} style={{ marginRight: 6 }} /> {t('noticeBoardTab', lang)}
           </button>
           <button 
             style={communitySubTab === 'tools' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
             onClick={() => setCommunitySubTab('tools')}
           >
-            <Wrench size={14} style={{ marginRight: 6 }} /> Tool Library (P2P)
+            <Wrench size={14} style={{ marginRight: 6 }} /> {t('toolLibraryTab', lang)}
           </button>
           <button 
             style={communitySubTab === 'chores' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
             onClick={() => setCommunitySubTab('chores')}
           >
-            <Award size={14} style={{ marginRight: 6 }} /> Chore Scheduler
+            <Award size={14} style={{ marginRight: 6 }} /> {t('choreSchedulerTab', lang)}
           </button>
           <button 
             style={communitySubTab === 'disputes' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
             onClick={() => setCommunitySubTab('disputes')}
           >
-            <Gavel size={14} style={{ marginRight: 6 }} /> Disputes & Mediation
+            <Gavel size={14} style={{ marginRight: 6 }} /> {t('disputesTab', lang)}
           </button>
         </div>
 
-        {/* Sub-tab 1: Notices & Events */}
         {communitySubTab === 'notices' && (
-          <div className="responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
-            {/* Notices List */}
-            <div>
-              <h3 style={{ ...panelTitleStyle, marginTop: 0 }}>Community Bulletins</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {communityNotices.map(notice => (
-                  <div key={notice.id} className="glass-panel" style={{ padding: '1.2rem', borderRadius: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ 
-                        fontSize: '0.65rem', 
-                        fontWeight: 'bold', 
-                        padding: '0.1rem 0.4rem', 
-                        borderRadius: '4px',
-                        background: notice.type === 'event' ? 'rgba(212, 175, 55, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                        border: `1px solid ${notice.type === 'event' ? '#D4AF37' : '#3b82f6'}`,
-                        color: notice.type === 'event' ? '#D4AF37' : '#3b82f6'
-                      }}>
-                        {notice.type.toUpperCase()}
-                      </span>
-                      <span style={{ fontSize: '0.7rem', color: '#888' }}>
-                        Posted: {new Date(notice.timestamp).toLocaleDateString()} by {notice.postedBy}
-                      </span>
-                    </div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '0.95rem' }}>{notice.title}</h4>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#ccc', lineHeight: '1.4' }}>{notice.description}</p>
-                    
-                    <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <button 
-                          className="btn-gold" 
-                          style={{ 
-                            padding: '0.2rem 0.5rem', 
-                            fontSize: '0.7rem', 
-                            background: notice.vibes?.includes(currentUser?.name || '') ? '#D4AF37' : 'rgba(255,255,255,0.05)',
-                            color: notice.vibes?.includes(currentUser?.name || '') ? '#000' : '#D4AF37',
-                            border: '1px solid rgba(212,175,55,0.2)'
-                          }}
-                          onClick={() => handleVibeNotice(notice.id)}
-                        >
-                          ❤️ vibe ({notice.vibes?.length || 0})
-                        </button>
-                        <button 
-                          className="btn-gold" 
-                          style={{ 
-                            padding: '0.2rem 0.5rem', 
-                            fontSize: '0.7rem', 
-                            background: notice.echos?.includes(currentUser?.name || '') ? '#D4AF37' : 'rgba(255,255,255,0.05)',
-                            color: notice.echos?.includes(currentUser?.name || '') ? '#000' : '#D4AF37',
-                            border: '1px solid rgba(212,175,55,0.2)'
-                          }}
-                          onClick={() => handleEchoNotice(notice.id)}
-                        >
-                          📢 echo ({notice.echos?.length || 0})
-                        </button>
-                      </div>
-
-                      {notice.type === 'event' ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                          <span style={{ fontSize: '0.75rem', color: '#888' }}>
-                            {notice.rsvps.length} attending {notice.rsvps.length > 0 && `(${notice.rsvps.join(', ')})`}
-                          </span>
-                          <button 
-                            className="btn-gold" 
-                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
-                            onClick={() => handleRSVPToEvent(notice.id)}
-                          >
-                            {notice.rsvps.includes(currentUser?.name || '') ? 'Cancel RSVP' : 'RSVP'}
-                          </button>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '0.7rem', color: '#666' }}>Bulletin Notice</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Post Notice Form */}
-            <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px', height: 'fit-content' }}>
-              <h3 style={{ ...panelTitleStyle, borderBottom: 'none', marginBottom: '1rem', marginTop: 0 }}>Post Announcement</h3>
-              <form onSubmit={handlePostNotice} style={formStyleStyle}>
-                <div style={inputGroupStyle}>
-                  <label style={labelStyleStyle}>Announcement Title</label>
-                  <input 
-                    type="text" 
-                    required 
-                    placeholder="e.g. Water cut this Thursday / Found key ring" 
-                    value={noticeTitle}
-                    onChange={(e) => setNoticeTitle(e.target.value)}
-                    style={modalInputStyle}
-                  />
-                </div>
-                <div style={inputGroupStyle}>
-                  <label style={labelStyleStyle}>Post Type</label>
-                  <select 
-                    value={noticeType}
-                    onChange={(e) => setNoticeType(e.target.value as 'notice' | 'event')}
-                    style={modalSelectStyle}
-                  >
-                    <option value="notice">General Notice</option>
-                    <option value="event">Community Event / RSVP</option>
-                  </select>
-                </div>
-                {noticeType === 'event' && (
-                  <div style={inputGroupStyle}>
-                    <label style={labelStyleStyle}>Event Date / Time</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Saturday, 30 May at 2:00 PM" 
-                      value={noticeEventDate}
-                      onChange={(e) => setNoticeEventDate(e.target.value)}
-                      style={modalInputStyle}
-                    />
-                  </div>
-                )}
-                <div style={inputGroupStyle}>
-                  <label style={labelStyleStyle}>Details / Description</label>
-                  <textarea 
-                    rows={3} 
-                    required 
-                    placeholder="Write announcement details here..." 
-                    value={noticeDesc}
-                    onChange={(e) => setNoticeDesc(e.target.value)}
-                    style={modalTextareaStyle}
-                  />
-                </div>
-                <button type="submit" className="btn-gold" style={{ ...modalSubmitBtnStyle, marginTop: '0.5rem' }}>
-                  Publish to Notice Board
-                </button>
-              </form>
-            </div>
-          </div>
+          <NoticeBoardTab
+            communityNotices={communityNotices}
+            currentUser={currentUser}
+            noticeTitle={noticeTitle}
+            setNoticeTitle={setNoticeTitle}
+            noticeType={noticeType}
+            setNoticeType={setNoticeType}
+            noticeEventDate={noticeEventDate}
+            setNoticeEventDate={setNoticeEventDate}
+            noticeDesc={noticeDesc}
+            setNoticeDesc={setNoticeDesc}
+            handleVibeNotice={handleVibeNotice}
+            handleEchoNotice={handleEchoNotice}
+            handleRSVPToEvent={handleRSVPToEvent}
+            handlePostNotice={handlePostNotice}
+            lang={lang}
+            styles={tabStyles}
+          />
         )}
 
-        {/* Sub-tab 2: Tool Sharing */}
         {communitySubTab === 'tools' && (
-          <div>
-            <div style={landlordHeaderRowStyle}>
-              <h3 style={{ ...panelTitleStyle, borderBottom: 'none', margin: 0 }}>Available Tool Sharing Library</h3>
-              <button className="btn-gold" onClick={() => setShowToolRegModal(true)}>
-                <Plus size={14} style={{ marginRight: 6 }} /> Register a Tool for Hire
-              </button>
-            </div>
-            
-            <div style={{ ...gridStyle, marginTop: '1.2rem' }}>
-              {communityTools.map(tool => (
-                <div key={tool.id} className="glass-panel" style={cardStyle}>
-                  <div style={{ ...cardBodyStyle, gap: '0.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#fff' }}>{tool.title}</h4>
-                      <span style={{ color: '#D4AF37', fontWeight: 'bold' }}>{formatCurrency(tool.pricePerDay, tool.currency)} / day</span>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#aaa' }}>
-                      <strong>Owner:</strong> {tool.ownerName} | <strong>Location:</strong> {tool.location}
-                    </p>
-                    <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#ccc', minHeight: '36px' }}>{tool.description}</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                      <span style={{ 
-                        fontSize: '0.65rem', 
-                        fontWeight: 'bold', 
-                        borderRadius: '4px', 
-                        padding: '0.1rem 0.3rem',
-                        background: tool.status === 'available' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                        border: `1px solid ${tool.status === 'available' ? '#22c55e' : '#ef4444'}`,
-                        color: tool.status === 'available' ? '#22c55e' : '#ef4444'
-                      }}>
-                        {tool.status.toUpperCase()}
-                      </span>
-                      {tool.status === 'available' ? (
-                        <button 
-                          className="btn-gold" 
-                          style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
-                          onClick={() => handleRentTool(tool)}
-                        >
-                          Hire Tool
-                        </button>
-                      ) : (
-                        tool.rentedBy === currentUser?.id ? (
-                          <button 
-                            className="btn-primary" 
-                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', background: '#ef4444' }}
-                            onClick={() => handleReturnTool(tool.id, tool.title)}
-                          >
-                            Return Tool
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: '0.7rem', color: '#888' }}>
-                            Hired by {tool.rentedByName} until {tool.rentedUntil}
-                          </span>
-                        )
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ToolLibraryTab
+            communityTools={communityTools}
+            currentUser={currentUser}
+            setShowToolRegModal={setShowToolRegModal}
+            handleRentTool={handleRentTool}
+            handleReturnTool={handleReturnTool}
+            formatCurrency={formatCurrency}
+            lang={lang}
+            styles={tabStyles}
+          />
         )}
 
-        {/* Sub-tab 3: Chore Scheduler */}
         {communitySubTab === 'chores' && (
-          <div className="responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
-            {/* Chores Table */}
-            <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
-              <h3 style={{ ...panelTitleStyle, borderBottom: 'none', marginTop: 0 }}>Weekly Roommate Chores Rota</h3>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#D4AF37' }}>
-                      <th style={{ padding: '0.6rem 0.4rem' }}>Day</th>
-                      <th style={{ padding: '0.6rem 0.4rem' }}>Roommate</th>
-                      <th style={{ padding: '0.6rem 0.4rem' }}>Task</th>
-                      <th style={{ padding: '0.6rem 0.4rem' }}>Status</th>
-                      <th style={{ padding: '0.6rem 0.4rem', textAlign: 'right' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {communityChores.map(chore => (
-                      <tr key={chore.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '0.6rem 0.4rem', fontWeight: 'bold' }}>{chore.dayOfWeek}</td>
-                        <td style={{ padding: '0.6rem 0.4rem' }}>{chore.roommateName}</td>
-                        <td style={{ padding: '0.6rem 0.4rem', color: '#ccc' }}>{chore.taskName}</td>
-                        <td style={{ padding: '0.6rem 0.4rem' }}>
-                          <span style={{ 
-                            fontSize: '0.6rem', 
-                            padding: '0.1rem 0.3rem', 
-                            borderRadius: '3px',
-                            background: chore.status === 'completed' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                            border: `1px solid ${chore.status === 'completed' ? '#22c55e' : '#ef4444'}`,
-                            color: chore.status === 'completed' ? '#22c55e' : '#ef4444'
-                          }}>
-                            {chore.status.toUpperCase()}
-                          </span>
-                        </td>
-                        <td style={{ padding: '0.6rem 0.4rem', textAlign: 'right' }}>
-                          {chore.status === 'pending' && chore.roommateId === currentUser?.id && (
-                            <button 
-                              className="btn-gold" 
-                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
-                              onClick={() => handleCompleteChore(chore.id, chore.taskName)}
-                            >
-                              Done
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Scoreboard */}
-            <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px', height: 'fit-content' }}>
-              <h3 style={{ ...panelTitleStyle, borderBottom: 'none', marginTop: 0, color: '#D4AF37' }}>🏅 Reputation Leaderboard</h3>
-              <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 1rem 0' }}>Complete your assigned chores on time to earn +10 reputation points!</p>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                {Object.entries(reputationScores)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([uId, score], idx) => {
-                    const uName = uId === 'tenant-100' ? 'Global Tenant' : uId === 'rm-1' ? 'Lerato Modise' : 'Unknown Resident'
-                    return (
-                      <div key={uId} style={{ display: 'flex', justifyItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 0.8rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <strong style={{ color: '#D4AF37', marginRight: '0.8rem' }}>#{idx + 1}</strong>
-                        <span style={{ color: '#fff', fontSize: '0.8rem' }}>{uName}</span>
-                        <span style={{ marginLeft: 'auto', fontWeight: 'bold', color: '#22c55e', fontSize: '0.8rem' }}>{score} XP</span>
-                      </div>
-                    )
-                  })
-                }
-              </div>
-            </div>
-          </div>
+          <ChoreSchedulerTab
+            communityChores={communityChores}
+            currentUser={currentUser}
+            reputationScores={reputationScores}
+            handleCompleteChore={handleCompleteChore}
+            lang={lang}
+            styles={tabStyles}
+          />
         )}
 
-        {/* Sub-tab 4: Disputes Board */}
         {communitySubTab === 'disputes' && (
-          <div>
-            <div style={landlordHeaderRowStyle}>
-              <h3 style={{ ...panelTitleStyle, borderBottom: 'none', margin: 0 }}>Mediation & Conflict Resolution Ledger</h3>
-              {currentUser?.role !== 'landlord' && (
-                <button className="btn-gold" onClick={() => setShowDisputeModal(true)}>
-                  <Plus size={14} style={{ marginRight: 6 }} /> Report a Dispute / Issue
-                </button>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.2rem' }}>
-              {communityDisputes.length > 0 ? (
-                communityDisputes.map(dispute => (
-                  <div key={dispute.id} className="glass-panel" style={{ padding: '1.2rem', borderRadius: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <span style={{ 
-                          fontSize: '0.6rem', 
-                          fontWeight: 'bold', 
-                          borderRadius: '4px', 
-                          padding: '0.1rem 0.3rem',
-                          background: dispute.status === 'resolved' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                          border: `1px solid ${dispute.status === 'resolved' ? '#22c55e' : '#ef4444'}`,
-                          color: dispute.status === 'resolved' ? '#22c55e' : '#ef4444'
-                        }}>
-                          {dispute.status.toUpperCase()}
-                        </span>
-                        <span style={{ fontSize: '0.75rem', color: '#D4AF37' }}>
-                          Category: <strong>{dispute.category}</strong>
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '0.7rem', color: '#888' }}>
-                        Filed: {dispute.timestamp}
-                      </span>
-                    </div>
-
-                    <h4 style={{ margin: '0 0 0.4rem 0', color: '#fff', fontSize: '0.95rem' }}>{dispute.title}</h4>
-                    <p style={{ margin: '0 0 0.8rem 0', fontSize: '0.8rem', color: '#ccc', lineHeight: '1.4' }}>
-                      <strong>Details:</strong> {dispute.description}
-                    </p>
-
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '0.6rem', borderRadius: '6px', fontSize: '0.75rem' }}>
-                      <p style={{ margin: '0 0 0.3rem 0', color: '#888' }}>
-                        <strong>Complainant:</strong> {dispute.reportedBy} | <strong>Against:</strong> {dispute.againstUser}
-                      </p>
-                      <p style={{ margin: 0, color: '#888' }}>
-                        <strong>Assigned Mediator:</strong> {dispute.mediatorName} (Landlord)
-                      </p>
-                    </div>
-
-                    {dispute.status === 'resolved' && dispute.resolutionDetails && (
-                      <div style={{ marginTop: '0.8rem', background: 'rgba(34, 197, 94, 0.05)', border: '1px dashed #22c55e', padding: '0.8rem', borderRadius: '6px', fontSize: '0.8rem' }}>
-                        <strong style={{ color: '#22c55e' }}>✅ Resolution Action Taken by Mediator:</strong>
-                        <p style={{ margin: '0.2rem 0 0 0', color: '#ccc' }}>&quot;{dispute.resolutionDetails}&quot;</p>
-                      </div>
-                    )}
-
-                    {dispute.status === 'pending' && currentUser?.role === 'landlord' && (
-                      <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.8rem' }}>
-                        {resolvingDisputeId === dispute.id ? (
-                          <form onSubmit={handleResolveDispute}>
-                            <textarea 
-                              rows={2}
-                              required
-                              placeholder="Describe mediation actions or resolution details..."
-                              value={resolutionText}
-                              onChange={(e) => setResolutionText(e.target.value)}
-                              style={modalTextareaStyle}
-                            />
-                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                              <button type="submit" className="btn-gold" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}>Submit Resolution</button>
-                              <button type="button" className="btn-primary" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }} onClick={() => setResolvingDisputeId(null)}>Cancel</button>
-                            </div>
-                          </form>
-                        ) : (
-                          <button 
-                            className="btn-gold" 
-                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
-                            onClick={() => setResolvingDisputeId(dispute.id)}
-                          >
-                            Resolve Dispute / Add Mediation Details
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div style={emptyStateStyle}>No disputes filed. This community is peaceful!</div>
-              )}
-            </div>
-          </div>
+          <DisputesTab
+            communityDisputes={communityDisputes}
+            currentUser={currentUser}
+            setShowDisputeModal={setShowDisputeModal}
+            resolvingDisputeId={resolvingDisputeId}
+            setResolvingDisputeId={setResolvingDisputeId}
+            resolutionText={resolutionText}
+            setResolutionText={setResolutionText}
+            handleResolveDispute={handleResolveDispute}
+            lang={lang}
+            styles={tabStyles}
+          />
         )}
       </div>
     )
@@ -1922,6 +1630,33 @@ export default function DashboardPage() {
 
         {/* Footer controls: Security Labs toggle & Logout */}
         <div className="sidebar-footer">
+          {/* Language selector toggle */}
+          <div style={{ display: 'flex', gap: '4px', padding: '0.2rem 0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '0.5rem', justifyContent: 'space-between' }}>
+            <button 
+              onClick={() => dispatch(setLanguage('en'))} 
+              style={{ flex: 1, padding: '0.2rem', background: lang === 'en' ? 'var(--gold-primary)' : 'transparent', color: lang === 'en' ? '#000' : 'var(--foreground)', border: 'none', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              EN
+            </button>
+            <button 
+              onClick={() => dispatch(setLanguage('zu'))} 
+              style={{ flex: 1, padding: '0.2rem', background: lang === 'zu' ? 'var(--gold-primary)' : 'transparent', color: lang === 'zu' ? '#000' : 'var(--foreground)', border: 'none', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              ZU
+            </button>
+            <button 
+              onClick={() => dispatch(setLanguage('xh'))} 
+              style={{ flex: 1, padding: '0.2rem', background: lang === 'xh' ? 'var(--gold-primary)' : 'transparent', color: lang === 'xh' ? '#000' : 'var(--foreground)', border: 'none', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              XH
+            </button>
+            <button 
+              onClick={() => dispatch(setLanguage('af'))} 
+              style={{ flex: 1, padding: '0.2rem', background: lang === 'af' ? 'var(--gold-primary)' : 'transparent', color: lang === 'af' ? '#000' : 'var(--foreground)', border: 'none', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              AF
+            </button>
+          </div>
           <button 
             className="sidebar-nav-item"
             onClick={() => setTheme(theme === 'day' ? 'night' : 'day')}
@@ -3116,324 +2851,61 @@ export default function DashboardPage() {
           {/* Interactive Pentest Console */}
           <AnimatePresence>
             {showSecurityConsole && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="glass-panel" 
-                style={consolePanelStyle}
-              >
-                <div style={consoleHeaderStyle}>
-                  <div style={consoleTitleWrapperStyle}>
-                    <Terminal size={14} color="#D4AF37" />
-                    <span>Ethical Hacking Sandbox (Security Labs)</span>
-                  </div>
-                  <span style={consolePulseStyle} />
-                </div>
-                
-                <p style={consoleDescStyle}>
-                  Test common application vulnerabilities to see how our Next.js security configurations neutralize attacks in real-time.
-                </p>                 {/* Hacking Simulator buttons */}
-                <div style={hackButtonsRowStyle}>
-                  <button 
-                    onClick={() => runHackSimulation('xss')}
-                    style={hackBtnStyle}
-                    title="Simulate Cross-Site Scripting Injection"
-                  >
-                    1. XSS Injection (Input Script Attack)
-                  </button>
-                  <button 
-                    onClick={() => runHackSimulation('idor')}
-                    style={hackBtnStyle}
-                    title="Simulate Insecure Direct Object Reference"
-                  >
-                    2. IDOR Privilege Bypass (Record Hijack)
-                  </button>
-                  <button 
-                    onClick={() => runHackSimulation('flood')}
-                    style={hackBtnStyle}
-                    title="Simulate API brute-force DOS flood"
-                  >
-                    3. API Flood DDoS (Rate limit triggers)
-                  </button>
-                  <button 
-                    onClick={() => runHackSimulation('sqli')}
-                    style={hackBtnStyle}
-                    title="Simulate SQL Injection query parameters block"
-                  >
-                    4. SQL Injection (UNION SELECT Query)
-                  </button>
-                  <button 
-                    onClick={() => runHackSimulation('traversal')}
-                    style={hackBtnStyle}
-                    title="Simulate Directory/Path Traversal Attack"
-                  >
-                    5. Path Traversal (Access System Files)
-                  </button>
-                  <button 
-                    onClick={() => runHackSimulation('cmdi')}
-                    style={hackBtnStyle}
-                    title="Simulate OS Command Injection Attack"
-                  >
-                    6. Command Injection (Shell Execution)
-                  </button>
-                  <button 
-                    onClick={() => runHackSimulation('ssrf')}
-                    style={hackBtnStyle}
-                    title="Simulate Server-Side Request Forgery Attack"
-                  >
-                    7. SSRF Attack (Internal Network Scan)
-                  </button>
-                  <button 
-                    onClick={() => runHackSimulation('nosqli')}
-                    style={hackBtnStyle}
-                    title="Simulate MongoDB/NoSQL Operator Injection"
-                  >
-                    8. NoSQL Injection (Operator Bypass)
-                  </button>
-                </div>
-
-                <div style={{ marginTop: '1.5rem', paddingTop: '1.2rem', borderTop: '1px dashed rgba(212, 175, 55, 0.3)', textAlign: 'left' }}>
-                  <div style={consoleHeaderStyle}>
-                    <div style={consoleTitleWrapperStyle}>
-                      <Zap size={14} color="#D4AF37" />
-                      <span style={{ fontWeight: 'bold' }}>Scale & Stress Test Hub (10-Case Runner)</span>
-                    </div>
-                  </div>
-                  <p style={consoleDescStyle}>
-                    Simulate extreme scale workloads (900B users, 40B daily posts, mid-session JWT expiries, realtime dropouts, RLS overhead, deep pagination offsets) and benchmark performance.
-                  </p>
-
-                  {/* Stress Test Trigger Controls */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1rem' }}>
-                    <button 
-                      onClick={() => runScaleStressTest('jwt_expiry')}
-                      style={{ ...hackBtnStyle, flex: '1 1 48%', minWidth: '120px', background: 'rgba(212,175,55,0.15)' }}
-                    >
-                      ⚡ JWT Expiry Under Load
-                    </button>
-                    <button 
-                      onClick={() => runScaleStressTest('optimistic_rollback')}
-                      style={{ ...hackBtnStyle, flex: '1 1 48%', minWidth: '120px', background: 'rgba(212,175,55,0.15)' }}
-                    >
-                      🔄 Optimistic UI Rollback
-                    </button>
-                    <button 
-                      onClick={() => runScaleStressTest('realtime_reconnect')}
-                      style={{ ...hackBtnStyle, flex: '1 1 48%', minWidth: '120px', background: 'rgba(212,175,55,0.15)' }}
-                    >
-                      🔌 Realtime Reconnection
-                    </button>
-                    <button 
-                      onClick={() => runScaleStressTest('storage_performance')}
-                      style={{ ...hackBtnStyle, flex: '1 1 48%', minWidth: '120px', background: 'rgba(212,175,55,0.15)' }}
-                    >
-                      📦 Storage Performance
-                    </button>
-                    <button 
-                      onClick={() => runScaleStressTest('search_debounce')}
-                      style={{ ...hackBtnStyle, flex: '1 1 48%', minWidth: '120px', background: 'rgba(212,175,55,0.15)' }}
-                    >
-                      🔍 Search Debounce (20M/500ms)
-                    </button>
-                    <button 
-                      onClick={() => runScaleStressTest('notification_flood')}
-                      style={{ ...hackBtnStyle, flex: '1 1 48%', minWidth: '120px', background: 'rgba(212,175,55,0.15)' }}
-                    >
-                      🔔 Notification Flood (500M)
-                    </button>
-                    <button 
-                      onClick={() => runScaleStressTest('deep_pagination')}
-                      style={{ ...hackBtnStyle, flex: '1 1 48%', minWidth: '120px', background: 'rgba(212,175,55,0.15)' }}
-                    >
-                      📑 Deep Pagination Slowdown
-                    </button>
-                    <button 
-                      onClick={() => runScaleStressTest('rls_overhead')}
-                      style={{ ...hackBtnStyle, flex: '1 1 48%', minWidth: '120px', background: 'rgba(212,175,55,0.15)' }}
-                    >
-                      🛡️ RLS Policy Overhead
-                    </button>
-                    <button 
-                      onClick={() => runScaleStressTest('concurrent_vibe')}
-                      style={{ ...hackBtnStyle, flex: '1 1 48%', minWidth: '120px', background: 'rgba(212,175,55,0.15)' }}
-                    >
-                      🔥 Concurrent Vibe Flood
-                    </button>
-                    <button 
-                      onClick={() => runScaleStressTest('cache_ttl')}
-                      style={{ ...hackBtnStyle, flex: '1 1 48%', minWidth: '120px', background: 'rgba(212,175,55,0.15)' }}
-                    >
-                      ❄️ Cold vs Warm Cache TTL
-                    </button>
-                  </div>
-
-                  {/* Network Drop simulator toggle */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.8rem', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <input 
-                      type="checkbox" 
-                      id="kill-network" 
-                      checked={networkKilled}
-                      onChange={(e) => {
-                        const checked = e.target.checked
-                        setNetworkKilled(checked)
-                        if (typeof window !== 'undefined') {
-                          (window as unknown as { __networkKilled?: boolean }).__networkKilled = checked
-                        }
-                        setAlertNotification(checked ? 'Network killed! Vibe, RSVP, and Echo updates will now fail.' : 'Network restored.')
-                        setTimeout(() => setAlertNotification(null), 3000)
-                      }}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    <label htmlFor="kill-network" style={{ color: '#fff', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 'bold' }}>
-                      🚫 Toggle Network Drop (Kill Connection)
-                    </label>
-                  </div>
-
-                  {/* Stress Test Execution Log/Output */}
-                  {stressTestOutput && (
-                    <div style={{
-                      background: 'rgba(0,0,0,0.85)',
-                      padding: '0.8rem',
-                      borderRadius: '8px',
-                      fontFamily: 'monospace',
-                      fontSize: '0.75rem',
-                      color: '#00ff00',
-                      border: '1px solid rgba(212, 175, 55, 0.3)',
-                      maxHeight: '220px',
-                      overflowY: 'auto',
-                      whiteSpace: 'pre-wrap'
-                    }}>
-                      {stressTestOutput}
-                    </div>
-                  )}
-                </div>
-
-                {/* WAF Live Traffic Visualizer */}
-                {(() => {
-                  const latestLog = securityLogs[0]
-                  const isLastSqli = latestLog?.type === 'sqli_blocked'
-                  const isLastXss = latestLog?.type === 'xss_blocked'
-                  const isLastIdor = latestLog?.type === 'idor_prevented'
-                  const isLastRate = latestLog?.type === 'rate_limit_triggered'
-                  const isLastMalware = latestLog?.type === 'upload_malware_blocked'
-
-                  return (
-                    <div style={wafContainerStyle}>
-                      <p style={logTitleStyle}><Shield size={12} style={{ marginRight: 6 }} /> Visual WAF Filter Engine</p>
-                      <div style={wafFlowContainerStyle}>
-                        {/* Flowing animated packet simulation */}
-                        <div style={wafVisualFlowStyle}>
-                          <motion.div 
-                            animate={{ 
-                              x: [0, 80, 160, 240, 310], 
-                              y: [0, 5, -5, 5, 0],
-                              backgroundColor: latestLog && latestLog.type !== 'auth_success' ? ['#22c55e', '#ef4444', '#ef4444'] : ['#22c55e', '#22c55e', '#3b82f6']
-                            }}
-                            transition={{ repeat: Infinity, duration: 3, ease: 'linear' }}
-                            style={wafPacketStyle}
-                          />
-                          <div style={wafLineStyle} />
-                        </div>
-
-                        <div style={wafStatusGridStyle}>
-                          <div style={{ ...wafNodeStyle, borderColor: isLastRate ? '#ef4444' : 'rgba(255,255,255,0.08)' }}>
-                            <span style={{ ...wafNodeIndicatorStyle, background: isLastRate ? '#ef4444' : '#22c55e' }} />
-                            <span style={wafNodeLabelStyle}>Rate Limiter: {isLastRate ? 'LOCKOUT' : 'ACTIVE'}</span>
-                          </div>
-                          <div style={{ ...wafNodeStyle, borderColor: isLastSqli ? '#ef4444' : 'rgba(255,255,255,0.08)' }}>
-                            <span style={{ ...wafNodeIndicatorStyle, background: isLastSqli ? '#ef4444' : '#22c55e' }} />
-                            <span style={wafNodeLabelStyle}>SQLi Engine: {isLastSqli ? 'BLOCKED' : 'FILTERING'}</span>
-                          </div>
-                          <div style={{ ...wafNodeStyle, borderColor: isLastXss ? '#ef4444' : 'rgba(255,255,255,0.08)' }}>
-                            <span style={{ ...wafNodeIndicatorStyle, background: isLastXss ? '#ef4444' : '#22c55e' }} />
-                            <span style={wafNodeLabelStyle}>XSS Sandbox: {isLastXss ? 'STRIPPED' : 'SANITIZING'}</span>
-                          </div>
-                          <div style={{ ...wafNodeStyle, borderColor: isLastIdor ? '#ef4444' : 'rgba(255,255,255,0.08)' }}>
-                            <span style={{ ...wafNodeIndicatorStyle, background: isLastIdor ? '#ef4444' : '#22c55e' }} />
-                            <span style={wafNodeLabelStyle}>IDOR Guard: {isLastIdor ? 'DENIED' : 'SECURE'}</span>
-                          </div>
-                          <div style={{ ...wafNodeStyle, borderColor: isLastMalware ? '#ef4444' : 'rgba(255,255,255,0.08)' }}>
-                            <span style={{ ...wafNodeIndicatorStyle, background: isLastMalware ? '#ef4444' : '#22c55e' }} />
-                            <span style={wafNodeLabelStyle}>Malware: {isLastMalware ? 'BLOCKED' : 'SECURE'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })()}
-
-                {/* XSS Live Playground */}
-                <div style={playgroundGroupStyle}>
-                  <p style={logTitleStyle}><FileCode size={12} style={{ marginRight: 6 }} /> Real-time XSS Sanitizer Preview:</p>
-                  <textarea 
-                    rows={2}
-                    placeholder="Type <script>alert('hack')</script> here to see real-time filter action..."
-                    value={sanitizationInput}
-                    onChange={(e) => handleSanitizationCheck(e.target.value)}
-                    style={consoleTextareaStyle}
-                  />
-                  <div style={sanitizationOutputBoxStyle}>
-                    <span style={sanLabelStyle}>Sanitized Value saved to DB:</span>
-                    <code style={sanValueStyle}>{sanitizationOutput || '(clean input will render here)'}</code>
-                  </div>
-                </div>
-
-                {/* File Upload vulnerability test */}
-                <div style={{ ...playgroundGroupStyle, marginTop: '1rem' }}>
-                  <p style={logTitleStyle}><Upload size={12} style={{ marginRight: 6 }} /> Simulated File upload pentesting:</p>
-                  <div style={hackButtonsRowStyle}>
-                    <button 
-                      onClick={() => triggerMockUpload('exploit.php', 'document')}
-                      style={hackBtnStyle}
-                    >
-                      Test upload execution file (.php)
-                    </button>
-                    <button 
-                      onClick={() => triggerMockUpload('webshell.exe.jpg', 'listing')}
-                      style={hackBtnStyle}
-                    >
-                      Test upload spoofed extension (.exe.jpg)
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ ...inputGroupStyle, marginTop: '1rem' }}>
-                  <label style={labelStyleStyle}>Custom XSS URL query string simulation</label>
-                  <input 
-                    type="text" 
-                    placeholder="?search=<script>window.location=...</script>" 
-                    value={hackPayload}
-                    onChange={(e) => setHackPayload(e.target.value)}
-                    style={consoleInputStyle}
-                  />
-                </div>
-
-                {hackFeedback && (
-                  <div style={feedbackBoxStyleStyle(hackFeedbackType)}>
-                    <Info size={14} style={{ marginRight: 6 }} />
-                    <span>{hackFeedback}</span>
-                  </div>
-                )}
-
-                {/* Security Live Logs */}
-                <div style={logConsoleStyle}>
-                  <p style={logTitleStyle}>Edge Protection Firewalls - Live logs:</p>
-                  <div style={logScrollAreaStyle}>
-                    {securityLogs.length > 0 ? (
-                      securityLogs.map(log => (
-                        <div key={log.id} style={logLineStyleStyle(log.type)}>
-                          <span style={logTimeStyle}>[{log.timestamp.substr(11, 8)}]</span>
-                          <span style={logTypeLabelStyle}>[{log.type.toUpperCase()}]</span>
-                          <span>{log.action} - {log.details}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <div style={logEmptyStyle}>Security middleware active. No incidents logged.</div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
+              <WafConsoleTab
+                securityLogs={securityLogs}
+                runHackSimulation={runHackSimulation}
+                runScaleStressTest={runScaleStressTest}
+                networkKilled={networkKilled}
+                setNetworkKilled={setNetworkKilled}
+                setAlertNotification={setAlertNotification}
+                stressTestOutput={stressTestOutput}
+                sanitizationInput={sanitizationInput}
+                handleSanitizationCheck={handleSanitizationCheck}
+                sanitizationOutput={sanitizationOutput}
+                triggerMockUpload={triggerMockUpload}
+                hackPayload={hackPayload}
+                setHackPayload={setHackPayload}
+                hackFeedback={hackFeedback}
+                hackFeedbackType={hackFeedbackType}
+                lang={lang}
+                styles={{
+                  inputGroupStyle,
+                  labelStyleStyle,
+                  modalTextareaStyle,
+                  emptyStateStyle,
+                  landlordHeaderRowStyle
+                }}
+                consolePanelStyle={consolePanelStyle}
+                consoleHeaderStyle={consoleHeaderStyle}
+                consoleTitleWrapperStyle={consoleTitleWrapperStyle}
+                consolePulseStyle={consolePulseStyle}
+                consoleDescStyle={consoleDescStyle}
+                hackButtonsRowStyle={hackButtonsRowStyle}
+                hackBtnStyle={hackBtnStyle}
+                wafContainerStyle={wafContainerStyle}
+                logTitleStyle={logTitleStyle}
+                wafFlowContainerStyle={wafFlowContainerStyle}
+                wafVisualFlowStyle={wafVisualFlowStyle}
+                wafPacketStyle={wafPacketStyle}
+                wafLineStyle={wafLineStyle}
+                wafStatusGridStyle={wafStatusGridStyle}
+                wafNodeStyle={wafNodeStyle}
+                wafNodeIndicatorStyle={wafNodeIndicatorStyle}
+                wafNodeLabelStyle={wafNodeLabelStyle}
+                playgroundGroupStyle={playgroundGroupStyle}
+                consoleTextareaStyle={consoleTextareaStyle}
+                sanitizationOutputBoxStyle={sanitizationOutputBoxStyle}
+                sanLabelStyle={sanLabelStyle}
+                sanValueStyle={sanValueStyle}
+                consoleInputStyle={consoleInputStyle}
+                logConsoleStyle={logConsoleStyle}
+                logScrollAreaStyle={logScrollAreaStyle}
+                logEmptyStyle={logEmptyStyle}
+                logLineStyleStyle={logLineStyleStyle}
+                logTimeStyle={logTimeStyle}
+                logTypeLabelStyle={logTypeLabelStyle}
+                feedbackBoxStyleStyle={feedbackBoxStyleStyle}
+              />
             )}
           </AnimatePresence>
 
