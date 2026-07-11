@@ -29,6 +29,25 @@ export const encodeHTMLEntities = (input: string): string => {
   }
   return input.replace(/[&<>"'\/`]/g, (char) => map[char] || char)
 }
+/** Decode HTML entities to standard characters for signature matching */
+export const decodeHTMLEntities = (input: string): string => {
+  // Decode decimal entities like &#106; -> j
+  let decoded = input.replace(/&#([0-9]+);/gi, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+  // Decode hex entities like &#x6A; -> j
+  decoded = decoded.replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+  // Decode common named entities
+  const named: Record<string, string> = {
+    'colon': ':',
+    'amp': '&',
+    'lt': '<',
+    'gt': '>',
+    'quot': '"',
+    'apos': "'",
+    'sol': '/'
+  }
+  decoded = decoded.replace(/&([a-z0-9]+);/gi, (_, name) => named[name.toLowerCase()] || `&${name};`)
+  return decoded
+}
 
 /** Detect event handler XSS payloads (onerror, onload, onmouseover, etc.) */
 export const containsEventHandlerXSS = (input: string): boolean => {
@@ -38,8 +57,10 @@ export const containsEventHandlerXSS = (input: string): boolean => {
 
 /** Detect javascript: / vbscript: / data: protocol URIs */
 export const containsJavascriptURI = (input: string): boolean => {
-  // Also detect obfuscated variants with whitespace, entities, or mixed case
-  const cleaned = input.replace(/[\s\u0000-\u001f]/g, '').replace(/&[a-zA-Z]+;|&#x?[0-9a-fA-F]+;/g, '')
+  // Decode entities first to identify hidden schemas
+  const decoded = decodeHTMLEntities(input)
+  // Strip control characters and whitespace
+  const cleaned = decoded.replace(/[\s\u0000-\u001f]/g, '')
   return /javascript\s*:/gi.test(cleaned) || /data\s*:\s*text\/html/gi.test(cleaned) || /vbscript\s*:/gi.test(cleaned)
 }
 
