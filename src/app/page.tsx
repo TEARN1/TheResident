@@ -1,6 +1,6 @@
 'use client'
 import { motion } from 'framer-motion'
-import { ArrowRight, Shield, Lock, Crown } from 'lucide-react'
+import { ArrowRight, Shield, Lock, Crown, Download } from 'lucide-react'
 import Link from 'next/link'
 import styles from './page.module.css'
 
@@ -15,7 +15,8 @@ export default function Home() {
 
       {/* Navbar */}
       <nav className={styles.navbar}>
-        <div className={styles.logo}>
+        <div className={styles.logo} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img src="/logo.png" alt="The Resident Logo" style={{ height: '32px', width: '32px', borderRadius: '4px' }} />
           THE RESIDENT
         </div>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
@@ -55,10 +56,14 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.8 }}
           className={styles.ctaGroup}
+          style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}
         >
           <Link href="/auth" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             Enter Portal <ArrowRight size={16} />
           </Link>
+          <a href="/theresident.apk" download className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.08)', padding: '12px 24px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer' }}>
+            <Download size={16} /> Download Android APK
+          </a>
         </motion.div>
       </div>
 
