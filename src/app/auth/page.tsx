@@ -6,17 +6,8 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { loginUser, registerFailedAttempt, resetFailedAttempts, addLog, RootState, toUUID } from '../../store'
 import { supabase } from '../../utils/supabase'
-import { resilientFetchManager } from '../../utils/secureApiClient'
 import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
-
-// SHA-256 Hashing helper using Web Crypto API
-async function sha256(message: string): Promise<string> {
-  const msgBuffer = new TextEncoder().encode(message)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-}
 
 export default function AuthPage() {
   const router = useRouter()
@@ -162,8 +153,8 @@ export default function AuthPage() {
     const user = data.user
 
     if (session && user) {
-      resilientFetchManager.setToken(session.access_token)
-      document.cookie = `session-token=${session.access_token}; path=/; max-age=3600`
+      // Session cookies are managed by @supabase/ssr (createBrowserClient);
+      // middleware.ts validates them via supabase.auth.getUser().
 
       // Fetch their res_profile role
       const { data: dbProfile } = await supabase
@@ -172,7 +163,7 @@ export default function AuthPage() {
         .eq('id', toUUID(user.id))
         .single()
 
-      let userRole = dbProfile?.role || role || 'visitor'
+      const userRole = dbProfile?.role || role || 'visitor'
 
       // If no res_profile exists, default/insert it
       if (!dbProfile) {
@@ -238,7 +229,6 @@ export default function AuthPage() {
       return
     }
 
-    const session = data.session
     const user = data.user
 
     if (user) {
@@ -266,11 +256,6 @@ export default function AuthPage() {
         landlord_smoking_allowed: role === 'landlord' ? smokingAllowed : false,
         landlord_pets_allowed: role === 'landlord' ? petsAllowed : false
       })
-
-      if (session) {
-        resilientFetchManager.setToken(session.access_token)
-        document.cookie = `session-token=${session.access_token}; path=/; max-age=3600`
-      }
 
       dispatch(resetFailedAttempts(email))
       dispatch(loginUser({
@@ -309,7 +294,7 @@ export default function AuthPage() {
       }
     }
 
-    document.cookie = `session-token=guest-token; path=/; max-age=3600`
+    document.cookie = `guest-mode=1; path=/; max-age=3600`
     
     dispatch(resetFailedAttempts(email))
     dispatch(loginUser(visitorUser))

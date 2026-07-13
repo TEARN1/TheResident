@@ -122,8 +122,8 @@ const runFuzzTest = () => {
 
   let blockedMalicious = 0
   let allowedSafe = 0
-  let falsePositives: string[] = []
-  let falseNegatives: string[] = []
+  const falsePositives: string[] = []
+  const falseNegatives: string[] = []
 
   const startTime = Date.now()
 

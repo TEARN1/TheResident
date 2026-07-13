@@ -1,5 +1,7 @@
-// Resilient API Client / Fetch Interceptor
-// Handles token expiry mid-session, request queueing, and silent retries.
+// Security Labs demo: simulated fetch interceptor showing token expiry
+// mid-session, request queueing, and silent retries.
+// NOT wired into the real Supabase client — supabase-js manages real
+// sessions and refresh itself (see src/utils/supabase.ts).
 
 interface QueuedRequest {
   resolve: (value: Response) => void;
@@ -14,22 +16,12 @@ class ResilientFetchManager {
   private currentToken: string | null = null;
   private simulateExpiry = false; // Flag to trigger simulated JWT expiry for testing
 
-  constructor() {
-    // In a real application, we might load the initial token from cookies/localStorage
-    if (typeof window !== 'undefined') {
-      this.currentToken = localStorage.getItem('sb-access-token');
-    }
-  }
-
   setSimulateExpiry(val: boolean) {
     this.simulateExpiry = val;
   }
 
   setToken(token: string | null) {
     this.currentToken = token;
-    if (typeof window !== 'undefined' && token) {
-      localStorage.setItem('sb-access-token', token);
-    }
   }
 
   getToken() {
@@ -119,4 +111,3 @@ class ResilientFetchManager {
 }
 
 export const resilientFetchManager = new ResilientFetchManager();
-export const secureFetch = resilientFetchManager.customFetch;

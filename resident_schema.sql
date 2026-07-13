@@ -927,3 +927,69 @@ create policy res_status_select on public.res_neighbourhood_status
 drop policy if exists res_status_insert on public.res_neighbourhood_status;
 create policy res_status_insert on public.res_neighbourhood_status
   for insert to authenticated with check (reporter_id = auth.uid());
+
+-- ── 7. APP DELTAS (applied as migration notice_reactions_and_missing_policies) ─
+
+-- Vibe / echo reactions on notice boards (uuid[] like rsvps)
+alter table public.res_notice_events
+  add column if not exists vibes uuid[] default '{}',
+  add column if not exists echos uuid[] default '{}';
+
+-- Reaction toggles run as security definer because res_notice_events
+-- update-RLS is poster-only (same pattern as res_toggle_rsvp).
+create or replace function public.res_toggle_vibe(p_notice_id uuid)
+returns boolean
+language plpgsql security definer
+set search_path = public
+as $$
+declare joined boolean;
+begin
+  if auth.uid() is null then
+    raise exception 'not signed in';
+  end if;
+  update res_notice_events
+     set vibes = case when auth.uid() = any(vibes)
+                      then array_remove(vibes, auth.uid())
+                      else array_append(vibes, auth.uid()) end
+   where id = p_notice_id
+  returning auth.uid() = any(vibes) into joined;
+  return coalesce(joined, false);
+end;
+$$;
+
+create or replace function public.res_toggle_echo(p_notice_id uuid)
+returns boolean
+language plpgsql security definer
+set search_path = public
+as $$
+declare joined boolean;
+begin
+  if auth.uid() is null then
+    raise exception 'not signed in';
+  end if;
+  update res_notice_events
+     set echos = case when auth.uid() = any(echos)
+                      then array_remove(echos, auth.uid())
+                      else array_append(echos, auth.uid()) end
+   where id = p_notice_id
+  returning auth.uid() = any(echos) into joined;
+  return coalesce(joined, false);
+end;
+$$;
+
+revoke execute on function public.res_toggle_vibe(uuid) from public, anon;
+revoke execute on function public.res_toggle_echo(uuid) from public, anon;
+grant execute on function public.res_toggle_vibe(uuid) to authenticated, service_role;
+grant execute on function public.res_toggle_echo(uuid) to authenticated, service_role;
+
+-- Chore-week reset deletes a household's chores before re-inserting
+drop policy if exists res_chores_delete on public.res_chore_schedule;
+create policy res_chores_delete on public.res_chore_schedule
+  for delete to authenticated using (public.res_is_household_member(listing_id, auth.uid()));
+
+-- Dispute mediation/resolution updates status + resolution_details
+drop policy if exists res_disputes_update on public.res_community_disputes;
+create policy res_disputes_update on public.res_community_disputes
+  for update to authenticated
+  using (reported_by_id = auth.uid() or mediator_id = auth.uid())
+  with check (reported_by_id = auth.uid() or mediator_id = auth.uid());

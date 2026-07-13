@@ -1,37 +1,11 @@
 import { configureStore, createSlice, PayloadAction, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import { supabase } from '../utils/supabase'
 
-// Helper function to convert any string ID to a deterministic valid UUID format
-export function toUUID(str: string): string {
-  if (!str) return '00000000-0000-4000-8000-000000000000'
-  const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
-  if (uuidRegex.test(str)) {
-    return str.toLowerCase()
-  }
-
-  let h1 = 1540483477
-  let h2 = 2246822507
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    h1 = Math.imul(h1 ^ char, 597399067)
-    h2 = Math.imul(h2 ^ char, 2869860233)
-  }
-
-  const hex1 = (h1 >>> 0).toString(16).padStart(8, '0')
-  const hex2 = (h2 >>> 0).toString(16).padStart(8, '0')
-  const hex3 = (Math.imul(h1, h2) >>> 0).toString(16).padStart(8, '0')
-  const hex4 = ((h1 + h2) >>> 0).toString(16).padStart(8, '0')
-
-  const fullHex = (hex1 + hex2 + hex3 + hex4).substring(0, 32)
-  
-  const part1 = fullHex.substring(0, 8)
-  const part2 = fullHex.substring(8, 12)
-  const part3 = '4' + fullHex.substring(13, 16)
-  const part4 = ((parseInt(fullHex.substring(16, 18), 16) & 0x3f) | 0x80).toString(16).padStart(2, '0') + fullHex.substring(18, 20)
-  const part5 = fullHex.substring(20, 32)
-
-  return `${part1}-${part2}-${part3}-${part4}-${part5}`.toLowerCase()
-}
+// Mappers between app models and the deployed schema live in dbMappers.ts;
+// toUUID is re-exported from there so existing imports keep working.
+import * as db from './dbMappers'
+import { toUUID, NameMap } from './dbMappers'
+export { toUUID }
 
 
 // Types
@@ -209,6 +183,9 @@ export interface CommunityDispute {
 
 export interface ChoreAssignment {
   id: string
+  // Household listing this chore belongs to — required by the DB
+  // (res_chore_schedule.listing_id NOT NULL + res_is_household_member RLS).
+  listingId?: string
   roommateId: string
   roommateName: string
   taskName: string
@@ -1011,391 +988,484 @@ export const {
   markAllNotificationsRead
 } = notificationsSlice.actions
 
-// Async Thunk to fetch live data from Supabase
+// Async Thunk to fetch live data from Supabase.
+// Column names follow resident_schema.sql; display names are resolved from the
+// shared profiles trust columns (CONTRACT.md §3) since res_* tables store UUIDs.
 export const fetchSupabaseData = createAsyncThunk(
   'data/fetchSupabaseData',
   async (_, { dispatch }) => {
     if (!supabase) return
-    try {
-      // 1. Fetch listings
-      const { data: listingsData } = await supabase.from('res_listings').select('*')
-      if (listingsData) {
-        const mappedListings = listingsData.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          price: Number(item.price),
-          currency: item.currency || 'ZAR',
-          location: item.location,
-          suburb: item.suburb || '',
-          safetyRating: (item.safety_rating || 'medium') as 'high' | 'medium' | 'low',
-          safetyNotes: item.safety_notes || '',
-          landlordId: item.landlord_id,
-          landlordName: item.landlord_name || '',
-          landlordLivesHere: !!item.landlord_lives_here,
-          images: item.images || [],
-          amenities: {
-            wifi: !!item.wifi,
-            parking: !!item.parking,
-            bathroom: (item.bathroom || 'shared') as 'shared' | 'private' | 'ensuite'
-          },
-          requirements: {
-            genderPreference: (item.req_gender_pref || 'any') as 'men' | 'women' | 'couple' | 'any',
-            childrenAllowed: !!item.req_children_allowed,
-            maxChildren: item.req_max_children || 0,
-            smokingAllowed: !!item.req_smoking_allowed,
-            petsAllowed: !!item.req_pets_allowed
-          }
-        }))
-        dispatch(setListings(mappedListings))
-      }
-
-      // 2. Fetch Requests
-      const { data: requestsData } = await supabase.from('res_room_requests').select('*')
-      if (requestsData) {
-        const mappedRequests = requestsData.map(item => ({
-          id: item.id,
-          tenantId: item.tenant_id,
-          tenantName: item.tenant_name || '',
-          listingId: item.listing_id,
-          listingTitle: item.listing_title || '',
-          landlordId: item.landlord_id,
-          status: (item.status || 'pending') as 'pending' | 'approved' | 'rejected',
-          message: item.message || '',
-          timestamp: item.created_at || new Date().toISOString()
-        }))
-        dispatch(setRequests(mappedRequests))
-      }
-
-      // 3. Fetch Lifts
-      const { data: liftsData } = await supabase.from('res_lift_clubs').select('*')
-      if (liftsData) {
-        const mappedLifts = liftsData.map(item => ({
-          id: item.id,
-          driverName: item.driver_name || '',
-          origin: item.origin,
-          destination: item.destination,
-          departureTime: item.departure_time || '',
-          days: item.days || '',
-          pricePerSeat: Number(item.price_per_seat),
-          currency: item.currency || 'ZAR',
-          availableSeats: item.available_seats || 0,
-          totalSeats: item.total_seats || 0
-        }))
-        dispatch(setLifts(mappedLifts))
-      }
-
-      // 4. Fetch Roommates
-      const { data: seekersData } = await supabase.from('res_roommate_seekers').select('*')
-      if (seekersData) {
-        const mappedRoommates = seekersData.map(item => ({
-          id: item.id,
-          name: item.name || '',
-          gender: (item.gender || 'men') as 'men' | 'women',
-          childrenCount: item.children_count || 0,
-          budget: Number(item.budget || 0),
-          currency: item.currency || 'ZAR',
-          location: item.location || '',
-          suburb: item.suburb || '',
-          bio: item.bio || ''
-        }))
-        dispatch(setRoommates(mappedRoommates))
-      }
-
-      // 5. Fetch Services
-      const { data: servicesData } = await supabase.from('res_handyman_services').select('*')
-      if (servicesData) {
-        const mappedServices = servicesData.map(item => ({
-          id: item.id,
-          ownerId: item.owner_id,
-          businessName: item.business_name,
-          category: item.category as HandymanService['category'],
-          location: item.location,
-          suburb: item.suburb || '',
-          rating: Number(item.rating || 5.0),
-          contactNumber: item.contact_number,
-          websiteUrl: item.website_url || '',
-          priceEstimate: item.price_estimate || '',
-          description: item.description || '',
-          image: item.image || '',
-          reviewsCount: item.reviews_count || 0
-        }))
-        dispatch(setServices(mappedServices))
-      }
-
-      // 6. Fetch Dispatches
-      const { data: dispatchesData } = await supabase.from('res_service_dispatches').select('*')
-      if (dispatchesData) {
-        const mappedDispatches = dispatchesData.map(item => ({
-          id: item.id,
-          serviceId: item.service_id,
-          serviceName: item.service_name || '',
-          senderId: item.sender_id,
-          senderName: item.sender_name || '',
-          senderRole: (item.sender_role || 'visitor') as ServiceDispatch['senderRole'],
-          message: item.message || '',
-          status: (item.status || 'pending') as ServiceDispatch['status'],
-          timestamp: item.created_at || new Date().toISOString(),
-          proofFileName: item.proof_file_name || undefined,
-          proofFileUrl: item.proof_file_url || undefined
-        }))
-        dispatch(setDispatches(mappedDispatches))
-      }
-
-      // 7. Fetch Utility Vouchers
-      const { data: tokensData } = await supabase.from('res_utility_tokens').select('*')
-      if (tokensData) {
-        const mappedTokens = tokensData.map(item => ({
-          id: item.id,
-          landlordId: item.landlord_id,
-          landlordName: item.landlord_name || '',
-          meterNumber: item.meter_number,
-          price: Number(item.price),
-          currency: item.currency || 'ZAR',
-          tokenCode: item.token_code,
-          status: (item.status || 'available') as UtilityToken['status'],
-          purchasedBy: item.purchased_by || undefined,
-          purchasedAt: item.purchased_at || undefined
-        }))
-        dispatch(setTokens(mappedTokens))
-      }
-
-      // 8. Fetch Tools
-      const { data: toolsData } = await supabase.from('res_tool_library').select('*')
-      if (toolsData) {
-        const mappedTools = toolsData.map(item => ({
-          id: item.id,
-          ownerId: item.owner_id,
-          ownerName: item.owner_name || '',
-          title: item.title,
-          description: item.description || '',
-          pricePerDay: Number(item.price_per_day),
-          currency: item.currency || 'ZAR',
-          deposit: Number(item.deposit || 0),
-          location: item.location || '',
-          status: (item.status || 'available') as ToolItem['status'],
-          rentedBy: item.rented_by || undefined,
-          rentedByName: item.rented_by_name || undefined,
-          rentedUntil: item.rented_until || undefined
-        }))
-        dispatch(setTools(mappedTools))
-      }
-
-      // 9. Fetch Chores
-      const { data: choresData } = await supabase.from('res_chore_schedule').select('*')
-      if (choresData) {
-        const mappedChores = choresData.map(item => ({
-          id: item.id,
-          roommateId: item.roommate_id,
-          roommateName: item.roommate_name || '',
-          taskName: item.task_name,
-          dayOfWeek: item.day_of_week || '',
-          status: (item.status || 'pending') as ChoreAssignment['status'],
-          completedAt: item.completed_at || undefined
-        }))
-        dispatch(setChores(mappedChores))
-      }
-
-      // 10. Fetch Disputes
-      const { data: disputesData } = await supabase.from('res_community_disputes').select('*')
-      if (disputesData) {
-        const mappedDisputes = disputesData.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          category: (item.category || 'Other') as CommunityDispute['category'],
-          reportedBy: item.reported_by || '',
-          reportedById: item.reported_by_id,
-          againstUser: item.against_user || '',
-          againstUserId: item.against_user_id || '',
-          mediatorId: item.mediator_id || '',
-          mediatorName: item.mediator_name || '',
-          status: (item.status || 'pending') as CommunityDispute['status'],
-          resolutionDetails: item.resolution_details || undefined,
-          timestamp: item.created_at || new Date().toISOString()
-        }))
-        dispatch(setDisputes(mappedDisputes))
-      }
-
-      // 11. Fetch Notices
-      const { data: noticesData } = await supabase.from('res_notice_events').select('*')
-      if (noticesData) {
-        const mappedNotices = noticesData.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          type: (item.type || 'notice') as NoticeEvent['type'],
-          postedBy: item.posted_by || '',
-          postedById: item.posted_by_id,
-          timestamp: item.created_at || new Date().toISOString(),
-          eventDate: item.event_date || undefined,
-          rsvps: item.rsvps || [],
-          vibes: item.vibes || [],
-          echos: item.echos || []
-        }))
-        dispatch(setNotices(mappedNotices))
-      }
-
-      // 12. Fetch Communities
-      const { data: communitiesData } = await supabase.from('res_communities').select('*')
-      if (communitiesData) {
-        dispatch(setCommunities(communitiesData.map(item => ({
-          id: item.id,
-          name: item.name,
-          description: item.description || '',
-          location: item.location || '',
-          suburb: item.suburb || '',
-          createdBy: item.created_by,
-          createdAt: item.created_at
-        }))))
-      }
-
-      // 13. Fetch Alerts
-      const { data: alertsData } = await supabase.from('res_alerts').select('*')
-      if (alertsData) {
-        dispatch(setAlerts(alertsData.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          category: item.category as Alert['category'],
-          severity: item.severity as Alert['severity'],
-          status: item.status as Alert['status'],
-          createdBy: item.created_by,
-          createdAt: item.created_at,
-          lat: Number(item.lat || 0),
-          lon: Number(item.lon || 0)
-        }))))
-      }
-
-      // 14. Fetch Market Items
-      const { data: marketData } = await supabase.from('res_market_items').select('*')
-      if (marketData) {
-        dispatch(setMarketItems(marketData.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          price: Number(item.price || 0),
-          currency: item.currency || 'ZAR',
-          category: item.category || '',
-          imageUrl: item.image_url || undefined,
-          status: item.status as MarketItem['status'],
-          createdBy: item.created_by,
-          createdAt: item.created_at
-        }))))
-      }
-
-      // 15. Fetch Vendors
-      const { data: vendorsData } = await supabase.from('res_vendors').select('*')
-      if (vendorsData) {
-        dispatch(setVendors(vendorsData.map(item => ({
-          id: item.id,
-          name: item.name,
-          category: item.category || '',
-          description: item.description || '',
-          contactNumber: item.contact_number || '',
-          status: item.status as Vendor['status'],
-          rating: Number(item.rating || 5.0),
-          reviewsCount: Number(item.reviews_count || 0)
-        }))))
-      }
-
-      // 16. Fetch Group Buys
-      const { data: gbData } = await supabase.from('res_group_buys').select('*')
-      if (gbData) {
-        dispatch(setGroupBuys(gbData.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          targetAmount: Number(item.target_amount || 0),
-          currentPledges: Number(item.current_pledges || 0),
-          status: item.status as GroupBuy['status'],
-          createdBy: item.created_by,
-          endDate: item.end_date || ''
-        }))))
-      }
-
-      // 17. Fetch Skills
-      const { data: skillsData } = await supabase.from('res_skills').select('*')
-      if (skillsData) {
-        dispatch(setSkills(skillsData.map(item => ({
-          id: item.id,
-          userId: item.user_id,
-          title: item.title,
-          category: item.category || '',
-          description: item.description || '',
-          experienceLevel: item.experience_level || '',
-          contactInfo: item.contact_info || ''
-        }))))
-      }
-
-      // 18. Fetch Lost & Found
-      const { data: lfData } = await supabase.from('res_lost_found').select('*')
-      if (lfData) {
-        dispatch(setLostFound(lfData.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          type: item.type as LostFound['type'],
-          location: item.location || '',
-          contactInfo: item.contact_info || '',
-          imageUrl: item.image_url || undefined,
-          status: item.status as LostFound['status']
-        }))))
-      }
-
-      // 19. Fetch Care Circle Checks
-      const { data: ccData } = await supabase.from('res_care_circle').select('*')
-      if (ccData) {
-        dispatch(setCareCircle(ccData.map(item => ({
-          id: item.id,
-          name: item.name,
-          status: item.status as CareCircleCheck['status'],
-          lastCheckedAt: item.last_checked_at || new Date().toISOString(),
-          checkedByName: item.checked_by_name || undefined
-        }))))
-      }
-
-      // 20. Fetch Shared Resources
-      const { data: srData } = await supabase.from('res_shared_resources').select('*')
-      if (srData) {
-        dispatch(setSharedResources(srData.map(item => ({
-          id: item.id,
-          name: item.name,
-          type: item.type as SharedResource['type'],
-          status: item.status || 'available',
-          description: item.description || '',
-          location: item.location || '',
-          latitude: Number(item.latitude || 0),
-          longitude: Number(item.longitude || 0)
-        }))))
-      }
-
-      // 21. Fetch Neighbourhood Statuses
-      const { data: nsData } = await supabase.from('res_neighbourhood_status').select('*')
-      if (nsData) {
-        dispatch(setNeighbourhoodStatus(nsData.map(item => ({
-          id: item.id,
-          service: item.service as NeighbourhoodStatus['service'],
-          status: item.status as NeighbourhoodStatus['status'],
-          suburb: item.suburb || '',
-          updatedAt: item.updated_at || new Date().toISOString()
-        }))))
-      }
-    } catch (err) {
-      console.error('Error fetching Supabase data:', err)
+    dispatch(setDataStatus({ status: 'loading', failedTables: [] }))
+    const failedTables: string[] = []
+    const markFailed = (table: string, message: string) => {
+      failedTables.push(table)
+      console.error(`Failed to fetch ${table}: ${message}`)
     }
+
+    // 0. Display-name lookup (best-effort; blank when RLS hides a profile)
+    const nameMap: NameMap = {}
+    const { data: profileRows, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, display_name, username')
+    if (profilesError) {
+      markFailed('profiles', profilesError.message)
+    } else {
+      for (const p of profileRows || []) {
+        nameMap[String(p.id).toLowerCase()] = p.display_name || p.username || ''
+      }
+    }
+    const nameOf = (id: string | null | undefined) => db.resolveName(nameMap, id ?? undefined)
+
+    // Cross-reference maps filled by the listings/services fetches below
+    const listingTitleById: Record<string, string> = {}
+    const serviceNameById: Record<string, string> = {}
+
+    // 1. Listings
+    const fetchListings = async () => {
+      const { data, error } = await supabase!.from('res_listings').select('*')
+      if (error) return markFailed('res_listings', error.message)
+      if (!data) return
+      data.forEach(item => { listingTitleById[String(item.id)] = item.title })
+      dispatch(setListings(data.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        price: Number(item.price),
+        currency: item.currency || 'ZAR',
+        location: item.location,
+        suburb: item.suburb || '',
+        safetyRating: (item.safety_rating || 'medium') as 'high' | 'medium' | 'low',
+        safetyNotes: item.safety_notes || '',
+        landlordId: item.landlord_id,
+        landlordName: nameOf(item.landlord_id),
+        landlordLivesHere: !!item.landlord_lives_here,
+        images: item.images || [],
+        amenities: {
+          wifi: !!item.wifi,
+          parking: !!item.parking,
+          bathroom: (item.bathroom || 'shared') as 'shared' | 'private' | 'ensuite'
+        },
+        requirements: {
+          genderPreference: (item.req_gender_pref || 'any') as 'men' | 'women' | 'couple' | 'any',
+          childrenAllowed: !!item.req_children_allowed,
+          maxChildren: item.req_max_children || 0,
+          smokingAllowed: !!item.req_smoking_allowed,
+          petsAllowed: !!item.req_pets_allowed
+        }
+      }))))
+    }
+
+    // 5. Services (fetched early: dispatches resolve their names from it)
+    const fetchServices = async () => {
+      const { data, error } = await supabase!.from('res_handyman_services').select('*')
+      if (error) return markFailed('res_handyman_services', error.message)
+      if (!data) return
+      data.forEach(item => { serviceNameById[String(item.id)] = item.business_name })
+      dispatch(setServices(data.map(item => ({
+        id: item.id,
+        ownerId: item.owner_id,
+        businessName: item.business_name,
+        category: item.category as HandymanService['category'],
+        location: item.location,
+        suburb: item.suburb || '',
+        rating: Number(item.rating || 5.0),
+        contactNumber: item.contact_number,
+        websiteUrl: item.website_url || '',
+        priceEstimate: item.price_estimate || '',
+        description: item.description || '',
+        image: item.image || '',
+        reviewsCount: item.reviews_count || 0
+      }))))
+    }
+
+    // 2. Requests
+    const fetchRequests = async () => {
+      const { data, error } = await supabase!.from('res_room_requests').select('*')
+      if (error) return markFailed('res_room_requests', error.message)
+      if (!data) return
+      dispatch(setRequests(data.map(item => ({
+        id: item.id,
+        tenantId: item.tenant_id,
+        tenantName: nameOf(item.tenant_id),
+        listingId: item.listing_id,
+        listingTitle: listingTitleById[String(item.listing_id)] || '',
+        landlordId: item.landlord_id,
+        status: (item.status || 'pending') as 'pending' | 'approved' | 'rejected',
+        message: item.message || '',
+        timestamp: item.created_at || new Date().toISOString()
+      }))))
+    }
+
+    // 3. Lifts
+    const fetchLifts = async () => {
+      const { data, error } = await supabase!.from('res_lift_clubs').select('*')
+      if (error) return markFailed('res_lift_clubs', error.message)
+      if (!data) return
+      dispatch(setLifts(data.map(item => ({
+        id: item.id,
+        driverName: nameOf(item.driver_id),
+        origin: item.origin,
+        destination: item.destination,
+        departureTime: item.departure_time || '',
+        days: item.days || '',
+        pricePerSeat: Number(item.price_per_seat),
+        currency: item.currency || 'ZAR',
+        availableSeats: item.available_seats || 0,
+        totalSeats: item.total_seats || 0
+      }))))
+    }
+
+    // 4. Roommates
+    const fetchRoommates = async () => {
+      const { data, error } = await supabase!.from('res_roommate_seekers').select('*')
+      if (error) return markFailed('res_roommate_seekers', error.message)
+      if (!data) return
+      dispatch(setRoommates(data.map(item => ({
+        id: item.id,
+        name: nameOf(item.id),
+        gender: (item.gender || 'men') as 'men' | 'women',
+        childrenCount: item.children_count || 0,
+        budget: Number(item.budget || 0),
+        currency: item.currency || 'ZAR',
+        location: item.location || '',
+        suburb: item.suburb || '',
+        bio: item.bio || ''
+      }))))
+    }
+
+    // 6. Dispatches
+    const fetchDispatches = async () => {
+      const { data, error } = await supabase!.from('res_service_dispatches').select('*')
+      if (error) return markFailed('res_service_dispatches', error.message)
+      if (!data) return
+      dispatch(setDispatches(data.map(item => ({
+        id: item.id,
+        serviceId: item.service_id,
+        serviceName: serviceNameById[String(item.service_id)] || '',
+        senderId: item.sender_id,
+        senderName: nameOf(item.sender_id),
+        senderRole: 'tenant' as ServiceDispatch['senderRole'],
+        message: item.message || '',
+        status: (item.status || 'pending') as ServiceDispatch['status'],
+        timestamp: item.created_at || new Date().toISOString(),
+        proofFileName: undefined,
+        proofFileUrl: item.proof_file_url || undefined
+      }))))
+    }
+
+    // 7. Utility Vouchers (schema: meter_label / claimed_by / status 'claimed';
+    // voucher codes are never stored — broker posture, CONTRACT.md §6)
+    const fetchTokens = async () => {
+      const { data, error } = await supabase!.from('res_utility_tokens').select('*')
+      if (error) return markFailed('res_utility_tokens', error.message)
+      if (!data) return
+      dispatch(setTokens(data.map(item => ({
+        id: item.id,
+        landlordId: item.landlord_id,
+        landlordName: nameOf(item.landlord_id),
+        meterNumber: item.meter_label || '',
+        price: Number(item.price),
+        currency: item.currency || 'ZAR',
+        tokenCode: '',
+        status: (item.status === 'claimed' ? 'sold' : 'available') as UtilityToken['status'],
+        purchasedBy: item.claimed_by || undefined,
+        purchasedAt: item.claimed_at || undefined
+      }))))
+    }
+
+    // 8. Tools
+    const fetchTools = async () => {
+      const { data, error } = await supabase!.from('res_tool_library').select('*')
+      if (error) return markFailed('res_tool_library', error.message)
+      if (!data) return
+      dispatch(setTools(data.map(item => ({
+        id: item.id,
+        ownerId: item.owner_id,
+        ownerName: nameOf(item.owner_id),
+        title: item.title,
+        description: item.description || '',
+        pricePerDay: Number(item.price_per_day),
+        currency: item.currency || 'ZAR',
+        deposit: Number(item.deposit || 0),
+        location: item.location || '',
+        status: (item.status || 'available') as ToolItem['status'],
+        rentedBy: item.rented_by || undefined,
+        rentedByName: item.rented_by ? nameOf(item.rented_by) : undefined,
+        rentedUntil: item.rented_until || undefined
+      }))))
+    }
+
+    // 9. Chores
+    const fetchChores = async () => {
+      const { data, error } = await supabase!.from('res_chore_schedule').select('*')
+      if (error) return markFailed('res_chore_schedule', error.message)
+      if (!data) return
+      dispatch(setChores(data.map(item => ({
+        id: item.id,
+        listingId: item.listing_id,
+        roommateId: item.roommate_id,
+        roommateName: nameOf(item.roommate_id),
+        taskName: item.task_name,
+        dayOfWeek: item.day_of_week || '',
+        status: (item.status || 'pending') as ChoreAssignment['status'],
+        completedAt: item.completed_at || undefined
+      }))))
+    }
+
+    // 10. Disputes
+    const fetchDisputes = async () => {
+      const { data, error } = await supabase!.from('res_community_disputes').select('*')
+      if (error) return markFailed('res_community_disputes', error.message)
+      if (!data) return
+      dispatch(setDisputes(data.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        category: (item.category || 'Other') as CommunityDispute['category'],
+        reportedBy: nameOf(item.reported_by_id),
+        reportedById: item.reported_by_id,
+        againstUser: nameOf(item.against_user_id),
+        againstUserId: item.against_user_id || '',
+        mediatorId: item.mediator_id || '',
+        mediatorName: nameOf(item.mediator_id),
+        status: (item.status || 'pending') as CommunityDispute['status'],
+        resolutionDetails: item.resolution_details || undefined,
+        timestamp: item.created_at || new Date().toISOString()
+      }))))
+    }
+
+    // 11. Notices (rsvps/vibes/echos are uuid[] in the DB; the UI tracks names)
+    const fetchNotices = async () => {
+      const { data, error } = await supabase!.from('res_notice_events').select('*')
+      if (error) return markFailed('res_notice_events', error.message)
+      if (!data) return
+      dispatch(setNotices(data.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        type: (item.type || 'notice') as NoticeEvent['type'],
+        postedBy: nameOf(item.posted_by_id),
+        postedById: item.posted_by_id,
+        timestamp: item.created_at || new Date().toISOString(),
+        eventDate: item.event_date || undefined,
+        rsvps: db.uuidsToNames(item.rsvps, nameMap),
+        vibes: db.uuidsToNames(item.vibes, nameMap),
+        echos: db.uuidsToNames(item.echos, nameMap)
+      }))))
+    }
+
+    // 12. Communities
+    const fetchCommunities = async () => {
+      const { data, error } = await supabase!.from('res_communities').select('*')
+      if (error) return markFailed('res_communities', error.message)
+      if (!data) return
+      dispatch(setCommunities(data.map(item => ({
+        id: item.id,
+        name: item.name,
+        description: '',
+        location: item.suburb || '',
+        suburb: item.suburb || '',
+        createdBy: item.created_by,
+        createdAt: item.created_at
+      }))))
+    }
+
+    // 13. Alerts
+    const fetchAlerts = async () => {
+      const { data, error } = await supabase!.from('res_alerts').select('*')
+      if (error) return markFailed('res_alerts', error.message)
+      if (!data) return
+      dispatch(setAlerts(data.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        category: (item.kind === 'panic' || item.kind === 'suspicious' ? 'security' : 'other') as Alert['category'],
+        severity: ({ low: 'info', medium: 'warning', high: 'critical', critical: 'panic' }[String(item.severity)] || 'warning') as Alert['severity'],
+        status: (item.status === 'active' ? 'active' : 'resolved') as Alert['status'],
+        createdBy: item.user_id,
+        createdAt: item.created_at,
+        lat: Number(item.lat || 0),
+        lon: Number(item.lon || 0)
+      }))))
+    }
+
+    // 14. Market Items
+    const fetchMarketItems = async () => {
+      const { data, error } = await supabase!.from('res_market_items').select('*')
+      if (error) return markFailed('res_market_items', error.message)
+      if (!data) return
+      dispatch(setMarketItems(data.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        price: Number(item.price || 0),
+        currency: item.currency || 'ZAR',
+        category: item.category || '',
+        imageUrl: (item.images && item.images[0]) || undefined,
+        status: (item.status === 'available' ? 'available' : 'sold') as MarketItem['status'],
+        createdBy: item.user_id,
+        createdAt: item.created_at
+      }))))
+    }
+
+    // 15. Vendors
+    const fetchVendors = async () => {
+      const { data, error } = await supabase!.from('res_vendors').select('*')
+      if (error) return markFailed('res_vendors', error.message)
+      if (!data) return
+      dispatch(setVendors(data.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.kind || '',
+        description: '',
+        contactNumber: item.phone || '',
+        status: 'active' as Vendor['status'],
+        rating: 5.0,
+        reviewsCount: 0
+      }))))
+    }
+
+    // 16. Group Buys
+    const fetchGroupBuys = async () => {
+      const { data, error } = await supabase!.from('res_group_buys').select('*')
+      if (error) return markFailed('res_group_buys', error.message)
+      if (!data) return
+      dispatch(setGroupBuys(data.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        targetAmount: Number(item.target_quantity || 0),
+        currentPledges: Number(item.current_quantity || 0),
+        status: item.status as GroupBuy['status'],
+        createdBy: item.organizer_id,
+        endDate: item.deadline || ''
+      }))))
+    }
+
+    // 17. Skills
+    const fetchSkills = async () => {
+      const { data, error } = await supabase!.from('res_skills').select('*')
+      if (error) return markFailed('res_skills', error.message)
+      if (!data) return
+      dispatch(setSkills(data.map(item => ({
+        id: item.id,
+        userId: item.user_id,
+        title: item.title,
+        category: item.category || '',
+        description: item.description || '',
+        experienceLevel: item.rate_note || '',
+        contactInfo: ''
+      }))))
+    }
+
+    // 18. Lost & Found
+    const fetchLostFound = async () => {
+      const { data, error } = await supabase!.from('res_lost_found').select('*')
+      if (error) return markFailed('res_lost_found', error.message)
+      if (!data) return
+      dispatch(setLostFound(data.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        type: item.kind as LostFound['type'],
+        location: item.last_seen || '',
+        contactInfo: '',
+        imageUrl: (item.images && item.images[0]) || undefined,
+        status: (item.status === 'reunited' ? 'resolved' : 'active') as LostFound['status']
+      }))))
+    }
+
+    // 19. Care Circle
+    const fetchCareCircle = async () => {
+      const { data, error } = await supabase!.from('res_care_circle').select('*')
+      if (error) return markFailed('res_care_circle', error.message)
+      if (!data) return
+      dispatch(setCareCircle(data.map(item => ({
+        id: item.id,
+        name: nameOf(item.subject_id),
+        status: (item.status === 'active' ? 'ok' : 'pending') as CareCircleCheck['status'],
+        lastCheckedAt: item.last_ok_at || new Date().toISOString(),
+        checkedByName: nameOf(item.carer_id) || undefined
+      }))))
+    }
+
+    // 20. Shared Resources
+    const fetchSharedResources = async () => {
+      const { data, error } = await supabase!.from('res_shared_resources').select('*')
+      if (error) return markFailed('res_shared_resources', error.message)
+      if (!data) return
+      dispatch(setSharedResources(data.map(item => ({
+        id: item.id,
+        name: item.title,
+        type: (item.kind === 'wifi_hotspot' ? 'hotspot' : item.kind === 'borehole' ? 'borehole' : 'other') as SharedResource['type'],
+        status: item.availability || 'available',
+        description: item.access_note || '',
+        location: item.suburb || '',
+        latitude: Number(item.lat || 0),
+        longitude: Number(item.lon || 0)
+      }))))
+    }
+
+    // 21. Neighbourhood Statuses
+    const fetchNeighbourhoodStatus = async () => {
+      const { data, error } = await supabase!.from('res_neighbourhood_status').select('*')
+      if (error) return markFailed('res_neighbourhood_status', error.message)
+      if (!data) return
+      dispatch(setNeighbourhoodStatus(data.map(item => ({
+        id: item.id,
+        service: (item.kind === 'power' ? 'electricity' : item.kind === 'water' ? 'water' : 'other') as NeighbourhoodStatus['service'],
+        status: (item.status === 'up' ? 'active' : 'outage') as NeighbourhoodStatus['status'],
+        suburb: item.suburb || '',
+        updatedAt: item.created_at || new Date().toISOString()
+      }))))
+    }
+
+    // Listings + services first so requests/dispatches can resolve titles,
+    // then everything else in parallel.
+    await Promise.all([fetchListings(), fetchServices()])
+    await Promise.all([
+      fetchRequests(),
+      fetchLifts(),
+      fetchRoommates(),
+      fetchDispatches(),
+      fetchTokens(),
+      fetchTools(),
+      fetchChores(),
+      fetchDisputes(),
+      fetchNotices(),
+      fetchCommunities(),
+      fetchAlerts(),
+      fetchMarketItems(),
+      fetchVendors(),
+      fetchGroupBuys(),
+      fetchSkills(),
+      fetchLostFound(),
+      fetchCareCircle(),
+      fetchSharedResources(),
+      fetchNeighbourhoodStatus()
+    ])
+
+    dispatch(setDataStatus({
+      status: failedTables.length > 0 ? 'error' : 'ready',
+      failedTables
+    }))
   }
 )
 
 // Background synchronization middleware for Supabase mirror
 import { Middleware } from 'redux'
 
-const dbUpdate = async (table: string, payload: Record<string, unknown> | null, eqCol?: string, eqVal?: unknown) => {
-  const isKilled = (typeof window !== 'undefined' && (window as unknown as { __networkKilled?: boolean }).__networkKilled) || 
+// Throws when the Security Labs / scale-test "network kill" switch is active
+const assertNetworkAlive = () => {
+  const isKilled = (typeof window !== 'undefined' && (window as unknown as { __networkKilled?: boolean }).__networkKilled) ||
                    (typeof global !== 'undefined' && (global as unknown as { __networkKilled?: boolean }).__networkKilled);
   if (isKilled) {
     throw new Error("Network offline (simulated)");
   }
+}
+
+const dbUpdate = async (table: string, payload: Record<string, unknown> | null, eqCol?: string, eqVal?: unknown) => {
+  assertNetworkAlive();
   if (supabase) {
     if (eqCol && eqVal !== undefined) {
       if (payload === null) {
@@ -1417,29 +1487,27 @@ const dbUpdate = async (table: string, payload: Record<string, unknown> | null, 
   }
 };
 
-export const supabaseSyncMiddleware: Middleware<false, RootState> = store => next => async (action: any) => {
+export const supabaseSyncMiddleware: Middleware<false, RootState> = store => next => async (action: unknown) => {
   const result = next(action)
-  
+
   const isSim = typeof global !== 'undefined' && (global as unknown as { __simulationMode?: boolean }).__simulationMode
   if (!supabase && !isSim) return result
 
   const state = store.getState()
   const currentUser = state.auth.currentUser
 
+  // Human-readable label of what was being saved, for the failure notification
+  let syncLabel = ''
+
   try {
     // 1. Sync Authentication & Profiles
+    // NOTE: public.profiles is Gruvs-owned (CONTRACT.md §1) — The Resident
+    // never writes it; the shared row is created by the Gruvs signup rails.
     if (loginUser.match(action)) {
       const user = action.payload
       const uuid = toUUID(user.id)
 
       if (supabase) {
-        // Ensure user exists in shared public.profiles
-        await supabase.from('profiles').upsert({
-          id: uuid,
-          name: user.name,
-          email: user.email
-        })
-
         // Fetch or create their res_profiles configuration
         const { data: dbProfile } = await supabase
           .from('res_profiles')
@@ -1470,14 +1538,10 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
               }
             }))
           }
-          if (dbProfile.balance !== undefined && dbProfile.balance !== null) {
-            store.dispatch(setBalance(Number(dbProfile.balance)))
-          }
         } else {
           await supabase.from('res_profiles').insert({
             id: uuid,
             role: user.role,
-            balance: user.balance,
             bio: user.profile?.bio || null,
             gender: user.profile?.gender || null,
             children_count: user.profile?.childrenCount || 0,
@@ -1505,132 +1569,58 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     }
 
     if (updateProfile.match(action) && currentUser) {
-      const { profile } = action.payload
-      await dbUpdate('res_profiles', {
-        bio: profile.bio,
-        gender: profile.gender,
-        children_count: profile.childrenCount,
-        employment_status: profile.employmentStatus,
-        has_pets: profile.hasPets,
-        verification_doc_url: profile.verificationDocUrl || null,
-        updated_at: new Date().toISOString()
-      }, 'id', toUUID(currentUser.id))
+      syncLabel = 'your profile'
+      await dbUpdate('res_profiles', db.profileToRow(action.payload.profile), 'id', toUUID(currentUser.id))
     }
 
     if (updatePreferences.match(action) && currentUser) {
-      const { preferences } = action.payload
-      await dbUpdate('res_profiles', {
-        landlord_gender_pref: preferences.genderPreference,
-        landlord_children_allowed: preferences.childrenAllowed,
-        landlord_max_children: preferences.maxChildren,
-        landlord_smoking_allowed: preferences.smokingAllowed,
-        landlord_pets_allowed: preferences.petsAllowed,
-        updated_at: new Date().toISOString()
-      }, 'id', toUUID(currentUser.id))
+      syncLabel = 'your preferences'
+      await dbUpdate('res_profiles', db.preferencesToRow(action.payload.preferences), 'id', toUUID(currentUser.id))
     }
 
-    if ((deductBalance.match(action) || addBalance.match(action)) && currentUser) {
-      const updatedBalance = store.getState().auth.currentUser?.balance
-      if (updatedBalance !== undefined) {
-        await dbUpdate('res_profiles', {
-          balance: updatedBalance,
-          updated_at: new Date().toISOString()
-        }, 'id', toUUID(currentUser.id))
-      }
-    }
+    // deductBalance/addBalance are intentionally NOT synced: the wallet is
+    // display-only (CONTRACT.md §6 — broker posture, no balance columns).
 
     // 2. Sync Room Listings
     if (addListing.match(action)) {
-      const listing = action.payload
-      await dbUpdate('res_listings', {
-        id: toUUID(listing.id),
-        title: listing.title,
-        description: listing.description,
-        price: listing.price,
-        currency: listing.currency,
-        location: listing.location,
-        suburb: listing.suburb,
-        safety_rating: listing.safetyRating,
-        safety_notes: listing.safetyNotes,
-        landlord_id: toUUID(listing.landlordId),
-        landlord_name: listing.landlordName,
-        landlord_lives_here: listing.landlordLivesHere,
-        images: listing.images,
-        wifi: listing.amenities.wifi,
-        parking: listing.amenities.parking,
-        bathroom: listing.amenities.bathroom,
-        req_gender_pref: listing.requirements.genderPreference,
-        req_children_allowed: listing.requirements.childrenAllowed,
-        req_max_children: listing.requirements.maxChildren,
-        req_smoking_allowed: listing.requirements.smokingAllowed,
-        req_pets_allowed: listing.requirements.petsAllowed
-      })
+      syncLabel = 'your listing'
+      await dbUpdate('res_listings', db.listingToRow(action.payload))
     }
 
     if (deleteListing.match(action)) {
-      const listingId = action.payload
-      await dbUpdate('res_listings', null, 'id', toUUID(listingId))
+      syncLabel = 'the listing removal'
+      await dbUpdate('res_listings', null, 'id', toUUID(action.payload))
     }
 
     // 3. Sync Room Requests
     if (addRequest.match(action)) {
-      const req = action.payload
-      await dbUpdate('res_room_requests', {
-        id: toUUID(req.id),
-        tenant_id: toUUID(req.tenantId),
-        tenant_name: req.tenantName,
-        listing_id: toUUID(req.listingId),
-        listing_title: req.listingTitle,
-        landlord_id: toUUID(req.landlordId),
-        status: req.status,
-        message: req.message,
-        created_at: req.timestamp
-      })
+      syncLabel = 'your room request'
+      await dbUpdate('res_room_requests', db.requestToRow(action.payload))
     }
 
     if (updateRequestStatus.match(action)) {
       const { requestId, status } = action.payload
+      syncLabel = 'the request decision'
       await dbUpdate('res_room_requests', { status }, 'id', toUUID(requestId))
     }
 
     // 4. Sync Roommate Seekers
     if (addRoommateSeeker.match(action)) {
-      const seeker = action.payload
-      await dbUpdate('res_roommate_seekers', {
-        id: toUUID(seeker.id),
-        name: seeker.name,
-        gender: seeker.gender,
-        children_count: seeker.childrenCount,
-        budget: seeker.budget,
-        currency: seeker.currency,
-        location: seeker.location,
-        suburb: seeker.suburb,
-        bio: seeker.bio
-      })
+      syncLabel = 'your roommate ad'
+      await dbUpdate('res_roommate_seekers', db.seekerToRow(action.payload))
     }
 
     // 5. Sync Lift Clubs
     if (addLiftClub.match(action) && currentUser) {
-      const lift = action.payload
-      await dbUpdate('res_lift_clubs', {
-        id: toUUID(lift.id),
-        driver_id: toUUID(currentUser.id),
-        driver_name: lift.driverName,
-        origin: lift.origin,
-        destination: lift.destination,
-        departure_time: lift.departureTime,
-        days: lift.days,
-        price_per_seat: lift.pricePerSeat,
-        currency: lift.currency,
-        available_seats: lift.availableSeats,
-        total_seats: lift.totalSeats
-      })
+      syncLabel = 'your lift club'
+      await dbUpdate('res_lift_clubs', db.liftToRow(action.payload, currentUser.id))
     }
 
     if (bookSeat.match(action)) {
       const liftId = action.payload
       const matchedLift = store.getState().networking.lifts.find(l => toUUID(l.id) === toUUID(liftId))
       if (matchedLift) {
+        syncLabel = 'your seat booking'
         await dbUpdate('res_lift_clubs', {
           available_seats: matchedLift.availableSeats
         }, 'id', toUUID(liftId))
@@ -1639,128 +1629,70 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     // 6. Sync Handyman Business Directory
     if (addService.match(action)) {
-      const service = action.payload
-      await dbUpdate('res_handyman_services', {
-        id: toUUID(service.id),
-        owner_id: toUUID(service.ownerId),
-        business_name: service.businessName,
-        category: service.category,
-        location: service.location,
-        suburb: service.suburb,
-        rating: service.rating,
-        contact_number: service.contactNumber,
-        website_url: service.websiteUrl || null,
-        price_estimate: service.priceEstimate,
-        description: service.description,
-        image: service.image,
-        reviews_count: service.reviewsCount
-      })
+      syncLabel = 'your business listing'
+      await dbUpdate('res_handyman_services', db.serviceToRow(action.payload))
     }
 
     if (deleteService.match(action)) {
-      const serviceId = action.payload
-      await dbUpdate('res_handyman_services', null, 'id', toUUID(serviceId))
+      syncLabel = 'the business removal'
+      await dbUpdate('res_handyman_services', null, 'id', toUUID(action.payload))
     }
 
     // 7. Sync Maintenance Callout Dispatches
     if (addDispatch.match(action)) {
-      const disp = action.payload
-      await dbUpdate('res_service_dispatches', {
-        id: toUUID(disp.id),
-        service_id: toUUID(disp.serviceId),
-        service_name: disp.serviceName,
-        sender_id: toUUID(disp.senderId),
-        sender_name: disp.senderName,
-        sender_role: disp.senderRole,
-        message: disp.message,
-        status: disp.status,
-        proof_file_name: disp.proofFileName || null,
-        proof_file_url: disp.proofFileUrl || null,
-        created_at: disp.timestamp
-      })
+      syncLabel = 'your callout'
+      await dbUpdate('res_service_dispatches', db.dispatchToRow(action.payload))
     }
 
     if (updateDispatchStatus.match(action)) {
       const { dispatchId, status } = action.payload
+      syncLabel = 'the callout status'
       await dbUpdate('res_service_dispatches', { status }, 'id', toUUID(dispatchId))
     }
 
-    // 8. Sync Prepaid Utility Vouchers
+    // 8. Sync Prepaid Utility Vouchers (schema stores no voucher codes)
     if (addToken.match(action)) {
-      const token = action.payload
-      await dbUpdate('res_utility_tokens', {
-        id: toUUID(token.id),
-        landlord_id: toUUID(token.landlordId),
-        landlord_name: token.landlordName,
-        meter_number: token.meterNumber,
-        price: token.price,
-        currency: token.currency,
-        token_code: token.tokenCode,
-        status: token.status
-      })
+      syncLabel = 'your voucher'
+      await dbUpdate('res_utility_tokens', db.tokenToRow(action.payload))
     }
 
     if (buyToken.match(action)) {
       const { tokenId, buyerId, timestamp } = action.payload
-      await dbUpdate('res_utility_tokens', {
-        status: 'sold',
-        purchased_by: toUUID(buyerId),
-        purchased_at: timestamp
-      }, 'id', toUUID(tokenId))
+      syncLabel = 'your voucher claim'
+      await dbUpdate('res_utility_tokens', db.tokenClaimToRow(buyerId, timestamp), 'id', toUUID(tokenId))
     }
 
     // 9. Sync Tool Library Items
     if (addTool.match(action)) {
-      const tool = action.payload
-      await dbUpdate('res_tool_library', {
-        id: toUUID(tool.id),
-        owner_id: toUUID(tool.ownerId),
-        owner_name: tool.ownerName,
-        title: tool.title,
-        description: tool.description,
-        price_per_day: tool.pricePerDay,
-        currency: tool.currency,
-        deposit: tool.deposit,
-        location: tool.location,
-        status: tool.status
-      })
+      syncLabel = 'your tool'
+      await dbUpdate('res_tool_library', db.toolToRow(action.payload))
     }
 
     if (rentTool.match(action)) {
-      const { toolId, rentedBy, rentedByName, rentedUntil } = action.payload
-      await dbUpdate('res_tool_library', {
-        status: 'rented',
-        rented_by: toUUID(rentedBy),
-        rented_by_name: rentedByName,
-        rented_until: rentedUntil
-      }, 'id', toUUID(toolId))
+      const { toolId, rentedBy, rentedUntil } = action.payload
+      syncLabel = 'the tool rental'
+      await dbUpdate('res_tool_library', db.toolRentToRow(rentedBy, rentedUntil), 'id', toUUID(toolId))
     }
 
     if (returnTool.match(action)) {
-      const toolId = action.payload
-      await dbUpdate('res_tool_library', {
-        status: 'available',
-        rented_by: null,
-        rented_by_name: null,
-        rented_until: null
-      }, 'id', toUUID(toolId))
+      syncLabel = 'the tool return'
+      await dbUpdate('res_tool_library', db.toolReturnToRow(), 'id', toUUID(action.payload))
     }
 
-    // 10. Sync Chore Schedule
+    // 10. Sync Chore Schedule (listing_id is required by schema + RLS)
     if (addChore.match(action)) {
-      const chore = action.payload
-      await dbUpdate('res_chore_schedule', {
-        id: toUUID(chore.id),
-        roommate_id: toUUID(chore.roommateId),
-        roommate_name: chore.roommateName,
-        task_name: chore.taskName,
-        day_of_week: chore.dayOfWeek,
-        status: chore.status
-      })
+      const row = db.choreToRow(action.payload)
+      if (row) {
+        syncLabel = 'the chore'
+        await dbUpdate('res_chore_schedule', row)
+      } else {
+        console.warn('Chore not synced: no household listing attached')
+      }
     }
 
     if (completeChore.match(action)) {
       const { choreId, completedAt } = action.payload
+      syncLabel = 'the chore completion'
       await dbUpdate('res_chore_schedule', {
         status: 'completed',
         completed_at: completedAt
@@ -1769,246 +1701,193 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
     if (resetChoreWeek.match(action)) {
       const chores = action.payload
-      if (supabase) {
-        await supabase.from('res_chore_schedule').delete().filter('id', 'not.is', null)
+      syncLabel = 'the chore reset'
+      // Only clear the households being rescheduled — never the whole table
+      const listingIds = [...new Set(chores.map(c => c.listingId).filter(Boolean).map(id => toUUID(id!)))]
+      if (supabase && listingIds.length > 0) {
+        assertNetworkAlive()
+        const { error } = await supabase.from('res_chore_schedule').delete().in('listing_id', listingIds)
+        if (error) throw error
       }
       for (const chore of chores) {
-        await dbUpdate('res_chore_schedule', {
-          id: toUUID(chore.id),
-          roommate_id: toUUID(chore.roommateId),
-          roommate_name: chore.roommateName,
-          task_name: chore.taskName,
-          day_of_week: chore.dayOfWeek,
-          status: chore.status
-        })
+        const row = db.choreToRow(chore)
+        if (row) await dbUpdate('res_chore_schedule', row)
       }
     }
 
     // 11. Sync Notice Bulletins & Event RSVPs
     if (addNoticeEvent.match(action)) {
-      const notice = action.payload
-      await dbUpdate('res_notice_events', {
-        id: toUUID(notice.id),
-        title: notice.title,
-        description: notice.description,
-        type: notice.type,
-        posted_by: notice.postedBy,
-        posted_by_id: toUUID(notice.postedById),
-        event_date: notice.eventDate || null,
-        rsvps: notice.rsvps.map(r => toUUID(r)),
-        created_at: notice.timestamp
-      })
+      syncLabel = 'your notice'
+      await dbUpdate('res_notice_events', db.noticeToRow(action.payload))
     }
 
-    // 12. Sync Communities
+    // rsvp/vibe/echo toggle rows owned by OTHER users, so they go through
+    // security-definer RPCs (res_notice_events update-RLS is poster-only).
+    if (rsvpToEvent.match(action)) {
+      syncLabel = 'your RSVP'
+      assertNetworkAlive()
+      if (supabase) {
+        const { error } = await supabase.rpc('res_toggle_rsvp', { p_notice_id: toUUID(action.payload.noticeId) })
+        if (error) throw error
+      }
+    }
+
+    if (vibeNotice.match(action)) {
+      syncLabel = 'your vibe'
+      assertNetworkAlive()
+      if (supabase) {
+        const { error } = await supabase.rpc('res_toggle_vibe', { p_notice_id: toUUID(action.payload.noticeId) })
+        if (error) throw error
+      }
+    }
+
+    if (echoNotice.match(action)) {
+      syncLabel = 'your echo'
+      assertNetworkAlive()
+      if (supabase) {
+        const { error } = await supabase.rpc('res_toggle_echo', { p_notice_id: toUUID(action.payload.noticeId) })
+        if (error) throw error
+      }
+    }
+
+    // 12. Sync Community Disputes
+    if (addDispute.match(action)) {
+      syncLabel = 'your dispute'
+      await dbUpdate('res_community_disputes', db.disputeToRow(action.payload))
+    }
+
+    if (updateDisputeStatus.match(action)) {
+      const { disputeId, status, resolutionDetails } = action.payload
+      syncLabel = 'the dispute update'
+      await dbUpdate('res_community_disputes', db.disputeStatusToRow(status, resolutionDetails), 'id', toUUID(disputeId))
+    }
+
+    // 13. Sync Communities
     if (addCommunity.match(action)) {
-      const c = action.payload
-      await dbUpdate('res_communities', {
-        id: toUUID(c.id),
-        name: c.name,
-        description: c.description,
-        location: c.location,
-        suburb: c.suburb,
-        created_by: toUUID(c.createdBy)
-      })
+      syncLabel = 'your community'
+      await dbUpdate('res_communities', db.communityToRow(action.payload))
     }
 
-    // 13. Sync Alerts
+    // 14. Sync Alerts
     if (addAlert.match(action)) {
-      const a = action.payload
-      await dbUpdate('res_alerts', {
-        id: toUUID(a.id),
-        title: a.title,
-        description: a.description,
-        category: a.category,
-        severity: a.severity,
-        status: a.status,
-        created_by: toUUID(a.createdBy),
-        lat: a.lat,
-        lon: a.lon
-      })
+      syncLabel = 'your alert'
+      await dbUpdate('res_alerts', db.alertToRow(action.payload))
     }
 
     if (resolveAlert.match(action)) {
-      const alertId = action.payload
-      await dbUpdate('res_alerts', { status: 'resolved' }, 'id', toUUID(alertId))
+      syncLabel = 'the alert resolution'
+      await dbUpdate('res_alerts', { status: 'resolved', resolved_at: new Date().toISOString() }, 'id', toUUID(action.payload))
     }
 
-    // 14. Sync Market Items
+    // 15. Sync Market Items
     if (addMarketItem.match(action)) {
-      const m = action.payload
-      await dbUpdate('res_market_items', {
-        id: toUUID(m.id),
-        title: m.title,
-        description: m.description,
-        price: m.price,
-        currency: m.currency,
-        category: m.category,
-        image_url: m.imageUrl || null,
-        status: m.status,
-        created_by: toUUID(m.createdBy)
-      })
+      syncLabel = 'your market item'
+      await dbUpdate('res_market_items', db.marketItemToRow(action.payload))
     }
 
     if (sellMarketItem.match(action)) {
-      const itemId = action.payload
-      await dbUpdate('res_market_items', { status: 'sold' }, 'id', toUUID(itemId))
+      syncLabel = 'the item sale'
+      await dbUpdate('res_market_items', { status: 'gone' }, 'id', toUUID(action.payload))
     }
 
-    // 15. Sync Vendors
-    if (addVendor.match(action)) {
-      const v = action.payload
-      await dbUpdate('res_vendors', {
-        id: toUUID(v.id),
-        name: v.name,
-        category: v.category,
-        description: v.description,
-        contact_number: v.contactNumber,
-        status: v.status,
-        rating: v.rating,
-        reviews_count: v.reviewsCount
-      })
+    // 16. Sync Vendors
+    if (addVendor.match(action) && currentUser) {
+      syncLabel = 'your vendor listing'
+      await dbUpdate('res_vendors', db.vendorToRow(action.payload, currentUser.id))
     }
 
-    // 16. Sync Group Buys
+    // 17. Sync Group Buys
     if (addGroupBuy.match(action)) {
-      const g = action.payload
-      await dbUpdate('res_group_buys', {
-        id: toUUID(g.id),
-        title: g.title,
-        description: g.description,
-        target_amount: g.targetAmount,
-        current_pledges: g.currentPledges,
-        status: g.status,
-        created_by: toUUID(g.createdBy),
-        end_date: g.endDate
-      })
+      syncLabel = 'your group buy'
+      await dbUpdate('res_group_buys', db.groupBuyToRow(action.payload))
     }
 
     if (pledgeGroupBuy.match(action)) {
       const { groupBuyId, amount } = action.payload
       const gb = store.getState().community.groupBuys.find(g => toUUID(g.id) === toUUID(groupBuyId))
       if (gb) {
-        await dbUpdate('res_group_buys', {
-          current_pledges: gb.currentPledges
-        }, 'id', toUUID(groupBuyId))
-        
+        syncLabel = 'your pledge'
+        await dbUpdate('res_group_buys', db.groupBuyProgressToRow(gb.currentPledges), 'id', toUUID(groupBuyId))
         if (currentUser) {
-          await dbUpdate('res_group_buy_pledges', {
-            id: toUUID('pledge-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5)),
-            group_buy_id: toUUID(groupBuyId),
-            user_id: toUUID(currentUser.id),
-            amount: amount
-          })
+          await dbUpdate('res_group_buy_pledges', db.pledgeToRow(groupBuyId, currentUser.id, amount))
         }
       }
     }
 
-    // 17. Sync Skills
+    // 18. Sync Skills
     if (addSkill.match(action)) {
-      const s = action.payload
-      await dbUpdate('res_skills', {
-        id: toUUID(s.id),
-        user_id: toUUID(s.userId),
-        title: s.title,
-        category: s.category,
-        description: s.description,
-        experience_level: s.experienceLevel,
-        contact_info: s.contactInfo
-      })
+      syncLabel = 'your skill listing'
+      await dbUpdate('res_skills', db.skillToRow(action.payload))
     }
 
-    // 18. Sync Lost & Found
-    if (addLostFound.match(action)) {
-      const lf = action.payload
-      await dbUpdate('res_lost_found', {
-        id: toUUID(lf.id),
-        title: lf.title,
-        description: lf.description,
-        type: lf.type,
-        location: lf.location,
-        contact_info: lf.contactInfo,
-        image_url: lf.imageUrl || null,
-        status: lf.status
-      })
+    // 19. Sync Lost & Found
+    if (addLostFound.match(action) && currentUser) {
+      syncLabel = 'your lost & found post'
+      await dbUpdate('res_lost_found', db.lostFoundToRow(action.payload, currentUser.id))
     }
 
     if (resolveLostFound.match(action)) {
-      const lfId = action.payload
-      await dbUpdate('res_lost_found', { status: 'resolved' }, 'id', toUUID(lfId))
+      syncLabel = 'the lost & found update'
+      await dbUpdate('res_lost_found', { status: 'reunited' }, 'id', toUUID(action.payload))
     }
 
-    // 19. Sync Care Circle Check
+    // 20. Sync Care Circle Check (only an OK check-in maps to the schema)
     if (checkCareCircle.match(action)) {
-      const { id, status, checkedByName } = action.payload
-      await dbUpdate('res_care_circle', {
-        status,
-        last_checked_at: new Date().toISOString(),
-        checked_by_name: checkedByName
-      }, 'id', toUUID(id))
+      const { id, status } = action.payload
+      if (status === 'ok') {
+        syncLabel = 'the check-in'
+        await dbUpdate('res_care_circle', {
+          status: 'active',
+          last_ok_at: new Date().toISOString()
+        }, 'id', toUUID(id))
+      }
     }
 
-    // 20. Sync Shared Resources
-    if (addSharedResource.match(action)) {
-      const sr = action.payload
-      await dbUpdate('res_shared_resources', {
-        id: toUUID(sr.id),
-        name: sr.name,
-        type: sr.type,
-        status: sr.status,
-        description: sr.description,
-        location: sr.location,
-        latitude: sr.latitude,
-        longitude: sr.longitude
-      })
+    // 21. Sync Shared Resources
+    if (addSharedResource.match(action) && currentUser) {
+      syncLabel = 'your shared resource'
+      await dbUpdate('res_shared_resources', db.sharedResourceToRow(action.payload, currentUser.id))
     }
 
     if (updateSharedResourceStatus.match(action)) {
       const { id, status } = action.payload
-      await dbUpdate('res_shared_resources', { status }, 'id', toUUID(id))
+      syncLabel = 'the resource status'
+      await dbUpdate('res_shared_resources', { availability: status }, 'id', toUUID(id))
     }
 
-    // 21. Sync Neighbourhood Status
-    if (updateNeighbourhoodStatus.match(action)) {
-      const ns = action.payload
-      await dbUpdate('res_neighbourhood_status', {
-        id: toUUID(ns.id),
-        service: ns.service,
-        status: ns.status,
-        suburb: ns.suburb,
-        updated_at: ns.updatedAt
-      }, 'id', toUUID(ns.id))
-    }
-
-    // 22. Notice Actions (Optimistic Sync)
-    if (vibeNotice.match(action)) {
-      const { noticeId } = action.payload
-      if (typeof globalThis !== 'undefined' && (globalThis as any).__networkKilled) {
-        await Promise.resolve()
-        throw new Error("Network offline (simulated)")
-      }
-      await dbUpdate('res_notice_events', {
-        created_at: new Date().toISOString()
-      }, 'id', toUUID(noticeId))
-    }
-
-    if (echoNotice.match(action)) {
-      const { noticeId } = action.payload
-      if (typeof globalThis !== 'undefined' && (globalThis as any).__networkKilled) {
-        await Promise.resolve()
-        throw new Error("Network offline (simulated)")
-      }
-      await dbUpdate('res_notice_events', {
-        created_at: new Date().toISOString()
-      }, 'id', toUUID(noticeId))
+    // 22. Sync Neighbourhood Status (crowd-signal log: each report is a new row)
+    if (updateNeighbourhoodStatus.match(action) && currentUser) {
+      syncLabel = 'the status report'
+      await dbUpdate('res_neighbourhood_status', db.neighbourhoodStatusToRow(action.payload, currentUser.id))
     }
 
   } catch (err) {
-    console.error('Error syncing with Supabase:', err)
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`Error syncing with Supabase${syncLabel ? ` (${syncLabel})` : ''}:`, message)
+
+    // Undo optimistic toggles where a dedicated rollback reducer exists
     if (vibeNotice.match(action)) {
       store.dispatch(vibeNoticeRollback(action.payload))
     } else if (echoNotice.match(action)) {
       store.dispatch(echoNoticeRollback(action.payload))
+    } else if (rsvpToEvent.match(action)) {
+      store.dispatch(rsvpNoticeRollback(action.payload))
+    }
+
+    if (syncLabel) {
+      store.dispatch(addNotification({
+        title: 'Sync failed',
+        message: `Couldn't save ${syncLabel} — ${message}. The change may not persist.`,
+        read: false
+      }))
+      // Reconcile optimistic Redux state with what the DB actually holds
+      // (skip while the network is down — the refetch would fail too).
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+      const killed = (typeof globalThis !== 'undefined' && (globalThis as unknown as { __networkKilled?: boolean }).__networkKilled)
+      if (supabase && !offline && !killed) {
+        const dispatch = store.dispatch as AppDispatch
+        dispatch(fetchSupabaseData())
+      }
     }
   }
 
@@ -2019,12 +1898,16 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
 
 interface UIState {
   language: 'en' | 'zu' | 'xh' | 'af'
-  offlineQueue: Array<{ action: string; payload: any }>
+  offlineQueue: Array<{ action: string; payload: unknown }>
+  dataStatus: 'idle' | 'loading' | 'ready' | 'error'
+  failedTables: string[]
 }
 
 const initialUIState: UIState = {
   language: 'en',
-  offlineQueue: []
+  offlineQueue: [],
+  dataStatus: 'idle',
+  failedTables: []
 }
 
 const uiSlice = createSlice({
@@ -2034,7 +1917,11 @@ const uiSlice = createSlice({
     setLanguage: (state, action: PayloadAction<'en' | 'zu' | 'xh' | 'af'>) => {
       state.language = action.payload
     },
-    queueOfflineAction: (state, action: PayloadAction<{ action: string; payload: any }>) => {
+    setDataStatus: (state, action: PayloadAction<{ status: UIState['dataStatus']; failedTables: string[] }>) => {
+      state.dataStatus = action.payload.status
+      state.failedTables = action.payload.failedTables
+    },
+    queueOfflineAction: (state, action: PayloadAction<{ action: string; payload: unknown }>) => {
       state.offlineQueue.push(action.payload)
     },
     clearOfflineQueue: (state) => {
@@ -2043,7 +1930,7 @@ const uiSlice = createSlice({
   }
 })
 
-export const { setLanguage, queueOfflineAction, clearOfflineQueue } = uiSlice.actions
+export const { setLanguage, setDataStatus, queueOfflineAction, clearOfflineQueue } = uiSlice.actions
 
 export const selectFilteredListings = createSelector(
   [

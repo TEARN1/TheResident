@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx src/utils/security.test.ts",
+    "test": "tsx src/utils/security.test.ts && tsx src/store/store.test.ts && tsx src/store/dbMappers.test.ts",
     "fuzzer": "tsx scripts/attack-fuzzer.ts",
     "scale-test": "tsx scripts/scale-test.ts"
   },

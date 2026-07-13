@@ -65,6 +65,7 @@ import {
   validateUploadedFile as validateUploadedFileUtil 
 } from '../../utils/security'
 
+import { supabase } from '../../utils/supabase'
 import { t } from '../../utils/i18n'
 import NoticeBoardTab from './components/NoticeBoardTab'
 import ChoreSchedulerTab from './components/ChoreSchedulerTab'
@@ -235,27 +236,43 @@ export default function DashboardPage() {
   const [resolvingDisputeId, setResolvingDisputeId] = useState<string | null>(null)
   const [resolutionText, setResolutionText] = useState('')
 
-  // Load session from cookie on startup or redirect if missing
+  // Restore the Supabase session on startup (e.g. after a hard refresh),
+  // fall back to guest mode, otherwise redirect to /auth.
   useEffect(() => {
-    const cookies = document.cookie.split(';')
-    const tokenCookie = cookies.find(c => c.trim().startsWith('session-token='))
-    const token = tokenCookie ? tokenCookie.split('=')[1] : null
+    if (currentUser) return
 
-    if (!token) {
-      // No token, redirect to auth immediately
-      router.push('/auth')
-      return
-    }
+    let cancelled = false
 
-    // Reconstruct user session if it was wiped on refresh
-    if (!currentUser) {
-      if (token === 'guest-token') {
-        const visitorUser = {
+    const bootstrapSession = async () => {
+      if (supabase) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (cancelled) return
+        if (user) {
+          const { data: dbProfile } = await supabase
+            .from('res_profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+          if (cancelled) return
+          dispatch(loginUser({
+            id: user.id,
+            name: user.user_metadata?.name || 'Resident User',
+            email: user.email || '',
+            role: (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor',
+            balance: 0
+          }))
+          return
+        }
+      }
+
+      const isGuest = document.cookie.split(';').some(c => c.trim().startsWith('guest-mode=1'))
+      if (isGuest) {
+        dispatch(loginUser({
           id: 'visitor-guest',
           name: 'Guest Visitor',
           email: 'visitor@theresident.co.za',
           role: 'visitor' as const,
-          balance: 100,
+          balance: 0,
           profile: {
             bio: 'Browsing the directory as a guest.',
             gender: 'any' as const,
@@ -263,27 +280,15 @@ export default function DashboardPage() {
             employmentStatus: 'Visitor',
             hasPets: false
           }
-        }
-        dispatch(loginUser(visitorUser))
-      } else {
-        // Reconstruct default mock tenant user (for mock-jwt-token)
-        const mockUser = {
-          id: 'tenant-100',
-          name: 'Global Tenant',
-          email: 'tenant@theresident.co.za',
-          role: 'tenant' as const,
-          balance: 850,
-          profile: {
-            bio: 'Looking for a clean flat close to bus and tube stations.',
-            gender: 'any' as const,
-            childrenCount: 0,
-            employmentStatus: 'Employed',
-            hasPets: false
-          }
-        }
-        dispatch(loginUser(mockUser))
+        }))
+        return
       }
+
+      router.push('/auth')
     }
+
+    bootstrapSession()
+    return () => { cancelled = true }
   }, [currentUser, router, dispatch])
 
   // Form states: Create Room
@@ -379,6 +384,10 @@ export default function DashboardPage() {
     roommateSearchBudget
   ))
 
+  // Supabase fetch status (set by fetchSupabaseData)
+  const dataStatus = useSelector((state: RootState) => state.ui.dataStatus)
+  const failedTables = useSelector((state: RootState) => state.ui.failedTables)
+
   if (!currentUser) return <div style={loadingStyle}>Redirecting secure session...</div>
 
   // Rate Limiting checker
@@ -409,9 +418,9 @@ export default function DashboardPage() {
     return true
   }
 
-  // Logout action
+  // Logout action (logoutUser also triggers supabase.auth.signOut() in the sync middleware)
   const handleLogout = () => {
-    document.cookie = 'session-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+    document.cookie = 'guest-mode=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
     dispatch(logoutUser())
     router.push('/auth')
   }
@@ -1391,6 +1400,20 @@ export default function DashboardPage() {
         <div style={topAlertBannerStyle}>
           <CheckCircle2 size={18} color="#22c55e" />
           <span>{alertNotification}</span>
+        </div>
+      )}
+
+      {/* Supabase data sync status */}
+      {dataStatus === 'loading' && (
+        <div style={topAlertBannerStyle}>
+          <Loader size={18} className="animate-spin" color="#D4AF37" />
+          <span>Loading community data…</span>
+        </div>
+      )}
+      {dataStatus === 'error' && (
+        <div style={topAlertBannerStyle}>
+          <AlertTriangle size={18} color="#ef4444" />
+          <span>Some data failed to load ({failedTables.join(', ')}). Showing what we have — refresh to retry.</span>
         </div>
       )}
 
