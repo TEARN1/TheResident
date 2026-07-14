@@ -387,6 +387,7 @@ export default function DashboardPage() {
   // Supabase fetch status (set by fetchSupabaseData)
   const dataStatus = useSelector((state: RootState) => state.ui.dataStatus)
   const failedTables = useSelector((state: RootState) => state.ui.failedTables)
+  const pendingWrites = useSelector((state: RootState) => state.ui.offlineQueue.length)
 
   if (!currentUser) return <div style={loadingStyle}>Redirecting secure session...</div>
 
@@ -1414,6 +1415,16 @@ export default function DashboardPage() {
         <div style={topAlertBannerStyle}>
           <AlertTriangle size={18} color="#ef4444" />
           <span>Some data failed to load ({failedTables.join(', ')}). Showing what we have — refresh to retry.</span>
+        </div>
+      )}
+
+      {/* Writes held while offline — never queue silently */}
+      {pendingWrites > 0 && (
+        <div style={topAlertBannerStyle}>
+          <Clock size={18} color="#D4AF37" />
+          <span>
+            {pendingWrites} change{pendingWrites === 1 ? '' : 's'} waiting to sync — they&apos;ll be saved when you&apos;re back online.
+          </span>
         </div>
       )}
 

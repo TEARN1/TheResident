@@ -448,23 +448,27 @@ The `notifications` table and the `push-notify` edge function already exist and 
 4. Preferences live in a Resident-owned table; never write Gruvs profile columns.
 5. Default to fewer notifications, not more.
 
-### 47. Offline queue replay ✅ 🐛
-`offlineQueue`, `queueOfflineAction` and `clearOfflineQueue` all exist in `uiSlice` — **and nothing anywhere ever dispatches them.** It is pure scaffolding.
+### 47. Offline queue replay — ✅ **DONE**
+`offlineQueue`, `queueOfflineAction` and `clearOfflineQueue` existed in `uiSlice` and nothing ever dispatched them. Now wired.
 
-1. On a write failure while `navigator.onLine === false`, enqueue the action.
-2. Replay the queue in order on the `online` event.
-3. Cap the queue and drop the oldest entries — an unbounded queue is a memory leak.
-4. Reconcile after replay with one fetch, so a stale queued write can't overwrite fresher server data.
-5. Show the pending count in the UI; silent queueing is how you lose someone's post.
+1. ~~On a write failure while `navigator.onLine === false`, enqueue the action.~~ Done — the sync middleware queues on offline failure.
+2. ~~Replay the queue in order on the `online` event.~~ Done — `replayOfflineQueue` thunk, fired by an `online` listener in `ReduxProvider`. Replay calls `syncActionToSupabase` **without re-dispatching**, so the reducer can't double-apply the optimistic change.
+3. ~~Cap the queue.~~ Done — `MAX_OFFLINE_QUEUE = 100`, oldest dropped first.
+4. ~~Reconcile after replay with one fetch.~~ Done — a single `fetchSupabaseData` at the end, not one per write.
+5. ~~Show the pending count.~~ Done — a "waiting to sync" banner on the dashboard.
 
-### 48. Atomic counters ⚠️ 🐛
-**This is a live bug, not a feature.** `bookSeat` and `pledgeGroupBuy` read the current value into JavaScript, add to it, and write the result back — so two concurrent users clobber each other and a seat gets sold twice.
+Rolled-back actions (toggles, seat bookings, pledges) are deliberately **not** queued: their optimistic change is already reverted, so replaying the write would put the DB out of step with the UI.
 
-1. Replace with a SQL-side increment: `set available_seats = available_seats - 1 where id = $1 and available_seats > 0`.
-2. Wrap it in a security-definer RPC so the guard can't be bypassed.
-3. The RPC returns the new value; the client trusts it rather than its own arithmetic.
-4. Same treatment for `current_quantity` on group buys.
-5. A rejected decrement (zero seats left) surfaces as a real error rather than a silent optimistic success.
+### 48. Atomic counters — ✅ **DONE**
+`bookSeat` and `pledgeGroupBuy` read the value into JavaScript, added to it, and wrote the result back — so two riders racing for the last seat both computed `1 - 1 = 0` and both "won".
+
+1. ~~SQL-side decrement with the guard in the WHERE clause.~~ Done — `res_book_seat`, plus `res_release_seat` for cancellations.
+2. ~~Wrap in a security-definer RPC.~~ Done, `res_`-prefixed, pinned search_path, revoked from anon.
+3. ~~The RPC returns the new value; the client trusts it.~~ Done — `setLiftSeats` / `setGroupBuyProgress` reconcile Redux against the returned truth.
+4. ~~Same for group buys.~~ Done — `res_pledge_group_buy` recomputes `current_quantity` from the **sum of pledge rows** rather than incrementing, so the counter is self-healing; it also auto-completes on target and rejects pledges after the deadline.
+5. ~~A rejected decrement surfaces as a real error.~~ Done — the loser gets "no seats available" and their optimistic booking is rolled back.
+
+Verified with a concurrency test: two clients booking one seat simultaneously → exactly one succeeds, count lands at 0, never negative.
 
 ### 49. Lift ↔ Gruvs event bridge ✅
 `res_lift_clubs.event_id` already references `events(id)` and is never populated.

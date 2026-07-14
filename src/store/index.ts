@@ -522,6 +522,22 @@ const networkingSlice = createSlice({
         lift.availableSeats -= 1
       }
     },
+    // Reconciles the optimistic decrement with the seat count the database
+    // actually settled on (res_book_seat returns it).
+    setLiftSeats: (state, action: PayloadAction<{ liftId: string; availableSeats: number }>) => {
+      const liftId = toUUID(action.payload.liftId)
+      const lift = state.lifts.find(l => toUUID(l.id) === liftId)
+      if (lift) {
+        lift.availableSeats = action.payload.availableSeats
+      }
+    },
+    bookSeatRollback: (state, action: PayloadAction<string>) => {
+      const liftId = toUUID(action.payload)
+      const lift = state.lifts.find(l => toUUID(l.id) === liftId)
+      if (lift && lift.availableSeats < lift.totalSeats) {
+        lift.availableSeats += 1
+      }
+    },
     addDispatch: (state, action: PayloadAction<ServiceDispatch>) => {
       const disp = { ...action.payload }
       disp.id = toUUID(disp.id)
@@ -831,6 +847,19 @@ const communitySlice = createSlice({
       const gb = state.groupBuys.find(g => toUUID(g.id) === toUUID(action.payload.groupBuyId))
       if (gb) gb.currentPledges += action.payload.amount
     },
+    // Reconciles with the total res_pledge_group_buy recomputed from the
+    // pledge rows (the pledge row, not the counter, is the source of truth).
+    setGroupBuyProgress: (state, action: PayloadAction<{ groupBuyId: string; currentPledges: number }>) => {
+      const gb = state.groupBuys.find(g => toUUID(g.id) === toUUID(action.payload.groupBuyId))
+      if (gb) {
+        gb.currentPledges = action.payload.currentPledges
+        if (gb.currentPledges >= gb.targetAmount) gb.status = 'completed'
+      }
+    },
+    pledgeGroupBuyRollback: (state, action: PayloadAction<{ groupBuyId: string; amount: number }>) => {
+      const gb = state.groupBuys.find(g => toUUID(g.id) === toUUID(action.payload.groupBuyId))
+      if (gb) gb.currentPledges = Math.max(0, gb.currentPledges - action.payload.amount)
+    },
     addSkill: (state, action: PayloadAction<Skill>) => {
       state.skills.push({ ...action.payload, id: toUUID(action.payload.id), userId: toUUID(action.payload.userId) })
     },
@@ -931,6 +960,8 @@ export const {
   addService,
   deleteService,
   bookSeat,
+  setLiftSeats,
+  bookSeatRollback,
   addDispatch,
   updateDispatchStatus
 } = networkingSlice.actions
@@ -973,6 +1004,8 @@ export const {
   addVendor,
   addGroupBuy,
   pledgeGroupBuy,
+  setGroupBuyProgress,
+  pledgeGroupBuyRollback,
   addSkill,
   addLostFound,
   resolveLostFound,
@@ -1464,6 +1497,27 @@ const assertNetworkAlive = () => {
   }
 }
 
+// Real connectivity loss, or the simulated kill switch used by Security Labs.
+const isOffline = () => {
+  const killed = (typeof globalThis !== 'undefined' && (globalThis as unknown as { __networkKilled?: boolean }).__networkKilled)
+  const browserOffline = typeof navigator !== 'undefined' && navigator.onLine === false
+  return !!killed || browserOffline
+}
+
+// Actions whose optimistic update is undone by a rollback reducer on failure.
+// They must NOT be queued for replay: Redux has already reverted them, so
+// replaying the write would put the DB out of step with the UI. Toggles would
+// also flip twice.
+const ROLLED_BACK_ACTIONS: string[] = [
+  vibeNotice.type,
+  echoNotice.type,
+  rsvpToEvent.type,
+  bookSeat.type,
+  pledgeGroupBuy.type
+]
+
+const isReplayable = (actionType: string) => !ROLLED_BACK_ACTIONS.includes(actionType)
+
 const dbUpdate = async (table: string, payload: Record<string, unknown> | null, eqCol?: string, eqVal?: unknown) => {
   assertNetworkAlive();
   if (supabase) {
@@ -1487,11 +1541,23 @@ const dbUpdate = async (table: string, payload: Record<string, unknown> | null, 
   }
 };
 
-export const supabaseSyncMiddleware: Middleware<false, RootState> = store => next => async (action: unknown) => {
-  const result = next(action)
+// Minimal store surface the sync needs — lets replayOfflineQueue drive the same
+// code path as the middleware.
+interface SyncStore {
+  getState: () => RootState
+  dispatch: (action: unknown) => unknown
+}
 
+/**
+ * Mirrors one action to Supabase. Called by the middleware after the reducer
+ * has run (optimistic), and by replayOfflineQueue for writes that were held
+ * while offline — replay passes the action WITHOUT dispatching it, so the
+ * reducer doesn't apply the same optimistic change twice.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const syncActionToSupabase = async (store: SyncStore, action: any, options: { replay?: boolean } = {}) => {
   const isSim = typeof global !== 'undefined' && (global as unknown as { __simulationMode?: boolean }).__simulationMode
-  if (!supabase && !isSim) return result
+  if (!supabase && !isSim) return
 
   const state = store.getState()
   const currentUser = state.auth.currentUser
@@ -1616,14 +1682,18 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
       await dbUpdate('res_lift_clubs', db.liftToRow(action.payload, currentUser.id))
     }
 
+    // The seat count is decremented by the database, not by us: two riders
+    // racing for the last seat would otherwise both compute "1 - 1 = 0" from
+    // the same stale value and both succeed.
     if (bookSeat.match(action)) {
-      const liftId = action.payload
-      const matchedLift = store.getState().networking.lifts.find(l => toUUID(l.id) === toUUID(liftId))
-      if (matchedLift) {
-        syncLabel = 'your seat booking'
-        await dbUpdate('res_lift_clubs', {
-          available_seats: matchedLift.availableSeats
-        }, 'id', toUUID(liftId))
+      syncLabel = 'your seat booking'
+      assertNetworkAlive()
+      if (supabase) {
+        const { data, error } = await supabase.rpc('res_book_seat', { p_lift_id: toUUID(action.payload) })
+        if (error) throw error
+        if (typeof data === 'number') {
+          store.dispatch(setLiftSeats({ liftId: action.payload, availableSeats: data }))
+        }
       }
     }
 
@@ -1802,14 +1872,20 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
       await dbUpdate('res_group_buys', db.groupBuyToRow(action.payload))
     }
 
+    // One RPC writes the pledge row and recomputes current_quantity from the
+    // sum of pledges, so the counter is self-healing and can't be clobbered.
     if (pledgeGroupBuy.match(action)) {
       const { groupBuyId, amount } = action.payload
-      const gb = store.getState().community.groupBuys.find(g => toUUID(g.id) === toUUID(groupBuyId))
-      if (gb) {
-        syncLabel = 'your pledge'
-        await dbUpdate('res_group_buys', db.groupBuyProgressToRow(gb.currentPledges), 'id', toUUID(groupBuyId))
-        if (currentUser) {
-          await dbUpdate('res_group_buy_pledges', db.pledgeToRow(groupBuyId, currentUser.id, amount))
+      syncLabel = 'your pledge'
+      assertNetworkAlive()
+      if (supabase) {
+        const { data, error } = await supabase.rpc('res_pledge_group_buy', {
+          p_group_buy_id: toUUID(groupBuyId),
+          p_quantity: Math.max(1, Math.round(amount))
+        })
+        if (error) throw error
+        if (typeof data === 'number') {
+          store.dispatch(setGroupBuyProgress({ groupBuyId, currentPledges: data }))
         }
       }
     }
@@ -1865,36 +1941,93 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
     const message = err instanceof Error ? err.message : String(err)
     console.error(`Error syncing with Supabase${syncLabel ? ` (${syncLabel})` : ''}:`, message)
 
-    // Undo optimistic toggles where a dedicated rollback reducer exists
+    // Undo optimistic updates where a dedicated rollback reducer exists
     if (vibeNotice.match(action)) {
       store.dispatch(vibeNoticeRollback(action.payload))
     } else if (echoNotice.match(action)) {
       store.dispatch(echoNoticeRollback(action.payload))
     } else if (rsvpToEvent.match(action)) {
       store.dispatch(rsvpNoticeRollback(action.payload))
+    } else if (bookSeat.match(action)) {
+      store.dispatch(bookSeatRollback(action.payload))
+    } else if (pledgeGroupBuy.match(action)) {
+      store.dispatch(pledgeGroupBuyRollback(action.payload))
     }
 
     if (syncLabel) {
-      store.dispatch(addNotification({
-        title: 'Sync failed',
-        message: `Couldn't save ${syncLabel} — ${message}. The change may not persist.`,
-        read: false
-      }))
-      // Reconcile optimistic Redux state with what the DB actually holds
-      // (skip while the network is down — the refetch would fail too).
-      const offline = typeof navigator !== 'undefined' && navigator.onLine === false
-      const killed = (typeof globalThis !== 'undefined' && (globalThis as unknown as { __networkKilled?: boolean }).__networkKilled)
-      if (supabase && !offline && !killed) {
-        const dispatch = store.dispatch as AppDispatch
-        dispatch(fetchSupabaseData())
+      const offline = isOffline()
+
+      // Hold the write and replay it when connectivity returns, rather than
+      // losing it silently. Never re-queue during a replay: that would grow
+      // the queue without bound while the network stays down.
+      if (offline && !options.replay && isReplayable(action.type)) {
+        store.dispatch(queueOfflineAction({ action: action.type, payload: action.payload }))
+        store.dispatch(addNotification({
+          title: 'Saved offline',
+          message: `You're offline — ${syncLabel} is queued and will sync when you reconnect.`,
+          read: false
+        }))
+      } else {
+        store.dispatch(addNotification({
+          title: 'Sync failed',
+          message: `Couldn't save ${syncLabel} — ${message}. The change may not persist.`,
+          read: false
+        }))
+        // Reconcile optimistic Redux state with what the DB actually holds
+        // (pointless while offline — the refetch would fail too, and a replay
+        // reconciles once at the end).
+        if (supabase && !offline && !options.replay) {
+          const dispatch = store.dispatch as AppDispatch
+          dispatch(fetchSupabaseData())
+        }
       }
     }
   }
+}
 
+export const supabaseSyncMiddleware: Middleware<false, RootState> = store => next => async (action: unknown) => {
+  const result = next(action)
+  await syncActionToSupabase(store as SyncStore, action)
   return result
 }
 
+/**
+ * Replays writes that failed while offline, in the order they were made.
+ * Each queued action is sent straight to Supabase — NOT re-dispatched — because
+ * its optimistic change is already in Redux from the first attempt.
+ */
+export const replayOfflineQueue = createAsyncThunk(
+  'ui/replayOfflineQueue',
+  async (_, { getState, dispatch }) => {
+    const queued = (getState() as RootState).ui.offlineQueue
+    if (queued.length === 0 || !supabase || isOffline()) return
+
+    // Clear first so a second 'online' event can't replay the same writes twice.
+    dispatch(clearOfflineQueue())
+
+    const syncStore: SyncStore = {
+      getState: () => getState() as RootState,
+      dispatch: dispatch as unknown as (action: unknown) => unknown
+    }
+
+    for (const item of queued) {
+      await syncActionToSupabase(syncStore, { type: item.action, payload: item.payload }, { replay: true })
+    }
+
+    dispatch(addNotification({
+      title: 'Back online',
+      message: `Synced ${queued.length} change${queued.length === 1 ? '' : 's'} made while you were offline.`,
+      read: false
+    }))
+
+    // One reconcile at the end, rather than after every replayed write.
+    dispatch(fetchSupabaseData())
+  }
+)
+
 // Store Creation
+
+const MAX_OFFLINE_QUEUE = 100
 
 interface UIState {
   language: 'en' | 'zu' | 'xh' | 'af'
@@ -1923,6 +2056,11 @@ const uiSlice = createSlice({
     },
     queueOfflineAction: (state, action: PayloadAction<{ action: string; payload: unknown }>) => {
       state.offlineQueue.push(action.payload)
+      // Bound the queue: a long offline session must not grow memory forever.
+      // The oldest writes are dropped first.
+      if (state.offlineQueue.length > MAX_OFFLINE_QUEUE) {
+        state.offlineQueue.splice(0, state.offlineQueue.length - MAX_OFFLINE_QUEUE)
+      }
     },
     clearOfflineQueue: (state) => {
       state.offlineQueue = []

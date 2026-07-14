@@ -153,8 +153,6 @@ test('phase 4 community payloads only use real schema columns', () => {
   assertKeysInSchema('res_group_buys', gb)
   assert.strictEqual(gb.target_quantity, 10)
   assert.strictEqual(gb.deadline, '2026-03-01')
-  assertKeysInSchema('res_group_buys', db.groupBuyProgressToRow(5))
-  assertKeysInSchema('res_group_buy_pledges', db.pledgeToRow('gb-1', UID, 3))
 
   assertKeysInSchema('res_skills', db.skillToRow({
     id: 'sk-1', userId: UID, title: 't', category: 'c', description: 'd', experienceLevel: 'x', contactInfo: 'x'

@@ -340,16 +340,10 @@ export const groupBuyToRow = (g: GroupBuy): DbRow => ({
   deadline: g.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 })
 
-export const groupBuyProgressToRow = (currentPledges: number): DbRow => ({
-  current_quantity: Math.max(0, Math.round(currentPledges))
-})
-
-export const pledgeToRow = (groupBuyId: string, userId: string, amount: number): DbRow => ({
-  id: toUUID(`pledge-${groupBuyId}-${userId}-${Date.now()}`),
-  group_buy_id: toUUID(groupBuyId),
-  user_id: toUUID(userId),
-  quantity: Math.max(1, Math.round(amount))
-})
+// Pledges and seat bookings have no *ToRow mapper by design: they are counter
+// mutations, and doing the arithmetic here (read → add → write) is exactly the
+// race that let two riders book the same last seat. They go through the
+// res_pledge_group_buy / res_book_seat RPCs, which mutate inside the database.
 
 export const skillToRow = (s: Skill): DbRow => ({
   id: toUUID(s.id),

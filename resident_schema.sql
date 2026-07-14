@@ -993,3 +993,124 @@ create policy res_disputes_update on public.res_community_disputes
   for update to authenticated
   using (reported_by_id = auth.uid() or mediator_id = auth.uid())
   with check (reported_by_id = auth.uid() or mediator_id = auth.uid());
+
+-- ── 8. ATOMIC COUNTERS (migration atomic_seat_and_pledge_counters) ────────────
+-- The client used to read a count, add to it in JavaScript and write the result
+-- back, so two concurrent users could each book the same last seat. The
+-- mutation now happens inside the database with the guard in the WHERE clause.
+
+create or replace function public.res_book_seat(p_lift_id uuid)
+returns integer
+language plpgsql security definer
+set search_path = public
+as $$
+declare v_seats integer;
+begin
+  if auth.uid() is null then
+    raise exception 'not signed in';
+  end if;
+
+  update res_lift_clubs
+     set available_seats = available_seats - 1
+   where id = p_lift_id
+     and available_seats > 0
+  returning available_seats into v_seats;
+
+  if v_seats is null then
+    if not exists (select 1 from res_lift_clubs where id = p_lift_id) then
+      raise exception 'lift not found';
+    end if;
+    raise exception 'no seats available';
+  end if;
+
+  return v_seats;
+end;
+$$;
+
+create or replace function public.res_release_seat(p_lift_id uuid)
+returns integer
+language plpgsql security definer
+set search_path = public
+as $$
+declare v_seats integer;
+begin
+  if auth.uid() is null then
+    raise exception 'not signed in';
+  end if;
+
+  update res_lift_clubs
+     set available_seats = available_seats + 1
+   where id = p_lift_id
+     and available_seats < total_seats
+  returning available_seats into v_seats;
+
+  if v_seats is null then
+    raise exception 'seat cannot be released';
+  end if;
+
+  return v_seats;
+end;
+$$;
+
+-- The pledge row is the source of truth (unique per user per buy, so
+-- re-pledging updates); current_quantity is recomputed from the sum of pledges
+-- rather than incremented, which makes the counter self-healing.
+create or replace function public.res_pledge_group_buy(p_group_buy_id uuid, p_quantity integer)
+returns integer
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  v_total integer;
+  v_target integer;
+  v_deadline timestamptz;
+  v_status text;
+begin
+  if auth.uid() is null then
+    raise exception 'not signed in';
+  end if;
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'quantity must be positive';
+  end if;
+
+  select target_quantity, deadline, status
+    into v_target, v_deadline, v_status
+    from res_group_buys
+   where id = p_group_buy_id
+     for update;
+
+  if not found then
+    raise exception 'group buy not found';
+  end if;
+  if v_status <> 'open' then
+    raise exception 'group buy is not open';
+  end if;
+  if v_deadline < now() then
+    raise exception 'group buy deadline has passed';
+  end if;
+
+  insert into res_group_buy_pledges (group_buy_id, user_id, quantity)
+  values (p_group_buy_id, auth.uid(), p_quantity)
+  on conflict (group_buy_id, user_id)
+  do update set quantity = excluded.quantity;
+
+  select coalesce(sum(quantity), 0) into v_total
+    from res_group_buy_pledges
+   where group_buy_id = p_group_buy_id;
+
+  update res_group_buys
+     set current_quantity = v_total,
+         status = case when v_total >= v_target then 'completed' else status end
+   where id = p_group_buy_id;
+
+  return v_total;
+end;
+$$;
+
+revoke execute on function public.res_book_seat(uuid) from public, anon;
+revoke execute on function public.res_release_seat(uuid) from public, anon;
+revoke execute on function public.res_pledge_group_buy(uuid, integer) from public, anon;
+
+grant execute on function public.res_book_seat(uuid) to authenticated, service_role;
+grant execute on function public.res_release_seat(uuid) to authenticated, service_role;
+grant execute on function public.res_pledge_group_buy(uuid, integer) to authenticated, service_role;
