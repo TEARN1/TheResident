@@ -1122,6 +1122,16 @@ export const fetchSupabaseData = createAsyncThunk(
     dispatch(setDataStatus({ status: 'loading', failedTables: [] }))
     const failedTables: string[] = []
     const markFailed = (table: string, message: string) => {
+      // Ignore missing optional tables (404/406/does not exist) to avoid user-facing error banners
+      if (
+        message.includes('Could not find the table') || 
+        message.includes('does not exist') ||
+        message.includes('404') ||
+        message.includes('406')
+      ) {
+        console.warn(`Optional table ${table} not yet present in remote DB schema: ${message}`)
+        return
+      }
       failedTables.push(table)
       console.error(`Failed to fetch ${table}: ${message}`)
     }

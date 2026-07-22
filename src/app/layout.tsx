@@ -8,6 +8,15 @@ import { ReduxProvider } from '../store/provider'
 export const metadata: Metadata = {
   title: 'The Resident',
   description: 'Luxury Living Simplified for Tenants and Property Owners.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Resident',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  }
 }
 
 export default function RootLayout({
@@ -17,13 +26,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" data-theme="day">
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Resident" />
-        <link rel="apple-touch-icon" href="/logo.png" />
-      </head>
       <body>
         <ReduxProvider>
           <CustomCursor />
