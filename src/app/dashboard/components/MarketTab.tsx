@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle } from 'lucide-react'
+import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldCheck, Zap } from 'lucide-react'
 import { isOpenNow, isSuspiciousPrice, suburbPriceStats, mentionsOffPlatformPayment } from '../../../utils/logic'
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../store'
 
@@ -135,8 +135,8 @@ export default function MarketTab({
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong style={{ color: 'var(--text-primary, #fff)', fontSize: '0.9rem' }}>{item.title}</strong>
                       {suspicious && (
-                        <span style={{ fontSize: '0.6rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '0.1rem 0.3rem', borderRadius: '3px', border: '1px solid rgba(239,68,68,0.3)', fontWeight: 'bold' }}>
-                          ⚠️ LOW PRICE WARN
+                        <span style={{ fontSize: '0.6rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '0.15rem 0.4rem', borderRadius: '4px', border: '1px solid rgba(239,68,68,0.3)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                          <AlertTriangle size={10} /> Low Price Warning
                         </span>
                       )}
                     </div>
@@ -145,8 +145,8 @@ export default function MarketTab({
                     </div>
                     <p style={{ fontSize: '0.75rem', color: '#aaa', margin: 0 }}>{item.description}</p>
                     {offPlatformWarn && (
-                      <div style={{ marginTop: '0.4rem', fontSize: '0.65rem', color: '#eab308', background: 'rgba(234,179,8,0.1)', padding: '0.2rem 0.4rem', borderRadius: '4px', border: '1px solid rgba(234,179,8,0.2)' }}>
-                        🛡️ Safety Tip: Meet at verified local stands for cash delivery.
+                      <div style={{ marginTop: '0.4rem', fontSize: '0.65rem', color: '#eab308', background: 'rgba(234,179,8,0.1)', padding: '0.25rem 0.4rem', borderRadius: '4px', border: '1px solid rgba(234,179,8,0.2)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <ShieldCheck size={12} color="#eab308" /> Safety Tip: Meet at verified local stands for cash delivery.
                       </div>
                     )}
                     {item.createdBy !== currentUserId && (

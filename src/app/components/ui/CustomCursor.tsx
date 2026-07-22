@@ -4,6 +4,7 @@ import { motion, useMotionValue, useSpring } from 'framer-motion'
 
 export default function CustomCursor() {
     const [isHovering, setIsHovering] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
     const cursorX = useMotionValue(-100)
     const cursorY = useMotionValue(-100)
 
@@ -12,6 +13,18 @@ export default function CustomCursor() {
     const cursorYSpring = useSpring(cursorY, springConfig)
 
     useEffect(() => {
+        const checkTouchDevice = () => {
+            const hasTouch = 
+                'ontouchstart' in window || 
+                navigator.maxTouchPoints > 0 || 
+                window.matchMedia('(pointer: coarse)').matches ||
+                window.innerWidth <= 768
+            setIsMobile(hasTouch)
+        }
+
+        checkTouchDevice()
+        window.addEventListener('resize', checkTouchDevice)
+
         const moveCursor = (e: MouseEvent) => {
             cursorX.set(e.clientX - 16)
             cursorY.set(e.clientY - 16)
@@ -36,18 +49,26 @@ export default function CustomCursor() {
         window.addEventListener('mouseover', handleMouseOver)
 
         return () => {
+            window.removeEventListener('resize', checkTouchDevice)
             window.removeEventListener('mousemove', moveCursor)
             window.removeEventListener('mouseover', handleMouseOver)
         }
     }, [cursorX, cursorY])
 
+    // Hide custom cursor entirely on mobile / touch screens
+    if (isMobile) {
+        return null
+    }
+
     return (
         <>
             <style jsx global>{`
-        body, a, button {
-          cursor: none;
-        }
-      `}</style>
+                @media (pointer: fine) and (min-width: 769px) {
+                    body, a, button {
+                        cursor: none;
+                    }
+                }
+            `}</style>
             <motion.div
                 style={{
                     translateX: cursorXSpring,

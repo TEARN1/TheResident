@@ -50,7 +50,9 @@ import {
   validateVoucherHMAC,
   isClientSyncBackoffDue,
   isSyncQueueOverload,
-  isLandlordWaiverActive
+  isLandlordWaiverActive,
+  detectCurrencyByLocation,
+  formatCurrencyByLocation
 } from './logic'
 import type { Listing, LiftClub } from '../store'
 
@@ -443,4 +445,11 @@ test('isLandlordWaiverActive checks 30 days limit', () => {
   const stale = new Date(now - 45 * 86_400_000).toISOString()
   assert.strictEqual(isLandlordWaiverActive(recent, now), true)
   assert.strictEqual(isLandlordWaiverActive(stale, now), false)
+})
+
+test('detectCurrencyByLocation maps location to local currency', () => {
+  assert.strictEqual(detectCurrencyByLocation('Ivory Park, South Africa').currency, 'ZAR')
+  assert.strictEqual(detectCurrencyByLocation('Nairobi, Kenya').currency, 'KES')
+  assert.strictEqual(formatCurrencyByLocation(1200, 'Ivory Park'), 'R 1200')
+  assert.strictEqual(formatCurrencyByLocation(500, 'Nairobi'), 'KSh 500')
 })

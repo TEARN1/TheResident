@@ -22,6 +22,112 @@ import { distanceMetres, calculateWaterWaitTime } from '../../../utils/logic'
 // Default Ivory Park / Midrand center
 const DEFAULT_CENTER: [number, number] = [-25.9983, 28.2144]
 
+const DEFAULT_MOCK_LISTINGS: Listing[] = [
+  {
+    id: 'mock-listing-1',
+    title: 'Cozy Room near Stand 459',
+    description: 'Clean backyard room with pre-paid sub-meter electricity.',
+    price: 1200,
+    currency: 'ZAR',
+    suburb: 'Ivory Park Zone 5',
+    location: 'Stand 4592, Zone 5',
+    safetyNotes: 'Secure yard',
+    landlordId: 'll-1',
+    landlordName: 'Amahle Nkwali',
+    landlordLivesHere: true,
+    lat: -25.9983,
+    lon: 28.2144,
+    safetyRating: 'high',
+    images: [],
+    amenities: { wifi: true, parking: false, bathroom: 'shared' },
+    requirements: { genderPreference: 'any', childrenAllowed: true, maxChildren: 2, smokingAllowed: false, petsAllowed: false }
+  },
+  {
+    id: 'mock-listing-2',
+    title: 'Spacious Shack Unit',
+    description: 'Near communal borehole and taxi rank.',
+    price: 950,
+    currency: 'ZAR',
+    suburb: 'Ivory Park Zone 2',
+    location: 'Stand 1201, Zone 2',
+    safetyNotes: 'Well-lit street',
+    landlordId: 'll-2',
+    landlordName: 'Sipho Zulu',
+    landlordLivesHere: false,
+    lat: -25.9950,
+    lon: 28.2180,
+    safetyRating: 'medium',
+    images: [],
+    amenities: { wifi: false, parking: true, bathroom: 'shared' },
+    requirements: { genderPreference: 'any', childrenAllowed: true, maxChildren: 2, smokingAllowed: false, petsAllowed: false }
+  }
+]
+
+const DEFAULT_MOCK_VENDORS: Vendor[] = [
+  {
+    id: 'mock-vendor-1',
+    name: 'Sipho Fresh Produce Spaza',
+    category: 'Food & Fresh Produce',
+    description: 'Open 06:00 - 20:00 Daily',
+    contactNumber: '0812345678',
+    status: 'active',
+    rating: 4.8,
+    reviewsCount: 12,
+    lat: -25.9975,
+    lon: 28.2130
+  },
+  {
+    id: 'mock-vendor-2',
+    name: 'Mama Khumalo General Dealer',
+    category: 'Groceries & Paraffin',
+    description: 'Open 07:00 - 21:00 Daily',
+    contactNumber: '0823456789',
+    status: 'active',
+    rating: 4.9,
+    reviewsCount: 24,
+    lat: -25.9990,
+    lon: 28.2160
+  }
+]
+
+const DEFAULT_MOCK_RESOURCES: SharedResource[] = [
+  {
+    id: 'mock-tap-1',
+    name: 'Community Borehole Standpipe #1',
+    type: 'borehole',
+    status: 'pressure:high|buckets:3|wait:9',
+    description: 'Community water standpipe with solar pump',
+    location: 'Ivory Park Zone 5',
+    latitude: -25.9983,
+    longitude: 28.2144
+  },
+  {
+    id: 'mock-tap-2',
+    name: 'Zone 2 Solar Standpipe',
+    type: 'borehole',
+    status: 'pressure:dribble|buckets:8|wait:24',
+    description: 'Solar-powered communal tap',
+    location: 'Ivory Park Zone 2',
+    latitude: -25.9945,
+    longitude: 28.2175
+  }
+]
+
+const DEFAULT_MOCK_ALERTS: Alert[] = [
+  {
+    id: 'mock-alert-1',
+    title: 'Pothole Alert - Zone 5 Main Rd',
+    description: 'Deep pothole near intersection.',
+    category: 'utility',
+    severity: 'warning',
+    status: 'active',
+    createdBy: 'system',
+    createdAt: new Date().toISOString(),
+    lat: -25.9970,
+    lon: 28.2150
+  }
+]
+
 export default function VibeMap() {
   const dispatch = useDispatch()
   const mapRef = useRef<any>(null)
@@ -30,11 +136,17 @@ export default function VibeMap() {
   const [L, setL] = useState<any>(null)
   const [mapReady, setMapReady] = useState(false)
   
-  // Select data from Redux
-  const listings = useSelector((state: RootState) => state.listings.items)
-  const vendors = useSelector((state: RootState) => state.community.vendors)
-  const sharedResources = useSelector((state: RootState) => state.community.sharedResources)
-  const alerts = useSelector((state: RootState) => state.community.alerts)
+  // Select data from Redux with fallback to default mock items when empty
+  const reduxListings = useSelector((state: RootState) => state.listings.items)
+  const reduxVendors = useSelector((state: RootState) => state.community.vendors)
+  const reduxSharedResources = useSelector((state: RootState) => state.community.sharedResources)
+  const reduxAlerts = useSelector((state: RootState) => state.community.alerts)
+
+  const listings = reduxListings.length > 0 ? reduxListings : DEFAULT_MOCK_LISTINGS
+  const vendors = reduxVendors.length > 0 ? reduxVendors : DEFAULT_MOCK_VENDORS
+  const sharedResources = reduxSharedResources.length > 0 ? reduxSharedResources : DEFAULT_MOCK_RESOURCES
+  const alerts = reduxAlerts.length > 0 ? reduxAlerts : DEFAULT_MOCK_ALERTS
+
   const trafficReports = useSelector((state: RootState) => state.networking.trafficReports)
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
 
@@ -218,29 +330,29 @@ export default function VibeMap() {
       radius: radiusKm * 1000
     }).addTo(map)
 
-    // 2. Room Listings Markers (Gold / Yellow Theme)
+    // 2. Room Listings Markers (Gold Luxury House Icon Theme)
     filteredListings.forEach((item: Listing) => {
       const lat = item.lat ?? DEFAULT_CENTER[0]
       const lon = item.lon ?? DEFAULT_CENTER[1]
       const markerHtml = `
         <div style="
-          background-color: #fbbf24;
+          background: linear-gradient(135deg, #fbbf24, #d97706);
           border: 2px solid #ffffff;
           border-radius: 50%;
-          width: 32px;
-          height: 32px;
+          width: 34px;
+          height: 34px;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+          box-shadow: 0 0 12px rgba(251, 191, 36, 0.6);
         ">
-          <span style="color: #000000; font-weight: bold; font-size: 11px;">R</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
         </div>
       `
       const customIcon = L.divIcon({
         html: markerHtml,
         className: 'custom-map-marker',
-        iconSize: [32, 32]
+        iconSize: [34, 34]
       })
 
       const marker = L.marker([lat, lon], { icon: customIcon }).addTo(map)
@@ -250,29 +362,29 @@ export default function VibeMap() {
       })
     })
 
-    // 3. Handyman Gigs / Vendors Markers (Green Theme)
+    // 3. Handyman Gigs / Vendors Markers (Emerald Storefront Icon Theme)
     filteredVendors.forEach((item: Vendor) => {
       const lat = item.lat ?? DEFAULT_CENTER[0]
       const lon = item.lon ?? DEFAULT_CENTER[1]
       const markerHtml = `
         <div style="
-          background-color: #10b981;
+          background: linear-gradient(135deg, #10b981, #059669);
           border: 2px solid #ffffff;
           border-radius: 50%;
-          width: 32px;
-          height: 32px;
+          width: 34px;
+          height: 34px;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+          box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
         ">
-          <span style="color: #ffffff; font-weight: bold; font-size: 11px;">V</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
         </div>
       `
       const customIcon = L.divIcon({
         html: markerHtml,
         className: 'custom-map-marker',
-        iconSize: [32, 32]
+        iconSize: [34, 34]
       })
 
       const marker = L.marker([lat, lon], { icon: customIcon }).addTo(map)
@@ -282,29 +394,29 @@ export default function VibeMap() {
       })
     })
 
-    // 4. Shared Resources Markers (Blue Theme)
+    // 4. Shared Resources Markers (Cyan Droplet Water Theme)
     filteredResources.forEach((item: SharedResource) => {
       const lat = item.latitude ?? DEFAULT_CENTER[0]
       const lon = item.longitude ?? DEFAULT_CENTER[1]
       const markerHtml = `
         <div style="
-          background-color: #0ea5e9;
+          background: linear-gradient(135deg, #0ea5e9, #0284c7);
           border: 2px solid #ffffff;
           border-radius: 50%;
-          width: 32px;
-          height: 32px;
+          width: 34px;
+          height: 34px;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+          box-shadow: 0 0 12px rgba(14, 165, 233, 0.6);
         ">
-          <span style="color: #ffffff; font-weight: bold; font-size: 11px;">U</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
         </div>
       `
       const customIcon = L.divIcon({
         html: markerHtml,
         className: 'custom-map-marker',
-        iconSize: [32, 32]
+        iconSize: [34, 34]
       })
 
       const marker = L.marker([lat, lon], { icon: customIcon }).addTo(map)
@@ -314,30 +426,29 @@ export default function VibeMap() {
       })
     })
 
-    // 5. Active Safety Alerts Markers (Red Theme)
+    // 5. Active Safety Alerts Markers (Glowing Rose Hazard Theme)
     filteredAlerts.forEach((item: Alert) => {
       const lat = item.lat ?? DEFAULT_CENTER[0]
       const lon = item.lon ?? DEFAULT_CENTER[1]
       const markerHtml = `
         <div style="
-          background-color: #ef4444;
+          background: linear-gradient(135deg, #ef4444, #dc2626);
           border: 2px solid #ffffff;
           border-radius: 50%;
-          width: 36px;
-          height: 36px;
+          width: 38px;
+          height: 38px;
           display: flex;
           align-items: center;
           justify-content: center;
-          animation: pulse 1.5s infinite;
-          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+          box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
         ">
-          <span style="color: #ffffff; font-weight: bold; font-size: 11px;">🚨</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
         </div>
       `
       const customIcon = L.divIcon({
         html: markerHtml,
         className: 'custom-map-marker',
-        iconSize: [36, 36]
+        iconSize: [38, 38]
       })
 
       const marker = L.marker([lat, lon], { icon: customIcon }).addTo(map)

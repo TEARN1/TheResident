@@ -610,3 +610,20 @@ export function isLandlordWaiverActive(joinedAt: string, now: number = Date.now(
   const days = (now - new Date(joinedAt).getTime()) / 86_400_000
   return days <= 30
 }
+
+// Detect local currency symbol based on suburb/location string
+export function detectCurrencyByLocation(location?: string): { currency: string; symbol: string } {
+  const loc = (location || '').toLowerCase()
+  if (loc.includes('nairobi') || loc.includes('kenya')) return { currency: 'KES', symbol: 'KSh ' }
+  if (loc.includes('lagos') || loc.includes('nigeria')) return { currency: 'NGN', symbol: '₦' }
+  if (loc.includes('accra') || loc.includes('ghana')) return { currency: 'GHS', symbol: 'GH₵ ' }
+  if (loc.includes('harare') || loc.includes('zimbabwe')) return { currency: 'USD', symbol: '$' }
+  if (loc.includes('london') || loc.includes('uk')) return { currency: 'GBP', symbol: '£' }
+  // Default South Africa
+  return { currency: 'ZAR', symbol: 'R ' }
+}
+
+export function formatCurrencyByLocation(amount: number, location?: string): string {
+  const { symbol } = detectCurrencyByLocation(location)
+  return `${symbol}${amount}`
+}
