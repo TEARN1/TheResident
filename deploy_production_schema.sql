@@ -133,6 +133,51 @@ CREATE POLICY "Public Read Traffic Reports" ON public.res_traffic_reports FOR SE
 CREATE POLICY "Public Read Disputes" ON public.res_community_disputes FOR SELECT USING (true);
 CREATE POLICY "Public Read Profiles" ON public.profiles FOR SELECT USING (true);
 
+-- ── WRITE POLICIES (scoped to authenticated owner) ───────────────────────────
+
+-- Profiles: users can only update their own row
+CREATE POLICY "Users Update Own Profile" ON public.profiles
+  FOR UPDATE USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Listings: landlords can INSERT/UPDATE/DELETE only their own listings
+CREATE POLICY "Landlords Insert Listings" ON public.res_listings
+  FOR INSERT WITH CHECK (auth.uid() = landlord_id);
+CREATE POLICY "Landlords Update Own Listings" ON public.res_listings
+  FOR UPDATE USING (auth.uid() = landlord_id)
+  WITH CHECK (auth.uid() = landlord_id);
+CREATE POLICY "Landlords Delete Own Listings" ON public.res_listings
+  FOR DELETE USING (auth.uid() = landlord_id);
+
+-- Utility Tokens: landlords manage their own tokens
+CREATE POLICY "Landlords Insert Tokens" ON public.res_utility_tokens
+  FOR INSERT WITH CHECK (auth.uid() = landlord_id);
+CREATE POLICY "Landlords Update Own Tokens" ON public.res_utility_tokens
+  FOR UPDATE USING (auth.uid() = landlord_id)
+  WITH CHECK (auth.uid() = landlord_id);
+CREATE POLICY "Read Own Tokens" ON public.res_utility_tokens
+  FOR SELECT USING (auth.uid() = landlord_id OR auth.uid() = purchased_by);
+
+-- Traffic Reports: any authenticated user can report, but only delete their own
+CREATE POLICY "Auth Users Insert Traffic Reports" ON public.res_traffic_reports
+  FOR INSERT WITH CHECK (auth.uid() = reporter_id);
+CREATE POLICY "Users Delete Own Traffic Reports" ON public.res_traffic_reports
+  FOR DELETE USING (auth.uid() = reporter_id);
+
+-- Disputes: claimants can file, both parties can read their disputes
+CREATE POLICY "Auth Users File Disputes" ON public.res_community_disputes
+  FOR INSERT WITH CHECK (auth.uid() = claimant_id);
+CREATE POLICY "Parties Read Own Disputes" ON public.res_community_disputes
+  FOR SELECT USING (auth.uid() = claimant_id OR auth.uid() = respondent_id);
+
+-- Shared Resources: any authenticated user can contribute
+CREATE POLICY "Auth Users Insert Resources" ON public.res_shared_resources
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Security Logs: insert-only, no user reads (admin-only via service role)
+CREATE POLICY "System Insert Security Logs" ON public.res_security_logs
+  FOR INSERT WITH CHECK (true);
+
 -- Indexes for spatial and suburb search performance
 CREATE INDEX IF NOT EXISTS idx_listings_suburb ON public.res_listings(suburb);
 CREATE INDEX IF NOT EXISTS idx_listings_lat_lon ON public.res_listings(lat, lon);
