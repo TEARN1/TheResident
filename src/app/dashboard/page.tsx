@@ -228,6 +228,7 @@ export default function DashboardPage() {
   const notifications = useSelector((state: RootState) => state.notifications)
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [searchInputValue, setSearchInputValue] = useState('')
+  const [activeIndustryProfile, setActiveIndustryProfile] = useState<'beverage' | 'pharma' | 'dairy' | 'cold' | 'cosmetics'>('beverage')
 
   // Sub-tabs
   const [tenantTab, setTenantTab] = useState<'rooms' | 'roommates' | 'lifts' | 'handymen' | 'utilities' | 'community'>('rooms')
@@ -2432,6 +2433,72 @@ export default function DashboardPage() {
 
         {/* Dashboard Page Body */}
         <div className="dashboard-page-body">
+          {/* Industry Profiles Navigation Panel (Appears Before Everything) */}
+          <div className="nav-panel" style={{ margin: '0 0 1.5rem 0' }}>
+            <div className="nav-title">Industry Profiles</div>
+            <div className="nav-profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              <div 
+                className={`nav-profile-card ${activeIndustryProfile === 'beverage' ? 'active' : ''}`}
+                onClick={() => setActiveIndustryProfile('beverage')}
+              >
+                <div className="nav-profile-name">🥤 Beverage &amp; Bottling</div>
+                <div className="nav-profile-desc">Coca-Cola Portfolio • 45d Sweep</div>
+              </div>
+              <div 
+                className={`nav-profile-card ${activeIndustryProfile === 'pharma' ? 'active' : ''}`}
+                onClick={() => setActiveIndustryProfile('pharma')}
+              >
+                <div className="nav-profile-name">💊 Pharma &amp; Medical</div>
+                <div className="nav-profile-desc">180d Horizon • 30d Quarantine</div>
+              </div>
+              <div 
+                className={`nav-profile-card ${activeIndustryProfile === 'dairy' ? 'active' : ''}`}
+                onClick={() => setActiveIndustryProfile('dairy')}
+              >
+                <div className="nav-profile-name">🥛 Fresh Dairy</div>
+                <div className="nav-profile-desc">14d Horizon • 1h SLA Timers</div>
+              </div>
+              <div 
+                className={`nav-profile-card ${activeIndustryProfile === 'cold' ? 'active' : ''}`}
+                onClick={() => setActiveIndustryProfile('cold')}
+              >
+                <div className="nav-profile-name">🧊 Cold Storage</div>
+                <div className="nav-profile-desc">30d Horizon • Freezer Walk Paths</div>
+              </div>
+              <div 
+                className={`nav-profile-card ${activeIndustryProfile === 'cosmetics' ? 'active' : ''}`}
+                onClick={() => setActiveIndustryProfile('cosmetics')}
+              >
+                <div className="nav-profile-name">💄 Cosmetics &amp; Care</div>
+                <div className="nav-profile-desc">90d Horizon • Defect Tracking</div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div className="nav-title">System Status</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary, #aaa)', display: 'flex', flexDirection: 'row', gap: '20px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>Frontend Demo:</span>
+                  <span style={{ color: 'rgb(16, 185, 129)', fontWeight: 700 }}>● Active</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>DB Mode:</span>
+                  <span style={{ color: 'rgb(56, 189, 248)', fontWeight: 700 }}>SQLite3 / Standalone</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>Active Profile:</span>
+                  <span style={{ color: 'rgb(245, 158, 11)', fontWeight: 700 }}>
+                    {activeIndustryProfile === 'beverage' && '🥤 Beverage & Bottling (45d Sweep)'}
+                    {activeIndustryProfile === 'pharma' && '💊 Pharma & Medical (180d Horizon)'}
+                    {activeIndustryProfile === 'dairy' && '🥛 Fresh Dairy (14d Horizon)'}
+                    {activeIndustryProfile === 'cold' && '🧊 Cold Storage (30d Horizon)'}
+                    {activeIndustryProfile === 'cosmetics' && '💄 Cosmetics & Care (90d Horizon)'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Main content grid */}
           <div className="responsive-main-grid" style={{ 
             ...mainContentGridStyle, 
