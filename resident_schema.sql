@@ -1114,3 +1114,48 @@ revoke execute on function public.res_pledge_group_buy(uuid, integer) from publi
 grant execute on function public.res_book_seat(uuid) to authenticated, service_role;
 grant execute on function public.res_release_seat(uuid) to authenticated, service_role;
 grant execute on function public.res_pledge_group_buy(uuid, integer) to authenticated, service_role;
+
+-- VibeMap Schema Extensions
+alter table if exists public.res_listings 
+  add column if not exists approach_photo_url text,
+  add column if not exists micro_landmark text,
+  add column if not exists last_verified_at timestamptz default now(),
+  add column if not exists verified_by_user_id uuid references public.profiles(id) on delete set null;
+
+alter table if exists public.res_vendors 
+  add column if not exists approach_photo_url text,
+  add column if not exists micro_landmark text,
+  add column if not exists last_verified_at timestamptz default now(),
+  add column if not exists verified_by_user_id uuid references public.profiles(id) on delete set null;
+
+alter table if exists public.res_shared_resources 
+  add column if not exists approach_photo_url text,
+  add column if not exists micro_landmark text,
+  add column if not exists last_verified_at timestamptz default now(),
+  add column if not exists verified_by_user_id uuid references public.profiles(id) on delete set null;
+
+-- res_traffic_reports: Crowdsourced speed delays, roadblocks, potholes, dead robots
+create table if not exists public.res_traffic_reports (
+  id uuid primary key default uuid_generate_v4(),
+  reporter_id uuid references public.profiles(id) on delete cascade not null,
+  suburb text,
+  city text,
+  lat double precision not null,
+  lon double precision not null,
+  report_type text check (report_type in ('congestion', 'pothole', 'roadblock', 'accident', 'dead_robots', 'other')) not null,
+  description text,
+  created_at timestamptz default now()
+);
+
+-- RLS for res_traffic_reports
+alter table public.res_traffic_reports enable row level security;
+
+create policy "traffic_read_policy" 
+  on public.res_traffic_reports for select 
+  to authenticated, anon 
+  using (true);
+
+create policy "traffic_insert_policy" 
+  on public.res_traffic_reports for insert 
+  to authenticated 
+  with check (auth.uid() = reporter_id);

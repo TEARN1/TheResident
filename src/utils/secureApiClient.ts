@@ -111,3 +111,4 @@ class ResilientFetchManager {
 }
 
 export const resilientFetchManager = new ResilientFetchManager();
+export const secureFetch = resilientFetchManager.customFetch;

@@ -17,6 +17,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" data-theme="day">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Resident" />
+        <link rel="apple-touch-icon" href="/logo.png" />
+      </head>
       <body>
         <ReduxProvider>
           <CustomCursor />

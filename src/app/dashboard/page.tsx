@@ -6,24 +6,18 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   loginUser,
-  logoutUser, 
-  addListing, 
-  addRequest, 
-  updateRequestStatus, 
-  addLog, 
-  incrementApiCall, 
+  logoutUser,
+  addListing,
+  addRequest,
+  addLog,
+  incrementApiCall,
   bookSeat,
   addService,
   deleteService,
   addDispatch,
   updateDispatchStatus,
   addToken,
-  buyToken,
-  deductBalance,
   addTool,
-  rentTool,
-  returnTool,
-  completeChore,
   addNoticeEvent,
   rsvpToEvent,
   vibeNotice,
@@ -32,6 +26,8 @@ import {
   floodNotifications,
   addDispute,
   updateDisputeStatus,
+  pledgeGroupBuy,
+  fetchSupabaseData,
   setLanguage,
   selectFilteredListings,
   selectMatchedRoommates,
@@ -43,11 +39,40 @@ import {
   UtilityToken,
   ToolItem,
   CommunityDispute,
-  NoticeEvent
+  NoticeEvent,
+  AppDispatch
 } from '../../store'
+import {
+  raiseAlert,
+  respondToAlert,
+  resolveAlertRpc,
+  reportStatus,
+  joinCommunity,
+  leaveCommunity,
+  createCommunity,
+  redeemInvite,
+  reportContent,
+  approveRequest,
+  rejectRequest,
+  rotateChores,
+  completeChore as completeChoreRpc,
+  borrowTool,
+  requestToolReturn,
+  confirmToolReturn,
+  claimVoucher,
+  joinWaitlist,
+  cancelSeat,
+  reuniteLostFound
+} from '../../store/actions'
+import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
+import { suburbPriceStats, isSuspiciousPrice, roommateCompatibility } from '../../utils/logic'
+import SafetyTab from './components/SafetyTab'
+import MarketTab from './components/MarketTab'
+import HouseholdTab from './components/HouseholdTab'
+import CommunitiesTab from './components/CommunitiesTab'
 import { 
   Shield, LogOut, Home, Search, Plus, Check, X, AlertTriangle, 
-  Wifi, Car, FileText, Send, MapPin, Eye, 
+  Wifi, Car, FileText, Send, MapPin, Eye, Navigation,
   User as UserIcon, Users, CheckCircle2, Terminal, Info,
   Star, Calendar, Clock, Briefcase,
   ShieldCheck, Zap, Copy,
@@ -62,7 +87,9 @@ import {
   containsNoSQLi,
   scanInput,
   sanitizeInput as secureSanitize,
-  validateUploadedFile as validateUploadedFileUtil 
+  validateUploadedFile as validateUploadedFileUtil,
+  signVoucher,
+  verifyVoucherSignature
 } from '../../utils/security'
 
 import { supabase } from '../../utils/supabase'
@@ -72,6 +99,11 @@ import ChoreSchedulerTab from './components/ChoreSchedulerTab'
 import ToolLibraryTab from './components/ToolLibraryTab'
 import DisputesTab from './components/DisputesTab'
 import WafConsoleTab from './components/WafConsoleTab'
+import dynamic from 'next/dynamic'
+const VibeMap = dynamic(() => import('./components/VibeMap'), {
+  ssr: false,
+  loading: () => <div className="p-12 text-slate-400 font-bold text-center">Loading VibeMap client engine...</div>
+})
 
 const formatCurrency = (amount: number, currencyCode: string = 'ZAR') => {
   if (currencyCode === 'ZAR') return `R ${amount}`
@@ -161,6 +193,7 @@ export default function DashboardPage() {
   
   // Networking collections
   const lifts = useSelector((state: RootState) => state.networking.lifts)
+  const roommates = useSelector((state: RootState) => state.networking.roommates)
   const services = useSelector((state: RootState) => state.networking.services)
   const dispatches = useSelector((state: RootState) => state.networking.dispatches)
   const utilityTokens = useSelector((state: RootState) => state.utilities.tokens)
@@ -173,6 +206,24 @@ export default function DashboardPage() {
   const reputationScores = useSelector((state: RootState) => state.community.reputationScores)
   const lang = useSelector((state: RootState) => state.ui.language)
 
+  // Phase-4 collections. These were fetched into Redux from day one and never
+  // rendered anywhere; the tabs below are the first thing to actually use them.
+  const alerts = useSelector((state: RootState) => state.community.alerts)
+  const neighbourhoodStatus = useSelector((state: RootState) => state.community.neighbourhoodStatus)
+  const marketItems = useSelector((state: RootState) => state.community.marketItems)
+  const vendors = useSelector((state: RootState) => state.community.vendors)
+  const groupBuys = useSelector((state: RootState) => state.community.groupBuys)
+  const lostFound = useSelector((state: RootState) => state.community.lostFound)
+  const communities = useSelector((state: RootState) => state.community.communities)
+
+  // Server-held facts the client must not invent: verification, community
+  // membership, and which household (if any) you belong to.
+  const [isVerified, setIsVerified] = useState(false)
+  const [communityMemberships, setCommunityMemberships] = useState<string[]>([])
+  const [householdListingId, setHouseholdListingId] = useState<string | null>(null)
+  const [householdName, setHouseholdName] = useState('')
+  const [householdMembers, setHouseholdMembers] = useState<Array<{ userId: string; name: string; role: string }>>([])
+
   // Notifications Center & Search Debounce
   const notifications = useSelector((state: RootState) => state.notifications)
   const [showNotifMenu, setShowNotifMenu] = useState(false)
@@ -181,12 +232,20 @@ export default function DashboardPage() {
   // Sub-tabs
   const [tenantTab, setTenantTab] = useState<'rooms' | 'roommates' | 'lifts' | 'handymen' | 'utilities' | 'community'>('rooms')
   const [landlordTab, setLandlordTab] = useState<'portfolio' | 'requests' | 'maintenance' | 'utilities' | 'community'>('portfolio')
-  const [communitySubTab, setCommunitySubTab] = useState<'notices' | 'tools' | 'chores' | 'disputes'>('notices')
+  const [communitySubTab, setCommunitySubTab] = useState<
+    'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap'
+  >('notices')
 
   // Landlord Utility Form States
   const [utilityMeter, setUtilityMeter] = useState('')
   const [utilityPrice, setUtilityPrice] = useState<number>(100)
   const [utilityCode, setUtilityCode] = useState('')
+
+  // Cryptographic Voucher Verification States
+  const [verificationMeter, setVerificationMeter] = useState('')
+  const [verificationPrice, setVerificationPrice] = useState<number>(100)
+  const [verificationCode, setVerificationCode] = useState('')
+  const [verificationResult, setVerificationResult] = useState<{ checked: boolean; valid: boolean; message: string }>({ checked: false, valid: false, message: '' })
 
   // Business Registry Form States
   const [showBusinessRegModal, setShowBusinessRegModal] = useState(false)
@@ -291,6 +350,66 @@ export default function DashboardPage() {
     return () => { cancelled = true }
   }, [currentUser, router, dispatch])
 
+  // Live data + the shared notifications rail. Before this the app took a
+  // one-shot snapshot at login and never saw another change, and the bell was
+  // Redux-only so it emptied on every refresh.
+  useEffect(() => {
+    if (!currentUser || currentUser.id === 'visitor-guest') return
+
+    const appDispatch = dispatch as AppDispatch
+    loadNotifications(appDispatch)
+    const unsubscribe = subscribeToRealtime(appDispatch, currentUser.id)
+    return unsubscribe
+  }, [currentUser, dispatch])
+
+  // Facts only the server can be trusted for: am I verified, which communities
+  // am I in, and which household do I belong to. res_is_household_member has
+  // existed since the first schema and nothing ever called it.
+  useEffect(() => {
+    if (!currentUser || currentUser.id === 'visitor-guest' || !supabase) return
+    let cancelled = false
+
+    const loadMemberships = async () => {
+      const [{ data: profile }, { data: memberships }] = await Promise.all([
+        supabase!.from('profiles').select('is_verified').eq('id', currentUser.id).single(),
+        supabase!.from('res_community_members').select('community_id').eq('user_id', currentUser.id)
+      ])
+      if (cancelled) return
+
+      setIsVerified(!!profile?.is_verified)
+      setCommunityMemberships((memberships || []).map(m => String(m.community_id)))
+
+      // A household is a listing you own, or one whose application was approved.
+      const owned = listings.find(l => l.landlordId === currentUser.id)
+      const approved = requests.find(r => r.tenantId === currentUser.id && r.status === 'approved')
+      const listingId = owned?.id || approved?.listingId || null
+
+      setHouseholdListingId(listingId)
+      setHouseholdName(
+        owned?.title || listings.find(l => l.id === approved?.listingId)?.title || ''
+      )
+
+      if (listingId) {
+        const { data: roster } = await supabase!.rpc('res_household_members', { p_listing: listingId })
+        if (cancelled) return
+        setHouseholdMembers(
+          (roster || []).map((m: { user_id: string; role: string }) => ({
+            userId: m.user_id,
+            name: m.user_id === currentUser.id
+              ? currentUser.name
+              : roommates.find(r => r.id === m.user_id)?.name || 'Housemate',
+            role: m.role
+          }))
+        )
+      } else {
+        setHouseholdMembers([])
+      }
+    }
+
+    loadMemberships()
+    return () => { cancelled = true }
+  }, [currentUser, listings, requests, roommates])
+
   // Form states: Create Room
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -310,6 +429,7 @@ export default function DashboardPage() {
 
   // Filter States: Rooms (Tenant)
   const [searchLocation, setSearchLocation] = useState('')
+  const [suburbConnectionsCount, setSuburbConnectionsCount] = useState<number>(42)
   const [filterPrice, setFilterPrice] = useState<number>(3000)
   const [filterWifi, setFilterWifi] = useState(false)
   const [filterParking, setFilterParking] = useState(false)
@@ -426,6 +546,139 @@ export default function DashboardPage() {
     router.push('/auth')
   }
 
+  // ── Backlog handlers ────────────────────────────────────────────────────────
+  // Each of these calls an RPC. The rules they enforce (cooldowns, rate limits,
+  // eligibility, fan-out, counters) live in SQL, because a client can't be
+  // trusted with any of them. Failures surface as a notification rather than
+  // being swallowed.
+  const appDispatch = dispatch as AppDispatch
+  const currentSuburb = currentUser?.profile?.bio ? '' : ''
+  const suburb = listings.find(l => l.landlordId === currentUser?.id)?.suburb || 'Ivory Park'
+
+  // Only reports for this suburb feed the consensus rule, and each utility is
+  // counted separately.
+  const statusReports = neighbourhoodStatus
+    .filter(n => n.suburb === suburb)
+    .map(n => ({
+      reporterId: n.id,
+      kind: (n.service === 'electricity' ? 'power' : n.service === 'water' ? 'water' : 'network') as 'power' | 'water' | 'network',
+      status: n.status as 'active' | 'restored' | 'outage',
+      createdAt: n.updatedAt
+    }))
+
+  // #32 — what rooms actually go for around here, so a landlord prices sanely
+  // and a tenant can see when something is too good to be true.
+  const suburbStats = suburbPriceStats(
+    listings.filter(l => l.suburb === newSuburb).map(l => l.price)
+  )
+  const newListingLooksSuspicious = isSuspiciousPrice(newPrice, suburbStats)
+
+  const handleRaiseAlert = (args: {
+    kind: 'panic' | 'incident' | 'suspicious'
+    title: string
+    description: string
+    severity: 'low' | 'medium' | 'high' | 'critical'
+  }) => {
+    appDispatch(raiseAlert({ ...args, suburb }))
+  }
+
+  const handleRespondToAlert = (alertId: string, status: 'coming' | 'arrived' | 'stood_down') => {
+    appDispatch(respondToAlert({ alertId, status }))
+  }
+
+  const handleResolveAlert = (alertId: string) => {
+    appDispatch(resolveAlertRpc({ alertId }))
+  }
+
+  const handleReportStatus = (kind: 'power' | 'water' | 'network', status: 'up' | 'down') => {
+    appDispatch(reportStatus({ kind, status, suburb }))
+  }
+
+  const handlePostMarketItem = (item: { title: string; description: string; price: number | null; category: string }) => {
+    if (!supabase || !currentUser) return
+
+    const scanTitle = scanInput(item.title)
+    const scanDesc = scanInput(item.description)
+
+    if (!scanTitle.safe || !scanDesc.safe) {
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: 'Market post blocked: Malicious content',
+        type: 'xss_blocked',
+        details: `Blocked title: "${item.title}" or description: "${item.description}"`
+      }))
+      setAlertNotification('Security Block: Malicious content detected in market item!')
+      setTimeout(() => setAlertNotification(null), 5000)
+      return
+    }
+
+    supabase.from('res_market_items').insert({
+      user_id: currentUser.id,
+      title: secureSanitize(item.title, 100),
+      description: secureSanitize(item.description, 1000),
+      category: item.category,
+      price: item.price,
+      kind: item.price === null ? 'free' : 'sell',
+      suburb
+    }).then(({ error }) => {
+      if (error) {
+        setAlertNotification(`Could not post that: ${error.message}`)
+      } else {
+        setAlertNotification('Posted to the local market.')
+        appDispatch(fetchSupabaseData())
+      }
+      setTimeout(() => setAlertNotification(null), 4000)
+    })
+  }
+
+  const handlePledge = (groupBuyId: string, quantity: number) => {
+    dispatch(pledgeGroupBuy({ groupBuyId, amount: quantity }))
+  }
+
+  const handleReunite = (id: string) => {
+    appDispatch(reuniteLostFound(id))
+  }
+
+  const handleReportContent = (subjectType: string, subjectId: string) => {
+    appDispatch(reportContent({ subjectType, subjectId, reason: 'other' }))
+  }
+
+  const handleRotateChores = (tasks: string[], days: string[]) => {
+    if (!householdListingId) return
+    appDispatch(rotateChores({ listingId: householdListingId, tasks, days }))
+  }
+
+  const handleCompleteChoreRpc = (choreId: string) => {
+    appDispatch(completeChoreRpc(choreId))
+  }
+
+  const handleCreateCommunity = (args: {
+    name: string
+    kind: 'street' | 'block' | 'complex' | 'estate' | 'suburb'
+    suburb: string
+  }) => {
+    appDispatch(createCommunity(args))
+  }
+
+  const handleJoinCommunity = (communityId: string) => {
+    appDispatch(joinCommunity(communityId))
+    setCommunityMemberships(ids => [...ids, communityId])
+  }
+
+  const handleLeaveCommunity = (communityId: string) => {
+    appDispatch(leaveCommunity(communityId))
+    setCommunityMemberships(ids => ids.filter(id => id !== communityId))
+  }
+
+  const handleRedeemInvite = (code: string) => {
+    appDispatch(redeemInvite(code))
+  }
+
+  // Chores for this household only
+  const householdChores = communityChores.filter(
+    c => !householdListingId || !c.listingId || c.listingId === householdListingId
+  )
+
   // Secure File Upload validator wrapper: Blocks malicious scripts and extension spoofing
   const validateUploadedFile = (fileName: string, allowedExtensions: string[]): { valid: boolean; error: string | null } => {
     return validateUploadedFileUtil(fileName, allowedExtensions, (action, details) => {
@@ -467,25 +720,12 @@ export default function DashboardPage() {
       setTimeout(() => setAlertNotification(null), 4000)
       return
     }
-    if (!logApiAccess('Buy prepaid utility voucher')) return
+    if (!logApiAccess('Claim prepaid utility voucher')) return
 
-    if (currentUser.balance < token.price) {
-      setAlertNotification('Purchase failed: Insufficient funds in your wallet!')
-      setTimeout(() => setAlertNotification(null), 4000)
-      return
-    }
-
-    // Deduct tenant balance
-    dispatch(deductBalance(token.price))
-    // Mark token as purchased
-    dispatch(buyToken({
-      tokenId: token.id,
-      buyerId: currentUser.id,
-      timestamp: new Date().toLocaleDateString()
-    }))
-
-    setAlertNotification(`Voucher purchased! Meter: ${token.meterNumber}. Code: ${token.tokenCode}`)
-    setTimeout(() => setAlertNotification(null), 8000)
+    // Claiming is a coordination lock, not a purchase: the DB guards it with
+    // `status = 'available'` so two tenants can't claim the same voucher, and
+    // no money moves through the app (CONTRACT.md §6).
+    appDispatch(claimVoucher(token.id))
   }
 
   // Utility token: Landlord creates a voucher
@@ -493,8 +733,23 @@ export default function DashboardPage() {
     e.preventDefault()
     if (!logApiAccess('Create prepaid utility voucher')) return
 
-    const cleanMeter = cleanScriptTags(utilityMeter)
-    const cleanCode = cleanScriptTags(utilityCode)
+    const scanMeter = scanInput(utilityMeter)
+    const scanCode = scanInput(utilityCode)
+
+    if (!scanMeter.safe || !scanCode.safe) {
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: 'Voucher creation blocked: Malicious content',
+        type: 'xss_blocked',
+        details: `Blocked meter: "${utilityMeter}" or code: "${utilityCode}"`
+      }))
+      setAlertNotification('Security Block: Malicious content detected in utility fields!')
+      setTimeout(() => setAlertNotification(null), 5000)
+      return
+    }
+
+    const cleanMeter = secureSanitize(utilityMeter, 50)
+    const cleanCode = secureSanitize(utilityCode, 50)
 
     if (cleanCode.replace(/-/g, '').length !== 20 || isNaN(Number(cleanCode.replace(/-/g, '')))) {
       setAlertNotification('Voucher creation failed: Voucher code must be a 20-digit numeric code.')
@@ -518,6 +773,44 @@ export default function DashboardPage() {
     setUtilityCode('')
     setAlertNotification('Prepaid utility sub-meter voucher published successfully!')
     setTimeout(() => setAlertNotification(null), 4000)
+  }
+
+  // Generate a valid HMAC Token for sub-meters
+  const handleGenerateHMAC = () => {
+    if (!utilityMeter) {
+      setAlertNotification('Voucher signing failed: Please enter a sub-meter number first!')
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+    const signed = signVoucher(utilityMeter, utilityPrice, 'ivory-park-key-v1')
+    setUtilityCode(signed)
+    setAlertNotification('HMAC Security Signature generated and filled successfully!')
+    setTimeout(() => setAlertNotification(null), 4000)
+  }
+
+  // Verify HMAC Token authenticity
+  const handleVerifyVoucherSignature = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!verificationMeter || !verificationCode) {
+      setAlertNotification('Please fill in both the meter number and voucher code!')
+      setTimeout(() => setAlertNotification(null), 3000)
+      return
+    }
+
+    const isValid = verifyVoucherSignature(
+      verificationCode,
+      verificationMeter,
+      verificationPrice,
+      'ivory-park-key-v1'
+    )
+
+    setVerificationResult({
+      checked: true,
+      valid: isValid,
+      message: isValid
+        ? '✅ CRYPTOGRAPHIC SIGNATURE VALID: This voucher is authentic and registered to this sub-meter.'
+        : '❌ CHECKSUM OUT OF MATCH: Invalid voucher signature or price spoofing detected. Recharging blocked!'
+    })
   }
 
   // Submit Proof of Work for completing contract
@@ -547,8 +840,23 @@ export default function DashboardPage() {
     e.preventDefault()
     if (!logApiAccess('Create listing attempt')) return
 
-    const sanitizedTitle = cleanScriptTags(newTitle)
-    const sanitizedDesc = cleanScriptTags(newDesc)
+    const scanTitle = scanInput(newTitle)
+    const scanDesc = scanInput(newDesc)
+
+    if (!scanTitle.safe || !scanDesc.safe) {
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: 'Room listing blocked: Malicious content',
+        type: 'xss_blocked',
+        details: `Blocked title: "${newTitle}" or description: "${newDesc}"`
+      }))
+      setAlertNotification('Security Block: Malicious scripts/SQL detected in listing fields!')
+      setTimeout(() => setAlertNotification(null), 5000)
+      return
+    }
+
+    const sanitizedTitle = secureSanitize(newTitle, 100)
+    const sanitizedDesc = secureSanitize(newDesc, 1000)
 
     const listing: Listing = {
       id: `list-${Date.now()}`,
@@ -591,6 +899,19 @@ export default function DashboardPage() {
     if (!activeListing) return
     if (!logApiAccess('Submit room application')) return
 
+    const scanMsg = scanInput(applyMessage)
+    if (!scanMsg.safe) {
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: 'Room application blocked: Malicious content',
+        type: 'xss_blocked',
+        details: `Blocked message: "${applyMessage}"`
+      }))
+      setAlertNotification('Security Block: Malicious scripts/SQL detected in application message!')
+      setTimeout(() => setAlertNotification(null), 5000)
+      return
+    }
+
     const request: RoomRequest = {
       id: `req-${Date.now()}`,
       tenantId: currentUser.id,
@@ -599,7 +920,7 @@ export default function DashboardPage() {
       listingTitle: activeListing.title,
       landlordId: activeListing.landlordId,
       status: 'pending',
-      message: cleanScriptTags(applyMessage),
+      message: secureSanitize(applyMessage, 500),
       timestamp: new Date().toLocaleDateString()
     }
 
@@ -611,21 +932,40 @@ export default function DashboardPage() {
     setTimeout(() => setAlertNotification(null), 5000)
   }
 
-  // Approve/Reject request (Landlord Action)
+  // Approve/Reject request (Landlord Action).
+  // Approving cascades in the DB: the other applicants are rejected, the
+  // listing flips to `taken`, and the tenant is notified — one room, one tenant.
   const handleStatusChange = (requestId: string, status: 'approved' | 'rejected') => {
     if (!logApiAccess(`Set request status to ${status}`)) return
-    dispatch(updateRequestStatus({ requestId, status }))
+    if (status === 'approved') {
+      appDispatch(approveRequest(requestId))
+    } else {
+      appDispatch(rejectRequest(requestId))
+    }
     setActiveRequest(null)
-    setAlertNotification(`Application marked as ${status.toUpperCase()}.`)
+  }
+
+  // Book a seat in a lift club (P2P Tenant Action).
+  // A full lift offers a waitlist rather than a dead end; the seat itself is
+  // decremented inside the database so two riders can't take the last one.
+  const handleBookSeat = (liftId: string, driver: string) => {
+    if (!logApiAccess(`Book lift club seat`)) return
+
+    const lift = lifts.find(l => l.id === liftId)
+    if (lift && lift.availableSeats <= 0) {
+      appDispatch(joinWaitlist(liftId))
+      return
+    }
+
+    dispatch(bookSeat(liftId))
+    setAlertNotification(`Seat booked with ${driver}. Contact them directly to arrange the pickup.`)
     setTimeout(() => setAlertNotification(null), 5000)
   }
 
-  // Book a seat in a lift club (P2P Tenant Action)
-  const handleBookSeat = (liftId: string, driver: string) => {
-    if (!logApiAccess(`Book lift club seat`)) return
-    dispatch(bookSeat(liftId))
-    setAlertNotification(`Successfully booked a seat with ${driver}! Contact them directly to coordinate pickup times.`)
-    setTimeout(() => setAlertNotification(null), 5000)
+  // Cancel a seat — it goes straight to whoever is first on the waitlist.
+  const handleCancelSeat = (liftId: string) => {
+    if (!logApiAccess('Cancel lift seat')) return
+    appDispatch(cancelSeat(liftId))
   }
 
   // Create / Publish Business Card (B2B/B2P self-registration)
@@ -638,8 +978,23 @@ export default function DashboardPage() {
     }
     if (!logApiAccess('Register business listing')) return
 
-    const sanitizedBizName = cleanScriptTags(bizName)
-    const sanitizedBizDesc = cleanScriptTags(bizDesc)
+    const scanName = scanInput(bizName)
+    const scanDesc = scanInput(bizDesc)
+
+    if (!scanName.safe || !scanDesc.safe) {
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: 'Business registration blocked: Malicious content',
+        type: 'xss_blocked',
+        details: `Blocked name: "${bizName}" or description: "${bizDesc}"`
+      }))
+      setAlertNotification('Security Block: Malicious scripts/SQL detected in business card fields!')
+      setTimeout(() => setAlertNotification(null), 5000)
+      return
+    }
+
+    const sanitizedBizName = secureSanitize(bizName, 100)
+    const sanitizedBizDesc = secureSanitize(bizDesc, 1000)
 
     const newBiz: HandymanService = {
       id: `biz-${Date.now()}`,
@@ -687,7 +1042,20 @@ export default function DashboardPage() {
     }
     if (!logApiAccess('Dispatch service contract')) return
 
-    const sanitizedMessage = cleanScriptTags(hireMessage)
+    const scanMsg = scanInput(hireMessage)
+    if (!scanMsg.safe) {
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: 'Service contract blocked: Malicious content',
+        type: 'xss_blocked',
+        details: `Blocked message: "${hireMessage}"`
+      }))
+      setAlertNotification('Security Block: Malicious scripts/SQL detected in contract message!')
+      setTimeout(() => setAlertNotification(null), 5000)
+      return
+    }
+
+    const sanitizedMessage = secureSanitize(hireMessage, 1000)
     const newDispatch: ServiceDispatch = {
       id: `disp-${Date.now()}`,
       serviceId: selectedBiz.id,
@@ -745,11 +1113,8 @@ export default function DashboardPage() {
     }
     if (!logApiAccess('Post community announcement')) return
 
-    const cleanTitle = cleanScriptTags(noticeTitle)
-    const cleanDesc = cleanScriptTags(noticeDesc)
-
-    const scanTitle = scanInput(cleanTitle)
-    const scanDesc = scanInput(cleanDesc)
+    const scanTitle = scanInput(noticeTitle)
+    const scanDesc = scanInput(noticeDesc)
 
     if (!scanTitle.safe || !scanDesc.safe) {
       dispatch(addLog({
@@ -762,6 +1127,9 @@ export default function DashboardPage() {
       setTimeout(() => setAlertNotification(null), 5000)
       return
     }
+
+    const cleanTitle = secureSanitize(noticeTitle, 100)
+    const cleanDesc = secureSanitize(noticeDesc, 1000)
 
     const newNotice: NoticeEvent = {
       id: `not-${Date.now()}`,
@@ -998,8 +1366,23 @@ export default function DashboardPage() {
     }
     if (!logApiAccess('Register tool for rent')) return
 
-    const cleanTitle = cleanScriptTags(toolTitle)
-    const cleanDesc = cleanScriptTags(toolDesc)
+    const scanTitle = scanInput(toolTitle)
+    const scanDesc = scanInput(toolDesc)
+
+    if (!scanTitle.safe || !scanDesc.safe) {
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: 'Tool listing blocked: Malicious content',
+        type: 'xss_blocked',
+        details: `Blocked title: "${toolTitle}" or description: "${toolDesc}"`
+      }))
+      setAlertNotification('Security Block: Malicious scripts/SQL detected in tool fields!')
+      setTimeout(() => setAlertNotification(null), 5000)
+      return
+    }
+
+    const cleanTitle = secureSanitize(toolTitle, 100)
+    const cleanDesc = secureSanitize(toolDesc, 1000)
 
     const newTool: ToolItem = {
       id: `tool-${Date.now()}`,
@@ -1036,41 +1419,39 @@ export default function DashboardPage() {
       setTimeout(() => setAlertNotification(null), 4000)
       return
     }
-    if (currentUser.balance < tool.pricePerDay) {
-      setAlertNotification('Insufficient funds in your wallet to rent this tool!')
-      setTimeout(() => setAlertNotification(null), 4000)
-      return
-    }
-    if (!logApiAccess('Rent tool from neighbor')) return
+    if (!logApiAccess('Borrow tool from neighbour')) return
 
-    dispatch(deductBalance(tool.pricePerDay))
+    // The deposit and daily rate are stated amounts the two of them settle in
+    // cash — the app is a broker and never touches the money (CONTRACT.md §6).
     const returnDate = new Date()
     returnDate.setDate(returnDate.getDate() + 1)
-    
-    dispatch(rentTool({
+
+    appDispatch(borrowTool({
       toolId: tool.id,
-      rentedBy: currentUser.id,
-      rentedByName: currentUser.name,
-      rentedUntil: returnDate.toLocaleDateString()
+      until: returnDate.toISOString().slice(0, 10)
     }))
 
     dispatch(addLog({
       ip: '127.0.0.1',
-      action: `Rented tool: ${tool.title}`,
+      action: `Borrowed tool: ${tool.title}`,
       type: 'auth_success',
-      details: `User ${currentUser.name} rented tool from ${tool.ownerName}. Cost: ${formatCurrency(tool.pricePerDay, 'ZAR')}.`
+      details: `${currentUser.name} borrowed a tool. Deposit ${formatCurrency(tool.deposit, 'ZAR')} settled off-platform.`
     }))
-
-    setAlertNotification(`Successfully hired ${tool.title}! ${formatCurrency(tool.pricePerDay, 'ZAR')} deducted from wallet.`)
-    setTimeout(() => setAlertNotification(null), 5000)
   }
 
-  // Return a rented tool
+  // Return a rented tool — two-sided handshake: the borrower marks it returned,
+  // and only the owner's confirmation frees it and awards the XP.
   const handleReturnTool = (toolId: string, toolTitleStr: string) => {
-    if (!logApiAccess('Return rented tool')) return
-    dispatch(returnTool(toolId))
-    setAlertNotification(`Tool "${toolTitleStr}" returned successfully!`)
-    setTimeout(() => setAlertNotification(null), 4000)
+    if (!logApiAccess('Return borrowed tool')) return
+    const tool = communityTools.find(t => t.id === toolId)
+    if (!tool) return
+
+    if (tool.ownerId === currentUser.id) {
+      appDispatch(confirmToolReturn(toolId))
+    } else {
+      appDispatch(requestToolReturn(toolId))
+    }
+    void toolTitleStr
   }
 
   // Complete Chore task
@@ -1081,14 +1462,11 @@ export default function DashboardPage() {
       return
     }
     if (!logApiAccess('Complete assigned chore')) return
-    
-    dispatch(completeChore({
-      choreId,
-      completedAt: new Date().toISOString()
-    }))
 
-    setAlertNotification(`Awesome! Task "${taskName}" completed. You earned +10 Reputation Points!`)
-    setTimeout(() => setAlertNotification(null), 4000)
+    // The RPC is idempotent and awards the reputation server-side, so a chore
+    // can't be re-completed to farm XP.
+    appDispatch(completeChoreRpc(choreId))
+    void taskName
   }
 
   // File Dispute/Mediation request
@@ -1101,8 +1479,23 @@ export default function DashboardPage() {
     }
     if (!logApiAccess('File community dispute')) return
 
-    const cleanTitle = cleanScriptTags(disputeTitle)
-    const cleanDesc = cleanScriptTags(disputeDesc)
+    const scanTitle = scanInput(disputeTitle)
+    const scanDesc = scanInput(disputeDesc)
+
+    if (!scanTitle.safe || !scanDesc.safe) {
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: 'Dispute filing blocked: Malicious content',
+        type: 'xss_blocked',
+        details: `Blocked title: "${disputeTitle}" or description: "${disputeDesc}"`
+      }))
+      setAlertNotification('Security Block: Malicious scripts/SQL detected in dispute fields!')
+      setTimeout(() => setAlertNotification(null), 5000)
+      return
+    }
+
+    const cleanTitle = secureSanitize(disputeTitle, 100)
+    const cleanDesc = secureSanitize(disputeDesc, 1000)
 
     const newDispute: CommunityDispute = {
       id: `disp-${Date.now()}`,
@@ -1282,7 +1675,11 @@ export default function DashboardPage() {
       cardBodyStyle,
       emptyStateStyle,
       landlordHeaderRowStyle,
-      labelStyleStyle
+      labelStyleStyle,
+      // Used by the Safety / Market / Household / Communities tabs
+      inputStyle: modalInputStyle,
+      activeSubTabBtnStyle,
+      inactiveSubTabBtnStyle
     }
 
     return (
@@ -1320,11 +1717,41 @@ export default function DashboardPage() {
           >
             <Award size={14} style={{ marginRight: 6 }} /> {t('choreSchedulerTab', lang)}
           </button>
-          <button 
+          <button
             style={communitySubTab === 'disputes' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
             onClick={() => setCommunitySubTab('disputes')}
           >
             <Gavel size={14} style={{ marginRight: 6 }} /> {t('disputesTab', lang)}
+          </button>
+          <button
+            style={communitySubTab === 'safety' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
+            onClick={() => setCommunitySubTab('safety')}
+          >
+            <ShieldCheck size={14} style={{ marginRight: 6 }} /> Safety
+          </button>
+          <button
+            style={communitySubTab === 'market' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
+            onClick={() => setCommunitySubTab('market')}
+          >
+            <Briefcase size={14} style={{ marginRight: 6 }} /> Market
+          </button>
+          <button
+            style={communitySubTab === 'household' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
+            onClick={() => setCommunitySubTab('household')}
+          >
+            <Home size={14} style={{ marginRight: 6 }} /> Household
+          </button>
+          <button
+            style={communitySubTab === 'communities' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
+            onClick={() => setCommunitySubTab('communities')}
+          >
+            <MapPin size={14} style={{ marginRight: 6 }} /> Communities
+          </button>
+          <button
+            style={communitySubTab === 'vibemap' ? activeSubTabBtnStyle : inactiveSubTabBtnStyle}
+            onClick={() => setCommunitySubTab('vibemap')}
+          >
+            <Navigation size={14} style={{ marginRight: 6 }} /> VibeMap
           </button>
         </div>
 
@@ -1387,12 +1814,135 @@ export default function DashboardPage() {
             styles={tabStyles}
           />
         )}
+
+        {communitySubTab === 'safety' && (
+          <SafetyTab
+            alerts={alerts}
+            neighbourhoodStatus={neighbourhoodStatus}
+            statusReports={statusReports}
+            currentUserId={currentUser.id}
+            isVerified={isVerified}
+            suburb={currentSuburb}
+            onRaiseAlert={handleRaiseAlert}
+            onRespond={handleRespondToAlert}
+            onResolve={handleResolveAlert}
+            onReportStatus={handleReportStatus}
+            styles={tabStyles}
+          />
+        )}
+
+        {communitySubTab === 'market' && (
+          suburbConnectionsCount < 100 ? (
+            renderDensityGate('Spaza Marketplace')
+          ) : (
+            <MarketTab
+              marketItems={marketItems}
+              vendors={vendors}
+              groupBuys={groupBuys}
+              lostFound={lostFound}
+              currentUserId={currentUser.id}
+              formatCurrency={formatCurrency}
+              onPostItem={handlePostMarketItem}
+              onPledge={handlePledge}
+              onReunite={handleReunite}
+              onReport={handleReportContent}
+              styles={tabStyles}
+            />
+          )
+        )}
+
+        {communitySubTab === 'household' && (
+          <HouseholdTab
+            householdListingId={householdListingId}
+            householdName={householdName}
+            members={householdMembers}
+            chores={householdChores}
+            reputationScores={reputationScores}
+            currentUserId={currentUser.id}
+            onRotate={handleRotateChores}
+            onComplete={handleCompleteChoreRpc}
+            styles={tabStyles}
+          />
+        )}
+
+        {communitySubTab === 'communities' && (
+          <CommunitiesTab
+            communities={communities}
+            memberOf={communityMemberships}
+            currentUserId={currentUser.id}
+            onCreate={handleCreateCommunity}
+            onJoin={handleJoinCommunity}
+            onLeave={handleLeaveCommunity}
+            onRedeem={handleRedeemInvite}
+            styles={tabStyles}
+          />
+        )}
+
+        {communitySubTab === 'vibemap' && (
+          <VibeMap />
+        )}
       </div>
     )
   }
 
   const landlordRequests = requests.filter(req => req.landlordId === currentUser?.id)
   const tenantRequests = requests.filter(req => req.tenantId === currentUser?.id)
+
+  const renderDensityGate = (title: string) => (
+    <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', maxWidth: '500px', margin: '2rem auto', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+      <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#ef4444', marginBottom: '0.5rem' }}>
+        {title} Locked: Suburb Density Required
+      </h3>
+      <p style={{ fontSize: '0.85rem', color: '#aaa', lineHeight: '1.5', marginBottom: '1.5rem' }}>
+        To protect neighborhood trust and ensure transaction liquidity, the local spaza and service marketplace triggers only when you connect to at least **100 other users** in your suburb.
+      </p>
+
+      {/* Progress Bar */}
+      <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '1rem', border: '1px solid rgba(255,255,255,0.08)', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#ccc', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+          <span>Your Network Density</span>
+          <span style={{ color: '#fbbf24' }}>{suburbConnectionsCount} / 100 Connections</span>
+        </div>
+        <div style={{ background: '#222', borderRadius: '4px', height: '10px', overflow: 'hidden' }}>
+          <div style={{ background: 'linear-gradient(90deg, #ef4444 0%, #fbbf24 100%)', height: '100%', width: `${Math.min(100, suburbConnectionsCount)}%`, transition: 'width 0.5s ease-in-out' }}></div>
+        </div>
+      </div>
+
+      {/* Simulator Action */}
+      <button 
+        onClick={() => setSuburbConnectionsCount(prev => prev + 20)}
+        className="btn-gold"
+        style={{ width: '100%', padding: '12px', fontWeight: 'bold' }}
+      >
+        Connect to 20 Neighbors (+20 Connections)
+      </button>
+
+      <div style={{ marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.2rem' }}>
+        <p style={{ fontSize: '0.75rem', color: '#777', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.8rem', fontWeight: 'bold' }}>Suggested Neighbors to Link</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {[
+            { name: "Sipho M. (Ward 77 CPF)", role: "Street Captain", xp: "450 XP" },
+            { name: "Thandi K. (Spaza Owner)", role: "Water Vendor", xp: "320 XP" },
+            { name: "Landlord Joe (Augustine Rd)", role: "Verified Landlord", xp: "150 XP" }
+          ].map((neigh, idx) => (
+            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.04)' }}>
+              <div style={{ textAlign: 'left' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fff', display: 'block' }}>{neigh.name}</span>
+                <span style={{ fontSize: '0.7rem', color: '#666' }}>{neigh.role}</span>
+              </div>
+              <button 
+                onClick={() => setSuburbConnectionsCount(prev => prev + 10)}
+                style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Link +10
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="dashboard-wrapper">
@@ -1794,9 +2344,12 @@ export default function DashboardPage() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
                   <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.9rem' }}>Notifications</span>
-                  <button 
+                  <button
                     onClick={() => {
                       dispatch(markAllNotificationsRead())
+                      // Write back to the shared notifications table, so "read"
+                      // survives a refresh and follows the user across devices.
+                      markNotificationsReadInDb()
                       setAlertNotification('All notifications marked as read!')
                       setTimeout(() => setAlertNotification(null), 3000)
                     }}
@@ -2176,21 +2729,40 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       
-                      <button 
-                        className="btn-gold"
-                        style={liftBookBtnStyle}
-                        disabled={lift.availableSeats === 0}
-                        onClick={() => {
-                          if (currentUser.role === 'visitor') {
-                            setAlertNotification('Guest mode restriction: Please register or log in to book seats!')
-                            setTimeout(() => setAlertNotification(null), 4000)
-                            return
-                          }
-                          handleBookSeat(lift.id, lift.driverName)
-                        }}
-                      >
-                        {currentUser.role === 'visitor' ? 'Locked (Guest)' : (lift.availableSeats > 0 ? 'Request Ride Seat' : 'Fully Booked')}
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {/* A full lift joins the waitlist rather than being a dead end */}
+                        <button
+                          className="btn-gold"
+                          style={liftBookBtnStyle}
+                          onClick={() => {
+                            if (currentUser.role === 'visitor') {
+                              setAlertNotification('Guest mode restriction: Please register or log in to book seats!')
+                              setTimeout(() => setAlertNotification(null), 4000)
+                              return
+                            }
+                            handleBookSeat(lift.id, lift.driverName)
+                          }}
+                        >
+                          {currentUser.role === 'visitor'
+                            ? 'Locked (Guest)'
+                            : lift.availableSeats > 0
+                              ? 'Request Ride Seat'
+                              : 'Join Waitlist'}
+                        </button>
+                        {currentUser.role !== 'visitor' && (
+                          <button
+                            onClick={() => handleCancelSeat(lift.id)}
+                            title="Cancel your seat — it goes to whoever is first on the waitlist"
+                            style={{
+                              padding: '0.4rem 0.7rem', fontSize: '0.7rem', cursor: 'pointer',
+                              background: 'transparent', border: '1px solid #666', color: '#aaa',
+                              borderRadius: '4px'
+                            }}
+                          >
+                            Cancel seat
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2198,7 +2770,10 @@ export default function DashboardPage() {
 
               {/* TAB 4: Tenant Handymen Services Directory (P2B / B2P) */}
               {tenantTab === 'handymen' && (
-                <div>
+                suburbConnectionsCount < 100 ? (
+                  renderDensityGate('Services Directory')
+                ) : (
+                  <div>
                   <div style={landlordHeaderRowStyle}>
                     <div>
                       <h2 style={sectionHeaderStyle}>Local Skills & Services Directory</h2>
@@ -2374,7 +2949,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
-              )}
+              )
+            )}
 
               {/* TAB 5: Prepaid Utilities (Tenant P2B/P2P Sharing) */}
               {tenantTab === 'utilities' && (
@@ -2462,6 +3038,71 @@ export default function DashboardPage() {
                       </div>
                     ) : (
                       <div style={emptyStateStyle}>You have not purchased any prepaid electricity vouchers yet.</div>
+                    )}
+                  </div>
+
+                  {/* Cryptographic Voucher Authenticator */}
+                  <h3 style={{ ...panelTitleStyle, marginTop: '3rem' }}>🔒 Cryptographic Voucher Authenticator</h3>
+                  <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px' }}>
+                    <p style={{ margin: '0 0 1.2rem 0', fontSize: '0.8rem', color: '#aaa' }}>
+                      Verify the authenticity of a 20-digit utility recharge voucher code. This checks the cryptographic signature to ensure the code was signed by the registered standowner and matches the target meter.
+                    </p>
+                    <form onSubmit={handleVerifyVoucherSignature} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', alignItems: 'end', flexWrap: 'wrap' }}>
+                      <div style={inputGroupStyle}>
+                        <label style={labelStyleStyle}>Sub-Meter Number</label>
+                        <input 
+                          type="text" 
+                          required 
+                          placeholder="e.g. MTR-4592-1102" 
+                          value={verificationMeter}
+                          onChange={(e) => setVerificationMeter(e.target.value)}
+                          style={modalInputStyle}
+                        />
+                      </div>
+                      <div style={inputGroupStyle}>
+                        <label style={labelStyleStyle}>Voucher Value (R)</label>
+                        <input 
+                          type="number" 
+                          required 
+                          min={10}
+                          value={verificationPrice}
+                          onChange={(e) => setVerificationPrice(parseInt(e.target.value) || 0)}
+                          style={modalInputStyle}
+                        />
+                      </div>
+                      <div style={inputGroupStyle}>
+                        <label style={labelStyleStyle}>Voucher Token Code</label>
+                        <input 
+                          type="text" 
+                          required 
+                          placeholder="20-digit recharge code" 
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          style={modalInputStyle}
+                        />
+                      </div>
+                      <button 
+                        type="submit" 
+                        className="btn-gold" 
+                        style={{ ...modalSubmitBtnStyle, gridColumn: 'span 3', width: 'auto', justifySelf: 'start', padding: '0.5rem 1.5rem' }}
+                      >
+                        🔑 Verify Signature Checksum
+                      </button>
+                    </form>
+
+                    {verificationResult.checked && (
+                      <div style={{ 
+                        marginTop: '1.2rem', 
+                        padding: '1rem', 
+                        borderRadius: '6px', 
+                        border: `1px solid ${verificationResult.valid ? '#22c55e' : '#ef4444'}`,
+                        background: verificationResult.valid ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: verificationResult.valid ? '#22c55e' : '#f87171',
+                        fontSize: '0.8rem',
+                        fontWeight: 'bold'
+                      }}>
+                        {verificationResult.message}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -2782,15 +3423,35 @@ export default function DashboardPage() {
 
                         <div style={inputGroupStyle}>
                           <label style={labelStyleStyle}>20-Digit Recharge Code</label>
-                          <input 
-                            type="text" 
-                            required 
-                            placeholder="e.g. 4820-2910-3849-5029-1123" 
-                            value={utilityCode}
-                            onChange={(e) => setUtilityCode(e.target.value)}
-                            style={modalInputStyle}
-                          />
-                          <span style={{ fontSize: '0.65rem', color: '#888' }}>Must be exactly 20 digits. Separate blocks with hyphens.</span>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input 
+                              type="text" 
+                              required 
+                              placeholder="e.g. 8050-0100-3333-1123-9999" 
+                              value={utilityCode}
+                              onChange={(e) => setUtilityCode(e.target.value)}
+                              style={{ ...modalInputStyle, flex: 1 }}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleGenerateHMAC}
+                              className="btn-gold"
+                              style={{
+                                padding: '0 0.8rem',
+                                fontSize: '0.75rem',
+                                borderRadius: '4px',
+                                border: '1px solid #D4AF37',
+                                background: 'transparent',
+                                color: '#D4AF37',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              🔒 Sign Code
+                            </button>
+                          </div>
+                          <span style={{ fontSize: '0.65rem', color: '#888', marginTop: '4px', display: 'block' }}>Must be exactly 20 digits. Use generator or type manually.</span>
                         </div>
 
                         <button 
@@ -2986,13 +3647,27 @@ export default function DashboardPage() {
                 </div>
                 <div style={inputGroupStyle}>
                   <label style={labelStyleStyle}>Monthly Rent</label>
-                  <input 
-                    type="number" 
-                    required 
+                  <input
+                    type="number"
+                    required
                     value={newPrice}
                     onChange={(e) => setNewPrice(parseInt(e.target.value) || 0)}
                     style={modalInputStyle}
                   />
+                  {/* What rooms actually go for around here. Suppressed entirely
+                      below a usable sample rather than quoting a median of two. */}
+                  {suburbStats && (
+                    <p style={{ fontSize: '0.7rem', color: '#888', margin: '0.3rem 0 0 0' }}>
+                      Most rooms in {newSuburb} go for {formatCurrency(suburbStats.low, 'ZAR')}–{formatCurrency(suburbStats.high, 'ZAR')}
+                      {' '}(median {formatCurrency(suburbStats.median, 'ZAR')}, {suburbStats.sample} listings).
+                    </p>
+                  )}
+                  {newListingLooksSuspicious && (
+                    <p style={{ fontSize: '0.7rem', color: '#ef4444', margin: '0.3rem 0 0 0' }}>
+                      <AlertTriangle size={11} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                      That is far below the local median. Tenants will be warned this may be a scam.
+                    </p>
+                  )}
                 </div>
               </div>
 

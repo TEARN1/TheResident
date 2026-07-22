@@ -57,6 +57,12 @@ export interface Listing {
     bathroom: 'shared' | 'private' | 'ensuite'
   }
   requirements: LandlordPreferences
+  lat?: number
+  lon?: number
+  approachPhotoUrl?: string
+  microLandmark?: string
+  lastVerifiedAt?: string
+  verifiedByUserId?: string
 }
 
 export interface RoomRequest {
@@ -179,6 +185,10 @@ export interface CommunityDispute {
   status: 'pending' | 'mediating' | 'resolved'
   resolutionDetails?: string
   timestamp: string
+  evidenceHash?: string
+  votesForClaimant?: number
+  votesForRespondent?: number
+  juryStatus?: 'not_started' | 'voting' | 'completed'
 }
 
 export interface ChoreAssignment {
@@ -264,6 +274,12 @@ export interface Vendor {
   status: 'active' | 'inactive' | 'pending'
   rating: number
   reviewsCount: number
+  lat?: number
+  lon?: number
+  approachPhotoUrl?: string
+  microLandmark?: string
+  lastVerifiedAt?: string
+  verifiedByUserId?: string
 }
 
 export interface GroupBuy {
@@ -315,6 +331,22 @@ export interface SharedResource {
   location: string
   latitude: number
   longitude: number
+  approachPhotoUrl?: string
+  microLandmark?: string
+  lastVerifiedAt?: string
+  verifiedByUserId?: string
+}
+
+export interface TrafficReport {
+  id: string
+  reporterId: string
+  suburb?: string
+  city?: string
+  lat: number
+  lon: number
+  reportType: 'congestion' | 'pothole' | 'roadblock' | 'accident' | 'dead_robots' | 'other'
+  description?: string
+  createdAt?: string
 }
 
 export interface NeighbourhoodStatus {
@@ -407,6 +439,14 @@ const listingsSlice = createSlice({
     deleteListing: (state, action: PayloadAction<string>) => {
       const id = toUUID(action.payload)
       state.items = state.items.filter(item => toUUID(item.id) !== id)
+    },
+    updateListingVerification: (state, action: PayloadAction<{ id: string; approachPhotoUrl?: string; lastVerifiedAt: string; verifiedByUserId: string }>) => {
+      const item = state.items.find(l => toUUID(l.id) === toUUID(action.payload.id))
+      if (item) {
+        if (action.payload.approachPhotoUrl) item.approachPhotoUrl = action.payload.approachPhotoUrl
+        item.lastVerifiedAt = action.payload.lastVerifiedAt
+        item.verifiedByUserId = toUUID(action.payload.verifiedByUserId)
+      }
     }
   }
 })
@@ -475,7 +515,8 @@ const networkingSlice = createSlice({
     roommates: initialRoommates,
     lifts: initialLifts,
     services: initialServices,
-    dispatches: [] as ServiceDispatch[]
+    dispatches: [] as ServiceDispatch[],
+    trafficReports: [] as TrafficReport[]
   },
   reducers: {
     setRoommates: (state, action: PayloadAction<RoommateSeeker[]>) => {
@@ -493,6 +534,13 @@ const networkingSlice = createSlice({
         id: toUUID(d.id),
         serviceId: toUUID(d.serviceId),
         senderId: toUUID(d.senderId)
+      }))
+    },
+    setTrafficReports: (state, action: PayloadAction<TrafficReport[]>) => {
+      state.trafficReports = action.payload.map(tr => ({
+        ...tr,
+        id: toUUID(tr.id),
+        reporterId: toUUID(tr.reporterId)
       }))
     },
     addRoommateSeeker: (state, action: PayloadAction<RoommateSeeker>) => {
@@ -551,6 +599,12 @@ const networkingSlice = createSlice({
       if (disp) {
         disp.status = action.payload.status
       }
+    },
+    addTrafficReport: (state, action: PayloadAction<TrafficReport>) => {
+      const report = { ...action.payload }
+      report.id = toUUID(report.id)
+      report.reporterId = toUUID(report.reporterId)
+      state.trafficReports.push(report)
     }
   }
 })
@@ -810,7 +864,14 @@ const communitySlice = createSlice({
       if (dispute.mediatorId) dispute.mediatorId = toUUID(dispute.mediatorId)
       state.disputes.unshift(dispute)
     },
-    updateDisputeStatus: (state, action: PayloadAction<{ disputeId: string; status: 'pending' | 'mediating' | 'resolved'; resolutionDetails?: string }>) => {
+    updateDisputeStatus: (state, action: PayloadAction<{ 
+      disputeId: string; 
+      status: 'pending' | 'mediating' | 'resolved'; 
+      resolutionDetails?: string;
+      votesForClaimant?: number;
+      votesForRespondent?: number;
+      juryStatus?: 'not_started' | 'voting' | 'completed';
+    }>) => {
       const disputeId = toUUID(action.payload.disputeId)
       const dispute = state.disputes.find(d => toUUID(d.id) === disputeId)
       if (dispute) {
@@ -818,6 +879,9 @@ const communitySlice = createSlice({
         if (action.payload.resolutionDetails) {
           dispute.resolutionDetails = action.payload.resolutionDetails
         }
+        if (action.payload.votesForClaimant !== undefined) dispute.votesForClaimant = action.payload.votesForClaimant
+        if (action.payload.votesForRespondent !== undefined) dispute.votesForRespondent = action.payload.votesForRespondent
+        if (action.payload.juryStatus !== undefined) dispute.juryStatus = action.payload.juryStatus
       }
     },
     addCommunity: (state, action: PayloadAction<Community>) => {
@@ -892,6 +956,22 @@ const communitySlice = createSlice({
       } else {
         state.neighbourhoodStatus.push(action.payload)
       }
+    },
+    updateVendorVerification: (state, action: PayloadAction<{ id: string; approachPhotoUrl?: string; lastVerifiedAt: string; verifiedByUserId: string }>) => {
+      const item = state.vendors.find(v => toUUID(v.id) === toUUID(action.payload.id))
+      if (item) {
+        if (action.payload.approachPhotoUrl) item.approachPhotoUrl = action.payload.approachPhotoUrl
+        item.lastVerifiedAt = action.payload.lastVerifiedAt
+        item.verifiedByUserId = toUUID(action.payload.verifiedByUserId)
+      }
+    },
+    updateResourceVerification: (state, action: PayloadAction<{ id: string; approachPhotoUrl?: string; lastVerifiedAt: string; verifiedByUserId: string }>) => {
+      const item = state.sharedResources.find(r => toUUID(r.id) === toUUID(action.payload.id))
+      if (item) {
+        if (action.payload.approachPhotoUrl) item.approachPhotoUrl = action.payload.approachPhotoUrl
+        item.lastVerifiedAt = action.payload.lastVerifiedAt
+        item.verifiedByUserId = toUUID(action.payload.verifiedByUserId)
+      }
     }
   }
 })
@@ -912,6 +992,12 @@ const notificationsSlice = createSlice({
     virtualCount: 0
   },
   reducers: {
+    // #45: notifications loaded from the shared `notifications` table, so they
+    // survive a refresh instead of living only in Redux.
+    setNotifications: (state, action: PayloadAction<AppNotification[]>) => {
+      state.items = action.payload
+      state.virtualCount = action.payload.filter(n => !n.read).length
+    },
     addNotification: (state, action: PayloadAction<Omit<AppNotification, 'id' | 'timestamp'>>) => {
       state.items.unshift({
         ...action.payload,
@@ -947,7 +1033,7 @@ export const {
   setBalance
 } = authSlice.actions
 
-export const { setListings, addListing, deleteListing } = listingsSlice.actions
+export const { setListings, addListing, deleteListing, updateListingVerification } = listingsSlice.actions
 export const { setRequests, addRequest, updateRequestStatus } = requestsSlice.actions
 export const { addLog, incrementApiCall, resetApiCounts } = securitySlice.actions
 export const {
@@ -955,6 +1041,7 @@ export const {
   setLifts,
   setServices,
   setDispatches,
+  setTrafficReports,
   addRoommateSeeker,
   addLiftClub,
   addService,
@@ -963,7 +1050,8 @@ export const {
   setLiftSeats,
   bookSeatRollback,
   addDispatch,
-  updateDispatchStatus
+  updateDispatchStatus,
+  addTrafficReport
 } = networkingSlice.actions
 export const { setTokens, addToken, buyToken } = utilitiesSlice.actions
 export const {
@@ -1012,10 +1100,13 @@ export const {
   checkCareCircle,
   addSharedResource,
   updateSharedResourceStatus,
-  updateNeighbourhoodStatus
+  updateNeighbourhoodStatus,
+  updateVendorVerification,
+  updateResourceVerification
 } = communitySlice.actions
 
 export const {
+  setNotifications,
   addNotification,
   floodNotifications,
   markAllNotificationsRead
@@ -1084,7 +1175,13 @@ export const fetchSupabaseData = createAsyncThunk(
           maxChildren: item.req_max_children || 0,
           smokingAllowed: !!item.req_smoking_allowed,
           petsAllowed: !!item.req_pets_allowed
-        }
+        },
+        lat: item.lat ? Number(item.lat) : undefined,
+        lon: item.lon ? Number(item.lon) : undefined,
+        approachPhotoUrl: item.approach_photo_url || undefined,
+        microLandmark: item.micro_landmark || undefined,
+        lastVerifiedAt: item.last_verified_at || undefined,
+        verifiedByUserId: item.verified_by_user_id || undefined
       }))))
     }
 
@@ -1354,7 +1451,13 @@ export const fetchSupabaseData = createAsyncThunk(
         contactNumber: item.phone || '',
         status: 'active' as Vendor['status'],
         rating: 5.0,
-        reviewsCount: 0
+        reviewsCount: 0,
+        lat: item.lat ? Number(item.lat) : undefined,
+        lon: item.lon ? Number(item.lon) : undefined,
+        approachPhotoUrl: item.approach_photo_url || undefined,
+        microLandmark: item.micro_landmark || undefined,
+        lastVerifiedAt: item.last_verified_at || undefined,
+        verifiedByUserId: item.verified_by_user_id || undefined
       }))))
     }
 
@@ -1435,7 +1538,11 @@ export const fetchSupabaseData = createAsyncThunk(
         description: item.access_note || '',
         location: item.suburb || '',
         latitude: Number(item.lat || 0),
-        longitude: Number(item.lon || 0)
+        longitude: Number(item.lon || 0),
+        approachPhotoUrl: item.approach_photo_url || undefined,
+        microLandmark: item.micro_landmark || undefined,
+        lastVerifiedAt: item.last_verified_at || undefined,
+        verifiedByUserId: item.verified_by_user_id || undefined
       }))))
     }
 
@@ -1450,6 +1557,24 @@ export const fetchSupabaseData = createAsyncThunk(
         status: (item.status === 'up' ? 'active' : 'outage') as NeighbourhoodStatus['status'],
         suburb: item.suburb || '',
         updatedAt: item.created_at || new Date().toISOString()
+      }))))
+    }
+
+    // 22. Traffic Reports
+    const fetchTrafficReports = async () => {
+      const { data, error } = await supabase!.from('res_traffic_reports').select('*')
+      if (error) return markFailed('res_traffic_reports', error.message)
+      if (!data) return
+      dispatch(setTrafficReports(data.map(item => ({
+        id: item.id,
+        reporterId: item.reporter_id,
+        suburb: item.suburb || '',
+        city: item.city || '',
+        lat: Number(item.lat),
+        lon: Number(item.lon),
+        reportType: item.report_type as TrafficReport['reportType'],
+        description: item.description || '',
+        createdAt: item.created_at
       }))))
     }
 
@@ -1475,7 +1600,8 @@ export const fetchSupabaseData = createAsyncThunk(
       fetchLostFound(),
       fetchCareCircle(),
       fetchSharedResources(),
-      fetchNeighbourhoodStatus()
+      fetchNeighbourhoodStatus(),
+      fetchTrafficReports()
     ])
 
     dispatch(setDataStatus({
@@ -1687,6 +1813,7 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     // the same stale value and both succeed.
     if (bookSeat.match(action)) {
       syncLabel = 'your seat booking'
+      await Promise.resolve()
       assertNetworkAlive()
       if (supabase) {
         const { data, error } = await supabase.rpc('res_book_seat', { p_lift_id: toUUID(action.payload) })
@@ -1795,6 +1922,7 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     // security-definer RPCs (res_notice_events update-RLS is poster-only).
     if (rsvpToEvent.match(action)) {
       syncLabel = 'your RSVP'
+      await Promise.resolve()
       assertNetworkAlive()
       if (supabase) {
         const { error } = await supabase.rpc('res_toggle_rsvp', { p_notice_id: toUUID(action.payload.noticeId) })
@@ -1804,6 +1932,7 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
 
     if (vibeNotice.match(action)) {
       syncLabel = 'your vibe'
+      await Promise.resolve()
       assertNetworkAlive()
       if (supabase) {
         const { error } = await supabase.rpc('res_toggle_vibe', { p_notice_id: toUUID(action.payload.noticeId) })
@@ -1813,6 +1942,7 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
 
     if (echoNotice.match(action)) {
       syncLabel = 'your echo'
+      await Promise.resolve()
       assertNetworkAlive()
       if (supabase) {
         const { error } = await supabase.rpc('res_toggle_echo', { p_notice_id: toUUID(action.payload.noticeId) })
@@ -1877,6 +2007,7 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (pledgeGroupBuy.match(action)) {
       const { groupBuyId, amount } = action.payload
       syncLabel = 'your pledge'
+      await Promise.resolve()
       assertNetworkAlive()
       if (supabase) {
         const { data, error } = await supabase.rpc('res_pledge_group_buy', {
@@ -1935,6 +2066,42 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (updateNeighbourhoodStatus.match(action) && currentUser) {
       syncLabel = 'the status report'
       await dbUpdate('res_neighbourhood_status', db.neighbourhoodStatusToRow(action.payload, currentUser.id))
+    }
+
+    // 23. VibeMap / Traffic and verification sync handlers
+    if (addTrafficReport.match(action)) {
+      syncLabel = 'your traffic report'
+      await dbUpdate('res_traffic_reports', db.trafficToRow(action.payload))
+    }
+
+    if (updateListingVerification.match(action)) {
+      const { id, approachPhotoUrl, lastVerifiedAt, verifiedByUserId } = action.payload
+      syncLabel = 'the listing verification'
+      await dbUpdate('res_listings', {
+        approach_photo_url: approachPhotoUrl || null,
+        last_verified_at: lastVerifiedAt,
+        verified_by_user_id: toUUID(verifiedByUserId)
+      }, 'id', toUUID(id))
+    }
+
+    if (updateVendorVerification.match(action)) {
+      const { id, approachPhotoUrl, lastVerifiedAt, verifiedByUserId } = action.payload
+      syncLabel = 'the vendor verification'
+      await dbUpdate('res_vendors', {
+        approach_photo_url: approachPhotoUrl || null,
+        last_verified_at: lastVerifiedAt,
+        verified_by_user_id: toUUID(verifiedByUserId)
+      }, 'id', toUUID(id))
+    }
+
+    if (updateResourceVerification.match(action)) {
+      const { id, approachPhotoUrl, lastVerifiedAt, verifiedByUserId } = action.payload
+      syncLabel = 'the resource verification'
+      await dbUpdate('res_shared_resources', {
+        approach_photo_url: approachPhotoUrl || null,
+        last_verified_at: lastVerifiedAt,
+        verified_by_user_id: toUUID(verifiedByUserId)
+      }, 'id', toUUID(id))
     }
 
   } catch (err) {

@@ -180,6 +180,13 @@ test('phase 4 community payloads only use real schema columns', () => {
   assertKeysInSchema('res_neighbourhood_status', ns)
   assert.strictEqual(ns.kind, 'power')
   assert.strictEqual(ns.status, 'down')
+
+  const tr = db.trafficToRow({
+    id: 'tr-1', reporterId: UID, suburb: 's', city: 'c', lat: 1, lon: 2,
+    reportType: 'congestion', description: 'd'
+  })
+  assertKeysInSchema('res_traffic_reports', tr)
+  assert.strictEqual(tr.report_type, 'congestion')
 })
 
 test('name helpers resolve via the profiles map', () => {

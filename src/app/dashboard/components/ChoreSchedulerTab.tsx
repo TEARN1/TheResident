@@ -1,5 +1,6 @@
 import React from 'react'
 import { t } from '../../../utils/i18n'
+import { fairnessNote, type FairnessRow } from '../../../utils/logic'
 
 interface Chore {
   id: string
@@ -27,6 +28,30 @@ export default function ChoreSchedulerTab({
   lang,
   styles
 }: ChoreSchedulerTabProps) {
+  // Compute fairness row metrics per roommate
+  const rowsMap: Record<string, { completed: number; assigned: number }> = {}
+  communityChores.forEach(c => {
+    if (!rowsMap[c.roommateId]) {
+      rowsMap[c.roommateId] = { completed: 0, assigned: 0 }
+    }
+    rowsMap[c.roommateId].assigned += 1
+    if (c.status === 'completed') {
+      rowsMap[c.roommateId].completed += 1
+    }
+  })
+
+  const fairnessRows: FairnessRow[] = Object.entries(rowsMap).map(([userId, val]) => ({
+    userId,
+    completed: val.completed,
+    assigned: val.assigned
+  }))
+
+  const nameMap: Record<string, string> = {
+    'tenant-100': 'Global Tenant',
+    'rm-1': 'Lerato Modise'
+  }
+  const fairnessMessage = fairnessNote(fairnessRows, (id) => nameMap[id] || id) || 'Workload distribution is currently balanced across household members.'
+
   return (
     <div className="responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
       {/* Chores Table */}
@@ -98,6 +123,11 @@ export default function ChoreSchedulerTab({
               )
             })
           }
+        </div>
+
+        {/* Workload Fairness Insights */}
+        <div style={{ marginTop: '1rem', padding: '0.65rem 0.8rem', borderRadius: '6px', background: 'rgba(212,175,55,0.08)', border: '1px dashed rgba(212,175,55,0.2)', fontSize: '0.75rem', color: '#D4AF37' }}>
+          💡 <strong>Workload Distribution:</strong> {fairnessMessage}
         </div>
       </div>
     </div>

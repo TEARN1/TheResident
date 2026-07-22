@@ -30,7 +30,8 @@ import type {
   SharedResource,
   NeighbourhoodStatus,
   UserProfile,
-  LandlordPreferences
+  LandlordPreferences,
+  TrafficReport
 } from './index'
 
 // Helper function to convert any string ID to a deterministic valid UUID format
@@ -125,7 +126,11 @@ export const listingToRow = (listing: Listing): DbRow => ({
   req_children_allowed: listing.requirements.childrenAllowed,
   req_max_children: listing.requirements.maxChildren,
   req_smoking_allowed: listing.requirements.smokingAllowed,
-  req_pets_allowed: listing.requirements.petsAllowed
+  req_pets_allowed: listing.requirements.petsAllowed,
+  lat: listing.lat || null,
+  lon: listing.lon || null,
+  approach_photo_url: listing.approachPhotoUrl || null,
+  micro_landmark: listing.microLandmark || null
 })
 
 export const requestToRow = (req: RoomRequest): DbRow => ({
@@ -325,7 +330,11 @@ export const vendorToRow = (v: Vendor, userId: string): DbRow => ({
   kind: (VENDOR_KINDS as readonly string[]).includes(v.category.toLowerCase())
     ? v.category.toLowerCase()
     : 'other',
-  phone: v.contactNumber || null
+  phone: v.contactNumber || null,
+  lat: v.lat || null,
+  lon: v.lon || null,
+  approach_photo_url: v.approachPhotoUrl || null,
+  micro_landmark: v.microLandmark || null
 })
 
 export const groupBuyToRow = (g: GroupBuy): DbRow => ({
@@ -373,7 +382,20 @@ export const sharedResourceToRow = (sr: SharedResource, ownerId: string): DbRow 
   access_note: sr.description || null,
   availability: sr.status || null,
   lat: sr.latitude,
-  lon: sr.longitude
+  lon: sr.longitude,
+  approach_photo_url: sr.approachPhotoUrl || null,
+  micro_landmark: sr.microLandmark || null
+})
+
+export const trafficToRow = (tr: TrafficReport): DbRow => ({
+  id: toUUID(tr.id),
+  reporter_id: toUUID(tr.reporterId),
+  suburb: tr.suburb || null,
+  city: tr.city || null,
+  lat: tr.lat,
+  lon: tr.lon,
+  report_type: tr.reportType,
+  description: tr.description || null
 })
 
 const NS_KIND: Record<NeighbourhoodStatus['service'], string> = {
@@ -401,7 +423,7 @@ export const neighbourhoodStatusToRow = (ns: NeighbourhoodStatus, reporterId: st
 
 export const SCHEMA_COLUMNS: Record<string, string[]> = {
   res_profiles: ['id', 'role', 'bio', 'gender', 'children_count', 'employment_status', 'has_pets', 'verification_doc_url', 'landlord_gender_pref', 'landlord_children_allowed', 'landlord_max_children', 'landlord_smoking_allowed', 'landlord_pets_allowed', 'created_at', 'updated_at'],
-  res_listings: ['id', 'landlord_id', 'title', 'description', 'price', 'currency', 'location', 'suburb', 'city', 'lat', 'lon', 'safety_rating', 'safety_notes', 'landlord_lives_here', 'images', 'wifi', 'parking', 'bathroom', 'req_gender_pref', 'req_children_allowed', 'req_max_children', 'req_smoking_allowed', 'req_pets_allowed', 'status', 'created_at', 'updated_at'],
+  res_listings: ['id', 'landlord_id', 'title', 'description', 'price', 'currency', 'location', 'suburb', 'city', 'lat', 'lon', 'safety_rating', 'safety_notes', 'landlord_lives_here', 'images', 'wifi', 'parking', 'bathroom', 'req_gender_pref', 'req_children_allowed', 'req_max_children', 'req_smoking_allowed', 'req_pets_allowed', 'status', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id'],
   res_room_requests: ['id', 'tenant_id', 'listing_id', 'landlord_id', 'status', 'message', 'created_at'],
   res_lift_clubs: ['id', 'driver_id', 'origin', 'destination', 'origin_lat', 'origin_lon', 'dest_lat', 'dest_lon', 'departure_time', 'days', 'price_per_seat', 'currency', 'available_seats', 'total_seats', 'event_id', 'purpose', 'carries_parcels', 'created_at', 'updated_at'],
   res_handyman_services: ['id', 'owner_id', 'business_name', 'category', 'location', 'suburb', 'city', 'lat', 'lon', 'rating', 'contact_number', 'website_url', 'price_estimate', 'description', 'image', 'reviews_count', 'created_at', 'updated_at'],
@@ -415,12 +437,13 @@ export const SCHEMA_COLUMNS: Record<string, string[]> = {
   res_communities: ['id', 'name', 'kind', 'suburb', 'city', 'lat', 'lon', 'radius_m', 'is_private', 'created_by', 'created_at'],
   res_alerts: ['id', 'user_id', 'kind', 'title', 'description', 'lat', 'lon', 'community_id', 'suburb', 'city', 'severity', 'status', 'created_at', 'resolved_at'],
   res_market_items: ['id', 'user_id', 'title', 'description', 'category', 'price', 'currency', 'condition', 'images', 'status', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
-  res_vendors: ['id', 'user_id', 'name', 'kind', 'sells', 'hours', 'contact_via_dm', 'phone', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
+  res_vendors: ['id', 'user_id', 'name', 'kind', 'sells', 'hours', 'contact_via_dm', 'phone', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id'],
   res_group_buys: ['id', 'organizer_id', 'title', 'description', 'target_quantity', 'current_quantity', 'display_price', 'currency', 'deadline', 'status', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
   res_group_buy_pledges: ['id', 'group_buy_id', 'user_id', 'quantity', 'note', 'created_at'],
   res_skills: ['id', 'user_id', 'title', 'category', 'description', 'rate_note', 'availability', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
   res_lost_found: ['id', 'user_id', 'kind', 'category', 'title', 'description', 'images', 'last_seen', 'status', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
   res_care_circle: ['id', 'subject_id', 'carer_id', 'cadence', 'last_ok_at', 'status', 'note', 'created_at', 'updated_at'],
-  res_shared_resources: ['id', 'owner_id', 'kind', 'title', 'access_note', 'availability', 'is_free', 'price_note', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
-  res_neighbourhood_status: ['id', 'reporter_id', 'kind', 'status', 'detail', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at']
+  res_shared_resources: ['id', 'owner_id', 'kind', 'title', 'access_note', 'availability', 'is_free', 'price_note', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id'],
+  res_neighbourhood_status: ['id', 'reporter_id', 'kind', 'status', 'detail', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at'],
+  res_traffic_reports: ['id', 'reporter_id', 'suburb', 'city', 'lat', 'lon', 'report_type', 'description', 'created_at']
 }
