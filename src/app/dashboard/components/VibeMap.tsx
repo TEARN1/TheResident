@@ -18,6 +18,8 @@ import {
 } from '../../../store'
 import { MapPin, Navigation, Camera, AlertTriangle, Eye, Shield, Check, Info, Star } from 'lucide-react'
 import { distanceMetres, calculateWaterWaitTime } from '../../../utils/logic'
+import { supabase } from '../../../utils/supabase'
+import { fetchSharedZones, SharedZone } from '../../../utils/mapZones'
 
 // Default Ivory Park / Midrand center
 const DEFAULT_CENTER: [number, number] = [-25.9983, 28.2144]
@@ -135,6 +137,9 @@ export default function VibeMap() {
   
   const [L, setL] = useState<any>(null)
   const [mapReady, setMapReady] = useState(false)
+
+  // The SHARED living map: Gruvs closures/events + mirrored civic alerts.
+  const [gruvsZones, setGruvsZones] = useState<SharedZone[]>([])
   
   // Select data from Redux with fallback to default mock items when empty
   const reduxListings = useSelector((state: RootState) => state.listings.items)
@@ -270,6 +275,15 @@ export default function VibeMap() {
       }
     }
   }, [L])
+
+  // Pull the shared living-map zones around the current search centre. Refreshes
+  // when the centre/radius moves. Best-effort — a failure just shows no zones.
+  useEffect(() => {
+    let alive = true
+    fetchSharedZones(searchCenter[0], searchCenter[1], Math.max(2000, radiusKm * 1000))
+      .then((z) => { if (alive) setGruvsZones(z) })
+    return () => { alive = false }
+  }, [searchCenter, radiusKm])
 
   // Haversine formula to compute distance in km using unified logic
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -499,10 +513,47 @@ export default function VibeMap() {
       `)
     })
 
+    // 7. SHARED living-map zones (from The Gruvs + mirrored civic alerts).
+    //    Distinct violet "shared" pins. Popups are built with textContent only —
+    //    never innerHTML — so a hostile alert title can never inject script.
+    gruvsZones.forEach((z: SharedZone) => {
+      const isResident = z.source_app === 'resident'
+      const ring = isResident ? '#eab308' : '#8b5cf6'
+      const glyph = isResident ? '!' : '◆'
+      const markerHtml = `
+        <div style="
+          background: ${isResident ? 'linear-gradient(135deg,#eab308,#ca8a04)' : 'linear-gradient(135deg,#8b5cf6,#6d28d9)'};
+          border: 2px solid #ffffff; border-radius: 50%;
+          width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+          color: #fff; font-weight: 800; font-size: 14px;
+          box-shadow: 0 0 12px ${ring}99;
+        ">${glyph}</div>`
+      const icon = L.divIcon({ html: markerHtml, className: 'custom-shared-marker', iconSize: [30, 30] })
+      const marker = L.marker([z.lat, z.lon], { icon }).addTo(map)
+
+      // Safe popup: DOM nodes with textContent (XSS-proof for user-supplied text).
+      const el = document.createElement('div')
+      el.style.cssText = 'padding:4px 2px;color:#0f172a;max-width:220px'
+      const tag = document.createElement('p')
+      tag.style.cssText = 'font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:' + (isResident ? '#a16207' : '#6d28d9') + ';margin:0 0 2px'
+      tag.textContent = isResident ? 'Community report · The Resident' : 'The Gruvs · live map'
+      const title = document.createElement('p')
+      title.style.cssText = 'font-weight:700;font-size:13px;margin:0'
+      title.textContent = z.label || z.kind || 'Zone'
+      el.appendChild(tag); el.appendChild(title)
+      if (z.note) {
+        const note = document.createElement('p')
+        note.style.cssText = 'font-size:11px;margin:3px 0 0;color:#475569'
+        note.textContent = z.note
+        el.appendChild(note)
+      }
+      marker.bindPopup(el)
+    })
+
     return () => {
       map.removeLayer(circle)
     }
-  }, [mapReady, activeCategory, radiusKm, searchCenter, listings, vendors, sharedResources, alerts, trafficReports])
+  }, [mapReady, activeCategory, radiusKm, searchCenter, listings, vendors, sharedResources, alerts, trafficReports, gruvsZones])
 
   // Routing Engine Implementation
   useEffect(() => {
@@ -678,6 +729,25 @@ export default function VibeMap() {
       message: `Reported roadblock/delay bottleneck added to driver routing engines.`,
       read: false
     }))
+
+    // Push to the SHARED living map so it also shows on The Gruvs. Writes a
+    // neighbourhood-status row; a server-side trigger mirrors it into map_zones
+    // (source forced to 'resident', validated + auto-expiring). Best-effort, and
+    // only for a real signed-in user (guests have no auth session / profile row).
+    const isRealUser = !!supabase && !!userId && userId !== 'visitor-guest'
+      && userId !== '00000000-0000-4000-8000-000000000000'
+    if (isRealUser) {
+      supabase!.from('res_neighbourhood_status').insert({
+        reporter_id: userId,
+        kind: reportType,
+        status: 'active',
+        detail: reportDescription || null,
+        suburb: 'Ivory Park',
+        city: 'Midrand',
+        lat: reportCoords[0],
+        lon: reportCoords[1],
+      }).then(() => {}, () => {})
+    }
 
     setShowReportTrafficModal(false)
     setReportDescription('')

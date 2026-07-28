@@ -156,6 +156,12 @@ export default function AuthPage() {
       // Session cookies are managed by @supabase/ssr (createBrowserClient);
       // middleware.ts validates them via supabase.auth.getUser().
 
+      // ONE ACCOUNT across The Gruvs & The Resident: this idempotent, caller-only
+      // RPC guarantees both the shared master profile AND the Resident satellite
+      // exist — so someone who signed up on The Gruvs is whole here on first login
+      // (and vice-versa). Server-side + auth.uid()-scoped; best-effort.
+      await supabase.rpc('ensure_res_profile').then(() => {}, () => {})
+
       // Fetch their res_profile role
       const { data: dbProfile } = await supabase
         .from('res_profiles')
@@ -164,15 +170,6 @@ export default function AuthPage() {
         .single()
 
       const userRole = dbProfile?.role || role || 'visitor'
-
-      // If no res_profile exists, default/insert it
-      if (!dbProfile) {
-        await supabase.from('res_profiles').insert({
-          id: toUUID(user.id),
-          role: userRole,
-          bio: 'First login from The Resident'
-        })
-      }
 
       dispatch(resetFailedAttempts(email))
       dispatch(loginUser({
@@ -337,6 +334,7 @@ export default function AuthPage() {
         <div style={headerStyle}>
           <h2 style={logoStyle}>THE RESIDENT</h2>
           <p style={taglineStyle}>Verified Co-Living & Rental Portal</p>
+          <p style={crossAppNoteStyle}>One account — the same login works on The Gruvs</p>
         </div>
 
         {/* Tab Selection */}
@@ -720,6 +718,14 @@ const taglineStyle: React.CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '2px',
   margin: 0
+}
+
+const crossAppNoteStyle: React.CSSProperties = {
+  fontSize: '0.7rem',
+  color: 'var(--gold-primary)',
+  opacity: 0.75,
+  letterSpacing: '1px',
+  margin: '0.4rem 0 0 0'
 }
 
 const tabContainerStyle: React.CSSProperties = {
