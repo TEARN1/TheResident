@@ -6,13 +6,13 @@ import GoldParticles from './components/ui/GoldParticles'
 import { ReduxProvider } from '../store/provider'
 
 export const metadata: Metadata = {
-  title: 'The Resident',
-  description: 'Luxury Living Simplified for Tenants and Property Owners.',
+  title: 'The Resident Crew',
+  description: 'Co-Living, Accommodations Trading & Community Portal for The Resident Crew — Connected with The Gruvs.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Resident',
+    title: 'Resident Crew',
   },
   other: {
     'mobile-web-app-capable': 'yes',
