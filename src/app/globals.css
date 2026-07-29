@@ -501,67 +501,6 @@ a {
   will-change: transform, opacity;
 }
 
-/* Industry Profiles Nav Panel */
-.nav-panel {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(212, 175, 55, 0.25);
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.nav-title {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--gold-primary);
-  margin-bottom: 0.75rem;
-}
-
-.nav-profile-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.75rem;
-}
-
-.nav-profile-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-}
-
-.nav-profile-card:hover {
-  background: rgba(212, 175, 55, 0.1);
-  border-color: rgba(212, 175, 55, 0.3);
-  transform: translateY(-2px);
-}
-
-.nav-profile-card.active {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(175, 141, 35, 0.05) 100%);
-  border: 1px solid var(--gold-primary);
-  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.2);
-}
-
-.nav-profile-name {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--foreground);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.nav-profile-desc {
-  font-size: 0.725rem;
-  color: #a1a1aa;
-  margin-top: 0.25rem;
-}
 
 
 
