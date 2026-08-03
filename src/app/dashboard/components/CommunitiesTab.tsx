@@ -1,114 +1,91 @@
 'use client'
 
-import React, { useState } from 'react'
-import { MapPin, Plus, LogIn, Key, Lock } from 'lucide-react'
-import type { Community } from '../../../store'
+import React from 'react'
+import { MapPin, Users, Plus, ShieldCheck, ArrowRight, Info, Check } from 'lucide-react'
+
+interface Community {
+  id: string
+  name: string
+  kind: 'street' | 'block' | 'complex' | 'estate' | 'suburb'
+  suburb: string
+  memberCount: number
+}
 
 interface CommunitiesTabProps {
   communities: Community[]
   memberOf: string[]
   currentUserId: string
-  onCreate: (args: { name: string; kind: 'street' | 'block' | 'complex' | 'estate' | 'suburb'; suburb: string }) => void
-  onJoin: (communityId: string) => void
-  onLeave: (communityId: string) => void
-  onRedeem: (code: string) => void
-  styles: Record<string, React.CSSProperties>
+  onJoin?: (id: string) => void
+  onRegisterGroup?: () => void
 }
-
-const KINDS = ['street', 'block', 'complex', 'estate', 'suburb'] as const
 
 export default function CommunitiesTab({
   communities,
   memberOf,
-  onCreate,
   onJoin,
-  onLeave,
-  onRedeem,
-  styles
+  onRegisterGroup
 }: CommunitiesTabProps) {
-  const [showCreate, setShowCreate] = useState(false)
-  const [name, setName] = useState('')
-  const [kind, setKind] = useState<(typeof KINDS)[number]>('street')
-  const [suburb, setSuburb] = useState('')
-  const [code, setCode] = useState('')
-
   return (
-    <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem' }}>
-          <h3 style={{ ...styles.panelTitleStyle, borderBottom: 'none', margin: 0 }}>Your street, your block</h3>
-          <button
-            onClick={() => setShowCreate(v => !v)}
-            className="btn-gold"
-            style={{ marginLeft: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer' }}
-          >
-            <Plus size={12} style={{ verticalAlign: 'middle' }} /> Start one
-          </button>
+    <div className="space-y-6">
+      <div className="glass-panel p-6">
+        <div className="flex justify-between items-center mb-10">
+           <div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                 <Users size={24} className="text-gold-primary" /> Community Groups
+              </h3>
+              <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-black opacity-60">Organize and protect your immediate neighbors.</p>
+           </div>
+           <button
+              onClick={() => onRegisterGroup?.()}
+              className="bg-gold-primary text-black font-black px-4 py-2 rounded-lg text-xs uppercase tracking-widest transition-all hover:bg-gold-secondary shadow-lg shadow-gold-primary/10 flex items-center gap-2"
+           >
+              <Plus size={16}/> Register Group
+           </button>
         </div>
 
-        <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 1rem 0' }}>
-          A community scopes everything else — notices, alerts, the market — to the people who actually live near you.
-        </p>
-
-        {showCreate && (
-          <form
-            onSubmit={e => {
-              e.preventDefault()
-              if (!name.trim()) return
-              onCreate({ name, kind, suburb })
-              setName(''); setSuburb(''); setShowCreate(false)
-            }}
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.2rem' }}
-          >
-            <label htmlFor="com-name" style={{ fontSize: '0.75rem', color: '#888' }}>Name</label>
-            <input id="com-name" value={name} onChange={e => setName(e.target.value)}
-                   placeholder="Zone 5, Ivory Park" style={styles.inputStyle} required />
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <select id="com-kind" value={kind} onChange={e => setKind(e.target.value as typeof kind)}
-                      style={{ ...styles.inputStyle, flex: 1 }} aria-label="Community kind">
-                {KINDS.map(k => <option key={k} value={k}>{k}</option>)}
-              </select>
-              <input id="com-suburb" value={suburb} onChange={e => setSuburb(e.target.value)}
-                     placeholder="Suburb" style={{ ...styles.inputStyle, flex: 1 }} />
-            </div>
-            <button type="submit" className="btn-gold" style={{ padding: '0.6rem', cursor: 'pointer' }}>
-              Create — you&apos;ll be its founder
-            </button>
-          </form>
-        )}
-
         {communities.length === 0 ? (
-          <div style={styles.emptyStateStyle}>
-            <MapPin size={28} color="#D4AF37" />
-            <p>No communities near you yet. Start the first one.</p>
+          <div className="py-12 text-center text-gray-500">
+             <Info size={32} className="mx-auto mb-2 opacity-20" />
+             <p>No community groups found in your immediate area.</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-            {communities.map(c => {
-              const joined = memberOf.includes(c.id)
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {communities.map(community => {
+              const isMember = memberOf.includes(community.id)
               return (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <MapPin size={18} color="#D4AF37" />
-                  <div style={{ flex: 1 }}>
-                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary, #fff)' }}>{c.name}</strong>
-                    <div style={{ fontSize: '0.7rem', color: '#888' }}>{c.suburb}</div>
-                  </div>
-                  {joined ? (
-                    <button
-                      onClick={() => onLeave(c.id)}
-                      style={{ padding: '0.3rem 0.7rem', fontSize: '0.7rem', cursor: 'pointer', background: 'transparent', border: '1px solid #666', color: '#aaa', borderRadius: '4px' }}
-                    >
-                      Leave
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => onJoin(c.id)}
-                      className="btn-gold"
-                      style={{ padding: '0.3rem 0.7rem', fontSize: '0.7rem', cursor: 'pointer' }}
-                    >
-                      <LogIn size={12} style={{ verticalAlign: 'middle' }} /> Join
-                    </button>
-                  )}
+                <div key={community.id} className={`glass-panel p-5 flex items-center justify-between group hover:border-gold-primary/30 transition-all ${isMember ? 'border-gold-primary/20 bg-gold-primary/5' : 'hover:bg-white/2'}`}>
+                   <div className="flex items-center gap-4">
+                      <div className={`p-4 rounded-2xl transition-all duration-300 ${isMember ? 'bg-gold-primary text-black scale-105 shadow-lg shadow-gold-primary/20' : 'bg-white/5 text-gray-400 group-hover:text-white group-hover:bg-white/10'}`}>
+                         <MapPin size={24} />
+                      </div>
+                      <div className="space-y-1">
+                         <h4 className="font-black text-white text-lg flex items-center gap-2 tracking-tight">
+                            {community.name}
+                            {isMember && <ShieldCheck size={16} className="text-gold-primary" />}
+                         </h4>
+                         <div className="flex items-center gap-3 text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                            <span className="bg-white/5 px-2 py-0.5 rounded text-gray-400">{community.kind}</span>
+                            <span className="text-gold-primary/40">•</span>
+                            <span>{community.suburb}</span>
+                            <span className="text-gold-primary/40">•</span>
+                            <span className="text-white/40">{community.memberCount} MEMBERS</span>
+                         </div>
+                      </div>
+                   </div>
+
+                   {isMember ? (
+                     <span className="flex items-center gap-1 text-[10px] text-gold-primary font-black bg-gold-primary/10 px-3 py-1.5 rounded-full border border-gold-primary/20 uppercase tracking-widest">
+                        <Check size={12} /> Active Member
+                     </span>
+                   ) : (
+                     <button
+                        onClick={() => onJoin?.(community.id)}
+                        className="bg-white/5 hover:bg-gold-primary hover:text-black text-gray-300 p-2.5 rounded-xl border border-white/10 transition-all hover:border-gold-primary active:scale-90"
+                        title="Join Group"
+                     >
+                        <ArrowRight size={20} />
+                     </button>
+                   )}
                 </div>
               )
             })}
@@ -116,51 +93,15 @@ export default function CommunitiesTab({
         )}
       </div>
 
-      {/* Private communities are invite-only */}
-      <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
-        <h3 style={{ ...styles.panelTitleStyle, borderBottom: 'none', marginTop: 0 }}>
-          <Lock size={14} style={{ verticalAlign: 'middle', marginRight: '0.4rem' }} />
-          Have an invite code?
-        </h3>
-        <form
-          onSubmit={e => {
-            e.preventDefault()
-            if (!code.trim()) return
-            onRedeem(code)
-            setCode('')
-          }}
-          style={{ display: 'flex', gap: '0.5rem' }}
-        >
-          <label htmlFor="invite-code" style={{ display: 'none' }}>Invite code</label>
-          <input
-            id="invite-code"
-            value={code}
-            onChange={e => setCode(e.target.value.toUpperCase())}
-            placeholder="A1B2C3D4"
-            style={{ ...styles.inputStyle, flex: 1, letterSpacing: '0.1em' }}
-          />
-          <button type="submit" className="btn-gold" style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}>
-            <Key size={12} style={{ verticalAlign: 'middle' }} /> Redeem
-          </button>
-        </form>
-      </div>
-
-      {/* Connection Density Booster Card */}
-      <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px', background: 'rgba(212,175,55,0.04)', border: '1px border rgba(212,175,55,0.15)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h4 style={{ margin: 0, color: '#fff', fontSize: '0.9rem' }}>Suburb Connection Density Boost</h4>
-            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: '#aaa' }}>
-              Linking with neighbors scales your community multiplier and unlocks local trade perks.
-            </p>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '0.65rem', color: '#888', textTransform: 'uppercase', display: 'block' }}>XP Multiplier</span>
-            <strong style={{ fontSize: '1.1rem', color: '#D4AF37' }}>
-              {(memberOf.length > 0 ? (memberOf.length * 35 >= 100 ? 1.5 : memberOf.length * 35 >= 50 ? 1.2 : 1.0) : 1.0).toFixed(1)}x
-            </strong>
-          </div>
-        </div>
+      <div className="glass-panel p-8 bg-blue-500/5 border-blue-500/10 flex flex-col md:flex-row gap-6 items-center md:items-start group/verified">
+         <div className="p-4 bg-blue-500/20 rounded-2xl h-fit shadow-xl shadow-blue-900/10 group-hover/verified:bg-blue-500/30 transition-colors">
+            <ShieldCheck size={32} className="text-blue-400" />
+         </div>
+         <div className="text-center md:text-left space-y-2">
+            <h4 className="font-black text-white uppercase tracking-widest">Trust & Hierarchy Audit</h4>
+            <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">Verified groups have higher reputation limits and access to emergency dispatch features. Ensure your profile is verified to join premium complex groups or to apply for Street Captain status.</p>
+            <button className="text-blue-400 text-xs font-black uppercase tracking-widest hover:underline pt-2">View Verification Requirements →</button>
+         </div>
       </div>
     </div>
   )

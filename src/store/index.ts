@@ -232,6 +232,7 @@ const initialServices: HandymanService[] = []
 export interface Community {
   id: string
   name: string
+  kind: 'street' | 'block' | 'complex' | 'estate' | 'suburb'
   description: string
   location: string
   suburb: string
@@ -243,9 +244,13 @@ export interface Alert {
   id: string
   title: string
   description: string
+  // res_alerts.kind is the real column driving res_broadcast_alert's fan-out;
+  // category is a coarser display bucket derived from it.
+  kind: 'panic' | 'incident' | 'suspicious' | 'safe_walk'
   category: 'security' | 'fire' | 'medical' | 'utility' | 'other'
   severity: 'info' | 'warning' | 'critical' | 'panic'
   status: 'active' | 'resolved'
+  suburb: string
   createdBy: string
   createdAt: string
   lat: number
@@ -259,6 +264,7 @@ export interface MarketItem {
   price: number
   currency: string
   category: string
+  suburb: string
   imageUrl?: string
   status: 'available' | 'sold'
   createdBy: string
@@ -669,9 +675,20 @@ const communitySlice = createSlice({
     lostFound: [] as LostFound[],
     careCircle: [] as CareCircleCheck[],
     sharedResources: [] as SharedResource[],
-    neighbourhoodStatus: [] as NeighbourhoodStatus[]
+    neighbourhoodStatus: [] as NeighbourhoodStatus[],
+    // Community ids the signed-in user actually belongs to, and a member count
+    // per community — both derived from res_community_members, which nothing
+    // previously read on the client (the "Communities" tab used to hardcode []).
+    myCommunityIds: [] as string[],
+    communityMemberCounts: {} as Record<string, number>
   },
   reducers: {
+    setMyCommunityIds: (state, action: PayloadAction<string[]>) => {
+      state.myCommunityIds = action.payload.map(toUUID)
+    },
+    setCommunityMemberCounts: (state, action: PayloadAction<Record<string, number>>) => {
+      state.communityMemberCounts = action.payload
+    },
     setTools: (state, action: PayloadAction<ToolItem[]>) => {
       state.tools = action.payload.map(t => ({
         ...t,
@@ -1102,7 +1119,9 @@ export const {
   updateSharedResourceStatus,
   updateNeighbourhoodStatus,
   updateVendorVerification,
-  updateResourceVerification
+  updateResourceVerification,
+  setMyCommunityIds,
+  setCommunityMemberCounts
 } = communitySlice.actions
 
 export const {
@@ -1117,7 +1136,7 @@ export const {
 // shared profiles trust columns (CONTRACT.md §3) since res_* tables store UUIDs.
 export const fetchSupabaseData = createAsyncThunk(
   'data/fetchSupabaseData',
-  async (_, { dispatch }) => {
+  async (_, { dispatch, getState }) => {
     if (!supabase) return
     dispatch(setDataStatus({ status: 'loading', failedTables: [] }))
     const failedTables: string[] = []
@@ -1402,12 +1421,33 @@ export const fetchSupabaseData = createAsyncThunk(
       dispatch(setCommunities(data.map(item => ({
         id: item.id,
         name: item.name,
+        kind: (item.kind || 'suburb') as Community['kind'],
         description: '',
         location: item.suburb || '',
         suburb: item.suburb || '',
         createdBy: item.created_by,
         createdAt: item.created_at
       }))))
+    }
+
+    // Community membership: who am I in, and how many members does each have.
+    // res_community_members select-RLS is `using (true)`, so any signed-in user
+    // can read every row; the "Communities" tab used to hardcode both as empty.
+    const fetchCommunityMembership = async () => {
+      const { data, error } = await supabase!.from('res_community_members').select('community_id, user_id')
+      if (error) return markFailed('res_community_members', error.message)
+      if (!data) return
+
+      const counts: Record<string, number> = {}
+      const mine: string[] = []
+      const myId = (getState() as RootState).auth.currentUser?.id
+      for (const row of data) {
+        const cid = String(row.community_id)
+        counts[cid] = (counts[cid] || 0) + 1
+        if (myId && toUUID(String(row.user_id)) === toUUID(myId)) mine.push(cid)
+      }
+      dispatch(setCommunityMemberCounts(counts))
+      dispatch(setMyCommunityIds(mine))
     }
 
     // 13. Alerts
@@ -1419,9 +1459,11 @@ export const fetchSupabaseData = createAsyncThunk(
         id: item.id,
         title: item.title,
         description: item.description || '',
+        kind: (item.kind || 'incident') as Alert['kind'],
         category: (item.kind === 'panic' || item.kind === 'suspicious' ? 'security' : 'other') as Alert['category'],
         severity: ({ low: 'info', medium: 'warning', high: 'critical', critical: 'panic' }[String(item.severity)] || 'warning') as Alert['severity'],
         status: (item.status === 'active' ? 'active' : 'resolved') as Alert['status'],
+        suburb: item.suburb || '',
         createdBy: item.user_id,
         createdAt: item.created_at,
         lat: Number(item.lat || 0),
@@ -1441,6 +1483,7 @@ export const fetchSupabaseData = createAsyncThunk(
         price: Number(item.price || 0),
         currency: item.currency || 'ZAR',
         category: item.category || '',
+        suburb: item.suburb || '',
         imageUrl: (item.images && item.images[0]) || undefined,
         status: (item.status === 'available' ? 'available' : 'sold') as MarketItem['status'],
         createdBy: item.user_id,
@@ -1602,6 +1645,7 @@ export const fetchSupabaseData = createAsyncThunk(
       fetchDisputes(),
       fetchNotices(),
       fetchCommunities(),
+      fetchCommunityMembership(),
       fetchAlerts(),
       fetchMarketItems(),
       fetchVendors(),

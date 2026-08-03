@@ -150,7 +150,7 @@ export default function Home() {
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <span style={{ background: '#312e81', color: '#c7d2fe', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>3</span>
-                <p style={{ fontSize: '0.85rem', color: '#d1d5db', margin: 0 }}>Scroll down and select <strong>"Add to Home Screen"</strong>.</p>
+                <p style={{ fontSize: '0.85rem', color: '#d1d5db', margin: 0 }}>Scroll down and select <strong>&quot;Add to Home Screen&quot;</strong>.</p>
               </div>
             </div>
 

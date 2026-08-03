@@ -285,7 +285,7 @@ export const noticeToRow = (notice: NoticeEvent): DbRow => ({
 export const communityToRow = (c: Community): DbRow => ({
   id: toUUID(c.id),
   name: c.name,
-  kind: 'suburb',
+  kind: c.kind || 'suburb',
   suburb: c.suburb,
   created_by: toUUID(c.createdBy)
 })
@@ -300,11 +300,12 @@ const ALERT_SEVERITY: Record<Alert['severity'], string> = {
 export const alertToRow = (a: Alert): DbRow => ({
   id: toUUID(a.id),
   user_id: toUUID(a.createdBy),
-  kind: a.severity === 'panic' ? 'panic' : 'incident',
+  kind: a.kind || (a.severity === 'panic' ? 'panic' : 'incident'),
   title: a.title,
   description: a.description,
   severity: ALERT_SEVERITY[a.severity] || 'medium',
   status: a.status === 'resolved' ? 'resolved' : 'active',
+  suburb: a.suburb || null,
   lat: a.lat,
   lon: a.lon
 })

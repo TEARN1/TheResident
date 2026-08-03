@@ -185,6 +185,10 @@ export interface StatusReport {
   reporterId: string
   status: 'active' | 'restored' | 'outage'
   createdAt: string
+  // Which utility this report is about — optional so existing single-utility
+  // callers (and older tests) don't have to supply it; SafetyTab filters by it
+  // to keep power/water/network consensus independent of each other.
+  kind?: 'power' | 'water' | 'network'
 }
 
 export interface Consensus {

@@ -23,15 +23,20 @@ export interface SharedZone {
   lon: number
 }
 
-function geojsonPoint(g: any): [number, number] | null {
+interface GeoJsonGeometry {
+  type?: string
+  coordinates?: unknown
+}
+
+function geojsonPoint(g: GeoJsonGeometry | null): [number, number] | null {
   if (!g) return null
-  const c =
+  const c: unknown =
     g.type === 'Point' ? g.coordinates :
-    g.type === 'LineString' ? g.coordinates?.[0] :
-    g.type === 'Polygon' ? g.coordinates?.[0]?.[0] :
-    g.type === 'MultiPolygon' ? g.coordinates?.[0]?.[0]?.[0] :
+    g.type === 'LineString' ? (g.coordinates as unknown[] | undefined)?.[0] :
+    g.type === 'Polygon' ? ((g.coordinates as unknown[][] | undefined)?.[0])?.[0] :
+    g.type === 'MultiPolygon' ? (((g.coordinates as unknown[][][] | undefined)?.[0])?.[0])?.[0] :
     null
-  if (!c || c.length < 2) return null
+  if (!Array.isArray(c) || c.length < 2) return null
   return [Number(c[1]), Number(c[0])] // [lat, lon]
 }
 
@@ -48,7 +53,7 @@ export async function fetchSharedZones(
     if (error) throw error
     const out: SharedZone[] = []
     for (const z of data || []) {
-      let g: any = null
+      let g: GeoJsonGeometry | null = null
       try { g = typeof z.geojson === 'string' ? JSON.parse(z.geojson) : z.geojson } catch { /* skip */ }
       const p = geojsonPoint(g)
       if (!p) continue

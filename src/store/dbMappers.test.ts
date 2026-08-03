@@ -121,18 +121,18 @@ test('dispute payloads never send placeholder ids to profiles FK columns', () =>
 
 test('phase 4 community payloads only use real schema columns', () => {
   assertKeysInSchema('res_communities', db.communityToRow({
-    id: 'com-1', name: 'n', description: 'd', location: 'l', suburb: 's', createdBy: UID, createdAt: '2026-01-01'
+    id: 'com-1', name: 'n', kind: 'street', description: 'd', location: 'l', suburb: 's', createdBy: UID, createdAt: '2026-01-01'
   }))
   const alert = db.alertToRow({
-    id: 'al-1', title: 't', description: 'd', category: 'security', severity: 'panic',
-    status: 'active', createdBy: UID, createdAt: '2026-01-01', lat: 0, lon: 0
+    id: 'al-1', title: 't', description: 'd', kind: 'panic', category: 'security', severity: 'panic',
+    status: 'active', suburb: 'Ivory Park', createdBy: UID, createdAt: '2026-01-01', lat: 0, lon: 0
   })
   assertKeysInSchema('res_alerts', alert)
   assert.strictEqual(alert.kind, 'panic')
   assert.strictEqual(alert.severity, 'critical')
 
   const market = db.marketItemToRow({
-    id: 'mk-1', title: 't', description: 'd', price: 10, currency: 'ZAR', category: 'c',
+    id: 'mk-1', title: 't', description: 'd', price: 10, currency: 'ZAR', category: 'c', suburb: 'Ivory Park',
     imageUrl: 'http://x/img.png', status: 'sold', createdBy: UID, createdAt: '2026-01-01'
   })
   assertKeysInSchema('res_market_items', market)

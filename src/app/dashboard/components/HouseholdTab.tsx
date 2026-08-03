@@ -1,31 +1,34 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Home, Users, RotateCw, Check, Award } from 'lucide-react'
-import { fairnessNote, reputationTier, type FairnessRow } from '../../../utils/logic'
-import type { ChoreAssignment } from '../../../store'
+import React from 'react'
+import { Home, Users, Award, RotateCcw, CheckCircle2, Star, Shield, Info } from 'lucide-react'
 
-interface HouseholdMember {
+interface Member {
   userId: string
   name: string
   role: string
 }
 
-interface HouseholdTabProps {
-  /** The listing that forms this household — null when the user has none. */
-  householdListingId: string | null
-  householdName: string
-  members: HouseholdMember[]
-  chores: ChoreAssignment[]
-  reputationScores: Record<string, number>
-  currentUserId: string
-  onRotate: (tasks: string[], days: string[]) => void
-  onComplete: (choreId: string) => void
-  styles: Record<string, React.CSSProperties>
+interface Chore {
+  id: string
+  title: string
+  assignedTo: string
+  status: 'pending' | 'completed'
+  dueDate: string
+  points: number
 }
 
-const DEFAULT_TASKS = ['Kitchen', 'Bathroom', 'Bins', 'Yard', 'Common area']
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+interface HouseholdTabProps {
+  householdListingId: string | null
+  householdName: string
+  members: Member[]
+  chores: Chore[]
+  reputationScores: Record<string, number>
+  currentUserId: string
+  onRotate?: (tasks: string[], days: string[]) => void
+  onComplete?: (id: string) => void
+  styles: Record<string, React.CSSProperties>
+}
 
 export default function HouseholdTab({
   householdListingId,
@@ -34,185 +37,113 @@ export default function HouseholdTab({
   chores,
   reputationScores,
   currentUserId,
-  onRotate,
-  onComplete,
-  styles
+  onComplete
 }: HouseholdTabProps) {
-  const [tasks, setTasks] = useState<string[]>(DEFAULT_TASKS)
-  const [newTask, setNewTask] = useState('')
-
-  // No household = no chores. This is the gate that was missing: chores need a
-  // listing_id, and nothing in the app ever supplied one.
   if (!householdListingId) {
     return (
-      <div className="glass-panel" style={{ padding: '2rem', borderRadius: '12px', marginTop: '1rem' }}>
-        <div style={styles.emptyStateStyle}>
-          <Home size={32} color="#D4AF37" />
-          <p style={{ fontWeight: 'bold', color: 'var(--text-primary, #fff)' }}>You are not in a household yet</p>
-          <p style={{ fontSize: '0.8rem', color: '#888', maxWidth: '420px', margin: '0.5rem auto' }}>
-            A household forms when a landlord approves your room application — or, if you are a landlord,
-            when you list a room. Chores, the rota and household disputes unlock then.
-          </p>
-        </div>
+      <div className="glass-panel p-12 text-center">
+         <Home size={48} className="mx-auto mb-4 text-gray-700" />
+         <h3 className="text-xl font-bold text-white mb-2">No Active Household</h3>
+         <p className="text-gray-500 max-w-md mx-auto">
+            Once you are verified and move into a room, your household roster, chore scheduler, and reputation tracking will appear here.
+         </p>
       </div>
     )
   }
 
-  const nameOf = (id: string) => members.find(m => m.userId === id)?.name || 'Housemate'
-
-  const fairnessRows: FairnessRow[] = members.map(m => ({
-    userId: m.userId,
-    completed: chores.filter(c => c.roommateId === m.userId && c.status === 'completed').length,
-    assigned: chores.filter(c => c.roommateId === m.userId).length
-  }))
-  const imbalance = fairnessNote(fairnessRows, nameOf)
-
   return (
-    <div className="responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
-      {/* Rota */}
-      <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.8rem' }}>
-          <h3 style={{ ...styles.panelTitleStyle, borderBottom: 'none', margin: 0 }}>
-            {householdName || 'Your household'}
-          </h3>
-          <button
-            onClick={() => onRotate(tasks, DAYS.slice(0, tasks.length))}
-            className="btn-gold"
-            style={{ marginLeft: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer' }}
-          >
-            <RotateCw size={12} style={{ verticalAlign: 'middle' }} /> Rotate this week
-          </button>
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+           <h2 className="text-2xl font-bold text-white">{householdName}</h2>
+           <p className="text-gray-500 text-sm">Household Management & Shared Responsibilities</p>
         </div>
-
-        <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 1rem 0' }}>
-          Tasks are dealt round-robin across the household, and the starting person shifts each week
-          so the same one isn&apos;t always first.
-        </p>
-
-        {/* Task editor */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.8rem' }}>
-          {tasks.map(t => (
-            <span
-              key={t}
-              style={{
-                fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '4px',
-                background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.4)', color: '#D4AF37'
-              }}
-            >
-              {t}
-              <button
-                onClick={() => setTasks(ts => ts.filter(x => x !== t))}
-                aria-label={`Remove ${t}`}
-                style={{ background: 'none', border: 'none', color: '#D4AF37', cursor: 'pointer', marginLeft: '0.3rem', padding: 0 }}
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-        <form
-          onSubmit={e => {
-            e.preventDefault()
-            const t = newTask.trim()
-            if (!t || tasks.includes(t)) return
-            setTasks(ts => [...ts, t])
-            setNewTask('')
-          }}
-          style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem' }}
-        >
-          <label htmlFor="chore-new" className="sr-only" style={{ display: 'none' }}>Add a task</label>
-          <input
-            id="chore-new"
-            value={newTask}
-            onChange={e => setNewTask(e.target.value)}
-            placeholder="Add a task"
-            style={{ ...styles.inputStyle, flex: 1 }}
-          />
-          <button type="submit" style={{ ...styles.inputStyle, cursor: 'pointer', width: 'auto', padding: '0 0.8rem' }}>Add</button>
-        </form>
-
-        {chores.length === 0 ? (
-          <div style={styles.emptyStateStyle}>
-            <Users size={28} color="#D4AF37" />
-            <p>No chores assigned yet. Hit &ldquo;Rotate this week&rdquo;.</p>
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#D4AF37' }}>
-                  <th style={{ padding: '0.6rem 0.4rem' }}>Day</th>
-                  <th style={{ padding: '0.6rem 0.4rem' }}>Who</th>
-                  <th style={{ padding: '0.6rem 0.4rem' }}>Task</th>
-                  <th style={{ padding: '0.6rem 0.4rem', textAlign: 'right' }}>Done?</th>
-                </tr>
-              </thead>
-              <tbody>
-                {chores.map(chore => (
-                  <tr key={chore.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '0.6rem 0.4rem', fontWeight: 'bold' }}>{chore.dayOfWeek}</td>
-                    <td style={{ padding: '0.6rem 0.4rem' }}>{nameOf(chore.roommateId)}</td>
-                    <td style={{ padding: '0.6rem 0.4rem', color: '#ccc' }}>{chore.taskName}</td>
-                    <td style={{ padding: '0.6rem 0.4rem', textAlign: 'right' }}>
-                      {chore.status === 'completed' ? (
-                        <Check size={14} color="#22c55e" />
-                      ) : chore.roommateId === currentUserId ? (
-                        <button
-                          className="btn-gold"
-                          onClick={() => onComplete(chore.id)}
-                          style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', cursor: 'pointer' }}
-                        >
-                          Done
-                        </button>
-                      ) : (
-                        <span style={{ color: '#666', fontSize: '0.7rem' }}>pending</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <button className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 px-4 py-2 rounded-lg text-sm transition-all">
+           <RotateCcw size={16} /> Rotate Chores
+        </button>
       </div>
 
-      {/* Roster + standing */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
-          <h3 style={{ ...styles.panelTitleStyle, borderBottom: 'none', marginTop: 0 }}>Housemates</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {members.map(m => (
-              <div key={m.userId} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.7rem', borderRadius: '6px', background: 'rgba(0,0,0,0.2)' }}>
-                <Users size={14} color="#D4AF37" />
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-primary, #fff)' }}>{m.name}</span>
-                <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#888' }}>{m.role}</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+         {/* Roster & Reputation */}
+         <div className="space-y-6">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+               <Users size={20} className="text-gold-primary" /> Housemates
+            </h3>
+            <div className="glass-panel p-4 space-y-4">
+               {members.map(member => (
+                 <div key={member.userId} className={`flex items-center justify-between p-3 rounded-xl border ${member.userId === currentUserId ? 'bg-gold-primary/5 border-gold-primary/20' : 'bg-black/20 border-white/5'}`}>
+                    <div className="flex items-center gap-3">
+                       <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-xs font-bold text-gold-primary">
+                          {member.name.charAt(0)}
+                       </div>
+                       <div>
+                          <p className="text-sm font-bold text-white">{member.name} {member.userId === currentUserId && '(You)'}</p>
+                          <p className="text-[10px] text-gray-500 capitalize">{member.role}</p>
+                       </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                       <span className="text-xs font-bold text-gold-primary flex items-center gap-1">
+                          <Star size={10} className="fill-gold-primary" /> {reputationScores[member.userId] || 0} XP
+                       </span>
+                    </div>
+                 </div>
+               ))}
+            </div>
+
+            <div className="glass-panel p-4 bg-blue-500/5 border-blue-500/10">
+               <div className="flex gap-3">
+                  <Shield size={20} className="text-blue-500 shrink-0" />
+                  <div className="space-y-1">
+                     <p className="text-xs font-bold text-white">Trust Level: High</p>
+                     <p className="text-[10px] text-gray-500">Your household has a perfect chore completion rate this month.</p>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         {/* Chore Scheduler */}
+         <div className="lg:col-span-2 space-y-6">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+               <Award size={20} className="text-gold-primary" /> Active Tasks & Chores
+            </h3>
+
+            {chores.length === 0 ? (
+              <div className="glass-panel p-12 text-center text-gray-500">
+                 <Info size={32} className="mx-auto mb-2 opacity-20" />
+                 <p>No chores assigned for this period. Enjoy the break!</p>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
-          <h3 style={{ ...styles.panelTitleStyle, borderBottom: 'none', marginTop: 0 }}>Standing</h3>
-
-          {/* Imbalance is named gently, and only when it's real */}
-          {imbalance && (
-            <p style={{ fontSize: '0.75rem', color: '#D4AF37', background: 'rgba(212,175,55,0.1)', padding: '0.6rem', borderRadius: '6px', margin: '0 0 0.8rem 0' }}>
-              {imbalance}
-            </p>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {members.map(m => (
-              <div key={m.userId} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.7rem', borderRadius: '6px', background: 'rgba(0,0,0,0.2)' }}>
-                <Award size={14} color="#22c55e" />
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-primary, #fff)' }}>{m.name}</span>
-                <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#22c55e' }}>
-                  {reputationTier(reputationScores[m.userId] || 0)}
-                </span>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {chores.map(chore => (
+                   <div key={chore.id} className={`glass-panel p-5 border-l-4 ${chore.status === 'completed' ? 'border-l-green-500 opacity-60' : 'border-l-gold-primary'}`}>
+                      <div className="flex justify-between items-start mb-2">
+                         <h4 className={`font-bold ${chore.status === 'completed' ? 'text-gray-500 line-through' : 'text-white'}`}>{chore.title}</h4>
+                         <span className="text-[10px] bg-gold-primary/10 text-gold-primary px-1.5 py-0.5 rounded">+{chore.points} XP</span>
+                      </div>
+                      <div className="flex justify-between items-end mt-4">
+                         <div className="space-y-1">
+                            <p className="text-[10px] text-gray-500">Assigned to: <span className="text-gray-300 font-bold">{members.find(m => m.userId === chore.assignedTo)?.name || 'Housemate'}</span></p>
+                            <p className="text-[10px] text-gray-500">Due: <span className="text-gray-300">{chore.dueDate}</span></p>
+                         </div>
+                         {chore.status !== 'completed' && chore.assignedTo === currentUserId && (
+                           <button
+                            onClick={() => onComplete?.(chore.id)}
+                            className="bg-gold-primary text-black font-bold px-4 py-1.5 rounded-lg text-[10px] hover:scale-105 transition-transform"
+                           >
+                            Mark Done
+                           </button>
+                         )}
+                         {chore.status === 'completed' && (
+                           <span className="text-green-500 flex items-center gap-1 text-[10px] font-bold">
+                              <CheckCircle2 size={12} /> COMPLETED
+                           </span>
+                         )}
+                      </div>
+                   </div>
+                 ))}
               </div>
-            ))}
-          </div>
-        </div>
+            )}
+         </div>
       </div>
     </div>
   )

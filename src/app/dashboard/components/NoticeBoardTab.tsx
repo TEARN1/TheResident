@@ -1,5 +1,7 @@
-import React from 'react'
-import { t } from '../../../utils/i18n'
+'use client'
+
+import React, { useState } from 'react'
+import { Megaphone, Calendar, Info, Heart, Share2, Check, Plus, X } from 'lucide-react'
 
 interface Notice {
   id: string
@@ -7,7 +9,9 @@ interface Notice {
   description: string
   type: 'notice' | 'event'
   postedBy: string
+  postedById?: string
   timestamp: string
+  eventDate?: string
   vibes?: string[]
   echos?: string[]
   rsvps: string[]
@@ -15,175 +19,143 @@ interface Notice {
 
 interface NoticeBoardTabProps {
   communityNotices: Notice[]
-  currentUser: { name: string; balance: number; id: string } | null
-  noticeTitle: string
-  setNoticeTitle: (val: string) => void
-  noticeType: 'notice' | 'event'
-  setNoticeType: (val: 'notice' | 'event') => void
-  noticeEventDate: string
-  setNoticeEventDate: (val: string) => void
-  noticeDesc: string
-  setNoticeDesc: (val: string) => void
-  handleVibeNotice: (id: string) => void
-  handleEchoNotice: (id: string) => void
-  handleRSVPToEvent: (id: string) => void
-  handlePostNotice: (e: React.FormEvent) => void
-  lang: 'en' | 'zu' | 'xh' | 'af'
-  styles: Record<string, React.CSSProperties>
+  currentUser: { name: string; balance: number; id: string; role: string } | null
+  handleVibeNotice?: (id: string) => void
+  handleEchoNotice?: (id: string) => void
+  handleRSVPToEvent?: (id: string) => void
+  handlePostNotice?: (e: React.FormEvent) => void
 }
 
 export default function NoticeBoardTab({
   communityNotices,
-  currentUser,
-  noticeTitle,
-  setNoticeTitle,
-  noticeType,
-  setNoticeType,
-  noticeEventDate,
-  setNoticeEventDate,
-  noticeDesc,
-  setNoticeDesc,
   handleVibeNotice,
   handleEchoNotice,
   handleRSVPToEvent,
-  handlePostNotice,
-  lang,
-  styles
+  handlePostNotice
 }: NoticeBoardTabProps) {
+  const [showForm, setShowForm] = useState(false)
+  const [title, setTitle] = useState('')
+  const [desc, setDesc] = useState('')
+  const [type, setType] = useState<'notice' | 'event'>('notice')
+
+  const onPostSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim() || !desc.trim()) return
+    handlePostNotice?.(e)
+    setShowForm(false)
+    setTitle('')
+    setDesc('')
+  }
+
   return (
-    <div className="responsive-two-col" style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', marginTop: '1rem' }}>
-      {/* Notices List */}
-      <div>
-        <h3 style={{ ...styles.panelTitleStyle, marginTop: 0 }}>{t('bulletins', lang)}</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {communityNotices.map(notice => (
-            <div key={notice.id} className="glass-panel" style={{ padding: '1.2rem', borderRadius: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ 
-                  fontSize: '0.65rem', 
-                  fontWeight: 'bold', 
-                  padding: '0.1rem 0.4rem', 
-                  borderRadius: '4px',
-                  background: notice.type === 'event' ? 'rgba(212, 175, 55, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                  border: `1px solid ${notice.type === 'event' ? '#D4AF37' : '#3b82f6'}`,
-                  color: notice.type === 'event' ? '#D4AF37' : '#3b82f6'
-                }}>
-                  {notice.type.toUpperCase()}
-                </span>
-                <span style={{ fontSize: '0.7rem', color: '#888' }}>
-                  Posted: {new Date(notice.timestamp).toLocaleDateString()} by {notice.postedBy}
-                </span>
+    <div className="space-y-6">
+      <div className="glass-panel p-6">
+        <div className="flex justify-between items-center mb-8">
+           <div>
+              <h3 className="text-xl font-bold text-gold-primary flex items-center gap-2">
+                 <Megaphone size={20} className="text-gold-primary" /> Community Announcements
+              </h3>
+              <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-black opacity-60">Stay updated with neighborhood events and official notices.</p>
+           </div>
+           <button
+              onClick={() => setShowForm(!showForm)}
+              className="bg-gold-primary text-black font-black px-4 py-2 rounded-lg text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-gold-primary/10 hover:bg-gold-secondary"
+           >
+              {showForm ? <X size={16} /> : <Plus size={16} />}
+              {showForm ? 'Cancel' : 'Post Notice'}
+           </button>
+        </div>
+
+        {showForm && (
+           <form
+              onSubmit={onPostSubmit}
+              className="bg-black/40 border border-gold-primary/20 rounded-2xl p-6 mb-8 space-y-4 shadow-[0_0_20px_rgba(212,175,55,0.05)] animate-in fade-in slide-in-from-top-4 duration-300"
+           >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Notice Title</label>
+                    <input
+                       value={title} onChange={e => setTitle(e.target.value)}
+                       placeholder="e.g. Street Meeting Saturday"
+                       className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50 transition-all font-medium"
+                    />
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Announcement Type</label>
+                    <select
+                       value={type} onChange={e => setType(e.target.value as 'notice' | 'event')}
+                       className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50 transition-all font-medium cursor-pointer"
+                    >
+                       <option value="notice">General Notice</option>
+                       <option value="event">Community Event</option>
+                    </select>
+                 </div>
               </div>
-              <h4 style={{ margin: '0 0 0.5rem 0', color: '#fff', fontSize: '0.95rem' }}>{notice.title}</h4>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#ccc', lineHeight: '1.4' }}>{notice.description}</p>
-              
-              <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <button 
-                    className="btn-gold" 
-                    style={{ 
-                      padding: '0.2rem 0.5rem', 
-                      fontSize: '0.7rem', 
-                      background: notice.vibes?.includes(currentUser?.name || '') ? '#D4AF37' : 'rgba(255,255,255,0.05)',
-                      color: notice.vibes?.includes(currentUser?.name || '') ? '#000' : '#D4AF37',
-                      border: '1px solid rgba(212,175,55,0.2)',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => handleVibeNotice(notice.id)}
-                  >
-                    ❤️ vibe ({notice.vibes?.length || 0})
-                  </button>
-                  <button 
-                    className="btn-gold" 
-                    style={{ 
-                      padding: '0.2rem 0.5rem', 
-                      fontSize: '0.7rem', 
-                      background: notice.echos?.includes(currentUser?.name || '') ? '#D4AF37' : 'rgba(255,255,255,0.05)',
-                      color: notice.echos?.includes(currentUser?.name || '') ? '#000' : '#D4AF37',
-                      border: '1px solid rgba(212,175,55,0.2)',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => handleEchoNotice(notice.id)}
-                  >
-                    📢 echo ({notice.echos?.length || 0})
-                  </button>
+              <div className="space-y-2">
+                 <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Message Body</label>
+                 <textarea
+                    value={desc} onChange={e => setDesc(e.target.value)}
+                    placeholder="Provide important details for your neighbors..."
+                    className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 transition-all font-medium"
+                 />
+              </div>
+              <button type="submit" className="w-full bg-gold-primary text-black font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all hover:bg-gold-secondary shadow-lg shadow-gold-primary/10 active:scale-95">Publish to Community Wall</button>
+           </form>
+        )}
+
+        {communityNotices.length === 0 ? (
+          <div className="py-20 text-center text-gray-500 bg-white/2 rounded-3xl border border-dashed border-white/5">
+             <Info size={48} className="mx-auto mb-4 opacity-10" />
+             <p className="text-sm uppercase tracking-widest font-bold">Your neighborhood wall is clear</p>
+             <p className="text-xs text-gray-600 mt-1 font-medium">Be the first to post a notice or event!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {communityNotices.map(notice => (
+              <div key={notice.id} className="bg-black/40 border border-white/5 rounded-2xl p-6 flex flex-col gap-5 hover:border-gold-primary/20 transition-all group shadow-lg hover:shadow-gold-primary/5">
+                <div className="flex justify-between items-start">
+                  <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border transition-all ${notice.type === 'event' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 group-hover:bg-purple-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20 group-hover:bg-blue-500/20'}`}>
+                    {notice.type}
+                  </span>
+                  <span className="text-[10px] text-gray-600 font-mono tracking-tighter opacity-60 font-bold">{new Date(notice.timestamp).toLocaleDateString()}</span>
                 </div>
 
-                {notice.type === 'event' ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#888' }}>
-                      {notice.rsvps.length} attending {notice.rsvps.length > 0 && `(${notice.rsvps.join(', ')})`}
-                    </span>
-                    <button 
-                      className="btn-gold" 
-                      style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', cursor: 'pointer' }}
-                      onClick={() => handleRSVPToEvent(notice.id)}
-                    >
-                      {notice.rsvps.includes(currentUser?.name || '') ? 'Cancel RSVP' : 'RSVP'}
-                    </button>
-                  </div>
-                ) : (
-                  <span style={{ fontSize: '0.7rem', color: '#666' }}>Bulletin Notice</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+                <div className="space-y-2">
+                   <h4 className="text-lg font-black text-white leading-tight group-hover:text-gold-primary transition-colors tracking-tight">{notice.title}</h4>
+                   <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80 font-medium">{notice.description}</p>
+                </div>
 
-      {/* Post Notice Form */}
-      <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px', height: 'fit-content' }}>
-        <h3 style={{ ...styles.panelTitleStyle, borderBottom: 'none', marginBottom: '1rem', marginTop: 0 }}>{t('postAnnouncement', lang)}</h3>
-        <form onSubmit={handlePostNotice} style={styles.formStyleStyle}>
-          <div style={styles.inputGroupStyle}>
-            <label style={styles.labelStyleStyle}>{t('title', lang)}</label>
-            <input 
-              type="text" 
-              required 
-              placeholder="e.g. Water cut this Thursday / Found key ring" 
-              value={noticeTitle}
-              onChange={(e) => setNoticeTitle(e.target.value)}
-              style={styles.modalInputStyle}
-            />
+                {notice.type === 'event' && notice.eventDate && (
+                  <div className="flex items-center gap-3 text-[10px] font-black text-gold-primary bg-gold-primary/5 p-3 rounded-xl border border-gold-primary/10 uppercase tracking-widest shadow-inner">
+                    <Calendar size={14} className="opacity-60" /> <span>Scheduled: <span className="text-white ml-1">{notice.eventDate}</span></span>
+                  </div>
+                )}
+
+                <div className="mt-auto pt-6 border-t border-white/5 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                     <div className="w-7 h-7 bg-gray-800 rounded-xl flex items-center justify-center text-[10px] font-black text-gold-primary transition-colors group-hover:bg-gold-primary group-hover:text-black">
+                        {notice.postedBy.charAt(0)}
+                     </div>
+                     <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest opacity-80">{notice.postedBy}</span>
+                  </div>
+                  <div className="flex gap-4">
+                     <button onClick={() => handleVibeNotice?.(notice.id)} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-pink-500 transition-colors font-black active:scale-90">
+                        <Heart size={18} className="transition-transform group-hover:scale-110" /> <span>{notice.vibes?.length || 0}</span>
+                     </button>
+                     <button onClick={() => handleEchoNotice?.(notice.id)} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-500 transition-colors font-black active:scale-90">
+                        <Share2 size={18} className="transition-transform group-hover:scale-110" /> <span>{notice.echos?.length || 0}</span>
+                     </button>
+                     {notice.type === 'event' && (
+                       <button onClick={() => handleRSVPToEvent?.(notice.id)} className="flex items-center gap-2 text-[10px] text-green-500 bg-green-500/10 px-3 py-1.5 rounded-xl border border-green-500/20 hover:bg-green-500 hover:text-black transition-all font-black uppercase tracking-widest shadow-lg active:scale-90 ml-1">
+                          <Check size={14} /> RSVP <span className="opacity-40">({notice.rsvps.length})</span>
+                       </button>
+                     )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          <div style={styles.inputGroupStyle}>
-            <label style={styles.labelStyleStyle}>{t('postType', lang)}</label>
-            <select 
-              value={noticeType}
-              onChange={(e) => setNoticeType(e.target.value as 'notice' | 'event')}
-              style={styles.modalSelectStyle}
-            >
-              <option value="notice">{t('generalNotice', lang)}</option>
-              <option value="event">{t('communityEvent', lang)}</option>
-            </select>
-          </div>
-          {noticeType === 'event' && (
-            <div style={styles.inputGroupStyle}>
-              <label style={styles.labelStyleStyle}>{t('eventDateTime', lang)}</label>
-              <input 
-                type="text" 
-                placeholder="e.g. Saturday, 30 May at 2:00 PM" 
-                value={noticeEventDate}
-                onChange={(e) => setNoticeEventDate(e.target.value)}
-                style={styles.modalInputStyle}
-              />
-            </div>
-          )}
-          <div style={styles.inputGroupStyle}>
-            <label style={styles.labelStyleStyle}>{t('detailsDesc', lang)}</label>
-            <textarea 
-              rows={3} 
-              required 
-              placeholder="Write announcement details here..." 
-              value={noticeDesc}
-              onChange={(e) => setNoticeDesc(e.target.value)}
-              style={styles.modalTextareaStyle}
-            />
-          </div>
-          <button type="submit" className="btn-gold" style={{ ...styles.modalSubmitBtnStyle, marginTop: '0.5rem', cursor: 'pointer' }}>
-            {t('publishButton', lang)}
-          </button>
-        </form>
+        )}
       </div>
     </div>
   )

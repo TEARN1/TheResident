@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldCheck, Zap } from 'lucide-react'
-import { isOpenNow, isSuspiciousPrice, suburbPriceStats, mentionsOffPlatformPayment } from '../../../utils/logic'
+import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldCheck, X, MapPin } from 'lucide-react'
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../store'
 
 interface MarketTabProps {
@@ -12,11 +11,10 @@ interface MarketTabProps {
   lostFound: LostFound[]
   currentUserId: string
   formatCurrency: (amount: number, currency?: string) => string
-  onPostItem: (item: { title: string; description: string; price: number | null; category: string }) => void
-  onPledge: (groupBuyId: string, quantity: number) => void
-  onReunite: (id: string) => void
-  onReport: (subjectType: string, subjectId: string) => void
-  styles: Record<string, React.CSSProperties>
+  onPostItem?: (item: { title: string; description: string; price: number | null; category: string }) => void
+  onPledge?: (groupBuyId: string, quantity: number) => void
+  onReunite?: (id: string) => void
+  onReport?: (subjectType: string, subjectId: string) => void
 }
 
 type Section = 'market' | 'vendors' | 'groupbuys' | 'lostfound'
@@ -30,273 +28,194 @@ export default function MarketTab({
   formatCurrency,
   onPostItem,
   onPledge,
-  onReunite,
-  onReport,
-  styles
+  onReunite
 }: MarketTabProps) {
   const [section, setSection] = useState<Section>('market')
   const [showForm, setShowForm] = useState(false)
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [price, setPrice] = useState<string>('')
-  const [category, setCategory] = useState('Household')
+  const [postTitle, setPostTitle] = useState('')
+  const [postDesc, setPostDesc] = useState('')
+  const [postPrice, setPostPrice] = useState('')
+  const [postCategory, setPostCategory] = useState('Household')
 
-  // Calculate market price statistics for suspicious pricing heuristics
-  const allPrices = marketItems.map(i => i.price).filter((p): p is number => p !== null && p > 0)
-  const priceStats = suburbPriceStats(allPrices, 2)
-
-  const tab = (id: Section, label: string) => (
-    <button
-      key={id}
-      onClick={() => setSection(id)}
-      style={section === id ? styles.activeSubTabBtnStyle : styles.inactiveSubTabBtnStyle}
-    >
-      {label}
-    </button>
-  )
+  const tabClass = (id: Section) =>
+    `px-4 py-2 rounded-lg text-sm font-medium transition-all ${section === id ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`
 
   return (
-    <div style={{ marginTop: '1rem' }}>
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        {tab('market', 'For sale & free')}
-        {tab('vendors', 'Spazas & vendors')}
-        {tab('groupbuys', 'Group buys')}
-        {tab('lostfound', 'Lost & found')}
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2 mb-4 bg-gray-900/30 p-1 rounded-xl border border-white/5 inline-flex">
+        <button onClick={() => setSection('market')} className={tabClass('market')}>Local Market</button>
+        <button onClick={() => setSection('vendors')} className={tabClass('vendors')}>Vendors</button>
+        <button onClick={() => setSection('groupbuys')} className={tabClass('groupbuys')}>Group Buys</button>
+        <button onClick={() => setSection('lostfound')} className={tabClass('lostfound')}>Lost & Found</button>
       </div>
 
-      {/* ── Market ─────────────────────────────────────────────────────────── */}
       {section === 'market' && (
-        <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ ...styles.panelTitleStyle, borderBottom: 'none', margin: 0 }}>Local market</h3>
-            <button
-              onClick={() => setShowForm(v => !v)}
-              className="btn-gold"
-              style={{ marginLeft: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer' }}
-            >
-              <Plus size={12} style={{ verticalAlign: 'middle' }} /> Post something
-            </button>
+        <div className="glass-panel p-6">
+          <div className="flex justify-between items-center mb-6">
+             <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                   <ShoppingBag size={20} className="text-gold-primary" /> Spaza Marketplace
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">Direct trading between neighbors. No platform fees.</p>
+             </div>
+             <button onClick={() => setShowForm(!showForm)} className="bg-white/5 hover:bg-white/10 text-gold-primary border border-gold-primary/20 px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                {showForm ? <X size={14}/> : <Plus size={14}/>}
+                {showForm ? 'Cancel' : 'Post Item'}
+             </button>
           </div>
 
-          <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 1rem 0' }}>
-            Leave the price blank to give it away. Payment happens between you and the buyer — never through the app.
-          </p>
-
           {showForm && (
-            <form
-              onSubmit={e => {
-                e.preventDefault()
-                if (!title.trim()) return
-                onPostItem({
-                  title,
-                  description,
-                  price: price.trim() === '' ? null : Number(price),
-                  category
-                })
-                setTitle(''); setDescription(''); setPrice(''); setShowForm(false)
-              }}
-              style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.2rem' }}
-            >
-              <label htmlFor="mk-title" style={{ fontSize: '0.75rem', color: '#888' }}>What is it?</label>
-              <input id="mk-title" value={title} onChange={e => setTitle(e.target.value)}
-                     placeholder="Two-plate stove" style={styles.inputStyle} required />
-              <textarea id="mk-desc" value={description} onChange={e => setDescription(e.target.value)}
-                        placeholder="Condition, why you're selling" rows={2} style={styles.inputStyle} />
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input id="mk-price" type="number" min={0} value={price} onChange={e => setPrice(e.target.value)}
-                       placeholder="Price (blank = free)" style={{ ...styles.inputStyle, flex: 1 }} />
-                <select id="mk-cat" value={category} onChange={e => setCategory(e.target.value)}
-                        style={{ ...styles.inputStyle, flex: 1 }}>
-                  <option>Household</option>
-                  <option>Furniture</option>
-                  <option>Electronics</option>
-                  <option>Clothing</option>
-                  <option>Food</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <button type="submit" className="btn-gold" style={{ padding: '0.6rem', cursor: 'pointer' }}>Post it</button>
-            </form>
+             <form
+                onSubmit={e => {
+                   e.preventDefault()
+                   if (!postTitle.trim()) return
+                   onPostItem?.({
+                      title: postTitle,
+                      description: postDesc,
+                      price: postPrice.trim() === '' ? null : Number(postPrice),
+                      category: postCategory
+                   })
+                   setPostTitle(''); setPostDesc(''); setPostPrice(''); setShowForm(false)
+                }}
+                className="bg-black/40 border border-gold-primary/20 rounded-xl p-6 mb-8 space-y-4"
+             >
+                <p className="text-xs text-gray-500">Leave the price blank to give it away. Payment happens between you and the buyer — never through the app.</p>
+                <input value={postTitle} onChange={e => setPostTitle(e.target.value)} required placeholder="What is it?" className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
+                <textarea value={postDesc} onChange={e => setPostDesc(e.target.value)} placeholder="Condition, why you're selling" className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white h-20 resize-none outline-none focus:border-gold-primary/40" />
+                <div className="flex gap-3">
+                   <input type="number" min={0} value={postPrice} onChange={e => setPostPrice(e.target.value)} placeholder="Price (blank = free)" className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
+                   <select value={postCategory} onChange={e => setPostCategory(e.target.value)} className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                      <option>Household</option>
+                      <option>Furniture</option>
+                      <option>Electronics</option>
+                      <option>Clothing</option>
+                      <option>Food</option>
+                      <option>Other</option>
+                   </select>
+                </div>
+                <button type="submit" className="w-full bg-gold-primary text-black font-black py-2.5 rounded-lg text-xs uppercase tracking-widest">Post it</button>
+             </form>
           )}
 
           {marketItems.length === 0 ? (
-            <div style={styles.emptyStateStyle}>
-              <ShoppingBag size={28} color="#D4AF37" />
-              <p>Nothing for sale yet. Be the first to post.</p>
+            <div className="py-12 text-center text-gray-500">
+               <ShoppingBag size={48} className="mx-auto mb-4 opacity-10" />
+               <p>No items for sale in your area.</p>
             </div>
           ) : (
-            <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.9rem' }}>
-              {marketItems.filter(i => i.status === 'available').map(item => {
-                const suspicious = item.price ? isSuspiciousPrice(item.price, priceStats) : false
-                const offPlatformWarn = mentionsOffPlatformPayment(item.description)
-
-                return (
-                  <div key={item.id} style={{ padding: '0.9rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: `1px solid ${suspicious ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.06)'}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ color: 'var(--text-primary, #fff)', fontSize: '0.9rem' }}>{item.title}</strong>
-                      {suspicious && (
-                        <span style={{ fontSize: '0.6rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '0.15rem 0.4rem', borderRadius: '4px', border: '1px solid rgba(239,68,68,0.3)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                          <AlertTriangle size={10} /> Low Price Warning
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ color: '#D4AF37', fontWeight: 'bold', margin: '0.3rem 0' }}>
-                      {item.price ? formatCurrency(item.price, item.currency) : 'Free'}
-                    </div>
-                    <p style={{ fontSize: '0.75rem', color: '#aaa', margin: 0 }}>{item.description}</p>
-                    {offPlatformWarn && (
-                      <div style={{ marginTop: '0.4rem', fontSize: '0.65rem', color: '#eab308', background: 'rgba(234,179,8,0.1)', padding: '0.25rem 0.4rem', borderRadius: '4px', border: '1px solid rgba(234,179,8,0.2)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <ShieldCheck size={12} color="#eab308" /> Safety Tip: Meet at verified local stands for cash delivery.
-                      </div>
-                    )}
-                    {item.createdBy !== currentUserId && (
-                      <button
-                        onClick={() => onReport('market_item', item.id)}
-                        style={{ marginTop: '0.6rem', background: 'none', border: 'none', color: '#666', fontSize: '0.65rem', cursor: 'pointer', padding: 0 }}
-                      >
-                        Report
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Vendors ────────────────────────────────────────────────────────── */}
-      {section === 'vendors' && (
-        <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
-          <h3 style={{ ...styles.panelTitleStyle, borderBottom: 'none', marginTop: 0 }}>Spazas & vendors</h3>
-          {vendors.length === 0 ? (
-            <div style={styles.emptyStateStyle}>
-              <Store size={28} color="#D4AF37" />
-              <p>No vendors registered yet.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-              {[...vendors]
-                // Open vendors sort above closed ones
-                .sort((a, b) => Number(isOpenNow(b.description) ?? false) - Number(isOpenNow(a.description) ?? false))
-                .map(v => {
-                  const open = isOpenNow(v.description)
-                  return (
-                    <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <Store size={18} color="#D4AF37" />
-                      <div style={{ flex: 1 }}>
-                        <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary, #fff)' }}>{v.name}</strong>
-                        <div style={{ fontSize: '0.7rem', color: '#888' }}>{v.category}</div>
-                      </div>
-                      {open !== null && (
-                        <span style={{
-                          fontSize: '0.65rem', padding: '0.15rem 0.4rem', borderRadius: '3px',
-                          background: open ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                          border: `1px solid ${open ? '#22c55e' : '#ef4444'}`,
-                          color: open ? '#22c55e' : '#ef4444'
-                        }}>
-                          {open ? 'OPEN NOW' : 'CLOSED'}
-                        </span>
-                      )}
-                    </div>
-                  )
-                })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Group buys ─────────────────────────────────────────────────────── */}
-      {section === 'groupbuys' && (
-        <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
-          <h3 style={{ ...styles.panelTitleStyle, borderBottom: 'none', marginTop: 0 }}>Group buys</h3>
-          <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 1rem 0' }}>
-            Pledge what you need. When the target is reached everyone collects — the app never handles the money.
-          </p>
-
-          {groupBuys.length === 0 ? (
-            <div style={styles.emptyStateStyle}>
-              <Users size={28} color="#D4AF37" />
-              <p>No group buys running.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-              {groupBuys.map(gb => {
-                const pct = Math.min(100, Math.round((gb.currentPledges / Math.max(gb.targetAmount, 1)) * 100))
-                return (
-                  <div key={gb.id} style={{ padding: '0.9rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <strong style={{ color: 'var(--text-primary, #fff)', fontSize: '0.9rem' }}>{gb.title}</strong>
-                      <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: gb.status === 'completed' ? '#22c55e' : '#888' }}>
-                        {gb.status.toUpperCase()}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '0.75rem', color: '#aaa', margin: '0.4rem 0' }}>{gb.description}</p>
-
-                    <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden', margin: '0.5rem 0' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: pct >= 100 ? '#22c55e' : '#D4AF37' }} />
-                    </div>
-                    <div style={{ fontSize: '0.7rem', color: '#888' }}>
-                      {gb.currentPledges} of {gb.targetAmount} pledged ({pct}%)
-                    </div>
-
-                    {gb.status === 'open' && (
-                      <button
-                        onClick={() => onPledge(gb.id, 1)}
-                        className="btn-gold"
-                        style={{ marginTop: '0.6rem', padding: '0.3rem 0.7rem', fontSize: '0.7rem', cursor: 'pointer' }}
-                      >
-                        Pledge 1
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Lost & found ───────────────────────────────────────────────────── */}
-      {section === 'lostfound' && (
-        <div className="glass-panel" style={{ padding: '1.2rem', borderRadius: '12px' }}>
-          <h3 style={{ ...styles.panelTitleStyle, borderBottom: 'none', marginTop: 0 }}>Lost & found</h3>
-          {lostFound.length === 0 ? (
-            <div style={styles.emptyStateStyle}>
-              <Search size={28} color="#D4AF37" />
-              <p>Nothing lost, nothing found.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
-              {lostFound.map(lf => (
-                <div key={lf.id} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <span style={{
-                    fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: '3px',
-                    border: `1px solid ${lf.type === 'lost' ? '#ef4444' : '#22c55e'}`,
-                    color: lf.type === 'lost' ? '#ef4444' : '#22c55e'
-                  }}>
-                    {lf.type.toUpperCase()}
-                  </span>
-                  <div style={{ flex: 1 }}>
-                    <strong style={{ fontSize: '0.85rem', color: 'var(--text-primary, #fff)' }}>{lf.title}</strong>
-                    <div style={{ fontSize: '0.7rem', color: '#888' }}>{lf.location}</div>
-                  </div>
-                  {lf.status === 'active' && (
-                    <button
-                      onClick={() => onReunite(lf.id)}
-                      style={{
-                        padding: '0.3rem 0.6rem', fontSize: '0.7rem', cursor: 'pointer',
-                        background: 'rgba(34,197,94,0.15)', border: '1px solid #22c55e',
-                        color: '#22c55e', borderRadius: '4px'
-                      }}
-                    >
-                      <Check size={12} style={{ verticalAlign: 'middle' }} /> Reunited
-                    </button>
-                  )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {marketItems.map(item => (
+                <div key={item.id} className="bg-black/40 border border-white/5 rounded-xl p-4 flex flex-col gap-3 hover:border-white/10 transition-all group">
+                   <div className="flex justify-between items-start">
+                      <span className="text-xs font-black text-gold-primary group-hover:scale-110 transition-transform origin-left">{item.price ? formatCurrency(item.price) : 'FREE'}</span>
+                      <span className="text-[9px] bg-white/5 text-gray-500 px-1.5 py-0.5 rounded uppercase font-bold">{item.category}</span>
+                   </div>
+                   <h4 className="font-bold text-white text-sm group-hover:text-gold-primary transition-colors">{item.title}</h4>
+                   <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{item.description}</p>
+                   <div className="mt-auto pt-3 border-t border-white/5 flex justify-between items-center">
+                      <span className="text-[10px] text-gray-600">In {item.suburb}</span>
+                      <button className="text-gold-primary text-[10px] font-bold hover:underline">Chat Seller</button>
+                   </div>
                 </div>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {section === 'vendors' && (
+        <div className="glass-panel p-6 space-y-4">
+           {vendors.length === 0 ? (
+              <div className="py-12 text-center text-gray-500">
+                <Store size={48} className="mx-auto mb-4 opacity-10" />
+                <p>No registered vendors in this area.</p>
+              </div>
+           ) : (
+             vendors.map(v => (
+               <div key={v.id} className="flex items-center justify-between p-4 bg-black/40 border border-white/5 rounded-xl hover:border-gold-primary/20 transition-all group">
+                  <div className="flex items-center gap-4">
+                     <div className="p-3 bg-gold-primary/10 rounded-xl group-hover:bg-gold-primary group-hover:text-black transition-colors">
+                        <Store size={24} className="text-gold-primary group-hover:text-inherit" />
+                     </div>
+                     <div>
+                        <h4 className="font-bold text-white group-hover:text-gold-primary transition-colors">{v.name}</h4>
+                        <p className="text-xs text-gray-500">{v.category}</p>
+                     </div>
+                  </div>
+                  <button className="bg-white/5 text-gray-400 border border-white/10 px-4 py-2 rounded-lg text-xs hover:text-white hover:bg-white/10 transition-all font-bold">View Menu</button>
+               </div>
+             ))
+           )}
+        </div>
+      )}
+
+      {section === 'groupbuys' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           {groupBuys.length === 0 ? (
+              <div className="glass-panel col-span-full p-12 text-center text-gray-500">
+                <Users size={48} className="mx-auto mb-4 opacity-10" />
+                <p>No active group buys in your area.</p>
+              </div>
+           ) : (
+             groupBuys.map(gb => {
+               const pct = Math.min(100, (gb.currentPledges / gb.targetAmount) * 100)
+               return (
+                 <div key={gb.id} className="glass-panel p-6 space-y-4 hover:border-gold-primary/20 transition-all">
+                    <div className="flex justify-between items-start">
+                       <h4 className="text-lg font-bold text-white">{gb.title}</h4>
+                       <span className="text-[10px] font-bold text-gold-primary bg-gold-primary/5 px-2 py-1 rounded border border-gold-primary/20 uppercase tracking-widest">Group Buy</span>
+                    </div>
+                    <p className="text-sm text-gray-400 leading-relaxed">{gb.description}</p>
+                    <div className="space-y-2 pt-2">
+                       <div className="flex justify-between text-[10px] uppercase font-bold">
+                          <span className="text-gray-500">Progress: {gb.currentPledges} / {gb.targetAmount}</span>
+                          <span className="text-gold-primary">{Math.round(pct)}%</span>
+                       </div>
+                       <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden border border-white/5">
+                          <div className="h-full bg-gold-primary transition-all duration-1000 shadow-[0_0_10px_#D4AF37]" style={{ width: `${pct}%` }}></div>
+                       </div>
+                    </div>
+                    <button
+                      onClick={() => onPledge?.(gb.id, 1)}
+                      className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-bold py-2.5 rounded-lg text-xs active:scale-95 transition-all mt-4"
+                    >
+                      Pledge Support
+                    </button>
+                 </div>
+               )
+             })
+           )}
+        </div>
+      )}
+
+      {section === 'lostfound' && (
+        <div className="glass-panel p-6 space-y-4">
+           {lostFound.length === 0 ? (
+              <div className="py-12 text-center text-gray-500">
+                <Search size={48} className="mx-auto mb-4 opacity-10" />
+                <p>Nothing lost, nothing found.</p>
+              </div>
+           ) : (
+             lostFound.map(lf => (
+               <div key={lf.id} className="flex items-center justify-between p-4 bg-black/40 border border-white/5 rounded-xl hover:border-white/10 transition-all group">
+                  <div className="flex gap-4">
+                     <div className={`p-3 rounded-xl transition-colors ${lf.type === 'lost' ? 'bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white' : 'bg-green-500/10 text-green-500 group-hover:bg-green-500 group-hover:text-white'}`}>
+                        {lf.type === 'lost' ? <AlertTriangle size={24} /> : <Check size={24} />}
+                     </div>
+                     <div>
+                        <div className="flex items-center gap-2">
+                           <h4 className="font-bold text-white group-hover:text-gold-primary transition-colors">{lf.title}</h4>
+                           <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${lf.type === 'lost' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'}`}>{lf.type.toUpperCase()}</span>
+                        </div>
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1"><MapPin size={10} className="text-gold-primary" /> {lf.location}</p>
+                     </div>
+                  </div>
+                  {lf.status === 'active' && (
+                     <button onClick={() => onReunite?.(lf.id)} className="bg-gold-primary/10 text-gold-primary border border-gold-primary/20 px-4 py-2 rounded-lg text-xs font-bold hover:bg-gold-primary hover:text-black transition-all">Mark Reunited</button>
+                  )}
+               </div>
+             ))
+           )}
         </div>
       )}
     </div>
