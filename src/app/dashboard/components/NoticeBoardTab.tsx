@@ -19,7 +19,7 @@ interface Notice {
 
 interface NoticeBoardTabProps {
   communityNotices: Notice[]
-  currentUser: { name: string; balance: number; id: string; role: string } | null
+  currentUser: { name: string; id: string; role: string } | null
   handleVibeNotice?: (id: string) => void
   handleEchoNotice?: (id: string) => void
   handleRSVPToEvent?: (id: string) => void

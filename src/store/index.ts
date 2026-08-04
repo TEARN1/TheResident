@@ -34,7 +34,6 @@ export interface User {
   passwordHash?: string // cryptographically secured
   profile?: UserProfile
   preferences?: LandlordPreferences
-  balance: number // mock currency wallet balance
 }
 
 export interface Listing {
@@ -403,21 +402,6 @@ const authSlice = createSlice({
     updatePreferences: (state, action: PayloadAction<{ preferences: LandlordPreferences }>) => {
       if (state.currentUser && state.currentUser.role === 'landlord') {
         state.currentUser.preferences = action.payload.preferences
-      }
-    },
-    deductBalance: (state, action: PayloadAction<number>) => {
-      if (state.currentUser) {
-        state.currentUser.balance = (state.currentUser.balance || 0) - action.payload
-      }
-    },
-    addBalance: (state, action: PayloadAction<number>) => {
-      if (state.currentUser) {
-        state.currentUser.balance = (state.currentUser.balance || 0) + action.payload
-      }
-    },
-    setBalance: (state, action: PayloadAction<number>) => {
-      if (state.currentUser) {
-        state.currentUser.balance = action.payload
       }
     }
   }
@@ -1025,9 +1009,6 @@ const notificationsSlice = createSlice({
         state.items.pop()
       }
     },
-    floodNotifications: (state, action: PayloadAction<number>) => {
-      state.virtualCount += action.payload
-    },
     markAllNotificationsRead: (state) => {
       state.virtualCount = 0
       state.items.forEach(item => {
@@ -1044,10 +1025,7 @@ export const {
   registerFailedAttempt,
   resetFailedAttempts,
   updateProfile,
-  updatePreferences,
-  deductBalance,
-  addBalance,
-  setBalance
+  updatePreferences
 } = authSlice.actions
 
 export const { setListings, addListing, deleteListing, updateListingVerification } = listingsSlice.actions
@@ -1127,7 +1105,6 @@ export const {
 export const {
   setNotifications,
   addNotification,
-  floodNotifications,
   markAllNotificationsRead
 } = notificationsSlice.actions
 
@@ -1823,9 +1800,6 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
       syncLabel = 'your preferences'
       await dbUpdate('res_profiles', db.preferencesToRow(action.payload.preferences), 'id', toUUID(currentUser.id))
     }
-
-    // deductBalance/addBalance are intentionally NOT synced: the wallet is
-    // display-only (CONTRACT.md §6 — broker posture, no balance columns).
 
     // 2. Sync Room Listings
     if (addListing.match(action)) {

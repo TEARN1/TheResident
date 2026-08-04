@@ -53,14 +53,30 @@ body {
 .dashboard-top-bar {
   height: 64px;
   background: rgba(10, 10, 10, 0.8);
-  backdrop-blur: md;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
+  gap: 1rem;
   padding: 0 1.5rem;
   position: sticky;
   top: 0;
   z-index: 40;
+}
+
+.dashboard-page-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--foreground);
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.dashboard-page-title svg {
+  color: var(--gold-primary);
 }
 
 .dashboard-page-body {
@@ -119,23 +135,21 @@ body {
   letter-spacing: 1px;
 }
 
-.sidebar-wallet {
-  margin-top: 1rem;
-  padding: 0.8rem;
-  background: rgba(255,255,255,0.03);
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem;
-}
-
 .sidebar-nav {
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   flex: 1;
+}
+
+.sidebar-nav-section-label {
+  padding: 0.4rem 1rem 0.6rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #555;
 }
 
 .sidebar-nav-item {
@@ -145,20 +159,88 @@ body {
   padding: 0.8rem 1rem;
   color: #888;
   border-radius: 8px;
+  border-left: 3px solid transparent;
   transition: all 0.2s;
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
 }
 
-.sidebar-nav-item:hover, .sidebar-nav-item.active {
+.sidebar-nav-item:hover {
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sidebar-nav-item.active {
   color: var(--gold-primary);
-  background: rgba(212, 175, 55, 0.05);
+  background: rgba(212, 175, 55, 0.08);
+  border-left-color: var(--gold-primary);
 }
 
 .sidebar-footer {
   padding: 1rem;
   border-top: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.lang-switcher {
+  display: flex;
+  gap: 4px;
+  padding: 0.4rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 0.4rem;
+}
+
+.lang-switcher-btn {
+  flex: 1;
+  padding: 0.35rem 0;
+  background: transparent;
+  color: #888;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lang-switcher-btn.active {
+  background: var(--gold-primary);
+  color: #000;
+}
+
+.lang-switcher-btn:not(.active):hover {
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Dashboard loading gate (pre-auth / session bootstrap) */
+.dashboard-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  height: 100vh;
+  background: var(--background);
+  color: #666;
+}
+
+.dashboard-loading-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(212, 175, 55, 0.2);
+  border-top-color: var(--gold-primary);
+  animation: dashboard-spin 0.8s linear infinite;
+}
+
+@keyframes dashboard-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Glass UI Elements */
@@ -186,16 +268,6 @@ body {
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
-.wallet-pill {
-  background: rgba(212, 175, 55, 0.1);
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  padding: 0.4rem 0.8rem;
-  border-radius: 8px;
-  color: var(--gold-primary);
-  font-weight: bold;
-  font-size: 0.85rem;
-}
-
 .notif-badge {
   position: absolute;
   top: -4px;
@@ -211,7 +283,104 @@ body {
 .text-gold-primary { color: var(--gold-primary); }
 .bg-gold-primary { background-color: var(--gold-primary); }
 
+/*
+ * Shared button system. These two class names are used as `className` on
+ * buttons/links throughout the app (auth, landing page, dashboard tabs) but
+ * had no CSS definition anywhere — every one of them rendered as a bare
+ * unstyled element, with only whatever inline `style` prop happened to be
+ * layered on top giving it any appearance at all. That mismatch is the root
+ * cause of the app looking inconsistent from screen to screen.
+ */
+.btn-primary,
+.btn-gold,
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-family: var(--font-body, inherit);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter 0.2s ease, transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.btn-primary,
+.btn-gold {
+  background: var(--gold-primary);
+  border: 1px solid var(--gold-primary);
+  color: #0a0a0a;
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.18);
+}
+
+.btn-primary:hover,
+.btn-gold:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active,
+.btn-gold:active {
+  transform: translateY(0);
+  filter: brightness(0.96);
+}
+
+.btn-primary:disabled,
+.btn-gold:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+/* A visibly-secondary action: readable at rest, not competing with the
+   primary gold button, but never so faint it disappears (0.05-opacity fills
+   with a dashed border, as this used to be, read as "disabled"). */
+.btn-outline {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1.5px solid var(--gold-primary);
+  color: var(--gold-primary);
+}
+
+.btn-outline:hover {
+  background: rgba(212, 175, 55, 0.18);
+}
+
+/* The hamburger/close buttons only make sense once the sidebar becomes an
+   off-canvas drawer below 1024px; hidden by default so desktop doesn't show a
+   button that does nothing (the sidebar is already visible in the flex row). */
+.mobile-menu-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  padding: 0.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.mobile-menu-btn:hover {
+  color: var(--gold-primary);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.sidebar-logo .mobile-menu-btn {
+  margin-left: auto;
+}
+
 @media (max-width: 1024px) {
+  .mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .sidebar-container {
     position: fixed;
     transform: translateX(-100%);
@@ -225,6 +394,10 @@ body {
     background: rgba(0,0,0,0.6);
     backdrop-filter: blur(4px);
     z-index: 45;
+  }
+
+  .dashboard-page-title span {
+    display: none; /* icon only on small screens to save top-bar space */
   }
 }
 

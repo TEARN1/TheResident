@@ -9,6 +9,34 @@ import { supabase } from '../../utils/supabase'
 import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 
+// Cross-app SSO mark for The Gruvs. No Gruvs brand asset ships in this repo,
+// so rather than a placeholder emoji this renders as a proper monogram badge
+// in the app's own gold theme — a logo treatment, not a random icon.
+function GruvsMark() {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '22px',
+        height: '22px',
+        borderRadius: '50%',
+        background: 'var(--gold-primary)',
+        color: '#0a0a0a',
+        fontSize: '0.7rem',
+        fontWeight: 900,
+        fontFamily: 'var(--font-heading), serif',
+        flexShrink: 0,
+        lineHeight: 1
+      }}
+    >
+      G
+    </span>
+  )
+}
+
 export default function AuthPage() {
   const router = useRouter()
   const dispatch = useDispatch()
@@ -176,8 +204,7 @@ export default function AuthPage() {
         id: user.id,
         name: user.user_metadata?.name || name || 'Resident User',
         email: user.email!,
-        role: userRole as 'tenant' | 'landlord' | 'visitor',
-        balance: 0
+        role: userRole as 'tenant' | 'landlord' | 'visitor'
       }))
 
       dispatch(addLog({
@@ -259,8 +286,7 @@ export default function AuthPage() {
         id: user.id,
         name: sanitizedName,
         email: email,
-        role: role,
-        balance: 0
+        role: role
       }))
 
       dispatch(addLog({
@@ -274,28 +300,9 @@ export default function AuthPage() {
     }
   }
 
-  const handleSocialLogin = async (provider: 'google' | 'facebook' | 'apple' | 'gruvs') => {
-    if (provider === 'gruvs') {
-      // Direct Single Sign-On bridge to thegruvs.com
-      window.location.href = 'https://thegruvs.com/auth?redirect=the-resident-crew'
-      return
-    }
-
-    if (!supabase) {
-      setErrorMessage('Database offline / not configured.')
-      return
-    }
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: provider as 'google' | 'facebook' | 'apple',
-      options: {
-        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined
-      }
-    })
-
-    if (error) {
-      setErrorMessage(`Social authentication failed: ${error.message}`)
-    }
+  const handleGruvsSSO = () => {
+    // Direct Single Sign-On bridge to thegruvs.com — one account across both apps.
+    window.location.href = 'https://thegruvs.com/auth?redirect=the-resident-crew'
   }
 
   const handleVisitorLogin = () => {
@@ -305,7 +312,6 @@ export default function AuthPage() {
       name: 'Guest Visitor',
       email: 'visitor@theresident.co.za',
       role: 'visitor' as const,
-      balance: 0,
       profile: {
         bio: 'Browsing the directory as a guest.',
         gender: 'any' as const,
@@ -426,54 +432,30 @@ export default function AuthPage() {
               Grant Access <Lock size={14} style={{ marginLeft: 8 }} />
             </button>
 
-            <button 
-              type="button" 
-              onClick={handleVisitorLogin} 
-              className="btn-gold"
-              style={{ ...submitButtonStyle, background: 'rgba(212, 175, 55, 0.05)', borderStyle: 'dashed' }}
+            <button
+              type="button"
+              onClick={handleVisitorLogin}
+              className="btn-outline"
+              style={submitButtonStyle}
             >
-              Continue as Visitor (Guest)
+              <UserIcon size={15} style={{ marginRight: 6 }} /> Continue as Visitor (Guest)
             </button>
 
-            {/* Social / Cross-App Sign-In */}
+            {/* Cross-App Sign-In (one account works on both The Resident and The Gruvs) */}
             <div style={socialDividerStyle}>
               <span style={socialDividerLineStyle} />
-              <span style={socialDividerTextStyle}>or continue with</span>
+              <span style={socialDividerTextStyle}>or use your Gruvs account</span>
               <span style={socialDividerLineStyle} />
             </div>
 
             <button
               type="button"
-              onClick={() => handleSocialLogin('gruvs')}
+              onClick={handleGruvsSSO}
               style={gruvsBtnStyle}
             >
-              <span style={gruvsBtnIconStyle}>🎵</span>
+              <GruvsMark />
               Sign in with The Gruvs
             </button>
-
-            <div style={socialRowStyle}>
-              <button type="button" onClick={() => handleSocialLogin('google')} style={socialBtnStyle} title="Sign in with Google">
-                <svg width="18" height="18" viewBox="0 0 48 48" style={{ display: 'block' }}>
-                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.2 7.09-10.36 7.09-17.65z"/>
-                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.96 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                </svg>
-                Google
-              </button>
-              <button type="button" onClick={() => handleSocialLogin('facebook')} style={socialBtnStyle} title="Sign in with Facebook">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2" style={{ display: 'block' }}>
-                  <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.874v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
-                </svg>
-                Facebook
-              </button>
-              <button type="button" onClick={() => handleSocialLogin('apple')} style={socialBtnStyle} title="Sign in with Apple">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                </svg>
-                Apple
-              </button>
-            </div>
           </form>
         ) : (
           <form onSubmit={handleSignup} style={formStyle}>
@@ -687,54 +669,30 @@ export default function AuthPage() {
               Confirm Profile & Enter <CheckCircle size={14} style={{ marginLeft: 8 }} />
             </button>
 
-            <button 
-              type="button" 
-              onClick={handleVisitorLogin} 
-              className="btn-gold"
-              style={{ ...submitButtonStyle, background: 'rgba(212, 175, 55, 0.05)', borderStyle: 'dashed' }}
+            <button
+              type="button"
+              onClick={handleVisitorLogin}
+              className="btn-outline"
+              style={submitButtonStyle}
             >
-              Continue as Visitor (Guest)
+              <UserIcon size={15} style={{ marginRight: 6 }} /> Continue as Visitor (Guest)
             </button>
 
-            {/* Social / Cross-App Sign-In */}
+            {/* Cross-App Sign-In (one account works on both The Resident and The Gruvs) */}
             <div style={socialDividerStyle}>
               <span style={socialDividerLineStyle} />
-              <span style={socialDividerTextStyle}>or sign up with</span>
+              <span style={socialDividerTextStyle}>or sign up with Gruvs</span>
               <span style={socialDividerLineStyle} />
             </div>
 
             <button
               type="button"
-              onClick={() => handleSocialLogin('gruvs')}
+              onClick={handleGruvsSSO}
               style={gruvsBtnStyle}
             >
-              <span style={gruvsBtnIconStyle}>🎵</span>
+              <GruvsMark />
               Sign up with The Gruvs
             </button>
-
-            <div style={socialRowStyle}>
-              <button type="button" onClick={() => handleSocialLogin('google')} style={socialBtnStyle} title="Sign up with Google">
-                <svg width="18" height="18" viewBox="0 0 48 48" style={{ display: 'block' }}>
-                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.2 7.09-10.36 7.09-17.65z"/>
-                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.96 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                </svg>
-                Google
-              </button>
-              <button type="button" onClick={() => handleSocialLogin('facebook')} style={socialBtnStyle} title="Sign up with Facebook">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2" style={{ display: 'block' }}>
-                  <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.514c-1.491 0-1.956.93-1.956 1.874v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
-                </svg>
-                Facebook
-              </button>
-              <button type="button" onClick={() => handleSocialLogin('apple')} style={socialBtnStyle} title="Sign up with Apple">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                </svg>
-                Apple
-              </button>
-            </div>
           </form>
         )}
       </motion.div>
@@ -838,10 +796,16 @@ const tabContainerStyle: React.CSSProperties = {
   marginBottom: '1.5rem'
 }
 
+// Both objects share the exact same property keys (only borderBottom's value
+// differs) so React never has to add/remove a style property when the active
+// tab changes — mixing the `border` shorthand with the `borderBottom`
+// longhand on one object triggers a React dev warning and is fragile to diff.
 const activeTabStyle: React.CSSProperties = {
   flex: 1,
   background: 'transparent',
-  border: 'none',
+  borderTop: 'none',
+  borderLeft: 'none',
+  borderRight: 'none',
   borderBottom: '2px solid var(--gold-primary)',
   color: 'var(--gold-primary)',
   padding: '0.75rem',
@@ -855,7 +819,10 @@ const activeTabStyle: React.CSSProperties = {
 const inactiveTabStyle: React.CSSProperties = {
   flex: 1,
   background: 'transparent',
-  border: 'none',
+  borderTop: 'none',
+  borderLeft: 'none',
+  borderRight: 'none',
+  borderBottom: '2px solid transparent',
   color: 'var(--foreground)',
   opacity: 0.5,
   padding: '0.75rem',
@@ -1066,29 +1033,3 @@ const gruvsBtnStyle: React.CSSProperties = {
   boxShadow: '0 0 12px rgba(212, 175, 55, 0.12)'
 }
 
-const gruvsBtnIconStyle: React.CSSProperties = {
-  fontSize: '1.1rem',
-  lineHeight: 1
-}
-
-const socialRowStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
-  gap: '0.6rem'
-}
-
-const socialBtnStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '0.4rem',
-  padding: '0.6rem 0.5rem',
-  background: 'var(--glass-bg)',
-  border: '1px solid var(--glass-border)',
-  borderRadius: '8px',
-  color: 'var(--foreground)',
-  fontSize: '0.8rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  transition: 'all 0.2s ease'
-}

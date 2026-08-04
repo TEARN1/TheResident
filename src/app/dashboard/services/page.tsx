@@ -262,7 +262,7 @@ export default function ServicesPage() {
 
       {activeTab === 'utilities' && (
         <div className="space-y-12">
-           <div className="bg-gold-primary/5 border border-gold-primary/20 p-8 rounded-[2rem] flex flex-col md:flex-row justify-between items-center gap-10 shadow-2xl relative overflow-hidden">
+           <div className="bg-gold-primary/5 border border-gold-primary/20 p-8 rounded-[2rem] flex items-center gap-10 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-gold-primary/5 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
               <div className="flex items-center gap-6 relative z-10">
                  <div className="p-5 bg-gold-primary rounded-3xl shadow-[0_0_30px_rgba(212,175,55,0.4)] animate-pulse">
@@ -270,12 +270,8 @@ export default function ServicesPage() {
                  </div>
                  <div className="space-y-1">
                     <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Energy <span className="text-gold-primary">Marketplace</span></h3>
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest opacity-80">Purchase sub-meter vouchers using your resident wallet</p>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest opacity-80">Claim a sub-meter voucher, then arrange payment directly with the landlord</p>
                  </div>
-              </div>
-              <div className="bg-black/60 backdrop-blur-xl p-6 rounded-2xl border border-white/5 px-10 text-center relative z-10 shadow-inner">
-                 <p className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-black mb-1">My Balance</p>
-                 <p className="text-3xl font-black text-white tracking-tighter italic">{formatCurrencyByLocation(currentUser?.balance || 0)}</p>
               </div>
            </div>
 

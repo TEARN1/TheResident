@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert'
-import { store, loginUser, logoutUser, deductBalance, addBalance, addListing, deleteListing, addRequest, updateRequestStatus, addToken, buyToken, addDispatch, updateDispatchStatus } from './index'
+import { store, loginUser, logoutUser, addListing, deleteListing, addRequest, updateRequestStatus, addToken, buyToken, addDispatch, updateDispatchStatus } from './index'
 
-test('Redux Store - Authentication & Wallet Slices', () => {
+test('Redux Store - Authentication Slice', () => {
   // Initial state should not have a current user
   let state = store.getState()
   assert.strictEqual(state.auth.currentUser, null)
@@ -11,25 +11,13 @@ test('Redux Store - Authentication & Wallet Slices', () => {
     id: '4e36eee4-5310-437c-a19e-2270a147e260',
     name: 'Test Tenant',
     email: 'test@tenant.com',
-    role: 'tenant' as const,
-    balance: 500
+    role: 'tenant' as const
   }
 
   // Test login action
   store.dispatch(loginUser(mockUser))
   state = store.getState()
   assert.strictEqual(state.auth.currentUser?.id, '4e36eee4-5310-437c-a19e-2270a147e260')
-  assert.strictEqual(state.auth.currentUser?.balance, 500)
-
-  // Test wallet balance deduction
-  store.dispatch(deductBalance(150))
-  state = store.getState()
-  assert.strictEqual(state.auth.currentUser?.balance, 350)
-
-  // Test wallet balance addition
-  store.dispatch(addBalance(200))
-  state = store.getState()
-  assert.strictEqual(state.auth.currentUser?.balance, 550)
 
   // Test logout action
   store.dispatch(logoutUser())

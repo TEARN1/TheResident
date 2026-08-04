@@ -2,7 +2,6 @@ export const translations = {
   en: {
     communityHub: "Co-Living Community Hub",
     communityDesc: "Connect with fellow residents, rent shared tools, coordinate chore rotations, and resolve disputes.",
-    walletBalance: "My Wallet Balance",
     noticeBoardTab: "Notice Board & Events",
     toolLibraryTab: "Tool Library (P2P)",
     choreSchedulerTab: "Chore Scheduler",
@@ -46,7 +45,6 @@ export const translations = {
   zu: {
     communityHub: "Isizinda Somphakathi Co-Living",
     communityDesc: "Xhumana nabanye abahlali, uqashe amathuluzi, uhlele ukuhlanza, futhi uxazulule izingxabano.",
-    walletBalance: "Ibhalansi Yami Yesikhwama",
     noticeBoardTab: "Ibhodi Yezaziso Nemicimbi",
     toolLibraryTab: "Ilayibrari Yamathuluzi (P2P)",
     choreSchedulerTab: "Uhlelo Lwemisebenzi",
@@ -90,7 +88,6 @@ export const translations = {
   xh: {
     communityHub: "Iziko Loluntu Co-Living",
     communityDesc: "Dibanisa nabanye abahlali, uqeshe izixhobo ezikhethiweyo, uhlele ukucocwa, kwaye usombulule iingxabano.",
-    walletBalance: "I-Balance Yam Ye-Wallet",
     noticeBoardTab: "Ibhodi Yezaziso Nemicimbi",
     toolLibraryTab: "Ithala Leencwadi Lesixhobo (P2P)",
     choreSchedulerTab: "Ishedyuli Imisebenzi",
@@ -134,7 +131,6 @@ export const translations = {
   af: {
     communityHub: "Gemeenskap Hub Co-Living",
     communityDesc: "Maak kontak met mede-inwoners, huur gedeelde gereedskap, koördineer take en los geskille op.",
-    walletBalance: "My Beursie Balans",
     noticeBoardTab: "Kennisgewingbord & Geleenthede",
     toolLibraryTab: "Gereedskap Biblioteek (P2P)",
     choreSchedulerTab: "Take Skeduleerder",

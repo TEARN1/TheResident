@@ -65,7 +65,7 @@ test('offline queue is bounded — a long offline session cannot grow memory for
 test('a replayed write is not re-applied to Redux (no duplicate optimistic state)', () => {
   store.dispatch(clearOfflineQueue())
   store.dispatch(loginUser({
-    id: UID, name: 'Thandi', email: 't@example.com', role: 'tenant', balance: 0
+    id: UID, name: 'Thandi', email: 't@example.com', role: 'tenant'
   }))
 
   const before = store.getState().community.notices.length

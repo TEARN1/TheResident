@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   Shield, LogOut, Home, Search, Plus, Check, X, AlertTriangle,
   Wifi, Car, FileText, Send, MapPin, Eye, Navigation,
-  User as UserIcon, Users, CheckCircle2, Terminal, Info,
+  User as UserIcon, Users, CheckCircle2, Info,
   Star, Calendar, Clock, Briefcase,
   ShieldCheck, Zap, Copy,
   MessageSquare, Gavel, Award, Megaphone, Wrench, Loader, Menu, Sun, Moon
@@ -32,6 +32,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [theme, setTheme] = useState<'day' | 'night'>('day')
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
+  const notifMenuRef = useRef<HTMLDivElement>(null)
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const notifications = useSelector((state: RootState) => state.notifications)
@@ -61,8 +62,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             id: user.id,
             name: user.user_metadata?.name || 'Resident User',
             email: user.email || '',
-            role: (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor',
-            balance: 0
+            role: (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor'
           }))
           return
         }
@@ -73,8 +73,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           id: 'visitor-guest',
           name: 'Guest Visitor',
           email: 'visitor@theresident.co.za',
-          role: 'visitor' as const,
-          balance: 0
+          role: 'visitor' as const
         }))
         return
       }
@@ -91,18 +90,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return unsubscribe
   }, [currentUser, dispatch])
 
+  // Close the notifications dropdown on an outside click — previously the
+  // only way to close it was clicking the bell a second time.
+  useEffect(() => {
+    if (!showNotifMenu) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifMenuRef.current && !notifMenuRef.current.contains(e.target as Node)) {
+        setShowNotifMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showNotifMenu])
+
   const handleLogout = () => {
     document.cookie = 'guest-mode=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
     dispatch(logoutUser())
     router.push('/auth')
   }
 
-  const formatCurrency = (amount: number, currencyCode: string = 'ZAR') => {
-    if (currencyCode === 'ZAR') return `R ${amount}`
-    return `${amount} ${currencyCode}`
+  if (!currentUser) {
+    return (
+      <div className="dashboard-loading">
+        <div className="dashboard-loading-spinner" />
+        <span>Loading your dashboard…</span>
+      </div>
+    )
   }
-
-  if (!currentUser) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>
 
   const navItems = currentUser.role === 'tenant' || currentUser.role === 'visitor' ? [
     { name: 'Housing', href: '/dashboard/housing', icon: Home },
@@ -113,6 +127,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Maintenance', href: '/dashboard/services', icon: Wrench },
     { name: 'Community', href: '/dashboard/community', icon: Users },
   ]
+
+  // So the top bar can orient the user to which section they're in.
+  const pageTitle = navItems.find(item => item.href === pathname) || navItems[0]
 
   return (
     <div className="dashboard-wrapper">
@@ -133,7 +150,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="sidebar-logo">
           <Shield size={24} color="#D4AF37" />
           <span className="sidebar-logo-text">THE RESIDENT</span>
-          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(false)}>
+          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(false)} aria-label="Close menu">
             <X size={18} />
           </button>
         </div>
@@ -146,13 +163,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="sidebar-profile-role">{currentUser.role}</span>
             </div>
           </div>
-          <div className="sidebar-wallet">
-            <span>Wallet</span>
-            <strong>{formatCurrency(currentUser.balance || 0)}</strong>
-          </div>
         </div>
 
         <nav className="sidebar-nav">
+          <span className="sidebar-nav-section-label">Menu</span>
           {navItems.map(item => (
             <Link
               key={item.href}
@@ -166,12 +180,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         <div className="sidebar-footer">
-          <div style={{ display: 'flex', gap: '4px', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '1rem', justifyContent: 'space-between' }}>
+          <div className="lang-switcher">
             {['en', 'zu', 'xh', 'af'].map(l => (
               <button
                 key={l}
                 onClick={() => dispatch(setLanguage(l as 'en' | 'zu' | 'xh' | 'af'))}
-                style={{ flex: 1, padding: '0.3rem', background: lang === l ? 'var(--gold-primary)' : 'transparent', color: lang === l ? '#000' : '#888', border: 'none', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '900', cursor: 'pointer', transition: 'all 0.2s' }}
+                className={`lang-switcher-btn ${lang === l ? 'active' : ''}`}
               >
                 {l.toUpperCase()}
               </button>
@@ -181,9 +195,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {theme === 'day' ? <Moon size={16} /> : <Sun size={16} />}
             <span>{theme === 'day' ? 'Night Theme' : 'Day Theme'}</span>
           </button>
-          <Link href="/dashboard/admin" className={`sidebar-nav-item ${pathname === '/dashboard/admin' ? 'active' : ''}`}>
-            <Terminal size={16} /> Security Labs
-          </Link>
           <button className="sidebar-nav-item" onClick={handleLogout}>
             <LogOut size={16} /> Log Out
           </button>
@@ -192,12 +203,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div className="dashboard-main-content">
         <header className="dashboard-top-bar">
-          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)}>
-            <Menu size={24} />
+          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)} aria-label="Open menu">
+            <Menu size={22} />
           </button>
 
+          <div className="dashboard-page-title">
+            <pageTitle.icon size={18} />
+            <span>{pageTitle.name}</span>
+          </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto' }}>
-             <div style={{ position: 'relative' }}>
+             <div ref={notifMenuRef} style={{ position: 'relative' }}>
                 <button onClick={() => setShowNotifMenu(!showNotifMenu)} style={{ background: 'transparent', border: 'none', color: '#D4AF37', position: 'relative', cursor: 'pointer' }}>
                    <Megaphone size={20} />
                    {notifications.items.filter(n => !n.read).length > 0 && <span className="notif-badge">!</span>}
@@ -223,7 +239,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                    </div>
                 )}
              </div>
-             <div className="wallet-pill">{formatCurrency(currentUser.balance || 0)}</div>
           </div>
         </header>
 
