@@ -7,15 +7,21 @@ import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import BlockUserButton from '../components/BlockUserButton'
 
-// The next-of-kin trust circle — a SEPARATE, safety-oriented graph from
-// "Follow" (src/utils/social.ts). It is built entirely on res_trust_connections
-// via explicit request+confirm RPCs and must never read/write follows or
-// mutual_follows: blending the two would let mutual-follow-farming fake a
-// trust circle, undermining its whole anti-scam purpose.
+// Next of Kin — a SEPARATE, safety-oriented graph from "Follow"
+// (src/utils/social.ts). Built entirely on res_trust_connections via explicit
+// request+confirm RPCs; must never read/write follows or mutual_follows —
+// blending the two would let mutual-follow-farming fake a circle.
+//
+// Deliberately framed as pure safety, not a marketplace gate: res_trust_gate
+// now returns only a coarse status ('new'|'building'|'established') and
+// 'unlocked', never the raw connection counts. Showing an exact "3 of 5"
+// scoreboard would hand a scammer a visible target to farm (five people
+// ring-confirming each other satisfies a raw count without any real
+// vouching). The real 2-hop graph check still runs server-side — this is
+// hardening on top of that, not a replacement for it.
 
 interface TrustGate {
-  direct_connections: number
-  qualified_connections: number
+  status: 'new' | 'building' | 'established'
   unlocked: boolean
 }
 
@@ -151,10 +157,14 @@ export default function TrustCirclePage() {
     return p?.display_name || p?.username || 'Resident'
   }
 
-  const direct = gate?.direct_connections ?? 0
-  const qualified = gate?.qualified_connections ?? 0
+  const status = gate?.status ?? 'new'
   const unlocked = gate?.unlocked ?? false
-  const connectionsNeeded = Math.max(0, 5 - direct)
+  const STAGE_INDEX: Record<TrustGate['status'], number> = { new: 0, building: 1, established: 2 }
+  const STAGE_LABEL: Record<TrustGate['status'], string> = {
+    new: 'Just getting started',
+    building: 'Building your circle',
+    established: 'Established'
+  }
 
   return (
     <div className="space-y-6">
@@ -164,12 +174,12 @@ export default function TrustCirclePage() {
             <ShieldCheck size={22} className="text-gold-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Next-of-Kin Trust Circle</h2>
+            <h2 className="text-xl font-bold text-white">Next of Kin</h2>
             <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              This is a separate, safety-oriented circle — not the same as
-              &quot;Follow&quot;. It only grows when someone you trust explicitly
-              requests and confirms a connection with you, so it can&apos;t be
-              gamed by mutual-follow farming.
+              People to notify if something happens to you. It only grows when
+              someone you trust explicitly requests and confirms a connection
+              with you — separate from &quot;Follow&quot;, and never built from
+              your Gruvs follows or mutual connections.
             </p>
           </div>
         </div>
@@ -177,9 +187,9 @@ export default function TrustCirclePage() {
         <div className="flex items-start gap-2 bg-blue-500/5 border border-blue-500/20 rounded-lg p-3 mb-6">
           <Info size={14} className="text-blue-400 mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-400 leading-relaxed">
-            Connections here are used only to unlock trusted marketplace features
-            (like one-click move-assist). They never draw from or feed into your
-            Gruvs follows.
+            A real, established circle also quietly strengthens your standing
+            in trusted community features — no need to track exact numbers,
+            just keep confirming people who&apos;d genuinely vouch for you.
           </p>
         </div>
 
@@ -191,24 +201,24 @@ export default function TrustCirclePage() {
           <div className="bg-black/40 border border-white/5 rounded-xl p-5 space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-white uppercase tracking-widest">
-                {unlocked ? 'Trusted marketplace unlocked' : `${direct} of 5 connections`}
+                {STAGE_LABEL[status]}
               </span>
               <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${unlocked ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-gold-primary/10 text-gold-primary border border-gold-primary/20'}`}>
-                {unlocked ? 'Unlocked' : 'Locked'}
+                {unlocked ? 'Established' : 'Growing'}
               </span>
             </div>
-            <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden border border-white/5">
-              <div
-                className="h-full bg-gold-primary transition-all duration-700"
-                style={{ width: `${Math.min(100, (direct / 5) * 100)}%` }}
-              />
+            <div className="flex gap-1.5">
+              {(['new', 'building', 'established'] as const).map((stage, i) => (
+                <div
+                  key={stage}
+                  className={`h-1.5 flex-1 rounded-full border border-white/5 transition-all duration-700 ${i <= STAGE_INDEX[status] ? 'bg-gold-primary' : 'bg-gray-800'}`}
+                />
+              ))}
             </div>
             <p className="text-[11px] text-gray-500">
               {unlocked
-                ? `You have ${direct} confirmed connections, ${qualified} of them well-connected themselves — trusted features like one-click move-assist are unlocked.`
-                : connectionsNeeded > 0
-                  ? `Build ${connectionsNeeded} more confirmed connection${connectionsNeeded === 1 ? '' : 's'} to unlock trusted marketplace features like one-click move-assist.`
-                  : `You have 5+ connections — need ${Math.max(0, 3 - qualified)} more of them to be well-connected themselves (5+ connections each).`}
+                ? 'Your circle is established — trusted features like one-click move-assist are unlocked.'
+                : 'Keep confirming people who would genuinely vouch for you — your circle grows quietly in the background.'}
             </p>
           </div>
         )}

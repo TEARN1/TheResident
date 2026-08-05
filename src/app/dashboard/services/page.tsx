@@ -23,7 +23,9 @@ import { formatCurrency } from '../../../utils/logic'
 import FollowButton from '../components/FollowButton'
 import TrustBadge from '../components/TrustBadge'
 import OpenInMapsButton from '../components/OpenInMapsButton'
+import UpgradeButton from '../components/UpgradeButton'
 import { directionsUrlForAddress } from '../../../utils/navigation'
+import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
@@ -35,8 +37,7 @@ interface UpcomingEvent {
 }
 
 interface TrustGate {
-  direct_connections: number
-  qualified_connections: number
+  status: 'new' | 'building' | 'established'
   unlocked: boolean
 }
 
@@ -84,7 +85,17 @@ export default function ServicesPage() {
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const lifts = useSelector((state: RootState) => state.networking.lifts)
-  const services = useSelector((state: RootState) => state.networking.services)
+  const rawServices = useSelector((state: RootState) => state.networking.services)
+  const [providerTiers, setProviderTiers] = useState<Record<string, ProviderTier>>({})
+
+  // Pay-for-priority ordering: Premium first, then Priority, then everyone
+  // else in existing order. A free provider is never excluded, only later
+  // in the list — the free floor is bookable, paying just buys placement.
+  const TIER_RANK: Record<'premium' | 'priority' | 'none', number> = { premium: 0, priority: 1, none: 2 }
+  const services = [...rawServices].sort((a, b) =>
+    TIER_RANK[(providerTiers[a.ownerId] || 'none') as 'premium' | 'priority' | 'none'] -
+    TIER_RANK[(providerTiers[b.ownerId] || 'none') as 'premium' | 'priority' | 'none']
+  )
   const utilityTokens = useSelector((state: RootState) => state.utilities.tokens)
   const dispatches = useSelector((state: RootState) => state.networking.dispatches)
 
@@ -97,6 +108,17 @@ export default function ServicesPage() {
     })
     return () => { cancelled = true }
   }, [currentUser?.id])
+
+  // Batch-fetch provider tiers for every visible handyman card (no N+1).
+  useEffect(() => {
+    let cancelled = false
+    const ownerIds = rawServices.map(s => s.ownerId)
+    if (ownerIds.length === 0) return
+    getPublicProviderTiersBulk(ownerIds).then(result => {
+      if (!cancelled) setProviderTiers(result)
+    })
+    return () => { cancelled = true }
+  }, [rawServices])
 
   // Batch-fetch titles for every event a lift is attached to (no N+1).
   useEffect(() => {
@@ -361,8 +383,13 @@ export default function ServicesPage() {
                         <span className="text-xs font-black text-white">{srv.rating}</span>
                         <span className="text-[10px] text-gray-500 font-bold">({srv.reviewsCount})</span>
                      </div>
-                     <div className="absolute bottom-4 left-4">
+                     <div className="absolute bottom-4 left-4 flex gap-2">
                         <span className="bg-gold-primary text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-xl">{srv.category}</span>
+                        {providerTiers[srv.ownerId] && (
+                           <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-xl ${providerTiers[srv.ownerId] === 'premium' ? 'bg-purple-500 text-white' : 'bg-blue-500 text-white'}`}>
+                              {providerTiers[srv.ownerId] === 'premium' ? 'Premium' : 'Priority'}
+                           </span>
+                        )}
                      </div>
                   </div>
                   <div className="p-6 flex-1 flex flex-col gap-5">
@@ -400,7 +427,7 @@ export default function ServicesPage() {
                               </button>
                               {trustGate && !trustGate.unlocked && (
                                  <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest text-center flex items-center justify-center gap-1.5">
-                                    <Lock size={10} className="text-gold-primary" /> {trustGate.direct_connections}/5 trust connections — build your trust circle to unlock
+                                    <Lock size={10} className="text-gold-primary" /> {trustGate.status === 'building' ? 'Building your next-of-kin circle' : 'Build your next-of-kin circle to unlock'}
                                  </p>
                               )}
                            </div>
@@ -411,6 +438,15 @@ export default function ServicesPage() {
                         >
                            {srv.ownerId === currentUser?.id ? 'Manage My Card' : 'Hire Contractor'}
                         </button>
+                        {srv.ownerId === currentUser?.id && !providerTiers[srv.ownerId] && (
+                           <div className="space-y-2 pt-2 border-t border-white/5">
+                              <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest text-center">Free listing — get seen first</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                 <UpgradeButton tier="priority" className="w-full bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 text-blue-400 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+                                 <UpgradeButton tier="premium" className="w-full bg-purple-500/10 hover:bg-purple-500 hover:text-white border border-purple-500/30 text-purple-400 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+                              </div>
+                           </div>
+                        )}
                      </div>
                   </div>
                </motion.div>
@@ -690,8 +726,10 @@ export default function ServicesPage() {
                         {trustGate.unlocked ? <ShieldCheck size={20} className="text-green-500" /> : <Lock size={20} className="text-gold-primary" />}
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
                            {trustGate.unlocked
-                              ? 'Your next-of-kin trust circle is verified — you can request move help.'
-                              : `${trustGate.direct_connections}/5 trust connections. Build your next-of-kin trust circle (5+ confirmed connections) before requesting move help.`}
+                              ? 'Your next-of-kin circle is established — you can request move help.'
+                              : trustGate.status === 'building'
+                              ? "You're building your next-of-kin circle. Keep confirming connections to unlock move help."
+                              : 'Add next-of-kin connections before requesting move help — this keeps move-assist limited to people the community actually vouches for.'}
                         </p>
                      </div>
                   )}

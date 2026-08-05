@@ -2,10 +2,17 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import 'leaflet/dist/leaflet.css'
-import { Navigation, Maximize, RefreshCw, Check, X, ShieldAlert } from 'lucide-react'
+import { Navigation, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '../../../store'
 import { fetchSharedZones, verifyZone, type SharedZone } from '../../../utils/mapZones'
+import { fetchSavedPins, saveNewPin, deleteSavedPin, type SavedPin } from '../../../utils/savedPins'
+import { distanceMetres } from '../../../utils/logic'
+import type { GeocodeResult } from '../../../utils/geocode'
+import MapSearchBox from './MapSearchBox'
+import SavedPinsPanel from './SavedPinsPanel'
+import DistanceMatrixPanel, { type MatrixPoint } from './DistanceMatrixPanel'
+import LiveLocationToggle from './LiveLocationToggle'
 
 // Colour by kind — matches map_zones' shared CHECK constraint
 // (road_closed, heavy_traffic, detour, no_parking, route, zone, alert).
@@ -34,6 +41,9 @@ export default function VibeMap() {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<import('leaflet').Map | null>(null)
   const markersRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const searchMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const pinsLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const liveMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const leafletRef = useRef<typeof import('leaflet') | null>(null)
 
   const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null)
@@ -41,6 +51,42 @@ export default function VibeMap() {
   const [zones, setZones] = useState<SharedZone[]>([])
   const [loading, setLoading] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
+
+  // ── #1 Search-as-you-type + #2 Saved pins ─────────────────────────────────
+  const [pendingPoint, setPendingPoint] = useState<{ label: string; lat: number; lon: number } | null>(null)
+  const [savedPins, setSavedPins] = useState<SavedPin[]>([])
+  const [pinsLoading, setPinsLoading] = useState(false)
+
+  // ── #3 Multi-stop distance matrix ─────────────────────────────────────────
+  const [matrixPoints, setMatrixPoints] = useState<MatrixPoint[]>([])
+
+  // ── #4 Geofenced area alerts (client-side, informational) ────────────────
+  const [alertRadiusM, setAlertRadiusM] = useState(500)
+
+  // ── #5 Live location sharing (foundation) ─────────────────────────────────
+  const [livePosition, setLivePosition] = useState<{ lat: number; lon: number } | null>(null)
+
+  const currentUserId = currentUser && currentUser.id !== 'visitor-guest' ? currentUser.id : null
+
+  const refreshSavedPins = async () => {
+    if (!currentUserId) { setSavedPins([]); return }
+    setPinsLoading(true)
+    const pins = await fetchSavedPins()
+    setSavedPins(pins)
+    setPinsLoading(false)
+  }
+
+  useEffect(() => {
+    refreshSavedPins()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId])
+
+  // Geofence check: which saved pins have a shared zone within their alert radius.
+  const geofenceHits = savedPins.flatMap(pin =>
+    zones
+      .filter(z => distanceMetres(pin, z) <= alertRadiusM)
+      .map(z => ({ pin, zone: z }))
+  )
 
   // No hardcoded home country: ask the device where it is. If the user says
   // no, the map still works — it just starts zoomed out to the whole world
@@ -84,7 +130,14 @@ export default function VibeMap() {
       }).addTo(map)
 
       markersRef.current = L.layerGroup().addTo(map)
+      searchMarkerRef.current = L.layerGroup().addTo(map)
+      pinsLayerRef.current = L.layerGroup().addTo(map)
+      liveMarkerRef.current = L.layerGroup().addTo(map)
       mapRef.current = map
+
+      map.on('click', (e: import('leaflet').LeafletMouseEvent) => {
+        setPendingPoint({ label: `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`, lat: e.latlng.lat, lon: e.latlng.lng })
+      })
 
       if (center) loadZones(center.lat, center.lon)
     })
@@ -108,6 +161,21 @@ export default function VibeMap() {
 
     zones.forEach(zone => {
       const color = KIND_COLOR[zone.kind] || '#D4AF37'
+      const isGeofenceHit = geofenceHits.some(h => h.zone.id === zone.id)
+
+      if (isGeofenceHit) {
+        // #4 Geofenced alerts: a pulsing ring behind zones that fall inside
+        // the radius of one of the user's saved places.
+        L.circleMarker([zone.lat, zone.lon], {
+          radius: 16 + zone.severity * 2,
+          color: '#ef4444',
+          fillColor: '#ef4444',
+          fillOpacity: 0.12,
+          weight: 2,
+          className: 'res-geofence-pulse'
+        }).addTo(group)
+      }
+
       const marker = L.circleMarker([zone.lat, zone.lon], {
         radius: 8 + zone.severity * 2,
         color,
@@ -172,7 +240,88 @@ export default function VibeMap() {
       marker.addTo(group)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zones, currentUser])
+  }, [zones, currentUser, savedPins, alertRadiusM])
+
+  // #1 Search marker — a temporary marker for the currently selected search result / dropped pin.
+  useEffect(() => {
+    const L = leafletRef.current
+    const layer = searchMarkerRef.current
+    if (!L || !layer) return
+    layer.clearLayers()
+    if (!pendingPoint) return
+
+    L.marker([pendingPoint.lat, pendingPoint.lon], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="width:16px;height:16px;border-radius:50%;background:#22c55e;border:2px solid white;box-shadow:0 0 0 4px rgba(34,197,94,0.25)"></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      })
+    }).bindPopup(pendingPoint.label).addTo(layer).openPopup()
+  }, [pendingPoint])
+
+  // #2 Saved pins layer — persistent marker layer, distinct from zone markers.
+  useEffect(() => {
+    const L = leafletRef.current
+    const layer = pinsLayerRef.current
+    if (!L || !layer) return
+    layer.clearLayers()
+
+    savedPins.forEach(pin => {
+      L.marker([pin.lat, pin.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="width:14px;height:14px;border-radius:4px;background:#D4AF37;border:2px solid white;transform:rotate(45deg)"></div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7]
+        })
+      }).bindPopup(`<strong>${pin.label}</strong>`).addTo(layer)
+    })
+  }, [savedPins])
+
+  // #5 Live location marker — the current user's own position while sharing is on.
+  useEffect(() => {
+    const L = leafletRef.current
+    const layer = liveMarkerRef.current
+    if (!L || !layer) return
+    layer.clearLayers()
+    if (!livePosition) return
+
+    L.marker([livePosition.lat, livePosition.lon], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid white;box-shadow:0 0 0 6px rgba(59,130,246,0.25)"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+      })
+    }).bindPopup('You (live)').addTo(layer)
+  }, [livePosition])
+
+  const addMatrixPoint = (p: MatrixPoint) => {
+    setMatrixPoints(prev => prev.some(x => x.id === p.id) ? prev : [...prev, p])
+  }
+
+  const handleSearchSelect = (result: GeocodeResult) => {
+    setPendingPoint({ label: result.label, lat: result.lat, lon: result.lon })
+    mapRef.current?.setView([result.lat, result.lon], 15)
+  }
+
+  const handleSavePin = async (label: string) => {
+    if (!pendingPoint) return
+    await saveNewPin(label, pendingPoint.lat, pendingPoint.lon)
+    setPendingPoint(null)
+    await refreshSavedPins()
+  }
+
+  const handleDeletePin = async (id: string) => {
+    await deleteSavedPin(id)
+    setMatrixPoints(prev => prev.filter(p => p.id !== id))
+    await refreshSavedPins()
+  }
+
+  const handleJumpToPin = (pin: SavedPin) => {
+    mapRef.current?.setView([pin.lat, pin.lon], 15)
+  }
 
   return (
     <div className="space-y-6">
@@ -205,6 +354,17 @@ export default function VibeMap() {
           </div>
         </div>
 
+        <div className="mb-4">
+          <MapSearchBox onSelect={handleSearchSelect} />
+        </div>
+
+        {geofenceHits.length > 0 && (
+          <div className="mb-4 flex items-center gap-2 text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+            <Bell size={14} className="text-red-400 shrink-0" />
+            {geofenceHits.length} alert{geofenceHits.length === 1 ? '' : 's'} near your saved places (within {alertRadiusM}m)
+          </div>
+        )}
+
         {locationDenied && (
           <div className="mb-4 flex items-center gap-2 text-xs text-gray-500 bg-white/5 border border-white/10 rounded-xl p-3">
             <ShieldAlert size={14} className="text-gold-primary shrink-0" />
@@ -224,6 +384,20 @@ export default function VibeMap() {
           className="aspect-video rounded-2xl overflow-hidden border border-white/5"
           style={{ background: '#111' }}
         />
+
+        {pendingPoint && (
+          <div className="mt-3 flex items-center justify-between gap-2 text-xs text-gray-400 bg-white/2 border border-white/5 rounded-xl p-3">
+            <span className="truncate flex items-center gap-2">
+              <MapPin size={13} className="text-green-500 shrink-0" /> {pendingPoint.label}
+            </span>
+            <button
+              onClick={() => addMatrixPoint({ id: `pt-${pendingPoint.lat}-${pendingPoint.lon}`, label: pendingPoint.label, lat: pendingPoint.lat, lon: pendingPoint.lon })}
+              className="shrink-0 text-[11px] font-bold text-gold-primary border border-gold-primary/40 rounded-lg px-2 py-1 hover:bg-gold-primary/10 transition-colors"
+            >
+              Add to distance matrix
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
           {Object.entries(KIND_LABEL).map(([kind, label]) => (
@@ -255,6 +429,58 @@ export default function VibeMap() {
           </div>
         </div>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SavedPinsPanel
+          pending={pendingPoint}
+          pins={savedPins}
+          loading={pinsLoading}
+          onSave={handleSavePin}
+          onDelete={handleDeletePin}
+          onJump={handleJumpToPin}
+          onAddToMatrix={pin => addMatrixPoint({ id: pin.id, label: pin.label, lat: pin.lat, lon: pin.lon })}
+        />
+
+        <div className="glass-panel p-6">
+          <h4 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2 mb-4">
+            <Bell size={16} className="text-gold-primary" /> Geofenced Area Alerts
+          </h4>
+          <p className="text-[11px] text-gray-500 mb-4">
+            Highlights shared zones that fall within a radius of any of your saved places — client-side only, refreshed with the map.
+          </p>
+          <label className="block text-[10px] text-gray-500 uppercase font-bold mb-1">Alert radius (metres)</label>
+          <input
+            type="number"
+            min={50}
+            max={20000}
+            step={50}
+            value={alertRadiusM}
+            onChange={e => setAlertRadiusM(Math.max(50, Number(e.target.value) || 50))}
+            className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-gold-primary/50 mb-4"
+          />
+          <div className="p-3 bg-white/2 border border-white/5 rounded-xl mb-4">
+            <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Alerts near saved places</p>
+            <p className="text-lg font-bold text-white">{geofenceHits.length}</p>
+          </div>
+          <LiveLocationToggle userId={currentUserId} onPosition={setLivePosition} />
+        </div>
+      </div>
+
+      <DistanceMatrixPanel
+        points={matrixPoints}
+        onRemove={id => setMatrixPoints(prev => prev.filter(p => p.id !== id))}
+      />
+
+      <style jsx global>{`
+        .res-geofence-pulse {
+          animation: res-pulse-ring 1.6s ease-out infinite;
+        }
+        @keyframes res-pulse-ring {
+          0% { opacity: 0.9; }
+          70% { opacity: 0.15; }
+          100% { opacity: 0.9; }
+        }
+      `}</style>
     </div>
   )
 }

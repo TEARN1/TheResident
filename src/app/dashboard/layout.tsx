@@ -21,6 +21,8 @@ import {
 import { supabase } from '../../utils/supabase'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
 import { t } from '../../utils/i18n'
+import { hasHouseholdPlus } from '../../utils/subscriptions'
+import UpgradeButton from './components/UpgradeButton'
 import Link from 'next/link'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -39,6 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const dataStatus = useSelector((state: RootState) => state.ui.dataStatus)
   const failedTables = useSelector((state: RootState) => state.ui.failedTables)
   const pendingWrites = useSelector((state: RootState) => state.ui.offlineQueue.length)
+  const [showPlusUpsell, setShowPlusUpsell] = useState(false)
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -89,6 +92,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return unsubscribe
   }, [currentUser, dispatch])
 
+  useEffect(() => {
+    if (!currentUser || currentUser.id === 'visitor-guest') return
+    let cancelled = false
+    hasHouseholdPlus().then(has => { if (!cancelled) setShowPlusUpsell(!has) })
+    return () => { cancelled = true }
+  }, [currentUser])
+
   // Close the notifications dropdown on an outside click — previously the
   // only way to close it was clicking the bell a second time.
   useEffect(() => {
@@ -117,21 +127,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  const navItems = currentUser.role === 'tenant' || currentUser.role === 'visitor' ? [
+  const coreItems = currentUser.role === 'tenant' || currentUser.role === 'visitor' ? [
     { name: t('navHousing', lang), href: '/dashboard/housing', icon: Home },
     { name: t('navServices', lang), href: '/dashboard/services', icon: Briefcase },
     { name: t('navCommunity', lang), href: '/dashboard/community', icon: Users },
-    { name: 'Trust Circle', href: '/dashboard/trust-circle', icon: ShieldCheck },
-    { name: 'Gossip', href: '/dashboard/gossip', icon: MessagesSquare },
-    { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   ] : [
     { name: t('navPortfolio', lang), href: '/dashboard/housing', icon: Home },
     { name: t('navMaintenance', lang), href: '/dashboard/services', icon: Wrench },
     { name: t('navCommunity', lang), href: '/dashboard/community', icon: Users },
-    { name: 'Trust Circle', href: '/dashboard/trust-circle', icon: ShieldCheck },
-    { name: 'Gossip', href: '/dashboard/gossip', icon: MessagesSquare },
+  ]
+  const socialItems = [
+    { name: 'Next of Kin', href: '/dashboard/trust-circle', icon: ShieldCheck },
+    { name: 'Feed', href: '/dashboard/gossip', icon: MessagesSquare },
     { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   ]
+  const navItems = [...coreItems, ...socialItems]
 
   // So the top bar can orient the user to which section they're in.
   const pageTitle = navItems.find(item => item.href === pathname) || navItems[0]
@@ -196,7 +206,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <nav className="sidebar-nav">
           <span className="sidebar-nav-section-label">{t('menuLabel', lang)}</span>
-          {navItems.map(item => (
+          {coreItems.map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`sidebar-nav-item ${pathname === item.href ? 'active' : ''}`}
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <item.icon size={16} /> {item.name}
+            </Link>
+          ))}
+          <span className="sidebar-nav-section-label" style={{ marginTop: '0.75rem' }}>Social &amp; Safety</span>
+          {socialItems.map(item => (
             <Link
               key={item.href}
               href={item.href}
@@ -209,6 +230,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         <div className="sidebar-footer">
+          {showPlusUpsell && currentUser.id !== 'visitor-guest' && (
+            <div className="bg-gold-primary/5 border border-gold-primary/15 rounded-xl p-3 mb-1">
+              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-2">Household Plus</p>
+              <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">Priority mediation, extra feed storage, an ad-free view.</p>
+              <UpgradeButton tier="plus" className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-2 rounded-lg text-[9px] uppercase tracking-widest transition-all active:scale-95" />
+            </div>
+          )}
           <div className="lang-switcher">
             {['en', 'zu', 'xh', 'af'].map(l => (
               <button

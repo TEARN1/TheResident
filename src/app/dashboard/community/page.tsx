@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, Navigation, X, Shield, Users, Zap, Droplets, Lock
+  Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, X, Shield, Users, Zap, Droplets, Lock,
+  LayoutGrid, AlertTriangle, ListChecks, Sparkles, DoorOpen, Map as MapIcon
 } from 'lucide-react'
 import {
   RootState,
@@ -56,7 +57,8 @@ const VibeMap = dynamic(() => import('../components/VibeMap'), {
 
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
-  const [subTab, setSubTab] = useState<'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'rooms' | 'resources' | 'admin'>('notices')
+  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'rooms' | 'resources' | 'admin'>('overview')
+  const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
   // Dispute Modal State
@@ -296,20 +298,67 @@ export default function CommunityPage() {
     memberCount: communityMemberCounts[toUUID(c.id)] || 0
   }))
 
-  const tabs = [
-    { id: 'notices', label: 'Notices', icon: Megaphone },
-    { id: 'market', label: 'Market', icon: Briefcase },
-    { id: 'rooms', label: 'Empty Rooms', icon: Zap },
-    { id: 'resources', label: 'Resources', icon: Droplets },
-    { id: 'safety', label: 'Safety', icon: ShieldCheck },
-    { id: 'tools', label: 'Tools', icon: Wrench },
-    { id: 'chores', label: 'Chores', icon: Award },
-    { id: 'disputes', label: 'Disputes', icon: Gavel },
-    { id: 'household', label: 'Household', icon: Home },
-    { id: 'communities', label: 'Groups', icon: Users },
-    { id: 'admin', label: 'Admin', icon: Lock },
-    { id: 'vibemap', label: 'VibeMap', icon: Navigation },
+  // Four clusters, each carrying one secondary accent layered on top of the
+  // base gold palette (used only as a subtle icon-badge tint, never replacing
+  // gold as the primary active-state color). Admin cluster is appended below
+  // only when the user actually moderates a community.
+  const clusters = [
+    {
+      id: 'feed',
+      label: 'Feed & Social',
+      accent: 'text-sky-400 bg-sky-400/10',
+      tabs: [
+        { id: 'notices', label: 'Notices', icon: Megaphone },
+        { id: 'rooms', label: 'Empty Rooms', icon: Zap },
+        { id: 'communities', label: 'Groups', icon: Users },
+      ],
+    },
+    {
+      id: 'trade',
+      label: 'Trade & Resources',
+      accent: 'text-emerald-400 bg-emerald-400/10',
+      tabs: [
+        { id: 'market', label: 'Market', icon: Briefcase },
+        { id: 'resources', label: 'Resources', icon: Droplets },
+        { id: 'tools', label: 'Tools', icon: Wrench },
+      ],
+    },
+    {
+      id: 'safety',
+      label: 'Safety & Household',
+      accent: 'text-rose-400 bg-rose-400/10',
+      tabs: [
+        { id: 'safety', label: 'Safety', icon: ShieldCheck },
+        { id: 'disputes', label: 'Disputes', icon: Gavel },
+        { id: 'household', label: 'Household', icon: Home },
+        { id: 'chores', label: 'Chores', icon: Award },
+      ],
+    },
+    ...(isModerator ? [{
+      id: 'admin',
+      label: 'Admin',
+      accent: 'text-violet-400 bg-violet-400/10',
+      tabs: [
+        { id: 'admin', label: 'Admin', icon: Lock },
+      ],
+    }] : []),
   ] as const
+
+  // ── Overview stat cards ────────────────────────────────────────────────
+  const activeAlertsCount = alerts.filter(a => a.status === 'active').length
+  const myPendingChoresCount = communityChores.filter(c => c.roommateId === currentUser?.id && c.status !== 'completed').length
+  // eslint-disable-next-line react-hooks/purity -- 48h freshness window is a display heuristic, not render output that must stay stable
+  const now = Date.now()
+  const newMarketItemsCount = marketItems.filter(m => now - new Date(m.createdAt).getTime() < 48 * 60 * 60 * 1000).length
+  const isLandlord = listings.some(l => l.landlordId === currentUser?.id)
+  const openRoomRequestsCount = isLandlord
+    ? requests.filter(r => r.landlordId === currentUser?.id && r.status === 'pending').length
+    : 0
+
+  const goToTab = (id: typeof subTab) => { setPreMapTab(id as Exclude<typeof subTab, 'vibemap'>); setSubTab(id) }
+  const toggleVibeMap = () => {
+    if (subTab === 'vibemap') { setSubTab(preMapTab) } else { setPreMapTab(subTab as Exclude<typeof subTab, 'vibemap'>); setSubTab('vibemap') }
+  }
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-32">
@@ -324,20 +373,59 @@ export default function CommunityPage() {
           <p className="text-gray-500 text-sm font-bold uppercase tracking-widest opacity-60 ml-1">Connect, Share Resources & Protect Your Neighborhood</p>
         </div>
 
-        <div className="flex flex-wrap bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl w-full lg:w-auto overflow-x-auto no-scrollbar">
-          {tabs.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setSubTab(t.id)}
-              className={`flex-1 lg:flex-none px-4 py-2.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === t.id ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white'}`}
-            >
-              <t.icon size={12} /> {t.label}
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={toggleVibeMap}
+          title="VibeMap"
+          aria-label="Toggle VibeMap"
+          className={`hidden md:inline-flex items-center justify-center w-11 h-11 rounded-2xl border shrink-0 transition-all ${subTab === 'vibemap' ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20' : 'bg-black/40 text-gray-500 border-white/5 hover:text-gold-primary hover:border-gold-primary/30'}`}
+        >
+          <MapIcon size={18} />
+        </button>
       </header>
 
-      <GruvsConnectionsWidget />
+      {/* CLUSTERED TAB BAR */}
+      <div className="bg-black/40 p-3 md:p-4 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl space-y-3">
+        <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => goToTab('overview')}
+            className={`px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'overview' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white bg-white/5'}`}
+          >
+            <LayoutGrid size={12} /> Overview
+          </button>
+          <button
+            onClick={toggleVibeMap}
+            className={`md:hidden px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'vibemap' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white bg-white/5'}`}
+          >
+            <MapIcon size={12} /> VibeMap
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-x-8 gap-y-4 overflow-x-auto no-scrollbar">
+          {clusters.map(cluster => (
+            <div key={cluster.id} className="space-y-1.5 min-w-0">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 ml-1">{cluster.label}</p>
+              <div className="flex items-center gap-1.5">
+                {cluster.tabs.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => goToTab(t.id as typeof subTab)}
+                    className={`px-3.5 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap border ${
+                      subTab === t.id
+                        ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20'
+                        : 'text-gray-400 border-white/5 hover:text-white hover:border-white/20'
+                    }`}
+                  >
+                    <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-black/10' : cluster.accent}`}>
+                      <t.icon size={11} />
+                    </span>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="mt-4">
         <AnimatePresence mode="wait">
@@ -348,6 +436,43 @@ export default function CommunityPage() {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
           >
+            {subTab === 'overview' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="glass-panel p-5 bg-rose-400/5 border-rose-400/10 space-y-3">
+                    <div className="p-2 bg-rose-400/10 rounded-xl w-fit text-rose-400"><AlertTriangle size={18} /></div>
+                    <div>
+                      <p className="text-2xl font-black text-white italic">{activeAlertsCount}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active Alerts</p>
+                    </div>
+                  </div>
+                  <div className="glass-panel p-5 bg-gold-primary/5 border-gold-primary/10 space-y-3">
+                    <div className="p-2 bg-gold-primary/10 rounded-xl w-fit text-gold-primary"><ListChecks size={18} /></div>
+                    <div>
+                      <p className="text-2xl font-black text-white italic">{myPendingChoresCount}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Chores Assigned To You</p>
+                    </div>
+                  </div>
+                  <div className="glass-panel p-5 bg-emerald-400/5 border-emerald-400/10 space-y-3">
+                    <div className="p-2 bg-emerald-400/10 rounded-xl w-fit text-emerald-400"><Sparkles size={18} /></div>
+                    <div>
+                      <p className="text-2xl font-black text-white italic">{newMarketItemsCount}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">New Market Items (48h)</p>
+                    </div>
+                  </div>
+                  {isLandlord && (
+                    <div className="glass-panel p-5 bg-sky-400/5 border-sky-400/10 space-y-3">
+                      <div className="p-2 bg-sky-400/10 rounded-xl w-fit text-sky-400"><DoorOpen size={18} /></div>
+                      <div>
+                        <p className="text-2xl font-black text-white italic">{openRoomRequestsCount}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Open Room Requests</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <GruvsConnectionsWidget />
+              </div>
+            )}
             {subTab === 'notices' && (
                <NoticeBoardTab
                   communityNotices={communityNotices}
