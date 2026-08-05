@@ -269,7 +269,7 @@ export const containsOpenRedirect = (input: string): boolean => {
   ]
   // Allow same-domain redirects
   const isExternal = patterns.some(p => p.test(input))
-  const isSameDomain = input.includes('localhost') || input.includes('theresident.co.za')
+  const isSameDomain = input.includes('localhost') || input.includes('theresidentcrew.com')
   return isExternal && !isSameDomain
 }
 

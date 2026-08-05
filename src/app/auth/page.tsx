@@ -310,7 +310,7 @@ export default function AuthPage() {
     const visitorUser = {
       id: 'visitor-guest',
       name: 'Guest Visitor',
-      email: 'visitor@theresident.co.za',
+      email: 'visitor@theresidentcrew.com',
       role: 'visitor' as const,
       profile: {
         bio: 'Browsing the directory as a guest.',

@@ -69,7 +69,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         dispatch(loginUser({
           id: 'visitor-guest',
           name: 'Guest Visitor',
-          email: 'visitor@theresident.co.za',
+          email: 'visitor@theresidentcrew.com',
           role: 'visitor' as const
         }))
         return

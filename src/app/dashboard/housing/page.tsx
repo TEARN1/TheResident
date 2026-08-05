@@ -18,6 +18,7 @@ import {
 } from '../../../store'
 import { useGeolocation } from '../../../hooks/useGeolocation'
 import { formatCurrency, suburbPriceStats, isSuspiciousPrice } from '../../../utils/logic'
+import FollowButton from '../components/FollowButton'
 
 export default function HousingPage() {
   const dispatch = useDispatch()
@@ -327,6 +328,13 @@ export default function HousingPage() {
 
                   <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80">{item.description}</p>
 
+                  <div className="flex items-center justify-between gap-2 -mt-1">
+                     <span className="text-[10px] text-gray-500 font-bold">
+                        Posted by <span className="text-gray-300">{item.landlordName || 'Landlord'}</span>
+                     </span>
+                     <FollowButton targetUserId={item.landlordId} currentUserId={currentUser?.id} />
+                  </div>
+
                   <div className="flex flex-wrap gap-2 pt-2">
                     {item.amenities.wifi && <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-gray-400 flex items-center gap-1.5">WiFi</span>}
                     {item.amenities.parking && <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-gray-400 flex items-center gap-1.5">Parking</span>}
@@ -357,8 +365,11 @@ export default function HousingPage() {
                          <MapPin size={10} className="text-gold-primary" /> {rm.suburb}
                       </div>
                    </div>
-                   <div className="bg-gold-primary/10 border border-gold-primary/20 text-gold-primary px-3 py-1 rounded-xl text-sm font-black tracking-tighter">
-                      {formatCurrency(rm.budget, rm.currency)}
+                   <div className="flex flex-col items-end gap-2">
+                      <div className="bg-gold-primary/10 border border-gold-primary/20 text-gold-primary px-3 py-1 rounded-xl text-sm font-black tracking-tighter">
+                         {formatCurrency(rm.budget, rm.currency)}
+                      </div>
+                      <FollowButton targetUserId={rm.id} currentUserId={currentUser?.id} />
                    </div>
                 </div>
                 <p className="text-sm text-gray-400 italic leading-relaxed font-medium">&quot;{rm.bio}&quot;</p>

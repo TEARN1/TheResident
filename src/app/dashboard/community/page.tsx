@@ -41,6 +41,7 @@ import SafetyTab from '../components/SafetyTab'
 import MarketTab from '../components/MarketTab'
 import HouseholdTab from '../components/HouseholdTab'
 import CommunitiesTab from '../components/CommunitiesTab'
+import GruvsConnectionsWidget from '../components/GruvsConnectionsWidget'
 import dynamic from 'next/dynamic'
 import { formatCurrency, type StatusReport } from '../../../utils/logic'
 
@@ -277,6 +278,8 @@ export default function CommunityPage() {
           ))}
         </div>
       </header>
+
+      <GruvsConnectionsWidget />
 
       <div className="mt-4">
         <AnimatePresence mode="wait">

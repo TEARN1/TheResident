@@ -18,6 +18,7 @@ import {
 } from '../../../store'
 import { claimVoucher, joinWaitlist, cancelSeat } from '../../../store/actions'
 import { formatCurrency } from '../../../utils/logic'
+import FollowButton from '../components/FollowButton'
 
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
@@ -216,6 +217,12 @@ export default function ServicesPage() {
                         </div>
                      </div>
                      <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80 font-medium italic">&quot;{srv.description}&quot;</p>
+
+                     {srv.ownerId !== currentUser?.id && (
+                       <div className="flex justify-end -mt-2">
+                         <FollowButton targetUserId={srv.ownerId} currentUserId={currentUser?.id} />
+                       </div>
+                     )}
 
                      <div className="bg-white/2 border border-white/5 rounded-xl p-3 flex justify-between items-center">
                         <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Rate Estimate</span>
