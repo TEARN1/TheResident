@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, Navigation, X, Shield, Users
+  Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, Navigation, X, Shield, Users, Zap, Droplets, Lock
 } from 'lucide-react'
 import {
   RootState,
@@ -18,7 +18,8 @@ import {
   addTool,
   pledgeGroupBuy,
   resolveLostFound,
-  toUUID
+  toUUID,
+  fetchSupabaseData
 } from '../../../store'
 import {
   joinCommunity,
@@ -41,6 +42,9 @@ import SafetyTab from '../components/SafetyTab'
 import MarketTab from '../components/MarketTab'
 import HouseholdTab from '../components/HouseholdTab'
 import CommunitiesTab from '../components/CommunitiesTab'
+import EmptyRoomBoard from '../components/EmptyRoomBoard'
+import SharedResourcesTab from '../components/SharedResourcesTab'
+import CommunityAdminTab from '../components/CommunityAdminTab'
 import GruvsConnectionsWidget from '../components/GruvsConnectionsWidget'
 import dynamic from 'next/dynamic'
 import { formatCurrency, type StatusReport } from '../../../utils/logic'
@@ -52,7 +56,7 @@ const VibeMap = dynamic(() => import('../components/VibeMap'), {
 
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
-  const [subTab, setSubTab] = useState<'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap'>('notices')
+  const [subTab, setSubTab] = useState<'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'rooms' | 'resources' | 'admin'>('notices')
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
   // Dispute Modal State
@@ -88,6 +92,11 @@ export default function CommunityPage() {
 
   // Server-held facts a client must not invent: verification + household.
   const [isVerified, setIsVerified] = useState(false)
+  // Communities where the current user is admin/founder — drives the small
+  // hide/unhide moderation controls surfaced inside Market/Notices, and gates
+  // the Admin tab's member-management panel. Server-side res_moderate does
+  // its own role check regardless; this only controls what the UI offers.
+  const [adminCommunities, setAdminCommunities] = useState<Array<{ id: string; name: string }>>([])
   const [householdListingId, setHouseholdListingId] = useState<string | null>(null)
   const [householdName, setHouseholdName] = useState('')
   const [householdMembers, setHouseholdMembers] = useState<Array<{ userId: string; name: string; role: string }>>([])
@@ -124,6 +133,52 @@ export default function CommunityPage() {
     load()
     return () => { cancelled = true }
   }, [currentUser, listings, requests, roommates])
+
+  useEffect(() => {
+    if (!currentUser || currentUser.id === 'visitor-guest' || !supabase || myCommunityIds.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAdminCommunities([])
+      return
+    }
+    let cancelled = false
+
+    const loadAdminCommunities = async () => {
+      const ids = myCommunityIds.map(toUUID)
+      const { data } = await supabase!
+        .from('res_community_members')
+        .select('community_id, role')
+        .eq('user_id', currentUser.id)
+        .in('community_id', ids)
+        .in('role', ['admin', 'founder'])
+      if (cancelled || !data) return
+      setAdminCommunities(data.map(row => ({
+        id: row.community_id,
+        name: communities.find(c => toUUID(c.id) === toUUID(row.community_id))?.name || 'Community'
+      })))
+    }
+
+    loadAdminCommunities()
+    return () => { cancelled = true }
+  }, [currentUser, myCommunityIds, communities])
+
+  const isModerator = adminCommunities.length > 0
+  const moderationCommunityId = adminCommunities[0]?.id || null
+
+  const handleModerate = async (subjectType: string, subjectId: string, action: 'hide' | 'unhide') => {
+    if (!supabase || !moderationCommunityId) return
+    const { error } = await supabase.rpc('res_moderate', {
+      p_community: moderationCommunityId,
+      p_action: action,
+      p_subject_type: subjectType,
+      p_subject_id: subjectId,
+      p_reason: null
+    })
+    if (!error) {
+      setAlertNotification(action === 'hide' ? 'Hidden.' : 'Unhidden.')
+      setTimeout(() => setAlertNotification(null), 3000)
+      dispatch(fetchSupabaseData())
+    }
+  }
 
   // No fallback suburb: defaulting a new user in, say, Lagos into a South
   // African suburb would silently scope their whole safety/market feed to the
@@ -244,12 +299,15 @@ export default function CommunityPage() {
   const tabs = [
     { id: 'notices', label: 'Notices', icon: Megaphone },
     { id: 'market', label: 'Market', icon: Briefcase },
+    { id: 'rooms', label: 'Empty Rooms', icon: Zap },
+    { id: 'resources', label: 'Resources', icon: Droplets },
     { id: 'safety', label: 'Safety', icon: ShieldCheck },
     { id: 'tools', label: 'Tools', icon: Wrench },
     { id: 'chores', label: 'Chores', icon: Award },
     { id: 'disputes', label: 'Disputes', icon: Gavel },
     { id: 'household', label: 'Household', icon: Home },
     { id: 'communities', label: 'Groups', icon: Users },
+    { id: 'admin', label: 'Admin', icon: Lock },
     { id: 'vibemap', label: 'VibeMap', icon: Navigation },
   ] as const
 
@@ -298,6 +356,8 @@ export default function CommunityPage() {
                   handleEchoNotice={(id) => dispatch(echoNotice({ noticeId: id, userName: currentUser?.name || '' }))}
                   handleRSVPToEvent={(id) => dispatch(rsvpToEvent({ noticeId: id, userName: currentUser?.name || '' }))}
                   handlePostNotice={handlePostNotice}
+                  isModerator={isModerator}
+                  onModerate={handleModerate}
                />
             )}
             {subTab === 'market' && (
@@ -336,6 +396,20 @@ export default function CommunityPage() {
                   setAlertNotification('Marked reunited — thank you!')
                   setTimeout(() => setAlertNotification(null), 3000)
                 }}
+                isModerator={isModerator}
+                onModerate={handleModerate}
+              />
+            )}
+            {subTab === 'rooms' && (
+              <EmptyRoomBoard currentUserId={currentUser?.id || ''} defaultCurrency={defaultCurrency} />
+            )}
+            {subTab === 'resources' && (
+              <SharedResourcesTab currentUserId={currentUser?.id || ''} communityId={myCommunityIds[0] || null} />
+            )}
+            {subTab === 'admin' && (
+              <CommunityAdminTab
+                currentUserId={currentUser?.id || ''}
+                myCommunities={communities.filter(c => myCommunityIds.some(id => toUUID(id) === toUUID(c.id))).map(c => ({ id: c.id, name: c.name }))}
               />
             )}
             {subTab === 'safety' && (

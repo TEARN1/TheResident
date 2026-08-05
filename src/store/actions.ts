@@ -213,7 +213,7 @@ export const createInvite = createAsyncThunk(
 export const submitReview = createAsyncThunk(
   'trust/submitReview',
   async (
-    args: { subjectType: 'service' | 'tool' | 'listing' | 'skill'; subjectId: string; rating: number; body?: string },
+    args: { subjectType: 'service' | 'tool' | 'listing' | 'skill' | 'user'; subjectId: string; rating: number; body?: string },
     { dispatch }
   ) =>
     callRpc('res_submit_review', {
@@ -266,6 +266,24 @@ export const rejectRequest = createAsyncThunk(
   async (requestId: string, { dispatch }) =>
     callRpc('res_reject_request', { p_request: toUUID(requestId) }, dispatch, {
       successTitle: 'Declined'
+    })
+)
+
+export const waitlistRequest = createAsyncThunk(
+  'requests/waitlist',
+  async (requestId: string, { dispatch }) =>
+    callRpc('res_waitlist_request', { p_request: toUUID(requestId) }, dispatch, {
+      successTitle: 'Waitlisted',
+      successBody: 'The applicant has been told they are on the waitlist.'
+    })
+)
+
+export const saveRequest = createAsyncThunk(
+  'requests/save',
+  async (requestId: string, { dispatch }) =>
+    callRpc('res_save_request', { p_request: toUUID(requestId) }, dispatch, {
+      successTitle: 'Saved for later',
+      successBody: 'A private bookmark — the applicant is not notified.'
     })
 )
 

@@ -40,7 +40,20 @@ export const translations = {
     liveLogs: "Edge Protection Firewalls - Live logs:",
     noIncidents: "Security middleware active. No incidents logged.",
     vulnDetails: "Security Hardening Details",
-    vulnDesc: "Our application is hardened at the edge using Next.js route protections, strict Content-Security-Policies (CSP) to stop scripts, input level sanitisers, and Zod type validations. Live pentesting results are recorded in the labs console."
+    vulnDesc: "Our application is hardened at the edge using Next.js route protections, strict Content-Security-Policies (CSP) to stop scripts, input level sanitisers, and Zod type validations. Live pentesting results are recorded in the labs console.",
+    navHousing: "Housing",
+    navPortfolio: "Portfolio",
+    navServices: "Services",
+    navMaintenance: "Maintenance",
+    navCommunity: "Community",
+    menuLabel: "Menu",
+    logOut: "Log Out",
+    dayTheme: "Day Theme",
+    nightTheme: "Night Theme",
+    alerts: "Alerts",
+    markAllRead: "Mark all read",
+    noRecentAlerts: "No recent alerts",
+    loadingDashboard: "Loading your dashboard…"
   },
   zu: {
     communityHub: "Isizinda Somphakathi Co-Living",
@@ -83,7 +96,20 @@ export const translations = {
     liveLogs: "Firewalls Zokuvikela Edge - Izingodo ezibukhoma:",
     noIncidents: "I-Middleware yezokuphepha iyasebenza. Ayikho imicimbi erekhodiwe.",
     vulnDetails: "Imininingwane Yezokuphepha Ezithuthukisiwe",
-    vulnDesc: "Uhlelo lwethu lokusebenza luvikelekile onqenqemeni lusebenzisa izivikelo zomzira we-Next.js, imithetho eqinile ye-Content-Security-Policies (CSP) ukuvikela imibhalo."
+    vulnDesc: "Uhlelo lwethu lokusebenza luvikelekile onqenqemeni lusebenzisa izivikelo zomzira we-Next.js, imithetho eqinile ye-Content-Security-Policies (CSP) ukuvikela imibhalo.",
+    navHousing: "Izindlu",
+    navPortfolio: "Ipotifoliyo",
+    navServices: "Izinsizakalo",
+    navMaintenance: "Ukulungiswa",
+    navCommunity: "Umphakathi",
+    menuLabel: "Imenyu",
+    logOut: "Phuma",
+    dayTheme: "Itimu Yasemini",
+    nightTheme: "Itimu Yasebusuku",
+    alerts: "Izexwayiso",
+    markAllRead: "Phawula konke njengokufundiwe",
+    noRecentAlerts: "Azikho izexwayiso zakamuva",
+    loadingDashboard: "Ilayisha ideshibhodi yakho…"
   },
   xh: {
     communityHub: "Iziko Loluntu Co-Living",
@@ -126,7 +152,20 @@ export const translations = {
     liveLogs: "I-Firewalls Zokhuseleko lwe-Edge - Iilogi ezibukhoma:",
     noIncidents: "I-Middleware yokhuseleko iyasebenza. Akukho ziganeko zibhaliweyo.",
     vulnDetails: "Iinkcukacha Zokhuseleko Ezomeleziweyo",
-    vulnDesc: "Isicelo sethu sikhuselekile kwicala le-edge sisebenzisa izikhuselo zomkhondo we-Next.js, imigaqo eqinileyo ye-Content-Security-Policies (CSP)."
+    vulnDesc: "Isicelo sethu sikhuselekile kwicala le-edge sisebenzisa izikhuselo zomkhondo we-Next.js, imigaqo eqinileyo ye-Content-Security-Policies (CSP).",
+    navHousing: "Izindlu",
+    navPortfolio: "Ipotifoliyo",
+    navServices: "Iinkonzo",
+    navMaintenance: "Ukulungiswa",
+    navCommunity: "Uluntu",
+    menuLabel: "Imenyu",
+    logOut: "Phuma",
+    dayTheme: "Itimu Yemini",
+    nightTheme: "Itimu Yobusuku",
+    alerts: "Izilumkiso",
+    markAllRead: "Phawula konke njengokufundiweyo",
+    noRecentAlerts: "Akukho zilumkiso zamva nje",
+    loadingDashboard: "Ilayisha ideshibhodi yakho…"
   },
   af: {
     communityHub: "Gemeenskap Hub Co-Living",
@@ -169,7 +208,20 @@ export const translations = {
     liveLogs: "Edge Beveiliging Firewalls - Live logs:",
     noIncidents: "Beveiligingsmiddleware actief. Geen incidenten geregistreerd.",
     vulnDetails: "Beveiligingsdetails",
-    vulnDesc: "Onze applicatie is beveiligd aan de rand met Next.js routebeveiliging en Content-Security-Policies (CSP) om scripts te blokkeren."
+    vulnDesc: "Onze applicatie is beveiligd aan de rand met Next.js routebeveiliging en Content-Security-Policies (CSP) om scripts te blokkeren.",
+    navHousing: "Behuising",
+    navPortfolio: "Portefeulje",
+    navServices: "Dienste",
+    navMaintenance: "Instandhouding",
+    navCommunity: "Gemeenskap",
+    menuLabel: "Kieslys",
+    logOut: "Meld af",
+    dayTheme: "Dag Tema",
+    nightTheme: "Nag Tema",
+    alerts: "Kennisgewings",
+    markAllRead: "Merk alles as gelees",
+    noRecentAlerts: "Geen onlangse kennisgewings nie",
+    loadingDashboard: "Laai jou paneelbord…"
   }
 }
 

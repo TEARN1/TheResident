@@ -7,7 +7,8 @@ import {
   Shield, LogOut, Home, X, AlertTriangle,
   Wifi, Users, CheckCircle2,
   Briefcase,
-  Megaphone, Wrench, Loader, Menu, Sun, Moon
+  Megaphone, Wrench, Loader, Menu, Sun, Moon,
+  ShieldCheck, MessageCircle, MessagesSquare
 } from 'lucide-react'
 import {
   loginUser,
@@ -19,6 +20,7 @@ import {
 } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
+import { t } from '../../utils/i18n'
 import Link from 'next/link'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -110,19 +112,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="dashboard-loading">
         <div className="dashboard-loading-spinner" />
-        <span>Loading your dashboard…</span>
+        <span>{t('loadingDashboard', lang)}</span>
       </div>
     )
   }
 
   const navItems = currentUser.role === 'tenant' || currentUser.role === 'visitor' ? [
-    { name: 'Housing', href: '/dashboard/housing', icon: Home },
-    { name: 'Services', href: '/dashboard/services', icon: Briefcase },
-    { name: 'Community', href: '/dashboard/community', icon: Users },
+    { name: t('navHousing', lang), href: '/dashboard/housing', icon: Home },
+    { name: t('navServices', lang), href: '/dashboard/services', icon: Briefcase },
+    { name: t('navCommunity', lang), href: '/dashboard/community', icon: Users },
+    { name: 'Trust Circle', href: '/dashboard/trust-circle', icon: ShieldCheck },
+    { name: 'Gossip', href: '/dashboard/gossip', icon: MessagesSquare },
+    { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   ] : [
-    { name: 'Portfolio', href: '/dashboard/housing', icon: Home },
-    { name: 'Maintenance', href: '/dashboard/services', icon: Wrench },
-    { name: 'Community', href: '/dashboard/community', icon: Users },
+    { name: t('navPortfolio', lang), href: '/dashboard/housing', icon: Home },
+    { name: t('navMaintenance', lang), href: '/dashboard/services', icon: Wrench },
+    { name: t('navCommunity', lang), href: '/dashboard/community', icon: Users },
+    { name: 'Trust Circle', href: '/dashboard/trust-circle', icon: ShieldCheck },
+    { name: 'Gossip', href: '/dashboard/gossip', icon: MessagesSquare },
+    { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   ]
 
   // So the top bar can orient the user to which section they're in.
@@ -187,7 +195,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <nav className="sidebar-nav">
-          <span className="sidebar-nav-section-label">Menu</span>
+          <span className="sidebar-nav-section-label">{t('menuLabel', lang)}</span>
           {navItems.map(item => (
             <Link
               key={item.href}
@@ -214,10 +222,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <button className="sidebar-nav-item" onClick={() => setTheme(theme === 'day' ? 'night' : 'day')}>
             {theme === 'day' ? <Moon size={16} /> : <Sun size={16} />}
-            <span>{theme === 'day' ? 'Night Theme' : 'Day Theme'}</span>
+            <span>{theme === 'day' ? t('nightTheme', lang) : t('dayTheme', lang)}</span>
           </button>
           <button className="sidebar-nav-item" onClick={handleLogout}>
-            <LogOut size={16} /> Log Out
+            <LogOut size={16} /> {t('logOut', lang)}
           </button>
         </div>
       </aside>
@@ -242,7 +250,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {showNotifMenu && (
                    <div className="glass-panel" style={{ position: 'absolute', top: '100%', right: 0, width: '300px', maxHeight: '400px', overflowY: 'auto', zIndex: 100, marginTop: '1rem', padding: '1rem' }}>
                       <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-                         <span className="text-xs font-black text-white uppercase tracking-widest">Alerts</span>
+                         <span className="text-xs font-black text-white uppercase tracking-widest">{t('alerts', lang)}</span>
                          <button
                            onClick={() => {
                              dispatch(markAllNotificationsRead())
@@ -252,12 +260,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                            }}
                            className="text-[10px] text-gold-primary font-bold hover:underline"
                          >
-                           Mark all read
+                           {t('markAllRead', lang)}
                          </button>
                       </div>
                       <div className="space-y-3">
                          {notifications.items.length === 0 ? (
-                            <p className="text-[10px] text-gray-600 italic text-center py-4">No recent alerts</p>
+                            <p className="text-[10px] text-gray-600 italic text-center py-4">{t('noRecentAlerts', lang)}</p>
                          ) : (
                             notifications.items.map(item => (
                                <div key={item.id} className={`p-3 rounded-lg border ${item.read ? 'bg-black/20 border-white/5 opacity-60' : 'bg-gold-primary/5 border-gold-primary/20'}`}>

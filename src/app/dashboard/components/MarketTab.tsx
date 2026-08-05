@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin } from 'lucide-react'
+import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin, EyeOff, Eye } from 'lucide-react'
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../store'
 
 interface MarketTabProps {
@@ -15,6 +15,8 @@ interface MarketTabProps {
   onPledge?: (groupBuyId: string, quantity: number) => void
   onReunite?: (id: string) => void
   onReport?: (subjectType: string, subjectId: string) => void
+  isModerator?: boolean
+  onModerate?: (subjectType: string, subjectId: string, action: 'hide' | 'unhide') => void
 }
 
 type Section = 'market' | 'vendors' | 'groupbuys' | 'lostfound'
@@ -29,7 +31,9 @@ export default function MarketTab({
   onPostItem,
   onPledge,
   onReunite,
-  onReport
+  onReport,
+  isModerator,
+  onModerate
 }: MarketTabProps) {
   const [section, setSection] = useState<Section>('market')
   const [showForm, setShowForm] = useState(false)
@@ -124,6 +128,16 @@ export default function MarketTab({
                            >
                              <ShieldAlert size={14} />
                            </button>
+                         )}
+                         {isModerator && (
+                           <>
+                             <button onClick={() => onModerate?.('market_item', item.id, 'hide')} title="Hide listing" className="text-gray-600 hover:text-red-400 transition-colors">
+                               <EyeOff size={14} />
+                             </button>
+                             <button onClick={() => onModerate?.('market_item', item.id, 'unhide')} title="Unhide listing" className="text-gray-600 hover:text-green-400 transition-colors">
+                               <Eye size={14} />
+                             </button>
+                           </>
                          )}
                          <button className="text-gold-primary text-[10px] font-bold hover:underline">Chat Seller</button>
                       </div>

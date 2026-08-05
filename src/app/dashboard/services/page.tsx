@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info
+  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2
 } from 'lucide-react'
 import {
   RootState,
@@ -12,13 +12,31 @@ import {
   bookSeat,
   addService,
   addDispatch,
+  addLiftClub,
   updateDispatchStatus,
   HandymanService,
-  ServiceDispatch
+  ServiceDispatch,
+  LiftClub
 } from '../../../store'
 import { claimVoucher, joinWaitlist, cancelSeat } from '../../../store/actions'
 import { formatCurrency } from '../../../utils/logic'
 import FollowButton from '../components/FollowButton'
+import TrustBadge from '../components/TrustBadge'
+import { supabase } from '../../../utils/supabase'
+
+// Categories where the server-side res_request_move_assist RPC accepts a dispatch.
+const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
+
+interface UpcomingEvent {
+  id: string
+  title: string
+}
+
+interface TrustGate {
+  direct_connections: number
+  qualified_connections: number
+  unlocked: boolean
+}
 
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
@@ -42,11 +60,126 @@ export default function ServicesPage() {
   // Proof Modal State (Mock)
   const [showProofModal, setShowProofModal] = useState<ServiceDispatch | null>(null)
 
+  // Lift Club Creation State
+  const [showLiftModal, setShowLiftModal] = useState(false)
+  const [liftOrigin, setLiftOrigin] = useState('')
+  const [liftDestination, setLiftDestination] = useState('')
+  const [liftDeparture, setLiftDeparture] = useState('')
+  const [liftDays, setLiftDays] = useState('')
+  const [liftPrice, setLiftPrice] = useState('')
+  const [liftCurrency, setLiftCurrency] = useState('ZAR')
+  const [liftSeats, setLiftSeats] = useState('4')
+  const [liftEventId, setLiftEventId] = useState('')
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([])
+  const [eventTitles, setEventTitles] = useState<Record<string, string>>({})
+
+  // Move-Assist State (gated by next-of-kin trust circle)
+  const [trustGate, setTrustGate] = useState<TrustGate | null>(null)
+  const [moveAssistTarget, setMoveAssistTarget] = useState<HandymanService | null>(null)
+  const [moveAssistMessage, setMoveAssistMessage] = useState('')
+  const [moveAssistSubmitting, setMoveAssistSubmitting] = useState(false)
+  const [moveAssistError, setMoveAssistError] = useState<string | null>(null)
+
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const lifts = useSelector((state: RootState) => state.networking.lifts)
   const services = useSelector((state: RootState) => state.networking.services)
   const utilityTokens = useSelector((state: RootState) => state.utilities.tokens)
   const dispatches = useSelector((state: RootState) => state.networking.dispatches)
+
+  // Show trust-circle progress proactively rather than only failing on click.
+  useEffect(() => {
+    let cancelled = false
+    if (!supabase || !currentUser?.id) return
+    supabase.rpc('res_trust_gate').then(({ data, error }: { data: TrustGate | null; error: unknown }) => {
+      if (!cancelled && !error && data) setTrustGate(data)
+    })
+    return () => { cancelled = true }
+  }, [currentUser?.id])
+
+  // Batch-fetch titles for every event a lift is attached to (no N+1).
+  useEffect(() => {
+    let cancelled = false
+    if (!supabase) return
+    const ids = [...new Set(lifts.map(l => l.eventId).filter((id): id is string => !!id))]
+    if (ids.length === 0) return
+    supabase.from('events').select('id, title').in('id', ids).then(({ data }: { data: { id: string; title: string }[] | null }) => {
+      if (cancelled || !data) return
+      setEventTitles(prev => ({ ...prev, ...Object.fromEntries(data.map(e => [e.id, e.title])) }))
+    })
+    return () => { cancelled = true }
+  }, [lifts])
+
+  // Fetch upcoming events the moment the lift-creation form is opened.
+  useEffect(() => {
+    let cancelled = false
+    if (!showLiftModal || !supabase) return
+    supabase
+      .from('events')
+      .select('id, title, starts_at')
+      .gte('starts_at', new Date().toISOString())
+      .order('starts_at', { ascending: true })
+      .limit(20)
+      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
+        if (!cancelled && data) setUpcomingEvents(data.map(e => ({ id: e.id, title: e.title })))
+      })
+    return () => { cancelled = true }
+  }, [showLiftModal])
+
+  const handleCreateLift = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!currentUser) return
+    const newLift: LiftClub = {
+      id: `lift-${Date.now()}`,
+      driverName: currentUser.name || '',
+      origin: liftOrigin,
+      destination: liftDestination,
+      departureTime: liftDeparture,
+      days: liftDays,
+      pricePerSeat: Number(liftPrice) || 0,
+      currency: liftCurrency,
+      availableSeats: Number(liftSeats) || 0,
+      totalSeats: Number(liftSeats) || 0,
+      eventId: liftEventId || null
+    }
+    dispatch(addLiftClub(newLift))
+    setShowLiftModal(false)
+    setLiftOrigin(''); setLiftDestination(''); setLiftDeparture(''); setLiftDays('')
+    setLiftPrice(''); setLiftCurrency('ZAR'); setLiftSeats('4'); setLiftEventId('')
+    setAlertNotification('Lift club posted!')
+  }
+
+  const openMoveAssist = (srv: HandymanService) => {
+    setMoveAssistTarget(srv)
+    setMoveAssistMessage('')
+    setMoveAssistError(null)
+  }
+
+  const submitMoveAssist = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!moveAssistTarget || !supabase) return
+    setMoveAssistSubmitting(true)
+    setMoveAssistError(null)
+    try {
+      const { error } = await supabase.rpc('res_request_move_assist', {
+        p_service_id: moveAssistTarget.id,
+        p_message: moveAssistMessage || null
+      })
+      if (error) throw error
+      setMoveAssistTarget(null)
+      setAlertNotification('Move-assist request sent!')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('trust_gate_locked')) {
+        setMoveAssistError('Build your next-of-kin trust circle (5+ confirmed connections) before requesting move help.')
+      } else if (msg.includes('not a move-assist service')) {
+        setMoveAssistError('This service is not eligible for move-assist requests.')
+      } else {
+        setMoveAssistError(msg || 'Could not send the request — try again.')
+      }
+    } finally {
+      setMoveAssistSubmitting(false)
+    }
+  }
 
   const handleRegisterBusiness = (e: React.FormEvent) => {
     e.preventDefault()
@@ -124,6 +257,14 @@ export default function ServicesPage() {
 
       {activeTab === 'lifts' && (
         <div className="space-y-4">
+           <div className="flex justify-end">
+              <button
+                 onClick={() => setShowLiftModal(true)}
+                 className="w-full md:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+              >
+                 <Plus size={18} /> Post a Lift
+              </button>
+           </div>
            {lifts.map(lift => (
              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={lift.id} className="glass-panel p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 bg-black/40 border-white/5 group hover:border-gold-primary/30 transition-all">
                 <div className="flex-1 space-y-4">
@@ -133,6 +274,11 @@ export default function ServicesPage() {
                          {formatCurrency(lift.pricePerSeat, lift.currency)} <span className="text-[10px] opacity-60 ml-1">PER SEAT</span>
                       </div>
                    </div>
+                   {lift.eventId && eventTitles[lift.eventId] && (
+                      <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest bg-gold-primary/10 text-gold-primary border border-gold-primary/20 px-3 py-1.5 rounded-lg">
+                         🚗 For: {eventTitles[lift.eventId]}
+                      </span>
+                   )}
                    <div className="flex flex-col md:flex-row md:items-center text-sm gap-2 md:gap-4">
                       <div className="flex items-center gap-2 text-gray-300 font-bold bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 shadow-inner">
                          <MapPin size={16} className="text-gold-primary" /> {lift.origin}
@@ -219,7 +365,8 @@ export default function ServicesPage() {
                      <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80 font-medium italic">&quot;{srv.description}&quot;</p>
 
                      {srv.ownerId !== currentUser?.id && (
-                       <div className="flex justify-end -mt-2">
+                       <div className="flex justify-end items-center gap-2 -mt-2">
+                         <TrustBadge userId={srv.ownerId} compact />
                          <FollowButton targetUserId={srv.ownerId} currentUserId={currentUser?.id} />
                        </div>
                      )}
@@ -229,7 +376,22 @@ export default function ServicesPage() {
                         <span className="text-sm font-black text-white tracking-tighter">{srv.priceEstimate}</span>
                      </div>
 
-                     <div className="mt-auto pt-6 border-t border-white/5">
+                     <div className="mt-auto pt-6 border-t border-white/5 space-y-3">
+                        {srv.ownerId !== currentUser?.id && MOVE_ASSIST_CATEGORIES.includes(srv.category) && (
+                           <div className="space-y-1.5">
+                              <button
+                                 onClick={() => openMoveAssist(srv)}
+                                 className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-gold-primary/10"
+                              >
+                                 <Truck size={16} /> Request Move Assist
+                              </button>
+                              {trustGate && !trustGate.unlocked && (
+                                 <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest text-center flex items-center justify-center gap-1.5">
+                                    <Lock size={10} className="text-gold-primary" /> {trustGate.direct_connections}/5 trust connections — build your trust circle to unlock
+                                 </p>
+                              )}
+                           </div>
+                        )}
                         <button
                            onClick={() => setSelectedBiz(srv)}
                            className="w-full bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black py-4 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
@@ -428,6 +590,111 @@ export default function ServicesPage() {
                      </div>
                      <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all">
                         Dispatch Callout <Send size={14} />
+                     </button>
+                  </form>
+               </motion.div>
+            </div>
+         )}
+      </AnimatePresence>
+
+      {/* LIFT CLUB CREATION MODAL */}
+      <AnimatePresence>
+         {showLiftModal && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLiftModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden max-h-[90vh] overflow-y-auto">
+                  <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
+                     <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Post a <span className="text-gold-primary">Lift</span></h3>
+                     <button onClick={() => setShowLiftModal(false)} className="text-gray-500 hover:text-white"><X /></button>
+                  </div>
+                  <form onSubmit={handleCreateLift} className="p-8 space-y-6">
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                           <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Origin</label>
+                           <input value={liftOrigin} onChange={e => setLiftOrigin(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. Kreuzberg" />
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Destination</label>
+                           <input value={liftDestination} onChange={e => setLiftDestination(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. City Centre" />
+                        </div>
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                           <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Departure Time</label>
+                           <input value={liftDeparture} onChange={e => setLiftDeparture(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. 07:30" />
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Days</label>
+                           <input value={liftDays} onChange={e => setLiftDays(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. Mon-Fri" />
+                        </div>
+                     </div>
+                     <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                           <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Price / Seat</label>
+                           <input type="number" min="0" value={liftPrice} onChange={e => setLiftPrice(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. 20" />
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Currency</label>
+                           <input value={liftCurrency} onChange={e => setLiftCurrency(e.target.value.toUpperCase())} maxLength={3} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="ZAR" />
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Total Seats</label>
+                           <input type="number" min="1" value={liftSeats} onChange={e => setLiftSeats(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. 4" />
+                        </div>
+                     </div>
+                     <div className="space-y-2">
+                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest flex items-center gap-2"><Link2 size={12} className="text-gold-primary" /> Attach to an Event (optional)</label>
+                        <select value={liftEventId} onChange={e => setLiftEventId(e.target.value)} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40">
+                           <option value="">— No event —</option>
+                           {upcomingEvents.map(ev => (
+                              <option key={ev.id} value={ev.id}>{ev.title}</option>
+                           ))}
+                        </select>
+                     </div>
+                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 active:scale-95 transition-all">Post Lift Club</button>
+                  </form>
+               </motion.div>
+            </div>
+         )}
+      </AnimatePresence>
+
+      {/* MOVE-ASSIST REQUEST MODAL */}
+      <AnimatePresence>
+         {moveAssistTarget && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoveAssistTarget(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-6">
+                  <div className="flex justify-between items-center">
+                     <div className="space-y-1">
+                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Request <span className="text-gold-primary">Move Assist</span></h3>
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Dispatch Request to: {moveAssistTarget.businessName}</p>
+                     </div>
+                     <button onClick={() => setMoveAssistTarget(null)} className="text-gray-500 hover:text-white transition-colors"><X /></button>
+                  </div>
+
+                  {trustGate && (
+                     <div className={`p-4 rounded-xl border flex items-center gap-3 ${trustGate.unlocked ? 'bg-green-500/5 border-green-500/20' : 'bg-gold-primary/5 border-gold-primary/10'}`}>
+                        {trustGate.unlocked ? <ShieldCheck size={20} className="text-green-500" /> : <Lock size={20} className="text-gold-primary" />}
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
+                           {trustGate.unlocked
+                              ? 'Your next-of-kin trust circle is verified — you can request move help.'
+                              : `${trustGate.direct_connections}/5 trust connections. Build your next-of-kin trust circle (5+ confirmed connections) before requesting move help.`}
+                        </p>
+                     </div>
+                  )}
+
+                  <form onSubmit={submitMoveAssist} className="space-y-6">
+                     <div className="space-y-2">
+                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Message (optional)</label>
+                        <textarea value={moveAssistMessage} onChange={e => setMoveAssistMessage(e.target.value)} className="w-full bg-black border border-white/10 rounded-xl p-4 text-sm text-white h-28 resize-none outline-none focus:border-gold-primary/40" placeholder="Moving date, address, how much help you need..." />
+                     </div>
+                     {moveAssistError && (
+                        <div className="bg-red-500/5 border border-red-500/20 p-4 rounded-xl">
+                           <p className="text-[10px] text-red-400 leading-relaxed font-bold">{moveAssistError}</p>
+                        </div>
+                     )}
+                     <button type="submit" disabled={moveAssistSubmitting} className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50">
+                        {moveAssistSubmitting ? 'Sending…' : 'Send Move-Assist Request'} <Send size={14} />
                      </button>
                   </form>
                </motion.div>

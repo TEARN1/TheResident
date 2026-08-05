@@ -164,7 +164,8 @@ export const liftToRow = (lift: LiftClub, driverId: string): DbRow => ({
   price_per_seat: lift.pricePerSeat,
   currency: lift.currency,
   available_seats: lift.availableSeats,
-  total_seats: lift.totalSeats
+  total_seats: lift.totalSeats,
+  ...(lift.eventId ? { event_id: toUUID(lift.eventId) } : {})
 })
 
 export const serviceToRow = (service: HandymanService): DbRow => ({

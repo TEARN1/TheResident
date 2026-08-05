@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import {
   RootState,
+  AppDispatch,
   Listing,
   RoomRequest,
   selectFilteredListings,
@@ -16,12 +17,17 @@ import {
   addListing,
   updateRequestStatus
 } from '../../../store'
+import { approveRequest, rejectRequest, waitlistRequest, saveRequest } from '../../../store/actions'
 import { useGeolocation } from '../../../hooks/useGeolocation'
-import { formatCurrency, suburbPriceStats, isSuspiciousPrice } from '../../../utils/logic'
+import { formatCurrency, suburbPriceStats, isSuspiciousPrice, type SearchFilters } from '../../../utils/logic'
 import FollowButton from '../components/FollowButton'
+import TrustBadge from '../components/TrustBadge'
+import ReviewForm from '../components/ReviewForm'
+import ReviewsList from '../components/ReviewsList'
+import SavedSearches from '../components/SavedSearches'
 
 export default function HousingPage() {
-  const dispatch = useDispatch()
+  const dispatch = useDispatch<AppDispatch>()
   const [activeTab, setActiveTab] = useState<'rooms' | 'roommates'>('rooms')
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const { locationLoading, handleGetLiveLocation } = useGeolocation(setAlertNotification)
@@ -56,6 +62,10 @@ export default function HousingPage() {
 
   // Landlord Audit Modal
   const [activeAuditRequest, setActiveAuditRequest] = useState<RoomRequest | null>(null)
+  const [auditActionLoading, setAuditActionLoading] = useState<string | null>(null)
+
+  // Reviews toggle (per listing card)
+  const [reviewsOpenFor, setReviewsOpenFor] = useState<string | null>(null)
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const allListings = useSelector((state: RootState) => state.listings.items)
@@ -144,6 +154,65 @@ export default function HousingPage() {
   }
 
   const landlordRequests = requests.filter(r => r.landlordId === currentUser?.id && r.status === 'pending')
+  const landlordTrackedRequests = requests.filter(r =>
+    r.landlordId === currentUser?.id && ['pending', 'waitlisted', 'saved'].includes(r.status)
+  )
+
+  const currentSearchFilters: SearchFilters = {
+    suburb: searchInputValue || undefined,
+    maxPrice: filterPrice,
+    wifi: filterWifi || undefined,
+    parking: filterParking || undefined
+  }
+
+  const applySavedSearch = (filters: SearchFilters) => {
+    setSearchInputValue(filters.suburb || '')
+    setFilterPrice(typeof filters.maxPrice === 'number' ? filters.maxPrice : 3000)
+    setFilterWifi(!!filters.wifi)
+    setFilterParking(!!filters.parking)
+    setShowFilters(true)
+  }
+
+  const requestStatusBadge = (status: RoomRequest['status']) => {
+    const styles: Record<string, string> = {
+      pending: 'bg-gold-primary/10 text-gold-primary border-gold-primary/20',
+      waitlisted: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+      saved: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+      approved: 'bg-green-500/10 text-green-400 border-green-500/20',
+      rejected: 'bg-red-500/10 text-red-400 border-red-500/20'
+    }
+    return (
+      <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${styles[status] || styles.pending}`}>
+        {status}
+      </span>
+    )
+  }
+
+  const runAuditAction = async (action: 'approved' | 'rejected' | 'waitlisted' | 'saved') => {
+    if (!activeAuditRequest) return
+    setAuditActionLoading(action)
+    try {
+      if (action === 'approved') {
+        await dispatch(approveRequest(activeAuditRequest.id)).unwrap()
+        setAlertNotification('Tenant Approved!')
+      } else if (action === 'rejected') {
+        await dispatch(rejectRequest(activeAuditRequest.id)).unwrap()
+        setAlertNotification('Tenant Rejected.')
+      } else if (action === 'waitlisted') {
+        await dispatch(waitlistRequest(activeAuditRequest.id)).unwrap()
+        setAlertNotification('Applicant waitlisted.')
+      } else {
+        await dispatch(saveRequest(activeAuditRequest.id)).unwrap()
+        setAlertNotification('Saved for later.')
+      }
+      dispatch(updateRequestStatus({ requestId: activeAuditRequest.id, status: action }))
+      setActiveAuditRequest(null)
+    } catch (err) {
+      setAlertNotification(err instanceof Error ? err.message : 'That did not work.')
+    } finally {
+      setAuditActionLoading(null)
+    }
+  }
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10 pb-32">
@@ -175,8 +244,8 @@ export default function HousingPage() {
       </header>
 
       {/* Landlord Notifications for Applications */}
-      {currentUser?.role === 'landlord' && landlordRequests.length > 0 && (
-         <div className="glass-panel p-6 border-gold-primary/30 bg-gold-primary/5 flex flex-col md:flex-row justify-between items-center gap-4 animate-pulse">
+      {currentUser?.role === 'landlord' && landlordTrackedRequests.length > 0 && (
+         <div className="glass-panel p-6 border-gold-primary/30 bg-gold-primary/5 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-4 text-gold-primary">
                <Info size={24} />
                <div>
@@ -184,14 +253,15 @@ export default function HousingPage() {
                   <p className="text-xs text-white">You have <strong>{landlordRequests.length}</strong> pending room applications awaiting your audit.</p>
                </div>
             </div>
-            <div className="flex gap-2">
-               {landlordRequests.map(req => (
+            <div className="flex flex-wrap gap-2 justify-end">
+               {landlordTrackedRequests.map(req => (
                   <button
                     key={req.id}
                     onClick={() => setActiveAuditRequest(req)}
-                    className="bg-gold-primary text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gold-secondary transition-all"
+                    className="bg-gold-primary text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gold-secondary transition-all flex items-center gap-2"
                   >
                      Audit {req.tenantName}
+                     {req.status !== 'pending' && requestStatusBadge(req.status)}
                   </button>
                ))}
             </div>
@@ -226,6 +296,8 @@ export default function HousingPage() {
                 >
                   <Filter size={18} />
                 </button>
+
+                <SavedSearches currentFilters={currentSearchFilters} onApply={applySavedSearch} />
              </div>
 
              {currentUser?.role === 'landlord' && (
@@ -329,11 +401,33 @@ export default function HousingPage() {
                   <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80">{item.description}</p>
 
                   <div className="flex items-center justify-between gap-2 -mt-1">
-                     <span className="text-[10px] text-gray-500 font-bold">
+                     <button
+                       onClick={() => setReviewsOpenFor(reviewsOpenFor === item.id ? null : item.id)}
+                       className="text-[10px] text-gray-500 font-bold hover:text-gold-primary transition-colors text-left"
+                     >
                         Posted by <span className="text-gray-300">{item.landlordName || 'Landlord'}</span>
-                     </span>
-                     <FollowButton targetUserId={item.landlordId} currentUserId={currentUser?.id} />
+                     </button>
+                     <div className="flex items-center gap-2">
+                        <TrustBadge userId={item.landlordId} compact />
+                        <FollowButton targetUserId={item.landlordId} currentUserId={currentUser?.id} />
+                     </div>
                   </div>
+
+                  <AnimatePresence>
+                     {reviewsOpenFor === item.id && (
+                        <motion.div
+                           initial={{ height: 0, opacity: 0 }}
+                           animate={{ height: 'auto', opacity: 1 }}
+                           exit={{ height: 0, opacity: 0 }}
+                           className="overflow-hidden space-y-3"
+                        >
+                           <ReviewsList userId={item.landlordId} />
+                           {currentUser?.id && currentUser.id !== item.landlordId && (
+                              <ReviewForm subjectId={item.landlordId} />
+                           )}
+                        </motion.div>
+                     )}
+                  </AnimatePresence>
 
                   <div className="flex flex-wrap gap-2 pt-2">
                     {item.amenities.wifi && <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-gray-400 flex items-center gap-1.5">WiFi</span>}
@@ -369,6 +463,7 @@ export default function HousingPage() {
                       <div className="bg-gold-primary/10 border border-gold-primary/20 text-gold-primary px-3 py-1 rounded-xl text-sm font-black tracking-tighter">
                          {formatCurrency(rm.budget, rm.currency)}
                       </div>
+                      <TrustBadge userId={rm.id} compact />
                       <FollowButton targetUserId={rm.id} currentUserId={currentUser?.id} />
                    </div>
                 </div>
@@ -547,29 +642,57 @@ export default function HousingPage() {
                      <button onClick={() => setActiveAuditRequest(null)} className="text-gray-500 hover:text-white"><X /></button>
                   </div>
                   <div className="p-8 space-y-8">
-                     <div className="flex gap-6">
+                     <div className="flex gap-6 items-start">
                         <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center text-2xl font-black text-gold-primary border border-white/5 shadow-inner">{activeAuditRequest.tenantName.charAt(0)}</div>
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                            <h4 className="text-2xl font-black text-white">{activeAuditRequest.tenantName}</h4>
                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Applicant for: {activeAuditRequest.listingTitle}</p>
+                           <div className="flex items-center gap-2 pt-1">
+                              <TrustBadge userId={activeAuditRequest.tenantId} />
+                              {activeAuditRequest.status !== 'pending' && requestStatusBadge(activeAuditRequest.status)}
+                           </div>
                         </div>
                      </div>
                      <div className="bg-black/40 border border-white/5 rounded-2xl p-4 italic text-sm text-gray-400 leading-relaxed font-medium">&quot;{activeAuditRequest.message}&quot;</div>
 
-                     <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <button
-                          onClick={() => { dispatch(updateRequestStatus({ requestId: activeAuditRequest.id, status: 'approved' })); setActiveAuditRequest(null); setAlertNotification('Tenant Approved!') }}
-                          className="bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-black border border-green-500/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
+                          onClick={() => runAuditAction('approved')}
+                          disabled={!!auditActionLoading}
+                          className="bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-black border border-green-500/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                            <Check size={16} /> Approve
                         </button>
                         <button
-                          onClick={() => { dispatch(updateRequestStatus({ requestId: activeAuditRequest.id, status: 'rejected' })); setActiveAuditRequest(null); setAlertNotification('Tenant Rejected.') }}
-                          className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
+                          onClick={() => runAuditAction('rejected')}
+                          disabled={!!auditActionLoading}
+                          className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                            <X size={16} /> Reject
                         </button>
+                        <button
+                          onClick={() => runAuditAction('waitlisted')}
+                          disabled={!!auditActionLoading}
+                          className="bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-black border border-blue-500/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                           Waitlist
+                        </button>
+                        <button
+                          onClick={() => runAuditAction('saved')}
+                          disabled={!!auditActionLoading}
+                          className="bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-black border border-purple-500/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                           Save for Later
+                        </button>
                      </div>
+
+                     {activeAuditRequest.status === 'approved' && (
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                           <h5 className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Review This Tenant</h5>
+                           <ReviewForm subjectId={activeAuditRequest.tenantId} />
+                           <ReviewsList userId={activeAuditRequest.tenantId} />
+                        </div>
+                     )}
                   </div>
                </motion.div>
             </div>

@@ -71,7 +71,7 @@ export interface RoomRequest {
   listingId: string
   listingTitle: string
   landlordId: string
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'saved'
   message: string
   timestamp: string
 }
@@ -109,6 +109,8 @@ export interface LiftClub {
   currency: string
   availableSeats: number
   totalSeats: number
+  /** Optional link to a Gruvs-owned `events` row — see CONTRACT.md. */
+  eventId?: string | null
 }
 
 export interface HandymanService {
@@ -464,7 +466,7 @@ const requestsSlice = createSlice({
       req.landlordId = toUUID(req.landlordId)
       state.items.push(req)
     },
-    updateRequestStatus: (state, action: PayloadAction<{ requestId: string; status: 'approved' | 'rejected' }>) => {
+    updateRequestStatus: (state, action: PayloadAction<{ requestId: string; status: 'approved' | 'rejected' | 'waitlisted' | 'saved' }>) => {
       const reqId = toUUID(action.payload.requestId)
       const req = state.items.find(r => toUUID(r.id) === reqId)
       if (req) {
@@ -1226,7 +1228,7 @@ export const fetchSupabaseData = createAsyncThunk(
         listingId: item.listing_id,
         listingTitle: listingTitleById[String(item.listing_id)] || '',
         landlordId: item.landlord_id,
-        status: (item.status || 'pending') as 'pending' | 'approved' | 'rejected',
+        status: (item.status || 'pending') as 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'saved',
         message: item.message || '',
         timestamp: item.created_at || new Date().toISOString()
       }))))
@@ -1247,7 +1249,8 @@ export const fetchSupabaseData = createAsyncThunk(
         pricePerSeat: Number(item.price_per_seat),
         currency: item.currency || 'ZAR',
         availableSeats: item.available_seats || 0,
-        totalSeats: item.total_seats || 0
+        totalSeats: item.total_seats || 0,
+        eventId: item.event_id || null
       }))))
     }
 

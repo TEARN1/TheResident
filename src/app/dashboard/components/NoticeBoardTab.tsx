@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Megaphone, Calendar, Info, Heart, Share2, Check, Plus, X } from 'lucide-react'
+import { Megaphone, Calendar, Info, Heart, Share2, Check, Plus, X, EyeOff, Eye } from 'lucide-react'
 
 interface Notice {
   id: string
@@ -24,6 +24,8 @@ interface NoticeBoardTabProps {
   handleEchoNotice?: (id: string) => void
   handleRSVPToEvent?: (id: string) => void
   handlePostNotice?: (data: { title: string; description: string; type: 'notice' | 'event' }) => void
+  isModerator?: boolean
+  onModerate?: (subjectType: string, subjectId: string, action: 'hide' | 'unhide') => void
 }
 
 export default function NoticeBoardTab({
@@ -31,7 +33,9 @@ export default function NoticeBoardTab({
   handleVibeNotice,
   handleEchoNotice,
   handleRSVPToEvent,
-  handlePostNotice
+  handlePostNotice,
+  isModerator,
+  onModerate
 }: NoticeBoardTabProps) {
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
@@ -118,7 +122,19 @@ export default function NoticeBoardTab({
                   <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border transition-all ${notice.type === 'event' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 group-hover:bg-purple-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20 group-hover:bg-blue-500/20'}`}>
                     {notice.type}
                   </span>
-                  <span className="text-[10px] text-gray-600 font-mono tracking-tighter opacity-60 font-bold">{new Date(notice.timestamp).toLocaleDateString()}</span>
+                  <div className="flex items-center gap-3">
+                    {isModerator && (
+                      <>
+                        <button onClick={() => onModerate?.('notice', notice.id, 'hide')} title="Hide notice" className="text-gray-600 hover:text-red-400 transition-colors">
+                          <EyeOff size={13} />
+                        </button>
+                        <button onClick={() => onModerate?.('notice', notice.id, 'unhide')} title="Unhide notice" className="text-gray-600 hover:text-green-400 transition-colors">
+                          <Eye size={13} />
+                        </button>
+                      </>
+                    )}
+                    <span className="text-[10px] text-gray-600 font-mono tracking-tighter opacity-60 font-bold">{new Date(notice.timestamp).toLocaleDateString()}</span>
+                  </div>
                 </div>
 
                 <div className="space-y-2">

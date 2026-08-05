@@ -1,9 +1,39 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check } from 'lucide-react'
+import React, { useEffect, useState, useCallback } from 'react'
+import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle } from 'lucide-react'
 import { outageConsensus, type StatusReport } from '../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../store'
+import { supabase } from '../../../utils/supabase'
+
+interface CareProfile {
+  id: string
+  username: string | null
+  display_name: string | null
+  avatar_url: string | null
+  bio: string | null
+  city: string | null
+  vibe_score: number | null
+  is_verified: boolean | null
+}
+
+interface CareCircleRow {
+  id: string
+  subject_id: string
+  carer_id: string
+  cadence: string
+  last_ok_at: string | null
+  status: string
+  note: string | null
+  created_at: string
+  subject?: CareProfile | null
+  carer?: CareProfile | null
+}
+
+const CADENCE_WINDOW_MS: Record<string, number> = {
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000
+}
 
 interface SafetyTabProps {
   alerts: Alert[]
@@ -53,6 +83,111 @@ export default function SafetyTab({
   }, [])
 
   const activeAlerts = alerts.filter(a => a.status === 'active')
+
+  // Care Circle — watch over a neighbour and get checked on yourself.
+  // Note: res_care_circle's insert RLS check is `carer_id = auth.uid()`, so a
+  // user can only register a row where THEY are the carer (i.e. "I'll watch
+  // over this person"), not one where they pick someone else to watch them.
+  const [careRows, setCareRows] = useState<CareCircleRow[]>([])
+  const [careLoading, setCareLoading] = useState(false)
+  const [careQuery, setCareQuery] = useState('')
+  const [careResults, setCareResults] = useState<CareProfile[]>([])
+  const [searching, setSearching] = useState(false)
+  const [selectedSubject, setSelectedSubject] = useState<CareProfile | null>(null)
+  const [cadence, setCadence] = useState<'daily' | 'weekly'>('daily')
+  const [registering, setRegistering] = useState(false)
+  const [careError, setCareError] = useState<string | null>(null)
+  const [checkingInId, setCheckingInId] = useState<string | null>(null)
+
+  const loadCareCircle = useCallback(async () => {
+    if (!supabase || !currentUserId) return
+    setCareLoading(true)
+    const { data, error } = await supabase
+      .from('res_care_circle')
+      .select('id, subject_id, carer_id, cadence, last_ok_at, status, note, created_at')
+      .or(`subject_id.eq.${currentUserId},carer_id.eq.${currentUserId}`)
+      .order('created_at', { ascending: false })
+
+    if (error || !data) { setCareLoading(false); return }
+
+    const otherIds = [...new Set(
+      data.map(r => (r.subject_id === currentUserId ? r.carer_id : r.subject_id))
+    )]
+
+    let profileMap = new Map<string, CareProfile>()
+    if (otherIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, bio, city, vibe_score, is_verified')
+        .in('id', otherIds)
+      profileMap = new Map((profiles || []).map(p => [p.id, p as CareProfile]))
+    }
+
+    setCareRows(data.map(r => ({
+      ...r,
+      subject: profileMap.get(r.subject_id),
+      carer: profileMap.get(r.carer_id)
+    })))
+    setCareLoading(false)
+  }, [currentUserId])
+
+  useEffect(() => {
+    const id = setTimeout(() => { loadCareCircle() }, 0)
+    return () => clearTimeout(id)
+  }, [loadCareCircle])
+
+  useEffect(() => {
+    if (!supabase || careQuery.trim().length < 2) {
+      const id = setTimeout(() => setCareResults([]), 0)
+      return () => clearTimeout(id)
+    }
+    let cancelled = false
+    const searchTimer = setTimeout(() => setSearching(true), 0)
+    const id = setTimeout(async () => {
+      const { data } = await supabase!
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, bio, city, vibe_score, is_verified')
+        .or(`username.ilike.%${careQuery}%,display_name.ilike.%${careQuery}%`)
+        .neq('id', currentUserId)
+        .limit(8)
+      if (!cancelled) { setCareResults((data as CareProfile[]) || []); setSearching(false) }
+    }, 300)
+    return () => { cancelled = true; clearTimeout(id); clearTimeout(searchTimer) }
+  }, [careQuery, currentUserId])
+
+  const registerCareCircle = async () => {
+    if (!supabase || !selectedSubject || !currentUserId) return
+    setRegistering(true)
+    setCareError(null)
+    const { error } = await supabase.from('res_care_circle').insert({
+      subject_id: selectedSubject.id,
+      carer_id: currentUserId,
+      cadence
+    })
+    setRegistering(false)
+    if (error) { setCareError(error.message); return }
+    setSelectedSubject(null)
+    setCareQuery('')
+    setCareResults([])
+    loadCareCircle()
+  }
+
+  const checkIn = async (careId: string) => {
+    if (!supabase) return
+    setCheckingInId(careId)
+    const { error } = await supabase.rpc('res_care_check_in', { p_care_id: careId })
+    setCheckingInId(null)
+    if (!error) loadCareCircle()
+  }
+
+  const isOverdue = (row: CareCircleRow) => {
+    if (!row.last_ok_at) return true
+    const window = CADENCE_WINDOW_MS[row.cadence] ?? CADENCE_WINDOW_MS.daily
+    return now - new Date(row.last_ok_at).getTime() > window
+  }
+
+  const watchingOverMe = careRows.filter(r => r.subject_id === currentUserId)
+  const iAmWatching = careRows.filter(r => r.carer_id === currentUserId)
 
   return (
     <div className="space-y-8">
@@ -131,6 +266,164 @@ export default function SafetyTab({
               Report it
             </button>
           </form>
+        )}
+      </div>
+
+      {/* Care Circle — check on someone, or let someone check on you */}
+      <div className="glass-panel p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-gold-primary/10 rounded-lg">
+            <HeartHandshake size={20} className="text-gold-primary" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Care Circle</h3>
+            <p className="text-gray-400 text-xs">Watch over a neighbour, or let them watch over you.</p>
+          </div>
+        </div>
+
+        {/* Register: watch over someone */}
+        <div className="bg-black/40 border border-white/5 rounded-xl p-4 mb-6 space-y-3">
+          <p className="text-xs text-gray-400 uppercase font-bold tracking-widest">Start watching over someone</p>
+          {!selectedSubject ? (
+            <div className="relative">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  value={careQuery}
+                  onChange={e => setCareQuery(e.target.value)}
+                  placeholder="Search by username or name"
+                  className="w-full bg-black border border-white/10 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white outline-none focus:border-gold-primary/40"
+                />
+              </div>
+              {careQuery.trim().length >= 2 && (
+                <div className="mt-2 space-y-1 max-h-56 overflow-y-auto">
+                  {searching && <p className="text-xs text-gray-500 px-1">Searching…</p>}
+                  {!searching && careResults.length === 0 && (
+                    <p className="text-xs text-gray-500 px-1">No neighbours found.</p>
+                  )}
+                  {careResults.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => { setSelectedSubject(p); setCareQuery(''); setCareResults([]) }}
+                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-left"
+                    >
+                      {p.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-white/10" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm text-white font-medium truncate">{p.display_name || p.username || 'Neighbour'}</p>
+                        {p.city && <p className="text-[10px] text-gray-500 truncate">{p.city}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+              <div className="flex items-center gap-3">
+                {selectedSubject.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={selectedSubject.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-white/10" />
+                )}
+                <div>
+                  <p className="text-sm text-white font-medium">{selectedSubject.display_name || selectedSubject.username}</p>
+                  <p className="text-[10px] text-gray-500">You&apos;ll be their carer</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={cadence}
+                  onChange={e => setCadence(e.target.value as 'daily' | 'weekly')}
+                  className="bg-black border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-gold-primary/40"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+                <button
+                  onClick={registerCareCircle}
+                  disabled={registering}
+                  className="bg-gold-primary text-black font-bold px-4 py-2 rounded-lg text-xs uppercase tracking-widest disabled:opacity-50"
+                >
+                  {registering ? 'Adding…' : 'Add'}
+                </button>
+                <button
+                  onClick={() => setSelectedSubject(null)}
+                  className="text-gray-400 text-xs px-2"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          {careError && <p className="text-xs text-red-400">{careError}</p>}
+        </div>
+
+        {careLoading ? (
+          <p className="text-xs text-gray-500">Loading care circle…</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Rows where I'm the subject: someone is checking on me */}
+            <div className="space-y-3">
+              <p className="text-xs text-gray-400 uppercase font-bold tracking-widest">Watching over you</p>
+              {watchingOverMe.length === 0 ? (
+                <p className="text-xs text-gray-600">No one is watching over you yet.</p>
+              ) : (
+                watchingOverMe.map(row => (
+                  <div key={row.id} className="bg-black/40 border border-white/5 rounded-xl p-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-white font-medium">
+                        {row.carer?.display_name || row.carer?.username || 'A neighbour'} is checking on you
+                      </p>
+                      <p className="text-[10px] text-gray-500">{row.cadence} · last OK {row.last_ok_at ? new Date(row.last_ok_at).toLocaleString() : 'never'}</p>
+                    </div>
+                    <button
+                      onClick={() => checkIn(row.id)}
+                      disabled={checkingInId === row.id}
+                      className="bg-green-500/10 text-green-400 border border-green-500/20 font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-widest disabled:opacity-50 hover:bg-green-500 hover:text-black transition-all"
+                    >
+                      {checkingInId === row.id ? '…' : "I'm OK — Check In"}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Rows where I'm the carer: I'm watching someone */}
+            <div className="space-y-3">
+              <p className="text-xs text-gray-400 uppercase font-bold tracking-widest">You&apos;re watching</p>
+              {iAmWatching.length === 0 ? (
+                <p className="text-xs text-gray-600">You&apos;re not watching over anyone yet.</p>
+              ) : (
+                iAmWatching.map(row => {
+                  const overdue = isOverdue(row)
+                  return (
+                    <div key={row.id} className="bg-black/40 border border-white/5 rounded-xl p-4 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${overdue ? 'bg-red-500' : 'bg-green-500'}`} />
+                        <div>
+                          <p className="text-sm text-white font-medium">
+                            You&apos;re checking on {row.subject?.display_name || row.subject?.username || 'a neighbour'}
+                          </p>
+                          <p className="text-[10px] text-gray-500">{row.cadence} · last OK {row.last_ok_at ? new Date(row.last_ok_at).toLocaleString() : 'never'}</p>
+                        </div>
+                      </div>
+                      {overdue && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase tracking-widest">
+                          <AlertTriangle size={12} /> Overdue
+                        </span>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
         )}
       </div>
 
