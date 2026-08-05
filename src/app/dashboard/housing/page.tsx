@@ -25,6 +25,7 @@ import TrustBadge from '../components/TrustBadge'
 import ReviewForm from '../components/ReviewForm'
 import ReviewsList from '../components/ReviewsList'
 import SavedSearches from '../components/SavedSearches'
+import OpenInMapsButton from '../components/OpenInMapsButton'
 
 export default function HousingPage() {
   const dispatch = useDispatch<AppDispatch>()
@@ -393,8 +394,11 @@ export default function HousingPage() {
                 <div className="p-6 flex-1 flex flex-col gap-5">
                   <div className="space-y-1">
                      <h3 className="text-xl font-black text-white tracking-tight leading-tight group-hover:text-gold-primary transition-colors">{item.title}</h3>
-                     <div className="flex items-center text-[10px] text-gray-500 font-black uppercase tracking-widest gap-2">
-                        <MapPin size={12} className="text-gold-primary" /> {item.suburb}, {item.location}
+                     <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center text-[10px] text-gray-500 font-black uppercase tracking-widest gap-2">
+                           <MapPin size={12} className="text-gold-primary" /> {item.suburb}, {item.location}
+                        </div>
+                        <OpenInMapsButton address={`${item.location}, ${item.suburb}`} />
                      </div>
                   </div>
 

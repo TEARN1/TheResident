@@ -403,7 +403,9 @@ export const trafficToRow = (tr: TrafficReport): DbRow => ({
 const NS_KIND: Record<NeighbourhoodStatus['service'], string> = {
   electricity: 'power',
   water: 'water',
-  other: 'network'
+  network: 'network',
+  fiber: 'fiber',
+  road: 'road'
 }
 
 const NS_STATUS: Record<NeighbourhoodStatus['status'], string> = {
@@ -418,7 +420,8 @@ export const neighbourhoodStatusToRow = (ns: NeighbourhoodStatus, reporterId: st
   reporter_id: toUUID(reporterId),
   kind: NS_KIND[ns.service] || 'network',
   status: NS_STATUS[ns.status] || 'up',
-  suburb: ns.suburb
+  suburb: ns.suburb,
+  ends_at: ns.endsAt || null
 })
 
 // ── Schema column allowlist (from resident_schema.sql) — used by tests ────────
@@ -446,6 +449,6 @@ export const SCHEMA_COLUMNS: Record<string, string[]> = {
   res_lost_found: ['id', 'user_id', 'kind', 'category', 'title', 'description', 'images', 'last_seen', 'status', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
   res_care_circle: ['id', 'subject_id', 'carer_id', 'cadence', 'last_ok_at', 'status', 'note', 'created_at', 'updated_at'],
   res_shared_resources: ['id', 'owner_id', 'kind', 'title', 'access_note', 'availability', 'is_free', 'price_note', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id'],
-  res_neighbourhood_status: ['id', 'reporter_id', 'kind', 'status', 'detail', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at'],
+  res_neighbourhood_status: ['id', 'reporter_id', 'kind', 'status', 'detail', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'starts_at', 'ends_at', 'source', 'provider_id'],
   res_traffic_reports: ['id', 'reporter_id', 'suburb', 'city', 'lat', 'lon', 'report_type', 'description', 'created_at']
 }

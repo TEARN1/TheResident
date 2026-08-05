@@ -197,7 +197,7 @@ export default function CommunityPage() {
     .filter(n => n.suburb === suburb)
     .map(n => ({
       reporterId: n.id,
-      kind: (n.service === 'electricity' ? 'power' : n.service === 'water' ? 'water' : 'network') as StatusReport['kind'],
+      kind: (n.service === 'electricity' ? 'power' : n.service) as StatusReport['kind'],
       status: n.status,
       createdAt: n.updatedAt
     }))
@@ -423,7 +423,7 @@ export default function CommunityPage() {
                 onRaiseAlert={(args) => dispatch(raiseAlert({ ...args, suburb }))}
                 onRespond={(id, status) => dispatch(respondToAlert({ alertId: id, status }))}
                 onResolve={(id) => dispatch(resolveAlertRpc({ alertId: id }))}
-                onReportStatus={(kind, status) => dispatch(reportStatus({ kind, status, suburb }))}
+                onReportStatus={(kind, status, endsAt) => dispatch(reportStatus({ kind, status, suburb, endsAt }))}
               />
             )}
             {subTab === 'tools' && (

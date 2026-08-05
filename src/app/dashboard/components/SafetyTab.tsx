@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
-import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle } from 'lucide-react'
+import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction } from 'lucide-react'
 import { outageConsensus, type StatusReport } from '../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../store'
 import { supabase } from '../../../utils/supabase'
@@ -45,15 +45,37 @@ interface SafetyTabProps {
   onRaiseAlert?: (args: { kind: 'panic' | 'incident' | 'suspicious'; title: string; description: string; severity: 'low' | 'medium' | 'high' | 'critical' }) => void
   onRespond?: (alertId: string, status: 'coming' | 'arrived' | 'stood_down') => void
   onResolve?: (alertId: string) => void
-  onReportStatus?: (kind: 'power' | 'water' | 'network', status: 'up' | 'down') => void
+  onReportStatus?: (kind: 'power' | 'water' | 'network' | 'fiber' | 'road', status: 'up' | 'down', endsAt?: string | null) => void
   styles?: Record<string, React.CSSProperties>
 }
 
-const SERVICES: Array<{ key: 'power' | 'water' | 'network'; label: string; Icon: typeof Zap }> = [
+const SERVICES: Array<{ key: 'power' | 'water' | 'network' | 'fiber' | 'road'; label: string; Icon: typeof Zap }> = [
   { key: 'power', label: 'Electricity', Icon: Zap },
   { key: 'water', label: 'Water', Icon: Info },
-  { key: 'network', label: 'Network', Icon: Wifi }
+  { key: 'network', label: 'Network', Icon: Wifi },
+  { key: 'fiber', label: 'Fiber', Icon: Signal },
+  { key: 'road', label: 'Road / Traffic', Icon: Construction }
 ]
+
+// "How long" options for a crowd report's optional end time. The DB trigger
+// rejects crowd windows shorter than 8 hours, so nothing below that is offered.
+const DURATION_OPTIONS: Array<{ key: string; label: string; hours: number | null }> = [
+  { key: '8h', label: '8 hours', hours: 8 },
+  { key: '24h', label: '24 hours', hours: 24 },
+  { key: '3d', label: '3 days', hours: 72 },
+  { key: 'ufn', label: 'Until further notice', hours: null }
+]
+
+const formatExpiry = (endsAt: string | null | undefined): string | null => {
+  if (!endsAt) return null
+  const end = new Date(endsAt)
+  const diffMs = end.getTime() - Date.now()
+  if (diffMs <= 0) return null
+  const diffHours = diffMs / (60 * 60 * 1000)
+  if (diffHours < 36) return `until ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+  const days = Math.round(diffHours / 24)
+  return `for the next ${days} day${days === 1 ? '' : 's'}`
+}
 
 export default function SafetyTab({
   alerts,
@@ -83,6 +105,25 @@ export default function SafetyTab({
   }, [])
 
   const activeAlerts = alerts.filter(a => a.status === 'active')
+
+  // Duration picked per-service before submitting an outage report.
+  const [durationByKey, setDurationByKey] = useState<Record<string, string>>({})
+
+  // Official reports carry a provider_id — batch-fetch the provider names
+  // rather than issuing one lookup per row.
+  const [providerNames, setProviderNames] = useState<Record<string, string>>({})
+  useEffect(() => {
+    const providerIds = [...new Set(
+      neighbourhoodStatus.filter(s => s.source === 'official' && s.providerId).map(s => s.providerId as string)
+    )]
+    if (providerIds.length === 0 || !supabase) return
+    let cancelled = false
+    supabase.from('res_infra_providers').select('id, name').in('id', providerIds).then(({ data }) => {
+      if (cancelled || !data) return
+      setProviderNames(Object.fromEntries(data.map((p: { id: string; name: string }) => [p.id, p.name])))
+    })
+    return () => { cancelled = true }
+  }, [neighbourhoodStatus])
 
   // Care Circle — watch over a neighbour and get checked on yourself.
   // Note: res_care_circle's insert RLS check is `carer_id = auth.uid()`, so a
@@ -499,11 +540,18 @@ export default function SafetyTab({
           </h3>
           <div className="glass-panel p-6 space-y-6">
              {SERVICES.map(({ key, label, Icon }) => {
+               const rowsForService = neighbourhoodStatus.filter(s => s.service === (key === 'power' ? 'electricity' : key))
+               // Official reports are authoritative on their own and bypass crowd consensus;
+               // the newest one wins.
+               const officialRow = [...rowsForService]
+                 .filter(s => s.source === 'official')
+                 .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
                const consensus = outageConsensus(statusReports.filter(r => r.kind === key), now)
-               const dbStatus = neighbourhoodStatus.find(s =>
-                 s.service === (key === 'power' ? 'electricity' : key === 'water' ? 'water' : 'other')
-               )
-               const isDown = consensus.confirmed || dbStatus?.status === 'outage'
+               const crowdRow = rowsForService.find(s => s.source === 'crowd')
+               const isDown = officialRow ? officialRow.status === 'outage' : (consensus.confirmed || crowdRow?.status === 'outage')
+               const expiry = formatExpiry(officialRow ? officialRow.endsAt : crowdRow?.endsAt)
+               const providerName = officialRow?.providerId ? providerNames[officialRow.providerId] : null
+               const selectedDuration = durationByKey[key] || '8h'
 
                return (
                  <div key={key} className="flex items-center justify-between group">
@@ -514,19 +562,41 @@ export default function SafetyTab({
                        <span className="text-sm font-medium text-gray-300">{label}</span>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isDown ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>
-                          {isDown ? (consensus.confirmed ? `OUTAGE (${consensus.reporters} reports)` : 'OUTAGE') : 'OPERATIONAL'}
-                       </span>
-                       <div className="flex gap-1">
+                       <div className="flex items-center gap-1">
+                          {officialRow && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gold-primary/20 text-gold-primary uppercase tracking-widest">
+                              Official{providerName ? ` · ${providerName}` : ''}
+                            </span>
+                          )}
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isDown ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>
+                             {isDown ? (!officialRow && consensus.confirmed ? `OUTAGE (${consensus.reporters} reports)` : 'OUTAGE') : 'OPERATIONAL'}
+                          </span>
+                       </div>
+                       {expiry && <span className="text-[9px] text-gray-500">{expiry}</span>}
+                       <div className="flex items-center gap-1">
+                          <select
+                            value={selectedDuration}
+                            onChange={e => setDurationByKey(prev => ({ ...prev, [key]: e.target.value }))}
+                            className="bg-black border border-white/10 rounded px-1 py-0.5 text-[9px] text-gray-400 outline-none"
+                            title="How long"
+                          >
+                            {DURATION_OPTIONS.map(opt => (
+                              <option key={opt.key} value={opt.key}>{opt.label}</option>
+                            ))}
+                          </select>
                           <button
-                            onClick={() => onReportStatus?.(key, 'down')}
+                            onClick={() => {
+                              const opt = DURATION_OPTIONS.find(o => o.key === selectedDuration)
+                              const endsAt = opt?.hours ? new Date(Date.now() + opt.hours * 60 * 60 * 1000).toISOString() : null
+                              onReportStatus?.(key, 'down', endsAt)
+                            }}
                             className="text-[9px] text-red-400 hover:text-red-300 uppercase font-bold"
                           >
                             Report down
                           </button>
                           <span className="text-gray-700">/</span>
                           <button
-                            onClick={() => onReportStatus?.(key, 'up')}
+                            onClick={() => onReportStatus?.(key, 'up', null)}
                             className="text-[9px] text-green-400 hover:text-green-300 uppercase font-bold"
                           >
                             It&apos;s back

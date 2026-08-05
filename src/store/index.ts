@@ -358,10 +358,14 @@ export interface TrafficReport {
 
 export interface NeighbourhoodStatus {
   id: string
-  service: 'electricity' | 'water' | 'other'
+  service: 'electricity' | 'water' | 'network' | 'fiber' | 'road'
   status: 'active' | 'restored' | 'outage'
   suburb: string
   updatedAt: string
+  startsAt: string
+  endsAt: string | null
+  source: 'crowd' | 'official'
+  providerId: string | null
 }
 
 // Slices
@@ -1586,10 +1590,14 @@ export const fetchSupabaseData = createAsyncThunk(
       if (!data) return
       dispatch(setNeighbourhoodStatus(data.map(item => ({
         id: item.id,
-        service: (item.kind === 'power' ? 'electricity' : item.kind === 'water' ? 'water' : 'other') as NeighbourhoodStatus['service'],
+        service: (item.kind === 'power' ? 'electricity' : item.kind) as NeighbourhoodStatus['service'],
         status: (item.status === 'up' ? 'active' : 'outage') as NeighbourhoodStatus['status'],
         suburb: item.suburb || '',
-        updatedAt: item.created_at || new Date().toISOString()
+        updatedAt: item.created_at || new Date().toISOString(),
+        startsAt: item.starts_at || item.created_at || new Date().toISOString(),
+        endsAt: item.ends_at || null,
+        source: (item.source === 'official' ? 'official' : 'crowd') as NeighbourhoodStatus['source'],
+        providerId: item.provider_id || null
       }))))
     }
 

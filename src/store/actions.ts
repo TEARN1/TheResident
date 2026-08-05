@@ -137,21 +137,36 @@ export const resolveAlertRpc = createAsyncThunk(
     }, dispatch, { successTitle: 'Alert closed' })
 )
 
+// Crowd reports that set an end time must cover at least an 8-hour window —
+// enforced server-side by a DB trigger, but checked here first so the user
+// gets a friendly inline message instead of a raw Postgres error.
+export const MIN_CROWD_REPORT_WINDOW_MS = 8 * 60 * 60 * 1000
+
 export const reportStatus = createAsyncThunk(
   'safety/reportStatus',
   async (
-    args: { kind: 'power' | 'water' | 'network'; status: 'up' | 'down' | 'stage'; suburb: string; detail?: string; communityId?: string | null },
-    { dispatch }
-  ) =>
-    callRpc('res_report_status', {
+    args: { kind: 'power' | 'water' | 'network' | 'fiber' | 'road'; status: 'up' | 'down' | 'stage'; suburb: string; detail?: string; communityId?: string | null; endsAt?: string | null },
+    { dispatch, rejectWithValue }
+  ) => {
+    if (args.endsAt) {
+      const windowMs = new Date(args.endsAt).getTime() - Date.now()
+      if (windowMs < MIN_CROWD_REPORT_WINDOW_MS) {
+        const message = 'Reports need to cover at least 8 hours'
+        dispatch(addNotification({ title: 'That did not work', message, read: false }))
+        return rejectWithValue(message)
+      }
+    }
+    return callRpc('res_report_status', {
       p_kind: args.kind,
       p_status: args.status,
       p_suburb: args.suburb,
       p_detail: args.detail ?? null,
       p_community: args.communityId ?? null,
       p_lat: null,
-      p_lon: null
+      p_lon: null,
+      p_ends_at: args.endsAt ?? null
     }, dispatch, { successTitle: 'Thanks — reported' })
+  }
 )
 
 // ── Community (#11–#15) ───────────────────────────────────────────────────────

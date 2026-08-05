@@ -175,7 +175,8 @@ test('phase 4 community payloads only use real schema columns', () => {
   assert.strictEqual(sr.kind, 'wifi_hotspot')
 
   const ns = db.neighbourhoodStatusToRow({
-    id: 'ns-1', service: 'electricity', status: 'outage', suburb: 's', updatedAt: '2026-01-01'
+    id: 'ns-1', service: 'electricity', status: 'outage', suburb: 's', updatedAt: '2026-01-01',
+    startsAt: '2026-01-01', endsAt: null, source: 'crowd', providerId: null
   }, UID)
   assertKeysInSchema('res_neighbourhood_status', ns)
   assert.strictEqual(ns.kind, 'power')

@@ -22,6 +22,8 @@ import { claimVoucher, joinWaitlist, cancelSeat } from '../../../store/actions'
 import { formatCurrency } from '../../../utils/logic'
 import FollowButton from '../components/FollowButton'
 import TrustBadge from '../components/TrustBadge'
+import OpenInMapsButton from '../components/OpenInMapsButton'
+import { directionsUrlForAddress } from '../../../utils/navigation'
 import { supabase } from '../../../utils/supabase'
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
@@ -287,6 +289,14 @@ export default function ServicesPage() {
                       <div className="flex items-center gap-2 text-gray-300 font-bold bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 shadow-inner">
                          <MapPin size={16} className="text-gold-primary" /> {lift.destination}
                       </div>
+                      <a
+                        href={directionsUrlForAddress(lift.destination, lift.origin)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-[10px] font-black text-gold-primary uppercase tracking-widest hover:underline"
+                      >
+                        Preview route
+                      </a>
                    </div>
                    <div className="flex flex-wrap gap-3 pt-2">
                       <span className="text-[9px] font-black uppercase tracking-widest bg-black/40 px-3 py-1.5 rounded-lg text-gray-400 border border-white/5 flex items-center gap-2"><Clock size={12} className="text-gold-primary" /> {lift.departureTime}</span>
@@ -358,8 +368,11 @@ export default function ServicesPage() {
                   <div className="p-6 flex-1 flex flex-col gap-5">
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-white tracking-tight uppercase italic group-hover:text-gold-primary transition-colors">{srv.businessName}</h3>
-                        <div className="flex items-center text-[10px] text-gray-500 font-black uppercase tracking-widest gap-2">
-                           <MapPin size={12} className="text-gold-primary" /> {srv.suburb}
+                        <div className="flex items-center justify-between gap-2">
+                           <div className="flex items-center text-[10px] text-gray-500 font-black uppercase tracking-widest gap-2">
+                              <MapPin size={12} className="text-gold-primary" /> {srv.suburb}
+                           </div>
+                           <OpenInMapsButton address={`${srv.location}, ${srv.suburb}`} />
                         </div>
                      </div>
                      <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80 font-medium italic">&quot;{srv.description}&quot;</p>
