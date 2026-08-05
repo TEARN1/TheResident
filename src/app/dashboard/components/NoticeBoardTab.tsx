@@ -23,7 +23,7 @@ interface NoticeBoardTabProps {
   handleVibeNotice?: (id: string) => void
   handleEchoNotice?: (id: string) => void
   handleRSVPToEvent?: (id: string) => void
-  handlePostNotice?: (e: React.FormEvent) => void
+  handlePostNotice?: (data: { title: string; description: string; type: 'notice' | 'event' }) => void
 }
 
 export default function NoticeBoardTab({
@@ -41,10 +41,11 @@ export default function NoticeBoardTab({
   const onPostSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim() || !desc.trim()) return
-    handlePostNotice?.(e)
+    handlePostNotice?.({ title, description: desc, type })
     setShowForm(false)
     setTitle('')
     setDesc('')
+    setType('notice')
   }
 
   return (

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, MapPin, Wifi, Car, Star, Users, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Eye, User as UserIcon
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck
 } from 'lucide-react'
 import {
   RootState,
@@ -17,7 +17,7 @@ import {
   updateRequestStatus
 } from '../../../store'
 import { useGeolocation } from '../../../hooks/useGeolocation'
-import { formatCurrencyByLocation, suburbPriceStats, isSuspiciousPrice } from '../../../utils/logic'
+import { formatCurrency, suburbPriceStats, isSuspiciousPrice } from '../../../utils/logic'
 
 export default function HousingPage() {
   const dispatch = useDispatch()
@@ -38,8 +38,9 @@ export default function HousingPage() {
   const [newTitle, setNewTitle] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [newPrice, setNewPrice] = useState<number>(1500)
-  const [newLocation, setNewLocation] = useState('Midrand, South Africa')
-  const [newSuburb, setNewSuburb] = useState('Ivory Park')
+  const [newCurrency, setNewCurrency] = useState('ZAR')
+  const [newLocation, setNewLocation] = useState('')
+  const [newSuburb, setNewSuburb] = useState('')
   const [newLivesHere, setNewLivesHere] = useState(false)
   const [newWifi, setNewWifi] = useState(true)
   const [newParking, setNewParking] = useState(true)
@@ -82,6 +83,15 @@ export default function HousingPage() {
     2000
   ))
 
+  // What rooms actually go for near this listing, in the same currency —
+  // comparing ZAR to EUR would produce a meaningless "median".
+  const newListingPriceStats = newSuburb
+    ? suburbPriceStats(
+        allListings.filter(l => l.suburb === newSuburb && l.currency === newCurrency).map(l => l.price)
+      )
+    : null
+  const newListingLooksSuspicious = isSuspiciousPrice(newPrice, newListingPriceStats)
+
   const handleCreateListing = (e: React.FormEvent) => {
     e.preventDefault()
     const listing: Listing = {
@@ -89,7 +99,7 @@ export default function HousingPage() {
       title: newTitle,
       description: newDesc,
       price: newPrice,
-      currency: 'ZAR',
+      currency: newCurrency,
       location: newLocation,
       suburb: newSuburb,
       safetyRating: 'high',
@@ -239,7 +249,7 @@ export default function HousingPage() {
                      <div className="space-y-4">
                         <div className="flex justify-between items-end">
                            <label className="text-[10px] uppercase font-black tracking-[0.2em] text-gray-500">Price Ceiling</label>
-                           <span className="text-gold-primary font-black text-sm">{formatCurrencyByLocation(filterPrice)}</span>
+                           <span className="text-gold-primary font-black text-sm">{formatCurrency(filterPrice)}</span>
                         </div>
                         <input
                            type="range" min={500} max={5000} step={50}
@@ -301,7 +311,7 @@ export default function HousingPage() {
                         <span className="text-xs font-black text-white tracking-tight uppercase">Verified</span>
                      </div>
                      <div className="bg-gold-primary text-black px-4 py-2 rounded-xl shadow-xl">
-                        <span className="text-lg font-black tracking-tighter">{formatCurrencyByLocation(item.price)}</span>
+                        <span className="text-lg font-black tracking-tighter">{formatCurrency(item.price, item.currency)}</span>
                         <span className="text-[10px] font-black ml-1 opacity-60">/ MO</span>
                      </div>
                   </div>
@@ -348,7 +358,7 @@ export default function HousingPage() {
                       </div>
                    </div>
                    <div className="bg-gold-primary/10 border border-gold-primary/20 text-gold-primary px-3 py-1 rounded-xl text-sm font-black tracking-tighter">
-                      {formatCurrencyByLocation(rm.budget)}
+                      {formatCurrency(rm.budget, rm.currency)}
                    </div>
                 </div>
                 <p className="text-sm text-gray-400 italic leading-relaxed font-medium">&quot;{rm.bio}&quot;</p>
@@ -384,11 +394,35 @@ export default function HousingPage() {
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Listing Title</label>
-                           <input value={newTitle} onChange={e => setNewTitle(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="e.g. Sunny En-suite near Midrand" />
+                           <input value={newTitle} onChange={e => setNewTitle(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="e.g. Sunny en-suite near the station" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Monthly Rent (ZAR)</label>
-                           <input type="number" value={newPrice} onChange={e => setNewPrice(Number(e.target.value))} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
+                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Monthly Rent</label>
+                           <div className="flex gap-2">
+                              <input type="number" value={newPrice} onChange={e => setNewPrice(Number(e.target.value))} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
+                              <select value={newCurrency} onChange={e => setNewCurrency(e.target.value)} className="bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                                 <option value="ZAR">ZAR</option>
+                                 <option value="USD">USD</option>
+                                 <option value="EUR">EUR</option>
+                                 <option value="GBP">GBP</option>
+                                 <option value="KES">KES</option>
+                                 <option value="NGN">NGN</option>
+                                 <option value="GHS">GHS</option>
+                              </select>
+                           </div>
+                           {/* What rooms actually go for nearby, in the same currency — suppressed
+                               below a usable sample rather than quoting a median of two. */}
+                           {newListingPriceStats && (
+                             <p className="text-[10px] text-gray-500 mt-1.5">
+                               Typical range in {newSuburb}: {formatCurrency(newListingPriceStats.low, newCurrency)}–{formatCurrency(newListingPriceStats.high, newCurrency)}
+                               {' '}({newListingPriceStats.sample} listings)
+                             </p>
+                           )}
+                           {newListingLooksSuspicious && (
+                             <p className="text-[10px] text-red-400 mt-1.5 flex items-center gap-1">
+                               <AlertTriangle size={11} /> That&apos;s far below the going rate nearby — tenants will see a caution flag on this listing.
+                             </p>
+                           )}
                         </div>
                      </div>
                      <div className="space-y-2">
@@ -397,9 +431,15 @@ export default function HousingPage() {
                      </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Suburb / Area</label>
-                           <input value={newSuburb} onChange={e => setNewSuburb(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
+                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">City / Location</label>
+                           <input value={newLocation} onChange={e => setNewLocation(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="e.g. Berlin, Germany" />
                         </div>
+                        <div className="space-y-2">
+                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Suburb / Area</label>
+                           <input value={newSuburb} onChange={e => setNewSuburb(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="e.g. Kreuzberg" />
+                        </div>
+                     </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Bathroom Style</label>
                            <select value={newBathroom} onChange={e => setNewBathroom(e.target.value as 'shared' | 'private' | 'ensuite')} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
@@ -418,6 +458,34 @@ export default function HousingPage() {
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-400 uppercase tracking-widest">
                            <input type="checkbox" checked={newLivesHere} onChange={e => setNewLivesHere(e.target.checked)} className="accent-gold-primary" /> I Live On-Site
+                        </label>
+                     </div>
+                     {/* Who this room suits — feeds roommateCompatibility's hard filters directly.
+                         Every listing silently shared the same defaults until this existed. */}
+                     <div className="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/5">
+                        <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Who This Room Suits</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <div className="space-y-2">
+                              <label className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">Gender Preference</label>
+                              <select value={newGenderPref} onChange={e => setNewGenderPref(e.target.value as 'men' | 'women' | 'couple' | 'any')} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                                 <option value="any">No preference</option>
+                                 <option value="men">Men only</option>
+                                 <option value="women">Women only</option>
+                                 <option value="couple">Couples welcome</option>
+                              </select>
+                           </div>
+                           <div className="space-y-2">
+                              <label className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">Max Children</label>
+                              <input
+                                type="number" min={0} value={newMaxChildren}
+                                onChange={e => setNewMaxChildren(Number(e.target.value))}
+                                disabled={!newChildrenAllowed}
+                                className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40 disabled:opacity-40"
+                              />
+                           </div>
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-400 uppercase tracking-widest">
+                           <input type="checkbox" checked={newChildrenAllowed} onChange={e => setNewChildrenAllowed(e.target.checked)} className="accent-gold-primary" /> Children Allowed
                         </label>
                      </div>
                      <div className="pt-4 border-t border-white/5 flex gap-4">

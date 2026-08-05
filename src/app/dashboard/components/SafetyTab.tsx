@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Shield, AlertTriangle, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check } from 'lucide-react'
+import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check } from 'lucide-react'
 import { outageConsensus, type StatusReport } from '../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../store'
 

@@ -143,7 +143,9 @@ export default function ChoreSchedulerTab({
                </div>
             ) : (
                <div className="space-y-4">
-                  {[...otherChores, ...myChores.filter(c => c.status === 'completed')].sort((a,b) => a.status === 'completed' ? 1 : -1).map(renderChore)}
+                  {[...otherChores, ...myChores.filter(c => c.status === 'completed')]
+                    .sort((a, b) => (a.status === 'completed' ? 1 : 0) - (b.status === 'completed' ? 1 : 0))
+                    .map(renderChore)}
                </div>
             )}
          </div>

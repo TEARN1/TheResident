@@ -18,8 +18,7 @@ import {
   fairnessNote,
   listingMatchesSearch,
   shouldDeliver,
-  detectCurrencyByLocation,
-  formatCurrencyByLocation
+  formatCurrency
 } from './logic'
 import type { Listing, LiftClub } from '../store'
 
@@ -214,9 +213,27 @@ test('panic alerts ignore mutes and quiet hours', () => {
 
 // ── Currency display ─────────────────────────────────────────────────────────
 
-test('detectCurrencyByLocation maps location to local currency', () => {
-  assert.strictEqual(detectCurrencyByLocation('Ivory Park, South Africa').currency, 'ZAR')
-  assert.strictEqual(detectCurrencyByLocation('Nairobi, Kenya').currency, 'KES')
-  assert.strictEqual(formatCurrencyByLocation(1200, 'Ivory Park'), 'R 1200')
-  assert.strictEqual(formatCurrencyByLocation(500, 'Nairobi'), 'KSh 500')
+test('formatCurrency renders each amount in its OWN currency, never a guessed one', () => {
+  // Exact separators/symbol placement are Intl's job and vary by ICU/locale;
+  // what matters is the digits survive and no other currency got substituted.
+  assert.match(formatCurrency(1200, 'ZAR').replace(/[\s,.]/g, ''), /1200/)
+  assert.match(formatCurrency(500, 'KES').replace(/[\s,.]/g, ''), /500/)
+  assert.match(formatCurrency(75, 'USD'), /75/)
+  assert.match(formatCurrency(50, 'EUR'), /50/)
+})
+
+test('formatCurrency never fabricates a currency for a record that never specified one', () => {
+  assert.strictEqual(formatCurrency(1200), '1200')
+  assert.strictEqual(formatCurrency(1200, ''), '1200')
+  assert.strictEqual(formatCurrency(1200, undefined), '1200')
+})
+
+test('formatCurrency never throws on an unrecognised ISO code', () => {
+  // Intl.NumberFormat accepts any syntactically-valid 3-letter code and
+  // degrades gracefully (showing the code itself in place of a symbol) —
+  // the exact spacing is Intl's call, not ours; just assert it doesn't throw
+  // and both the code and the amount are present.
+  const result = formatCurrency(500, 'XYZ')
+  assert.match(result, /XYZ/)
+  assert.match(result, /500/)
 })

@@ -21,6 +21,9 @@ export interface SharedZone {
   severity: number
   lat: number
   lon: number
+  confirmCount: number
+  disputeCount: number
+  endsAt: string | null
 }
 
 interface GeoJsonGeometry {
@@ -61,10 +64,25 @@ export async function fetchSharedZones(
         id: z.id, source_app: z.source_app, kind: z.kind,
         label: z.label, note: z.note, status: z.status,
         severity: z.severity, lat: p[0], lon: p[1],
+        confirmCount: z.confirm_count || 0, disputeCount: z.dispute_count || 0,
+        endsAt: z.ends_at || null,
       })
     }
     return out
   } catch {
     return []
   }
+}
+
+/**
+ * Confirm or dispute a zone on the shared map — Gruvs- or Resident-sourced,
+ * doesn't matter. zone_verify has no ownership gate: any signed-in user from
+ * either app can vote, which is what makes the map genuinely two-directional
+ * rather than read-only for one side. Throws on failure so the caller can
+ * surface a real error instead of a silent no-op.
+ */
+export async function verifyZone(zoneId: string, vote: 'confirm' | 'dispute'): Promise<void> {
+  if (!supabase) throw new Error('Not connected')
+  const { error } = await supabase.rpc('zone_verify', { p_zone: zoneId, p_vote: vote })
+  if (error) throw error
 }

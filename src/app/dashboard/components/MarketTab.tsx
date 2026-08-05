@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldCheck, X, MapPin } from 'lucide-react'
+import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin } from 'lucide-react'
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../store'
 
 interface MarketTabProps {
@@ -28,7 +28,8 @@ export default function MarketTab({
   formatCurrency,
   onPostItem,
   onPledge,
-  onReunite
+  onReunite,
+  onReport
 }: MarketTabProps) {
   const [section, setSection] = useState<Section>('market')
   const [showForm, setShowForm] = useState(false)
@@ -107,14 +108,25 @@ export default function MarketTab({
               {marketItems.map(item => (
                 <div key={item.id} className="bg-black/40 border border-white/5 rounded-xl p-4 flex flex-col gap-3 hover:border-white/10 transition-all group">
                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-black text-gold-primary group-hover:scale-110 transition-transform origin-left">{item.price ? formatCurrency(item.price) : 'FREE'}</span>
+                      <span className="text-xs font-black text-gold-primary group-hover:scale-110 transition-transform origin-left">{item.price ? formatCurrency(item.price, item.currency) : 'FREE'}</span>
                       <span className="text-[9px] bg-white/5 text-gray-500 px-1.5 py-0.5 rounded uppercase font-bold">{item.category}</span>
                    </div>
                    <h4 className="font-bold text-white text-sm group-hover:text-gold-primary transition-colors">{item.title}</h4>
                    <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{item.description}</p>
                    <div className="mt-auto pt-3 border-t border-white/5 flex justify-between items-center">
                       <span className="text-[10px] text-gray-600">In {item.suburb}</span>
-                      <button className="text-gold-primary text-[10px] font-bold hover:underline">Chat Seller</button>
+                      <div className="flex items-center gap-3">
+                         {item.createdBy !== currentUserId && (
+                           <button
+                             onClick={() => onReport?.('market_item', item.id)}
+                             title="Report this listing"
+                             className="text-gray-600 hover:text-red-400 transition-colors"
+                           >
+                             <ShieldAlert size={14} />
+                           </button>
+                         )}
+                         <button className="text-gold-primary text-[10px] font-bold hover:underline">Chat Seller</button>
+                      </div>
                    </div>
                 </div>
               ))}

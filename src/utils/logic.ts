@@ -380,22 +380,38 @@ export function shouldDeliver(
   return true
 }
 
-// ── Currency display (South Africa is the default and primary market; the
-// suburb/city string can still carry a cross-border listing) ─────────────────
+// ── Currency display ──────────────────────────────────────────────────────────
+//
+// Every priced record (Listing, LiftClub, UtilityToken, RoommateSeeker, …)
+// already carries its own `currency` ISO code — the app never needed to guess.
+// formatCurrency renders it with Intl.NumberFormat, which handles symbol,
+// placement and grouping correctly for any currency in any locale with zero
+// hardcoded country list. The locale itself is left undefined so the browser's
+// own locale drives formatting conventions (decimal comma vs point, etc.) —
+// nothing here assumes any one country or region.
 
-// Detect local currency symbol based on suburb/location string
-export function detectCurrencyByLocation(location?: string): { currency: string; symbol: string } {
-  const loc = (location || '').toLowerCase()
-  if (loc.includes('nairobi') || loc.includes('kenya')) return { currency: 'KES', symbol: 'KSh ' }
-  if (loc.includes('lagos') || loc.includes('nigeria')) return { currency: 'NGN', symbol: '₦' }
-  if (loc.includes('accra') || loc.includes('ghana')) return { currency: 'GHS', symbol: 'GH₵ ' }
-  if (loc.includes('harare') || loc.includes('zimbabwe')) return { currency: 'USD', symbol: '$' }
-  if (loc.includes('london') || loc.includes('uk')) return { currency: 'GBP', symbol: '£' }
-  // Default South Africa
-  return { currency: 'ZAR', symbol: 'R ' }
+const CURRENCY_FALLBACK_SYMBOL: Record<string, string> = {
+  ZAR: 'R', USD: '$', EUR: '€', GBP: '£', KES: 'KSh', NGN: '₦', GHS: 'GH₵'
 }
 
-export function formatCurrencyByLocation(amount: number, location?: string): string {
-  const { symbol } = detectCurrencyByLocation(location)
-  return `${symbol}${amount}`
+/** Formats an amount in its OWN currency — never guessed from a location string. */
+export function formatCurrency(amount: number, currencyCode?: string | null): string {
+  const code = (currencyCode || '').toUpperCase().trim()
+  if (!/^[A-Z]{3}$/.test(code)) {
+    // No usable currency code on the record — show the number plainly rather
+    // than silently asserting a currency that was never specified.
+    return String(amount)
+  }
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+      maximumFractionDigits: 2
+    }).format(amount)
+  } catch {
+    // An unrecognised ISO code (rare, but Intl throws rather than guessing).
+    const symbol = CURRENCY_FALLBACK_SYMBOL[code] || `${code} `
+    return `${symbol} ${amount}`
+  }
 }

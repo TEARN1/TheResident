@@ -251,12 +251,22 @@ body {
   border-radius: 1rem;
 }
 
-.top-alert-banner {
+/* Positions the whole group; individual banners just stack inside it —
+   without this, two banners that are true at once (e.g. loading AND
+   pending-writes) would render on top of each other at identical coordinates. */
+.top-alert-banner-stack {
   position: fixed;
   top: 1rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.top-alert-banner {
   background: rgba(0,0,0,0.9);
   border: 1px solid var(--gold-primary);
   padding: 0.75rem 1.5rem;

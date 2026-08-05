@@ -29,7 +29,8 @@ import {
   raiseAlert,
   respondToAlert,
   resolveAlertRpc,
-  reportStatus
+  reportStatus,
+  reportContent
 } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
 import NoticeBoardTab from '../components/NoticeBoardTab'
@@ -41,7 +42,7 @@ import MarketTab from '../components/MarketTab'
 import HouseholdTab from '../components/HouseholdTab'
 import CommunitiesTab from '../components/CommunitiesTab'
 import dynamic from 'next/dynamic'
-import type { StatusReport } from '../../../utils/logic'
+import { formatCurrency, type StatusReport } from '../../../utils/logic'
 
 const VibeMap = dynamic(() => import('../components/VibeMap'), {
   ssr: false,
@@ -123,9 +124,17 @@ export default function CommunityPage() {
     return () => { cancelled = true }
   }, [currentUser, listings, requests, roommates])
 
+  // No fallback suburb: defaulting a new user in, say, Lagos into a South
+  // African suburb would silently scope their whole safety/market feed to the
+  // wrong place. Empty means "not set yet" — the UI shows an honest empty
+  // state instead of someone else's neighbourhood.
   const suburb = listings.find(l => l.landlordId === currentUser?.id)?.suburb
     || roommates.find(r => r.id === currentUser?.id)?.suburb
-    || 'Ivory Park'
+    || ''
+
+  // Same reasoning for currency: derive it from the user's own listing when
+  // one exists, otherwise leave it unset rather than assuming ZAR.
+  const defaultCurrency = listings.find(l => l.landlordId === currentUser?.id)?.currency
 
   // Crowd-signal reports for the safety tab's outage consensus, kinded per utility.
   const statusReports: StatusReport[] = neighbourhoodStatus
@@ -137,7 +146,18 @@ export default function CommunityPage() {
       createdAt: n.updatedAt
     }))
 
-  const handlePostNotice = () => {
+  const handlePostNotice = (data: { title: string; description: string; type: 'notice' | 'event' }) => {
+    if (!currentUser) return
+    dispatch(addNoticeEvent({
+      id: `notice-${Date.now()}`,
+      title: data.title,
+      description: data.description,
+      type: data.type,
+      postedBy: currentUser.name,
+      postedById: currentUser.id,
+      timestamp: new Date().toISOString(),
+      rsvps: []
+    }))
     setAlertNotification('Notice Published Successfully!')
     setTimeout(() => setAlertNotification(null), 3000)
   }
@@ -284,7 +304,8 @@ export default function CommunityPage() {
                 groupBuys={groupBuys}
                 lostFound={lostFound}
                 currentUserId={currentUser?.id || ''}
-                formatCurrency={(a: number) => `R ${a}`}
+                formatCurrency={(a: number, c?: string) => formatCurrency(a, c || defaultCurrency)}
+                onReport={(subjectType, subjectId) => dispatch(reportContent({ subjectType, subjectId, reason: 'other' }))}
                 onPostItem={(item) => {
                   if (!currentUser) return
                   dispatch(addMarketItem({
@@ -292,7 +313,7 @@ export default function CommunityPage() {
                     title: item.title,
                     description: item.description,
                     price: item.price ?? 0,
-                    currency: 'ZAR',
+                    currency: defaultCurrency || '',
                     category: item.category,
                     suburb,
                     status: 'available',
@@ -332,7 +353,7 @@ export default function CommunityPage() {
               <ToolLibraryTab
                 communityTools={communityTools}
                 currentUser={currentUser}
-                formatCurrency={(a: number) => `R ${a}`}
+                formatCurrency={(a: number, c?: string) => formatCurrency(a, c || defaultCurrency)}
                 handleRentTool={handleRentTool}
                 handleAddTool={(tool) => {
                   if (!currentUser) return
@@ -343,7 +364,7 @@ export default function CommunityPage() {
                     title: tool.title,
                     description: tool.description,
                     pricePerDay: tool.pricePerDay,
-                    currency: 'ZAR',
+                    currency: defaultCurrency || '',
                     deposit: tool.deposit,
                     location: tool.location,
                     status: 'available'
@@ -418,7 +439,7 @@ export default function CommunityPage() {
                 }}
                 className="space-y-4"
               >
-                <input name="name" required placeholder="e.g. Zone 5, Ivory Park" className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
+                <input name="name" required placeholder="e.g. Maple Street Block" className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
                 <select name="kind" className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
                   <option value="street">Street</option>
                   <option value="block">Block</option>

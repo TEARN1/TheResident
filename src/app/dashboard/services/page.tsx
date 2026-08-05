@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Eye, Loader, Info
+  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info
 } from 'lucide-react'
 import {
   RootState,
@@ -17,7 +17,7 @@ import {
   ServiceDispatch
 } from '../../../store'
 import { claimVoucher, joinWaitlist, cancelSeat } from '../../../store/actions'
-import { formatCurrencyByLocation } from '../../../utils/logic'
+import { formatCurrency } from '../../../utils/logic'
 
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
@@ -31,6 +31,8 @@ export default function ServicesPage() {
   const [bizPhone, setBizPhone] = useState('')
   const [bizPrice, setBizPrice] = useState('')
   const [bizDesc, setBizDesc] = useState('')
+  const [bizLocation, setBizLocation] = useState('')
+  const [bizSuburb, setBizSuburb] = useState('')
 
   // Hire Modal State
   const [selectedBiz, setSelectedBiz] = useState<HandymanService | null>(null)
@@ -52,8 +54,8 @@ export default function ServicesPage() {
       ownerId: currentUser?.id || '',
       businessName: bizName,
       category: bizCategory,
-      location: 'Midrand',
-      suburb: 'Ivory Park',
+      location: bizLocation,
+      suburb: bizSuburb,
       rating: 5.0,
       contactNumber: bizPhone,
       priceEstimate: bizPrice,
@@ -127,7 +129,7 @@ export default function ServicesPage() {
                    <div className="flex justify-between items-center">
                       <h3 className="text-xl font-black text-white tracking-tight uppercase group-hover:text-gold-primary transition-colors italic">{lift.driverName}</h3>
                       <div className="bg-gold-primary/10 border border-gold-primary/20 text-gold-primary px-4 py-1 rounded-xl font-black text-sm tracking-tighter">
-                         {formatCurrencyByLocation(lift.pricePerSeat)} <span className="text-[10px] opacity-60 ml-1">PER SEAT</span>
+                         {formatCurrency(lift.pricePerSeat, lift.currency)} <span className="text-[10px] opacity-60 ml-1">PER SEAT</span>
                       </div>
                    </div>
                    <div className="flex flex-col md:flex-row md:items-center text-sm gap-2 md:gap-4">
@@ -282,7 +284,7 @@ export default function ServicesPage() {
                       <div className="p-4 bg-gold-primary/10 rounded-2xl group-hover:bg-gold-primary group-hover:text-black transition-colors">
                          <Zap size={28} className="text-gold-primary group-hover:text-inherit" />
                       </div>
-                      <span className="text-3xl font-black text-white tracking-tighter group-hover:text-gold-primary transition-colors italic">{formatCurrencyByLocation(token.price)}</span>
+                      <span className="text-3xl font-black text-white tracking-tighter group-hover:text-gold-primary transition-colors italic">{formatCurrency(token.price, token.currency)}</span>
                    </div>
                    <div className="space-y-4">
                       <div className="space-y-1">
@@ -325,7 +327,7 @@ export default function ServicesPage() {
                             </div>
                          </div>
                          <div className="text-center md:text-right space-y-1">
-                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Cost: {formatCurrencyByLocation(token.price)}</p>
+                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Cost: {formatCurrency(token.price, token.currency)}</p>
                             <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Secured</span>
                          </div>
                       </div>
@@ -367,12 +369,22 @@ export default function ServicesPage() {
                            </div>
                            <div className="space-y-2">
                               <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Contact Number</label>
-                              <input value={bizPhone} onChange={e => setBizPhone(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. +27 72..." />
+                              <input value={bizPhone} onChange={e => setBizPhone(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. +1 555 010 1234" />
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                           <div className="space-y-2">
+                              <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Location / City</label>
+                              <input value={bizLocation} onChange={e => setBizLocation(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. Berlin, Germany" />
+                           </div>
+                           <div className="space-y-2">
+                              <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Suburb / Neighbourhood</label>
+                              <input value={bizSuburb} onChange={e => setBizSuburb(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. Kreuzberg" />
                            </div>
                         </div>
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Rate Estimate</label>
-                           <input value={bizPrice} onChange={e => setBizPrice(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. From R250 / hour" />
+                           <input value={bizPrice} onChange={e => setBizPrice(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. From 25/hour" />
                         </div>
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Full Description</label>

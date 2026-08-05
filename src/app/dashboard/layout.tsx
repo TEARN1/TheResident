@@ -4,12 +4,10 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import {
-  Shield, LogOut, Home, Search, Plus, Check, X, AlertTriangle,
-  Wifi, Car, FileText, Send, MapPin, Eye, Navigation,
-  User as UserIcon, Users, CheckCircle2, Info,
-  Star, Calendar, Clock, Briefcase,
-  ShieldCheck, Zap, Copy,
-  MessageSquare, Gavel, Award, Megaphone, Wrench, Loader, Menu, Sun, Moon
+  Shield, LogOut, Home, X, AlertTriangle,
+  Wifi, Users, CheckCircle2,
+  Briefcase,
+  Megaphone, Wrench, Loader, Menu, Sun, Moon
 } from 'lucide-react'
 import {
   loginUser,
@@ -21,7 +19,6 @@ import {
 } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
-import { t } from '../../utils/i18n'
 import Link from 'next/link'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -133,13 +130,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="dashboard-wrapper">
-       {/* Alert Top Banner */}
-       {alertNotification && (
-        <div className="top-alert-banner">
-          <CheckCircle2 size={18} color="#22c55e" />
-          <span>{alertNotification}</span>
-        </div>
-      )}
+      <div className="top-alert-banner-stack">
+        {alertNotification && (
+          <div className="top-alert-banner">
+            <CheckCircle2 size={18} color="#22c55e" />
+            <span>{alertNotification}</span>
+          </div>
+        )}
+
+        {/* Live-data status: these are real signals from the sync layer, not
+            decoration — this banner went silent when the dashboard was split
+            into routed pages, so failed fetches and queued offline writes were
+            happening invisibly. */}
+        {dataStatus === 'loading' && (
+          <div className="top-alert-banner">
+            <Loader size={18} color="#D4AF37" className="animate-spin" />
+            <span>Loading your community data…</span>
+          </div>
+        )}
+        {dataStatus === 'error' && failedTables.length > 0 && (
+          <div className="top-alert-banner">
+            <AlertTriangle size={18} color="#ef4444" />
+            <span>Some data couldn&apos;t load ({failedTables.join(', ')}). Retrying automatically.</span>
+          </div>
+        )}
+        {pendingWrites > 0 && (
+          <div className="top-alert-banner">
+            <Wifi size={18} color="#D4AF37" />
+            <span>{pendingWrites} change{pendingWrites === 1 ? '' : 's'} waiting to sync — you&apos;re offline.</span>
+          </div>
+        )}
+      </div>
 
       {/* Mobile Drawer Sidebar Backdrop */}
       {isSidebarOpen && (
@@ -222,7 +243,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                    <div className="glass-panel" style={{ position: 'absolute', top: '100%', right: 0, width: '300px', maxHeight: '400px', overflowY: 'auto', zIndex: 100, marginTop: '1rem', padding: '1rem' }}>
                       <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
                          <span className="text-xs font-black text-white uppercase tracking-widest">Alerts</span>
-                         <button onClick={() => { dispatch(markAllNotificationsRead()); markNotificationsReadInDb() }} className="text-[10px] text-gold-primary font-bold hover:underline">Mark all read</button>
+                         <button
+                           onClick={() => {
+                             dispatch(markAllNotificationsRead())
+                             markNotificationsReadInDb()
+                             setAlertNotification('All notifications marked as read')
+                             setTimeout(() => setAlertNotification(null), 3000)
+                           }}
+                           className="text-[10px] text-gold-primary font-bold hover:underline"
+                         >
+                           Mark all read
+                         </button>
                       </div>
                       <div className="space-y-3">
                          {notifications.items.length === 0 ? (
