@@ -88,6 +88,8 @@ export default function AuthPage() {
   // Message states
   const [securityMessage, setSecurityMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  // "Sign in with The Gruvs" mode — shows the one-account helper on the login form.
+  const [gruvsMode, setGruvsMode] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState<{strong: boolean; score: number; feedback: string[]} | null>(null)
 
   const handlePasswordChange = (val: string) => {
@@ -301,8 +303,23 @@ export default function AuthPage() {
   }
 
   const handleGruvsSSO = () => {
-    // Direct Single Sign-On bridge to thegruvs.com — one account across both apps.
-    window.location.href = 'https://thegruvs.com/auth?redirect=the-resident-crew'
+    // One account across The Gruvs & The Resident — they share the SAME Supabase
+    // Auth project, so there is no separate "Gruvs password": your Gruvs email +
+    // password ARE your login here. A cross-domain redirect to thegruvs.com can't
+    // hand a session back (it's a static SPA with no SSO endpoint), so instead we
+    // drop straight into the login form with a clear one-account note. On submit,
+    // handleLogin() calls ensure_res_profile() to set up the Resident side
+    // automatically — a Gruvs user becomes whole here on their first sign-in.
+    setActiveTab('login')
+    setGruvsMode(true)
+    setErrorMessage(null)
+    if (typeof document !== 'undefined') {
+      setTimeout(() => {
+        const el = document.querySelector<HTMLInputElement>('input[type="email"]')
+        el?.focus()
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 60)
+    }
   }
 
   const handleVisitorLogin = () => {
@@ -390,6 +407,16 @@ export default function AuthPage() {
           </div>
         )}
 
+        {gruvsMode && activeTab === 'login' && (
+          <div style={gruvsBannerStyle}>
+            <GruvsMark />
+            <span>
+              <strong>One account.</strong> Sign in with the same email &amp; password you use on
+              The Gruvs — we&apos;ll set up your Resident profile automatically.
+            </span>
+          </div>
+        )}
+
         {activeTab === 'login' ? (
           <form onSubmit={handleLogin} style={formStyle}>
             <div style={inputGroupStyle}>
@@ -417,11 +444,11 @@ export default function AuthPage() {
             </div>
 
             <div style={inputGroupStyle}>
-              <label style={labelStyle}>Password (Test lockout with bad inputs)</label>
-              <input 
-                type="password" 
-                required 
-                placeholder="Correct password is: securepass" 
+              <label style={labelStyle}>Password</label>
+              <input
+                type="password"
+                required
+                placeholder="enter your password..."
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 style={inputStyle}
@@ -991,6 +1018,20 @@ const alertStyle: React.CSSProperties = {
 }
 
 // Social login styles
+const gruvsBannerStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  background: 'var(--gold-dim, rgba(212,175,55,0.10))',
+  border: '1px solid var(--gold-primary, #D4AF37)',
+  borderRadius: '10px',
+  padding: '12px 14px',
+  marginBottom: '16px',
+  color: 'var(--foreground)',
+  fontSize: '0.8rem',
+  lineHeight: 1.4,
+}
+
 const socialDividerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
