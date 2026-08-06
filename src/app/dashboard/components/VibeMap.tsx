@@ -145,9 +145,15 @@ export default function VibeMap() {
       leafletRef.current = L
 
       const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([startLat, startLon], startZoom)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19
+      // CARTO's basemaps, not tile.openstreetmap.org directly: same underlying
+      // OSM street data, but CARTO's own render pipeline refreshes far more
+      // often — tile.openstreetmap.org is OSM's lightweight demo server, it
+      // renders under-mapped areas infrequently, and production hotlinking it
+      // is against OSM's own tile usage policy. No API key required.
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 19,
+        subdomains: 'abcd'
       }).addTo(map)
 
       markersRef.current = L.layerGroup().addTo(map)
