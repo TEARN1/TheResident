@@ -36,6 +36,8 @@ export default function MarketTab({
   isModerator,
   onModerate
 }: MarketTabProps) {
+  const [now] = useState(() => Date.now())
+  const isFeatured = (item: MarketItem) => !!item.featuredUntil && new Date(item.featuredUntil).getTime() > now
   const [section, setSection] = useState<Section>('market')
   const [showForm, setShowForm] = useState(false)
   const [postTitle, setPostTitle] = useState('')
@@ -110,11 +112,16 @@ export default function MarketTab({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {marketItems.map(item => (
-                <div key={item.id} className="bg-black/40 border border-white/5 rounded-xl p-4 flex flex-col gap-3 hover:border-white/10 transition-all group">
+              {[...marketItems].sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a))).map(item => (
+                <div key={item.id} className={`bg-black/40 border rounded-xl p-4 flex flex-col gap-3 transition-all group ${isFeatured(item) ? 'border-gold-primary/40' : 'border-white/5 hover:border-white/10'}`}>
                    <div className="flex justify-between items-start">
                       <span className="text-xs font-black text-gold-primary group-hover:scale-110 transition-transform origin-left">{item.price ? formatCurrency(item.price, item.currency) : 'FREE'}</span>
-                      <span className="text-[9px] bg-white/5 text-gray-500 px-1.5 py-0.5 rounded uppercase font-bold">{item.category}</span>
+                      <div className="flex items-center gap-1.5">
+                         {isFeatured(item) && (
+                            <span className="bg-gold-primary text-black px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest">Featured</span>
+                         )}
+                         <span className="text-[9px] bg-white/5 text-gray-500 px-1.5 py-0.5 rounded uppercase font-bold">{item.category}</span>
+                      </div>
                    </div>
                    <h4 className="font-bold text-white text-sm group-hover:text-gold-primary transition-colors">{item.title}</h4>
                    <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{item.description}</p>

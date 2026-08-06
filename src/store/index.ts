@@ -62,6 +62,8 @@ export interface Listing {
   microLandmark?: string
   lastVerifiedAt?: string
   verifiedByUserId?: string
+  /** Set by a paid room-boost purchase; null/past = not currently featured. */
+  featuredUntil?: string | null
 }
 
 export interface RoomRequest {
@@ -270,6 +272,7 @@ export interface MarketItem {
   status: 'available' | 'sold'
   createdBy: string
   createdAt: string
+  featuredUntil?: string | null
 }
 
 export interface Vendor {
@@ -1193,7 +1196,8 @@ export const fetchSupabaseData = createAsyncThunk(
         approachPhotoUrl: item.approach_photo_url || undefined,
         microLandmark: item.micro_landmark || undefined,
         lastVerifiedAt: item.last_verified_at || undefined,
-        verifiedByUserId: item.verified_by_user_id || undefined
+        verifiedByUserId: item.verified_by_user_id || undefined,
+        featuredUntil: item.featured_until || null
       }))))
     }
 
@@ -1471,7 +1475,8 @@ export const fetchSupabaseData = createAsyncThunk(
         imageUrl: (item.images && item.images[0]) || undefined,
         status: (item.status === 'available' ? 'available' : 'sold') as MarketItem['status'],
         createdBy: item.user_id,
-        createdAt: item.created_at
+        createdAt: item.created_at,
+        featuredUntil: item.featured_until || null
       }))))
     }
 

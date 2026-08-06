@@ -478,7 +478,7 @@ export default function SafetyTab({
 
           {!isVerified && (
             <div className="text-xs text-gold-primary bg-gold-primary/10 border border-gold-primary/20 rounded-xl p-3 space-y-2">
-              <p>Only verified neighbours can respond to alerts. Verification is free and arrives via The Gruvs&apos; review queue — or skip the wait:</p>
+              <p>Only verified neighbours can respond to alerts. Verification itself happens on The Gruvs&apos; review queue, which this app doesn&apos;t control — but you can flag your request as priority:</p>
               <UpgradeButton item="verification_speedup" className="w-full sm:w-auto bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-4 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all active:scale-95" />
             </div>
           )}

@@ -79,7 +79,7 @@ export default function HousingPage() {
     return () => clearTimeout(handler)
   }, [searchInputValue])
 
-  const filteredListings = useSelector((state: RootState) => selectFilteredListings(
+  const filteredListingsRaw = useSelector((state: RootState) => selectFilteredListings(
     state,
     searchLocation,
     filterPrice,
@@ -89,6 +89,10 @@ export default function HousingPage() {
     false,
     false
   ))
+
+  // A boosted listing sorts first while its purchase is still active.
+  const isFeatured = (l: Listing) => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > Date.now()
+  const filteredListings = [...filteredListingsRaw].sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
 
   const filteredRoommates = useSelector((state: RootState) => selectMatchedRoommates(
     state,
@@ -394,7 +398,12 @@ export default function HousingPage() {
 
                 <div className="p-6 flex-1 flex flex-col gap-5">
                   <div className="space-y-1">
-                     <h3 className="text-xl font-black text-white tracking-tight leading-tight group-hover:text-gold-primary transition-colors">{item.title}</h3>
+                     <div className="flex items-center gap-2">
+                        <h3 className="text-xl font-black text-white tracking-tight leading-tight group-hover:text-gold-primary transition-colors">{item.title}</h3>
+                        {isFeatured(item) && (
+                           <span className="bg-gold-primary text-black px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">Featured</span>
+                        )}
+                     </div>
                      <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center text-[10px] text-gray-500 font-black uppercase tracking-widest gap-2">
                            <MapPin size={12} className="text-gold-primary" /> {item.suburb}, {item.location}
