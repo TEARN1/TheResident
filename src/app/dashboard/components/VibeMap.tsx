@@ -2,10 +2,10 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import 'leaflet/dist/leaflet.css'
-import { Navigation, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell } from 'lucide-react'
+import { Navigation, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '../../../store'
-import { fetchSharedZones, verifyZone, type SharedZone } from '../../../utils/mapZones'
+import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../utils/mapZones'
 import { fetchSavedPins, saveNewPin, deleteSavedPin, type SavedPin } from '../../../utils/savedPins'
 import { distanceMetres } from '../../../utils/logic'
 import type { GeocodeResult } from '../../../utils/geocode'
@@ -36,6 +36,28 @@ const KIND_LABEL: Record<string, string> = {
   zone: 'Zone'
 }
 
+// What a resident is allowed to report directly, and how long each option's
+// window lasts. Kept small and predictable rather than a free-text duration
+// field — "8 hours" and "3 days" cover almost every real closure; a rare
+// longer one can be re-reported once it lapses.
+const REPORTABLE_KINDS: Array<{ kind: ReportableZoneKind; label: string }> = [
+  { kind: 'road_closed', label: 'Road closed' },
+  { kind: 'detour', label: 'Detour' },
+  { kind: 'heavy_traffic', label: 'Heavy traffic' },
+  { kind: 'no_parking', label: 'No parking' }
+]
+const DURATION_OPTIONS: Array<{ hours: number; label: string }> = [
+  { hours: 1, label: '1 hour' },
+  { hours: 4, label: '4 hours' },
+  { hours: 8, label: '8 hours' },
+  { hours: 24, label: '24 hours' },
+  { hours: 72, label: '3 days' },
+  { hours: 168, label: '1 week' },
+  { hours: 336, label: '2 weeks (max)' }
+]
+
+type Drawer = 'none' | 'pins' | 'matrix' | 'geofence'
+
 export default function VibeMap() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -51,20 +73,24 @@ export default function VibeMap() {
   const [zones, setZones] = useState<SharedZone[]>([])
   const [loading, setLoading] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
+  const [showLegend, setShowLegend] = useState(false)
+  const [drawer, setDrawer] = useState<Drawer>('none')
 
-  // ── #1 Search-as-you-type + #2 Saved pins ─────────────────────────────────
   const [pendingPoint, setPendingPoint] = useState<{ label: string; lat: number; lon: number } | null>(null)
   const [savedPins, setSavedPins] = useState<SavedPin[]>([])
   const [pinsLoading, setPinsLoading] = useState(false)
 
-  // ── #3 Multi-stop distance matrix ─────────────────────────────────────────
   const [matrixPoints, setMatrixPoints] = useState<MatrixPoint[]>([])
-
-  // ── #4 Geofenced area alerts (client-side, informational) ────────────────
   const [alertRadiusM, setAlertRadiusM] = useState(500)
-
-  // ── #5 Live location sharing (foundation) ─────────────────────────────────
   const [livePosition, setLivePosition] = useState<{ lat: number; lon: number } | null>(null)
+
+  // Report-a-closure form, opened from the pending-point action card.
+  const [showReportForm, setShowReportForm] = useState(false)
+  const [reportKind, setReportKind] = useState<ReportableZoneKind>('road_closed')
+  const [reportDurationHours, setReportDurationHours] = useState(8)
+  const [reportNote, setReportNote] = useState('')
+  const [reportSubmitting, setReportSubmitting] = useState(false)
+  const [reportError, setReportError] = useState<string | null>(null)
 
   const currentUserId = currentUser && currentUser.id !== 'visitor-guest' ? currentUser.id : null
 
@@ -81,16 +107,12 @@ export default function VibeMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId])
 
-  // Geofence check: which saved pins have a shared zone within their alert radius.
   const geofenceHits = savedPins.flatMap(pin =>
     zones
       .filter(z => distanceMetres(pin, z) <= alertRadiusM)
       .map(z => ({ pin, zone: z }))
   )
 
-  // No hardcoded home country: ask the device where it is. If the user says
-  // no, the map still works — it just starts zoomed out to the whole world
-  // rather than silently defaulting to one region.
   useEffect(() => {
     if (!('geolocation' in navigator)) {
       setLocationDenied(true)
@@ -110,20 +132,19 @@ export default function VibeMap() {
     setLoading(false)
   }
 
-  // Build the Leaflet map once we know where to centre it.
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
 
     const startLat = center?.lat ?? 20
     const startLon = center?.lon ?? 0
-    const startZoom = center ? 13 : 2 // world view when we don't know where the user is
+    const startZoom = center ? 14 : 2
 
     let cancelled = false
     import('leaflet').then(L => {
       if (cancelled || !mapContainerRef.current || mapRef.current) return
       leafletRef.current = L
 
-      const map = L.map(mapContainerRef.current).setView([startLat, startLon], startZoom)
+      const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([startLat, startLon], startZoom)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 19
@@ -136,6 +157,8 @@ export default function VibeMap() {
       mapRef.current = map
 
       map.on('click', (e: import('leaflet').LeafletMouseEvent) => {
+        setShowReportForm(false)
+        setReportError(null)
         setPendingPoint({ label: `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`, lat: e.latlng.lat, lon: e.latlng.lng })
       })
 
@@ -145,14 +168,12 @@ export default function VibeMap() {
     return () => { cancelled = true }
   }, [center])
 
-  // Recentre + refetch once geolocation resolves after the map already exists.
   useEffect(() => {
     if (!center || !mapRef.current) return
-    mapRef.current.setView([center.lat, center.lon], 13)
+    mapRef.current.setView([center.lat, center.lon], 14)
     loadZones(center.lat, center.lon)
   }, [center])
 
-  // Render markers whenever the zone list changes.
   useEffect(() => {
     const L = leafletRef.current
     const group = markersRef.current
@@ -164,8 +185,6 @@ export default function VibeMap() {
       const isGeofenceHit = geofenceHits.some(h => h.zone.id === zone.id)
 
       if (isGeofenceHit) {
-        // #4 Geofenced alerts: a pulsing ring behind zones that fall inside
-        // the radius of one of the user's saved places.
         L.circleMarker([zone.lat, zone.lon], {
           radius: 16 + zone.severity * 2,
           color: '#ef4444',
@@ -185,12 +204,16 @@ export default function VibeMap() {
       })
 
       const sourceLabel = zone.source_app === 'gruvs' ? 'The Gruvs' : 'The Resident'
+      const expiry = zone.endsAt
+        ? new Date(zone.endsAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })
+        : null
       const popupId = `zone-popup-${zone.id}`
       marker.bindPopup(`
-        <div style="font-family:inherit;min-width:180px">
+        <div style="font-family:inherit;min-width:190px">
           <strong>${KIND_LABEL[zone.kind] || zone.kind}</strong>
           ${zone.label ? `<div>${zone.label}</div>` : ''}
           ${zone.note ? `<div style="opacity:0.7;font-size:0.85em;margin-top:4px">${zone.note}</div>` : ''}
+          ${expiry ? `<div style="font-size:0.75em;margin-top:6px;color:#D4AF37">Clears by ${expiry}</div>` : ''}
           <div style="font-size:0.75em;opacity:0.6;margin-top:6px">
             Reported via ${sourceLabel} · ${zone.status}
           </div>
@@ -242,7 +265,6 @@ export default function VibeMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zones, currentUser, savedPins, alertRadiusM])
 
-  // #1 Search marker — a temporary marker for the currently selected search result / dropped pin.
   useEffect(() => {
     const L = leafletRef.current
     const layer = searchMarkerRef.current
@@ -260,7 +282,6 @@ export default function VibeMap() {
     }).bindPopup(pendingPoint.label).addTo(layer).openPopup()
   }, [pendingPoint])
 
-  // #2 Saved pins layer — persistent marker layer, distinct from zone markers.
   useEffect(() => {
     const L = leafletRef.current
     const layer = pinsLayerRef.current
@@ -279,7 +300,6 @@ export default function VibeMap() {
     })
   }, [savedPins])
 
-  // #5 Live location marker — the current user's own position while sharing is on.
   useEffect(() => {
     const L = leafletRef.current
     const layer = liveMarkerRef.current
@@ -302,6 +322,8 @@ export default function VibeMap() {
   }
 
   const handleSearchSelect = (result: GeocodeResult) => {
+    setShowReportForm(false)
+    setReportError(null)
     setPendingPoint({ label: result.label, lat: result.lat, lon: result.lon })
     mapRef.current?.setView([result.lat, result.lon], 15)
   }
@@ -323,153 +345,271 @@ export default function VibeMap() {
     mapRef.current?.setView([pin.lat, pin.lon], 15)
   }
 
+  const submitClosureReport = async () => {
+    if (!pendingPoint) return
+    setReportSubmitting(true)
+    setReportError(null)
+    try {
+      await reportZone({
+        kind: reportKind,
+        lat: pendingPoint.lat,
+        lon: pendingPoint.lon,
+        label: KIND_LABEL[reportKind],
+        note: reportNote || undefined,
+        durationHours: reportDurationHours
+      })
+      setShowReportForm(false)
+      setPendingPoint(null)
+      setReportNote('')
+      if (center) loadZones(center.lat, center.lon)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('rate_limited')) {
+        setReportError('Too many reports in the last hour — try again shortly.')
+      } else {
+        setReportError(msg || 'Could not submit the report.')
+      }
+    } finally {
+      setReportSubmitting(false)
+    }
+  }
+
+  const zoom = (delta: number) => {
+    const map = mapRef.current
+    if (map) map.setZoom(map.getZoom() + delta)
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="glass-panel p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <Navigation size={24} className="text-gold-primary" /> Shared Living Map
-            </h3>
-            <p className="text-gray-500 text-sm mt-1">
-              Safety alerts, outage reports and traffic zones — from both The Resident and The Gruvs.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => center && loadZones(center.lat, center.lon)}
-              disabled={!center || loading}
-              className="bg-white/5 p-2 rounded-lg border border-white/10 text-gray-400 hover:text-white transition-all disabled:opacity-40"
-              title="Refresh"
-            >
-              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-            </button>
-            <button
-              onClick={() => mapRef.current?.invalidateSize()}
-              className="bg-white/5 p-2 rounded-lg border border-white/10 text-gray-400 hover:text-white transition-all"
-              title="Refresh map size"
-            >
-              <Maximize size={20} />
-            </button>
+    <div className="glass-panel p-3 md:p-4">
+      <div className="flex justify-between items-center mb-3 px-1">
+        <div>
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <Navigation size={20} className="text-gold-primary" /> Shared Living Map
+          </h3>
+          <p className="text-gray-500 text-xs mt-0.5">From both The Resident and The Gruvs — click anywhere to report or search a place.</p>
+        </div>
+      </div>
+
+      {/* Full-bleed map with floating controls, like Google Maps rather than a boxed embed */}
+      <div className="relative rounded-2xl overflow-hidden border border-white/5 h-[70vh] min-h-[420px]">
+        <div ref={mapContainerRef} className="absolute inset-0" style={{ background: '#111' }} />
+
+        {/* Search — floating top-left */}
+        <div className="absolute top-3 left-3 right-3 md:right-auto md:w-[340px] z-[500]">
+          <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl">
+            <MapSearchBox onSelect={handleSearchSelect} />
           </div>
         </div>
 
-        <div className="mb-4">
-          <MapSearchBox onSelect={handleSearchSelect} />
+        {/* Layers / legend toggle — floating top-right */}
+        <div className="absolute top-3 right-3 z-[500] flex flex-col items-end gap-2">
+          <button
+            onClick={() => setShowLegend(v => !v)}
+            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-2.5 text-gray-300 hover:text-white shadow-2xl"
+            title="Legend"
+          >
+            <Layers size={18} />
+          </button>
+          {showLegend && (
+            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl w-[170px]">
+              {Object.entries(KIND_LABEL).map(([kind, label]) => (
+                <div key={kind} className="flex items-center gap-2 text-[10px] text-gray-300 py-1">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: KIND_COLOR[kind] }} />
+                  {label}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {geofenceHits.length > 0 && (
-          <div className="mb-4 flex items-center gap-2 text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
-            <Bell size={14} className="text-red-400 shrink-0" />
-            {geofenceHits.length} alert{geofenceHits.length === 1 ? '' : 's'} near your saved places (within {alertRadiusM}m)
+        {/* Zoom + refresh — floating bottom-right, Google-Maps-style stacked controls */}
+        <div className="absolute bottom-3 right-3 z-[500] flex flex-col gap-1.5">
+          <button onClick={() => zoom(1)} className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl" title="Zoom in"><Plus size={16} /></button>
+          <button onClick={() => zoom(-1)} className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl" title="Zoom out"><Minus size={16} /></button>
+          <button
+            onClick={() => center && loadZones(center.lat, center.lon)}
+            disabled={!center || loading}
+            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl disabled:opacity-40"
+            title="Refresh reports"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={() => mapRef.current?.invalidateSize()}
+            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl"
+            title="Fix map size"
+          >
+            <Maximize size={16} />
+          </button>
+        </div>
+
+        {/* Tools drawer toggle — floating left, below search */}
+        <div className="absolute top-20 left-3 z-[500] flex flex-col gap-1.5">
+          {(['pins', 'matrix', 'geofence'] as const).map(d => (
+            <button
+              key={d}
+              onClick={() => setDrawer(v => v === d ? 'none' : d)}
+              className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-2xl border backdrop-blur-xl transition-all ${drawer === d ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black/80 text-gray-300 border-white/10 hover:text-white'}`}
+            >
+              {d === 'pins' ? 'Saved places' : d === 'matrix' ? 'Distances' : 'Alerts'}
+            </button>
+          ))}
+        </div>
+
+        {/* Stats chip — floating bottom-left */}
+        <div className="absolute bottom-3 left-3 z-[500] bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2 shadow-2xl flex items-center gap-3 text-[10px] text-gray-300">
+          <span>{zones.length} nearby</span>
+          <span className="text-gray-600">·</span>
+          <span className="flex items-center gap-1"><Check size={10} className="text-green-500" /> {zones.filter(z => z.status === 'confirmed' || z.status === 'official').length} confirmed</span>
+          {geofenceHits.length > 0 && (
+            <>
+              <span className="text-gray-600">·</span>
+              <span className="flex items-center gap-1 text-red-400"><Bell size={10} /> {geofenceHits.length} near your places</span>
+            </>
+          )}
+        </div>
+
+        {locationDenied && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 text-xs text-gray-300 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-2.5 shadow-2xl">
+            <ShieldAlert size={14} className="text-gold-primary shrink-0" />
+            Showing the whole world — zoom into your area for local reports.
           </div>
         )}
 
-        {locationDenied && (
-          <div className="mb-4 flex items-center gap-2 text-xs text-gray-500 bg-white/5 border border-white/10 rounded-xl p-3">
-            <ShieldAlert size={14} className="text-gold-primary shrink-0" />
-            Location access isn&apos;t available, so the map is showing the whole world. Zoom in to your area to see nearby reports.
+        {/* Pending-point action card — floating bottom-center, appears after a click or search */}
+        {pendingPoint && (
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[500] w-[92%] max-w-sm">
+            <div className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-3.5 shadow-2xl space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-gray-300 truncate flex items-center gap-1.5"><MapPin size={13} className="text-green-500 shrink-0" /> {pendingPoint.label}</span>
+                <button onClick={() => { setPendingPoint(null); setShowReportForm(false) }} className="text-gray-500 hover:text-white shrink-0"><X size={14} /></button>
+              </div>
+
+              {!showReportForm ? (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setShowReportForm(true)}
+                    className="flex-1 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Ban size={12} /> Report closure
+                  </button>
+                  {currentUserId && (
+                    <button
+                      onClick={() => handleSavePin(pendingPoint.label)}
+                      className="flex-1 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all"
+                    >
+                      Save place
+                    </button>
+                  )}
+                  <button
+                    onClick={() => addMatrixPoint({ id: `pt-${pendingPoint.lat}-${pendingPoint.lon}`, label: pendingPoint.label, lat: pendingPoint.lat, lon: pendingPoint.lon })}
+                    className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all"
+                  >
+                    Add to distances
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={reportKind}
+                      onChange={e => setReportKind(e.target.value as ReportableZoneKind)}
+                      className="bg-black border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none focus:border-red-500/40"
+                    >
+                      {REPORTABLE_KINDS.map(k => <option key={k.kind} value={k.kind}>{k.label}</option>)}
+                    </select>
+                    <select
+                      value={reportDurationHours}
+                      onChange={e => setReportDurationHours(Number(e.target.value))}
+                      className="bg-black border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none focus:border-red-500/40"
+                    >
+                      {DURATION_OPTIONS.map(d => <option key={d.hours} value={d.hours}>{d.label}</option>)}
+                    </select>
+                  </div>
+                  <input
+                    value={reportNote}
+                    onChange={e => setReportNote(e.target.value)}
+                    placeholder="Any detail that helps (optional)"
+                    maxLength={500}
+                    className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-red-500/40"
+                  />
+                  {reportError && <p className="text-[10px] text-red-400">{reportError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={submitClosureReport}
+                      disabled={reportSubmitting}
+                      className="flex-1 bg-red-500 hover:bg-red-600 text-white font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                    >
+                      {reportSubmitting ? <Loader size={12} className="animate-spin" /> : <Ban size={12} />}
+                      {reportSubmitting ? 'Reporting…' : `Report for ${DURATION_OPTIONS.find(d => d.hours === reportDurationHours)?.label}`}
+                    </button>
+                    <button onClick={() => setShowReportForm(false)} className="text-gray-500 hover:text-white text-[10px] font-bold uppercase tracking-widest px-2">Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {voteError && (
-          <div className="mb-4 flex items-center justify-between gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 text-xs text-red-300 bg-black/90 backdrop-blur-xl border border-red-500/30 rounded-xl p-2.5 shadow-2xl">
             <span>{voteError}</span>
             <button onClick={() => setVoteError(null)}><X size={14} /></button>
           </div>
         )}
 
-        <div
-          ref={mapContainerRef}
-          className="aspect-video rounded-2xl overflow-hidden border border-white/5"
-          style={{ background: '#111' }}
-        />
+        {/* Slide-in tools drawer — right side, replaces the old always-visible stacked cards */}
+        {drawer !== 'none' && (
+          <div className="absolute top-0 right-0 bottom-0 w-full sm:w-[340px] z-[600] bg-black/95 backdrop-blur-xl border-l border-white/10 overflow-y-auto p-4">
+            <button onClick={() => setDrawer('none')} className="absolute top-3 right-3 text-gray-500 hover:text-white"><X size={16} /></button>
 
-        {pendingPoint && (
-          <div className="mt-3 flex items-center justify-between gap-2 text-xs text-gray-400 bg-white/2 border border-white/5 rounded-xl p-3">
-            <span className="truncate flex items-center gap-2">
-              <MapPin size={13} className="text-green-500 shrink-0" /> {pendingPoint.label}
-            </span>
-            <button
-              onClick={() => addMatrixPoint({ id: `pt-${pendingPoint.lat}-${pendingPoint.lon}`, label: pendingPoint.label, lat: pendingPoint.lat, lon: pendingPoint.lon })}
-              className="shrink-0 text-[11px] font-bold text-gold-primary border border-gold-primary/40 rounded-lg px-2 py-1 hover:bg-gold-primary/10 transition-colors"
-            >
-              Add to distance matrix
-            </button>
+            {drawer === 'pins' && (
+              <SavedPinsPanel
+                pending={pendingPoint}
+                pins={savedPins}
+                loading={pinsLoading}
+                onSave={handleSavePin}
+                onDelete={handleDeletePin}
+                onJump={handleJumpToPin}
+                onAddToMatrix={pin => addMatrixPoint({ id: pin.id, label: pin.label, lat: pin.lat, lon: pin.lon })}
+              />
+            )}
+
+            {drawer === 'matrix' && (
+              <DistanceMatrixPanel
+                points={matrixPoints}
+                onRemove={id => setMatrixPoints(prev => prev.filter(p => p.id !== id))}
+              />
+            )}
+
+            {drawer === 'geofence' && (
+              <div>
+                <h4 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2 mb-4">
+                  <Bell size={16} className="text-gold-primary" /> Geofenced Area Alerts
+                </h4>
+                <p className="text-[11px] text-gray-500 mb-4">
+                  Highlights shared zones within a radius of any of your saved places — client-side, refreshed with the map.
+                </p>
+                <label className="block text-[10px] text-gray-500 uppercase font-bold mb-1">Alert radius (metres)</label>
+                <input
+                  type="number"
+                  min={50}
+                  max={20000}
+                  step={50}
+                  value={alertRadiusM}
+                  onChange={e => setAlertRadiusM(Math.max(50, Number(e.target.value) || 50))}
+                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-gold-primary/50 mb-4"
+                />
+                <div className="p-3 bg-white/2 border border-white/5 rounded-xl mb-4">
+                  <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Alerts near saved places</p>
+                  <p className="text-lg font-bold text-white">{geofenceHits.length}</p>
+                </div>
+                <LiveLocationToggle userId={currentUserId} onPosition={setLivePosition} />
+              </div>
+            )}
           </div>
         )}
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-          {Object.entries(KIND_LABEL).map(([kind, label]) => (
-            <div key={kind} className="flex items-center gap-2 text-[10px] text-gray-400">
-              <div className="w-2 h-2 rounded-full" style={{ background: KIND_COLOR[kind] }} />
-              {label}
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <div className="p-4 bg-white/2 border border-white/5 rounded-xl">
-            <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Active Reports Nearby</p>
-            <p className="text-lg font-bold text-white">{zones.length}</p>
-          </div>
-          <div className="p-4 bg-white/2 border border-white/5 rounded-xl">
-            <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Confirmed</p>
-            <p className="text-lg font-bold text-white">
-              {zones.filter(z => z.status === 'confirmed' || z.status === 'official').length}
-            </p>
-          </div>
-          <div className="p-4 bg-white/2 border border-white/5 rounded-xl">
-            <p className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
-              <Check size={10} /> From both apps
-            </p>
-            <p className="text-lg font-bold text-white">
-              {new Set(zones.map(z => z.source_app)).size > 1 ? 'Yes' : zones.length > 0 ? zones[0].source_app : '—'}
-            </p>
-          </div>
-        </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SavedPinsPanel
-          pending={pendingPoint}
-          pins={savedPins}
-          loading={pinsLoading}
-          onSave={handleSavePin}
-          onDelete={handleDeletePin}
-          onJump={handleJumpToPin}
-          onAddToMatrix={pin => addMatrixPoint({ id: pin.id, label: pin.label, lat: pin.lat, lon: pin.lon })}
-        />
-
-        <div className="glass-panel p-6">
-          <h4 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2 mb-4">
-            <Bell size={16} className="text-gold-primary" /> Geofenced Area Alerts
-          </h4>
-          <p className="text-[11px] text-gray-500 mb-4">
-            Highlights shared zones that fall within a radius of any of your saved places — client-side only, refreshed with the map.
-          </p>
-          <label className="block text-[10px] text-gray-500 uppercase font-bold mb-1">Alert radius (metres)</label>
-          <input
-            type="number"
-            min={50}
-            max={20000}
-            step={50}
-            value={alertRadiusM}
-            onChange={e => setAlertRadiusM(Math.max(50, Number(e.target.value) || 50))}
-            className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-gold-primary/50 mb-4"
-          />
-          <div className="p-3 bg-white/2 border border-white/5 rounded-xl mb-4">
-            <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Alerts near saved places</p>
-            <p className="text-lg font-bold text-white">{geofenceHits.length}</p>
-          </div>
-          <LiveLocationToggle userId={currentUserId} onPosition={setLivePosition} />
-        </div>
-      </div>
-
-      <DistanceMatrixPanel
-        points={matrixPoints}
-        onRemove={id => setMatrixPoints(prev => prev.filter(p => p.id !== id))}
-      />
 
       <style jsx global>{`
         .res-geofence-pulse {

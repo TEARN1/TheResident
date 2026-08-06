@@ -86,3 +86,35 @@ export async function verifyZone(zoneId: string, vote: 'confirm' | 'dispute'): P
   const { error } = await supabase.rpc('zone_verify', { p_zone: zoneId, p_vote: vote })
   if (error) throw error
 }
+
+export type ReportableZoneKind = 'road_closed' | 'heavy_traffic' | 'detour' | 'no_parking'
+
+/**
+ * Report a road closure/detour/traffic/no-parking zone with a chosen
+ * duration. map_zones has no direct INSERT policy — this goes through
+ * res_report_map_zone, which validates kind/duration/coordinates and rate-
+ * limits to 5 reports/hour server-side. Throws on failure (including the
+ * rate limit) so the caller can show the real reason, not a silent no-op.
+ */
+export async function reportZone(args: {
+  kind: ReportableZoneKind
+  lat: number
+  lon: number
+  label?: string
+  note?: string
+  severity?: 1 | 2 | 3
+  durationHours: number
+}): Promise<string> {
+  if (!supabase) throw new Error('Not connected')
+  const { data, error } = await supabase.rpc('res_report_map_zone', {
+    p_kind: args.kind,
+    p_lat: args.lat,
+    p_lon: args.lon,
+    p_label: args.label ?? null,
+    p_note: args.note ?? null,
+    p_severity: args.severity ?? 2,
+    p_duration_hours: args.durationHours
+  })
+  if (error) throw error
+  return data as string
+}
