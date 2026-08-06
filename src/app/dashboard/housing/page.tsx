@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2
 } from 'lucide-react'
 import {
   RootState,
@@ -20,6 +20,7 @@ import {
 import { approveRequest, rejectRequest, waitlistRequest, saveRequest } from '../../../store/actions'
 import { useGeolocation } from '../../../hooks/useGeolocation'
 import { formatCurrency, suburbPriceStats, isSuspiciousPrice, type SearchFilters } from '../../../utils/logic'
+import { supabase } from '../../../utils/supabase'
 import FollowButton from '../components/FollowButton'
 import TrustBadge from '../components/TrustBadge'
 import ReviewForm from '../components/ReviewForm'
@@ -27,10 +28,11 @@ import ReviewsList from '../components/ReviewsList'
 import SavedSearches from '../components/SavedSearches'
 import OpenInMapsButton from '../components/OpenInMapsButton'
 import UpgradeButton from '../components/UpgradeButton'
+import PropertiesPanel, { type ResProperty } from '../components/PropertiesPanel'
 
 export default function HousingPage() {
   const dispatch = useDispatch<AppDispatch>()
-  const [activeTab, setActiveTab] = useState<'rooms' | 'roommates'>('rooms')
+  const [activeTab, setActiveTab] = useState<'rooms' | 'roommates' | 'properties'>('rooms')
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const { locationLoading, handleGetLiveLocation } = useGeolocation(setAlertNotification)
 
@@ -57,6 +59,12 @@ export default function HousingPage() {
   const [newGenderPref, setNewGenderPref] = useState<'men' | 'women' | 'couple' | 'any'>('any')
   const [newChildrenAllowed, setNewChildrenAllowed] = useState(true)
   const [newMaxChildren, setNewMaxChildren] = useState(2)
+  const [newPropertyId, setNewPropertyId] = useState('')
+
+  // Landlord's Properties (the layer above listings — a property groups rooms
+  // under one address so occupancy can be tracked instead of every listing
+  // being its own island)
+  const [myProperties, setMyProperties] = useState<ResProperty[]>([])
 
   // Application Drawer
   const [activeListing, setActiveListing] = useState<Listing | null>(null)
@@ -78,6 +86,14 @@ export default function HousingPage() {
     const handler = setTimeout(() => setSearchLocation(searchInputValue), 300)
     return () => clearTimeout(handler)
   }, [searchInputValue])
+
+  const loadMyProperties = React.useCallback(async () => {
+    if (!supabase || !currentUser?.id || currentUser.role !== 'landlord') return
+    const { data } = await supabase.from('res_properties').select('*').eq('landlord_id', currentUser.id)
+    if (data) setMyProperties(data as ResProperty[])
+  }, [currentUser?.id, currentUser?.role])
+
+  useEffect(() => { loadMyProperties() }, [loadMyProperties])
 
   const filteredListingsRaw = useSelector((state: RootState) => selectFilteredListings(
     state,
@@ -132,10 +148,13 @@ export default function HousingPage() {
         maxChildren: newMaxChildren,
         smokingAllowed: false,
         petsAllowed: false
-      }
+      },
+      propertyId: newPropertyId || undefined,
+      createdAt: new Date().toISOString()
     }
     dispatch(addListing(listing))
     setShowCreateModal(false)
+    setNewPropertyId('')
     setAlertNotification('Property listed successfully!')
   }
 
@@ -246,6 +265,14 @@ export default function HousingPage() {
           >
             Roommates
           </button>
+          {currentUser?.role === 'landlord' && (
+            <button
+              onClick={() => setActiveTab('properties')}
+              className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 ${activeTab === 'properties' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white'}`}
+            >
+              <Building2 size={14} /> My Properties
+            </button>
+          )}
         </div>
       </header>
 
@@ -274,7 +301,17 @@ export default function HousingPage() {
          </div>
       )}
 
-      {activeTab === 'rooms' ? (
+      {activeTab === 'properties' ? (
+        currentUser?.id && (
+          <PropertiesPanel
+            properties={myProperties}
+            listings={allListings.filter(l => l.landlordId === currentUser.id)}
+            currentUserId={currentUser.id}
+            onRefresh={loadMyProperties}
+            onNotify={setAlertNotification}
+          />
+        )
+      ) : activeTab === 'rooms' ? (
         <div className="space-y-8">
           {/* Search & Action Bar */}
           <div className="flex flex-col lg:flex-row gap-4">
@@ -403,6 +440,19 @@ export default function HousingPage() {
                         {isFeatured(item) && (
                            <span className="bg-gold-primary text-black px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">Featured</span>
                         )}
+                        {item.landlordId === currentUser?.id && item.propertyId && (() => {
+                           const prop = myProperties.find(p => p.id === item.propertyId)
+                           if (!prop) return null
+                           const siblings = allListings
+                              .filter(l => l.propertyId === item.propertyId)
+                              .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+                           const ordinal = siblings.findIndex(l => l.id === item.id) + 1
+                           return (
+                              <span className="bg-white/5 border border-white/10 text-gray-400 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">
+                                 Room {ordinal} of {prop.total_rooms}
+                              </span>
+                           )
+                        })()}
                      </div>
                      <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center text-[10px] text-gray-500 font-black uppercase tracking-widest gap-2">
@@ -563,6 +613,17 @@ export default function HousingPage() {
                            <input value={newSuburb} onChange={e => setNewSuburb(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="e.g. Kreuzberg" />
                         </div>
                      </div>
+                     {myProperties.length > 0 && (
+                        <div className="space-y-2">
+                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Which Property Is This Room In?</label>
+                           <select value={newPropertyId} onChange={e => setNewPropertyId(e.target.value)} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                              <option value="">No property — standalone listing</option>
+                              {myProperties.map(p => (
+                                 <option key={p.id} value={p.id}>{p.address}, {p.suburb}</option>
+                              ))}
+                           </select>
+                        </div>
+                     )}
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Bathroom Style</label>

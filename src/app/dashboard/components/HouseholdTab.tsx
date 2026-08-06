@@ -1,7 +1,8 @@
 'use client'
 
-import React from 'react'
-import { Home, Users, Award, RotateCcw, CheckCircle2, Star, Shield, Info } from 'lucide-react'
+import React, { useCallback, useEffect, useState } from 'react'
+import { Home, Users, Award, RotateCcw, CheckCircle2, Star, Shield, Info, DoorOpen } from 'lucide-react'
+import { supabase } from '../../../utils/supabase'
 
 interface Member {
   userId: string
@@ -30,6 +31,12 @@ interface HouseholdTabProps {
   styles: Record<string, React.CSSProperties>
 }
 
+interface ActiveTenancy {
+  id: string
+  tenantId: string
+  landlordId: string
+}
+
 export default function HouseholdTab({
   householdListingId,
   householdName,
@@ -39,6 +46,38 @@ export default function HouseholdTab({
   currentUserId,
   onComplete
 }: HouseholdTabProps) {
+  // #9: one tenant, one landlord at a time — a tenancy has to have a real
+  // way to end, or an approved tenant can never legitimately move again.
+  const [activeTenancies, setActiveTenancies] = useState<ActiveTenancy[]>([])
+  const [ending, setEnding] = useState<string | null>(null)
+  const [endError, setEndError] = useState<string | null>(null)
+
+  const loadActiveTenancies = useCallback(async () => {
+    if (!supabase || !householdListingId || !currentUserId) return
+    const { data } = await supabase
+      .from('res_room_requests')
+      .select('id, tenant_id, landlord_id')
+      .eq('listing_id', householdListingId)
+      .eq('status', 'approved')
+      .or(`tenant_id.eq.${currentUserId},landlord_id.eq.${currentUserId}`)
+    setActiveTenancies((data || []).map(r => ({ id: r.id, tenantId: r.tenant_id, landlordId: r.landlord_id })))
+  }, [householdListingId, currentUserId])
+
+  useEffect(() => {
+    const id = setTimeout(() => { loadActiveTenancies() }, 0)
+    return () => clearTimeout(id)
+  }, [loadActiveTenancies])
+
+  const endTenancy = async (requestId: string) => {
+    if (!supabase) return
+    setEnding(requestId)
+    setEndError(null)
+    const { error } = await supabase.rpc('res_end_tenancy', { p_request: requestId })
+    setEnding(null)
+    if (error) { setEndError(error.message); return }
+    loadActiveTenancies()
+  }
+
   if (!householdListingId) {
     return (
       <div className="glass-panel p-12 text-center">
@@ -99,6 +138,30 @@ export default function HouseholdTab({
                   </div>
                </div>
             </div>
+
+            {activeTenancies.length > 0 && (
+              <div className="glass-panel p-4 space-y-3">
+                 <p className="text-xs font-bold text-white flex items-center gap-2">
+                    <DoorOpen size={16} className="text-gold-primary" /> Tenancy
+                 </p>
+                 {activeTenancies.map(t => (
+                   <div key={t.id} className="flex items-center justify-between gap-2">
+                      <p className="text-[10px] text-gray-500">
+                         {t.tenantId === currentUserId ? 'You are renting here.' : 'They rent from you here.'}
+                      </p>
+                      <button
+                        onClick={() => endTenancy(t.id)}
+                        disabled={ending === t.id}
+                        className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-widest disabled:opacity-50 shrink-0"
+                      >
+                        {ending === t.id ? 'Ending…' : 'End Tenancy'}
+                      </button>
+                   </div>
+                 ))}
+                 {endError && <p className="text-[10px] text-red-400">{endError}</p>}
+                 <p className="text-[9px] text-gray-600">Ending a tenancy frees the room and lets you apply elsewhere — you can only hold one active tenancy at a time.</p>
+              </div>
+            )}
          </div>
 
          {/* Chore Scheduler */}

@@ -64,6 +64,9 @@ export interface Listing {
   verifiedByUserId?: string
   /** Set by a paid room-boost purchase; null/past = not currently featured. */
   featuredUntil?: string | null
+  /** Owning res_properties row, if this room belongs to a multi-room property. */
+  propertyId?: string
+  createdAt?: string
 }
 
 export interface RoomRequest {
@@ -1197,7 +1200,9 @@ export const fetchSupabaseData = createAsyncThunk(
         microLandmark: item.micro_landmark || undefined,
         lastVerifiedAt: item.last_verified_at || undefined,
         verifiedByUserId: item.verified_by_user_id || undefined,
-        featuredUntil: item.featured_until || null
+        featuredUntil: item.featured_until || null,
+        propertyId: item.property_id || undefined,
+        createdAt: item.created_at || undefined
       }))))
     }
 
