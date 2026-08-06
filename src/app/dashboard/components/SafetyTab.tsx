@@ -5,6 +5,7 @@ import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check, H
 import { outageConsensus, type StatusReport } from '../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../store'
 import { supabase } from '../../../utils/supabase'
+import UpgradeButton from './UpgradeButton'
 
 interface CareProfile {
   id: string
@@ -476,8 +477,9 @@ export default function SafetyTab({
           </h3>
 
           {!isVerified && (
-            <div className="text-xs text-gold-primary bg-gold-primary/10 border border-gold-primary/20 rounded-xl p-3">
-              Only verified neighbours can respond to alerts. Get verified on The Gruvs to help out.
+            <div className="text-xs text-gold-primary bg-gold-primary/10 border border-gold-primary/20 rounded-xl p-3 space-y-2">
+              <p>Only verified neighbours can respond to alerts. Verification is free and arrives via The Gruvs&apos; review queue — or skip the wait:</p>
+              <UpgradeButton item="verification_speedup" className="w-full sm:w-auto bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-4 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all active:scale-95" />
             </div>
           )}
 

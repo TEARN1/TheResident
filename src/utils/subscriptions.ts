@@ -48,9 +48,12 @@ export async function hasHouseholdPlus(): Promise<boolean> {
 }
 
 /** Starts a Paystack checkout via the edge function; returns the URL to redirect to. */
-export async function startCheckout(tier: 'priority' | 'premium' | 'plus'): Promise<{ url: string | null; error: string | null }> {
+export async function startCheckout(
+  item: 'priority' | 'premium' | 'plus' | 'verification_speedup' | 'market_boost' | 'room_boost',
+  targetId?: string
+): Promise<{ url: string | null; error: string | null }> {
   if (!supabase) return { url: null, error: 'Not connected' }
-  const { data, error } = await supabase.functions.invoke('paystack-checkout', { body: { tier } })
+  const { data, error } = await supabase.functions.invoke('paystack-checkout', { body: { item, targetId } })
   if (error) return { url: null, error: error.message || 'Could not start checkout' }
   if (data?.error === 'payments_not_configured') {
     return { url: null, error: "Payments aren't set up yet — try again soon." }

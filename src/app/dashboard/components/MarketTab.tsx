@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin, EyeOff, Eye } from 'lucide-react'
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../store'
+import UpgradeButton from './UpgradeButton'
 
 interface MarketTabProps {
   marketItems: MarketItem[]
@@ -120,6 +121,13 @@ export default function MarketTab({
                    <div className="mt-auto pt-3 border-t border-white/5 flex justify-between items-center">
                       <span className="text-[10px] text-gray-600">In {item.suburb}</span>
                       <div className="flex items-center gap-3">
+                         {item.createdBy === currentUserId && (
+                           <UpgradeButton
+                             item="market_boost"
+                             targetId={item.id}
+                             className="text-gold-primary text-[10px] font-bold hover:underline"
+                           />
+                         )}
                          {item.createdBy !== currentUserId && (
                            <button
                              onClick={() => onReport?.('market_item', item.id)}

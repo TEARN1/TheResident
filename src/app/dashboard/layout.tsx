@@ -234,7 +234,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="bg-gold-primary/5 border border-gold-primary/15 rounded-xl p-3 mb-1">
               <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-2">Household Plus</p>
               <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">Priority mediation, extra feed storage, an ad-free view.</p>
-              <UpgradeButton tier="plus" className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-2 rounded-lg text-[9px] uppercase tracking-widest transition-all active:scale-95" />
+              <UpgradeButton item="plus" className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-2 rounded-lg text-[9px] uppercase tracking-widest transition-all active:scale-95" />
             </div>
           )}
           <div className="lang-switcher">

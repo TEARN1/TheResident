@@ -26,6 +26,7 @@ import ReviewForm from '../components/ReviewForm'
 import ReviewsList from '../components/ReviewsList'
 import SavedSearches from '../components/SavedSearches'
 import OpenInMapsButton from '../components/OpenInMapsButton'
+import UpgradeButton from '../components/UpgradeButton'
 
 export default function HousingPage() {
   const dispatch = useDispatch<AppDispatch>()
@@ -439,13 +440,17 @@ export default function HousingPage() {
                     <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-gray-400">Bath: {item.amenities.bathroom}</span>
                   </div>
 
-                  <div className="mt-auto pt-6 border-t border-white/5">
-                     <button
-                        onClick={() => setActiveListing(item)}
-                        className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
-                     >
-                        Request Room
-                     </button>
+                  <div className="mt-auto pt-6 border-t border-white/5 space-y-2">
+                     {item.landlordId === currentUser?.id ? (
+                        <UpgradeButton item="room_boost" targetId={item.id} className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest" />
+                     ) : (
+                        <button
+                           onClick={() => setActiveListing(item)}
+                           className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                        >
+                           Request Room
+                        </button>
+                     )}
                   </div>
                 </div>
               </motion.div>

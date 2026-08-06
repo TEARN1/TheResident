@@ -442,8 +442,8 @@ export default function ServicesPage() {
                            <div className="space-y-2 pt-2 border-t border-white/5">
                               <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest text-center">Free listing — get seen first</p>
                               <div className="grid grid-cols-2 gap-2">
-                                 <UpgradeButton tier="priority" className="w-full bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 text-blue-400 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
-                                 <UpgradeButton tier="premium" className="w-full bg-purple-500/10 hover:bg-purple-500 hover:text-white border border-purple-500/30 text-purple-400 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+                                 <UpgradeButton item="priority" className="w-full bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 text-blue-400 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+                                 <UpgradeButton item="premium" className="w-full bg-purple-500/10 hover:bg-purple-500 hover:text-white border border-purple-500/30 text-purple-400 font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
                               </div>
                            </div>
                         )}
