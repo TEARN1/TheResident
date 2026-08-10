@@ -49,7 +49,7 @@ export default function MessagesPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const loadThreads = useCallback(async () => {
-    if (!supabase || !myId) return
+    if (!supabase || !myId) { setLoading(false); return }
     setLoading(true)
     const { data, error: msgError } = await supabase
       .from('messages')

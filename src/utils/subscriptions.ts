@@ -49,7 +49,7 @@ export async function hasHouseholdPlus(): Promise<boolean> {
 
 /** Starts a Paystack checkout via the edge function; returns the URL to redirect to. */
 export async function startCheckout(
-  item: 'priority' | 'premium' | 'plus' | 'verification_speedup' | 'market_boost' | 'room_boost',
+  item: 'priority' | 'premium' | 'plus' | 'verification_speedup' | 'market_boost' | 'room_boost' | 'notice_boost' | 'notice_extend_visibility',
   targetId?: string
 ): Promise<{ url: string | null; error: string | null }> {
   if (!supabase) return { url: null, error: 'Not connected' }

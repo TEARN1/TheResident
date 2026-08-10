@@ -5,7 +5,7 @@ import { Loader, Sparkles } from 'lucide-react'
 import { startCheckout } from '../../../utils/subscriptions'
 import { PRICING, formatPrice } from '../../../utils/pricing'
 
-type SelfServeItem = 'priority' | 'premium' | 'plus' | 'verification_speedup' | 'market_boost' | 'room_boost'
+type SelfServeItem = 'priority' | 'premium' | 'plus' | 'verification_speedup' | 'market_boost' | 'room_boost' | 'notice_boost' | 'notice_extend_visibility'
 
 const ACTION_VERB: Record<SelfServeItem, string> = {
   priority: 'Upgrade to',
@@ -13,7 +13,9 @@ const ACTION_VERB: Record<SelfServeItem, string> = {
   plus: 'Get',
   verification_speedup: 'Buy',
   market_boost: 'Buy',
-  room_boost: 'Buy'
+  room_boost: 'Buy',
+  notice_boost: 'Buy',
+  notice_extend_visibility: 'Buy'
 }
 
 export default function UpgradeButton({ item, targetId, className }: { item: SelfServeItem; targetId?: string; className?: string }) {

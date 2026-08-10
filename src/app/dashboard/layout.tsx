@@ -7,8 +7,8 @@ import {
   Shield, LogOut, Home, X, AlertTriangle,
   Wifi, Users, CheckCircle2,
   Briefcase,
-  Megaphone, Wrench, Loader, Menu, Sun, Moon,
-  ShieldCheck, MessageCircle, MessagesSquare
+  Megaphone, Wrench, Loader, Menu,
+  ShieldCheck, MessageCircle, MessagesSquare, Map as MapIcon
 } from 'lucide-react'
 import {
   loginUser,
@@ -16,7 +16,9 @@ import {
   setLanguage,
   RootState,
   AppDispatch,
-  markAllNotificationsRead
+  markAllNotificationsRead,
+  GUEST_USER_ID,
+  isGuestUser
 } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
@@ -30,7 +32,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const dispatch = useDispatch()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [theme, setTheme] = useState<'day' | 'night'>('day')
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
@@ -43,11 +44,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pendingWrites = useSelector((state: RootState) => state.ui.offlineQueue.length)
   const [showPlusUpsell, setShowPlusUpsell] = useState(false)
 
+  // Dark-only for now — see the removed toggle below for why. Pinned
+  // explicitly so a stale data-theme left on the element by the auth page
+  // (which kept its own separate theme state) can't leak into the dashboard.
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', theme)
+      document.documentElement.setAttribute('data-theme', 'day')
     }
-  }, [theme])
+  }, [])
 
   useEffect(() => {
     if (currentUser) return
@@ -72,7 +76,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const isGuest = document.cookie.split(';').some(c => c.trim().startsWith('guest-mode=1'))
       if (isGuest) {
         dispatch(loginUser({
-          id: 'visitor-guest',
+          id: GUEST_USER_ID,
           name: 'Guest Visitor',
           email: 'visitor@theresidentcrew.com',
           role: 'visitor' as const
@@ -85,7 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [currentUser, router, dispatch])
 
   useEffect(() => {
-    if (!currentUser || currentUser.id === 'visitor-guest') return
+    if (!currentUser || isGuestUser(currentUser)) return
     const appDispatch = dispatch as AppDispatch
     loadNotifications(appDispatch)
     const unsubscribe = subscribeToRealtime(appDispatch, currentUser.id)
@@ -93,7 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [currentUser, dispatch])
 
   useEffect(() => {
-    if (!currentUser || currentUser.id === 'visitor-guest') return
+    if (!currentUser || isGuestUser(currentUser)) return
     let cancelled = false
     hasHouseholdPlus().then(has => { if (!cancelled) setShowPlusUpsell(!has) })
     return () => { cancelled = true }
@@ -230,7 +234,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         <div className="sidebar-footer">
-          {showPlusUpsell && currentUser.id !== 'visitor-guest' && (
+          {showPlusUpsell && !isGuestUser(currentUser) && (
             <div className="bg-gold-primary/5 border border-gold-primary/15 rounded-xl p-3 mb-1">
               <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-2">Household Plus</p>
               <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">Priority mediation, extra feed storage, an ad-free view.</p>
@@ -248,10 +252,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </button>
             ))}
           </div>
-          <button className="sidebar-nav-item" onClick={() => setTheme(theme === 'day' ? 'night' : 'day')}>
-            {theme === 'day' ? <Moon size={16} /> : <Sun size={16} />}
-            <span>{theme === 'day' ? t('nightTheme', lang) : t('dayTheme', lang)}</span>
-          </button>
+          {/* The day/night toggle used to live here. It was a promise the app
+              can't keep: "day" and "night" differ by 5/255 on the background
+              and nothing else, because the UI hardcodes dark styling in ~1200
+              places against 19 theme-aware variables. Rather than ship a
+              control that visibly does nothing, The Resident is dark-only
+              until that styling is consolidated onto the CSS variables. */}
           <button className="sidebar-nav-item" onClick={handleLogout}>
             <LogOut size={16} /> {t('logOut', lang)}
           </button>
@@ -270,6 +276,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto' }}>
+             <Link
+               href="/dashboard/community?tab=vibemap"
+               title="Open the shared living map"
+               style={{
+                 display: 'flex', alignItems: 'center', gap: '6px',
+                 background: pathname === '/dashboard/community' ? 'rgba(212, 175, 55, 0.12)' : 'transparent',
+                 border: '1px solid ' + (pathname === '/dashboard/community' ? 'rgba(212, 175, 55, 0.3)' : 'transparent'),
+                 color: '#D4AF37', padding: '0.4rem 0.7rem', borderRadius: '8px',
+                 fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em'
+               }}
+             >
+               <MapIcon size={16} /> <span className="hidden sm:inline">Map</span>
+             </Link>
              <div ref={notifMenuRef} style={{ position: 'relative' }}>
                 <button onClick={() => setShowNotifMenu(!showNotifMenu)} style={{ background: 'transparent', border: 'none', color: '#D4AF37', position: 'relative', cursor: 'pointer' }}>
                    <Megaphone size={20} />

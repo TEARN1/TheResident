@@ -100,7 +100,7 @@ export default function GossipPage() {
   }, [])
 
   const loadPosts = useCallback(async () => {
-    if (!supabase) return
+    if (!supabase) { setLoading(false); return }
     setLoading(true)
     setError(null)
     const { data, error: postsError } = await supabase

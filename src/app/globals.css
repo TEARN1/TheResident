@@ -7,9 +7,16 @@
   --foreground: #ededed;
   --gold-primary: #D4AF37;
   --gold-secondary: #B8860B;
+  --gold-dim: rgba(212, 175, 55, 0.16);
   --glass-border: rgba(255, 255, 255, 0.1);
   --card-bg: rgba(20, 20, 20, 0.6);
   --input-bg: rgba(0, 0, 0, 0.3);
+  /* Landing-page accent palette — used sparingly (background glow, hover
+     accents) to break up what was an all-gold-on-black page; the gold
+     stays the dominant brand color everywhere else. */
+  --accent-teal: #2dd4bf;
+  --accent-violet: #a78bfa;
+  --accent-rose: #fb7185;
 }
 
 [data-theme='night'] {

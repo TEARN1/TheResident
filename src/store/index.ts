@@ -26,6 +26,25 @@ export interface LandlordPreferences {
   petsAllowed: boolean
 }
 
+/**
+ * The signed-out browsing account.
+ *
+ * MUST stay UUID-shaped: `loginUser` runs every id through `toUUID`, which
+ * hashes anything that isn't already a UUID. The old sentinel `'visitor-guest'`
+ * was silently rewritten to `e9d573ec…` the moment it hit the store, so every
+ * `id === 'visitor-guest'` guard in the app compared against a value that could
+ * never occur and quietly passed guests through as real users.
+ */
+export const GUEST_USER_ID = '00000000-0000-4000-8000-000000000001'
+
+/**
+ * "This person cannot perform authenticated writes." Checks the role rather
+ * than only the id, so it also covers a session that resolved without a
+ * res_profiles row (which bootstraps as 'visitor').
+ */
+export const isGuestUser = (user: { id: string; role: string } | null | undefined): boolean =>
+  !user || user.id === GUEST_USER_ID || user.role === 'visitor'
+
 export interface User {
   id: string
   name: string
@@ -210,28 +229,244 @@ export interface ChoreAssignment {
   completedAt?: string
 }
 
+// Every notice/announcement gets an 8-hour free ride, on the theory that a
+// genuinely urgent, community-relevant post (water outage, lost pet, street
+// meeting) should never be gated behind payment while it's still fresh news.
+// Past that window it either has a paid extension covering the current
+// moment, or it drops out of every viewer's feed — see isNoticeCurrentlyVisible.
+export const NOTICE_FREE_WINDOW_MS = 8 * 60 * 60 * 1000
+
 export interface NoticeEvent {
   id: string
   title: string
   description: string
-  type: 'notice' | 'event'
+  type: 'notice' | 'event' | 'landlord_announcement'
   postedBy: string
   postedById: string
   timestamp: string
   eventDate?: string
+  /**
+   * Link to a Gruvs-owned `events` row (CONTRACT.md §8, same convention as
+   * `LiftClub.eventId`) — a Community Event notice points at a real Gruvs
+   * event rather than carrying its own free-text title/date, so the
+   * community wall and The Gruvs never show two different stories about the
+   * same event.
+   */
+  eventId?: string | null
   rsvps: string[]
   vibes?: string[]
   echos?: string[]
+  /**
+   * Who this is allowed to reach, on top of the base "everyone in the
+   * community" rule — see selectVisibleNotices for the full resolution order:
+   *  - 'everyone': every community member (default)
+   *  - 'my_tenants': only viewers with an approved request against this
+   *    landlord (type === 'landlord_announcement' only)
+   *  - 'targeted': only viewers associated with one of targetSuburbs, via
+   *    their own listings (landlord) or an approved/pending request on a
+   *    listing in that suburb (tenant)
+   */
+  audience?: 'everyone' | 'my_tenants' | 'targeted'
+  /** Suburbs this notice is targeted at — only read when audience === 'targeted'. */
+  targetSuburbs?: string[]
+  /**
+   * Explicit blocklist, resolved AFTER audience targeting — lets a poster
+   * say "everyone in Rosebank except these two people" without that being
+   * expressible through audience/targetSuburbs alone.
+   */
+  excludedUserIds?: string[]
+  /** Set by a paid notice-boost purchase; null/past = not currently featured. */
+  featuredUntil?: string | null
+  /**
+   * Paid extension past the 8h free window (see NOTICE_FREE_WINDOW_MS).
+   * null/past once the free window has also lapsed = the notice is expired
+   * and invisible to everyone except its poster (who can renew it).
+   * Doesn't apply to type === 'event' — an event's own eventDate already
+   * bounds its relevance, it isn't rented by the hour like a notice.
+   */
+  paidVisibilityUntil?: string | null
 }
 
-// Mock listings, roommates, lifts, services
-const initialListings: Listing[] = []
+/** True while `notice` is still inside its free 8h window. */
+export function isNoticeInFreeWindow(notice: Pick<NoticeEvent, 'timestamp'>, now: number = Date.now()): boolean {
+  return now - new Date(notice.timestamp).getTime() < NOTICE_FREE_WINDOW_MS
+}
 
-const initialRoommates: RoommateSeeker[] = []
+/**
+ * A notice is visible to *anyone* (before audience/targeting is applied)
+ * once it's still free, or its paid extension currently covers `now`.
+ * Events and landlord announcements to a private audience are exempt from
+ * the paywall entirely — the paywall only ever governs reach of a public
+ * 'notice'/'landlord_announcement' post, never who's allowed to see it at all.
+ */
+export function isNoticeCurrentlyVisible(notice: NoticeEvent, now: number = Date.now()): boolean {
+  if (notice.type === 'event') return true
+  if (isNoticeInFreeWindow(notice, now)) return true
+  return !!notice.paidVisibilityUntil && new Date(notice.paidVisibilityUntil).getTime() > now
+}
 
-const initialLifts: LiftClub[] = []
+// Example data so the app has something to show when browsing without a
+// live Supabase connection (e.g. local demo / guest mode).
+const initialListings: Listing[] = [
+  {
+    id: 'listing-demo-1',
+    title: 'Sunny private room near Gautrain',
+    description: 'Bright ensuite room in a secure townhouse complex, 5 min walk to the Gautrain station.',
+    price: 6500,
+    currency: 'ZAR',
+    location: '12 Jacaranda Ave',
+    suburb: 'Rosebank',
+    safetyRating: 'high',
+    safetyNotes: '24/7 estate security, biometric gate access.',
+    landlordId: 'landlord-demo-1',
+    landlordName: 'Naledi M.',
+    landlordLivesHere: false,
+    images: [],
+    amenities: { wifi: true, parking: true, bathroom: 'ensuite' },
+    requirements: { genderPreference: 'any', childrenAllowed: false, maxChildren: 0, smokingAllowed: false, petsAllowed: true },
+    lat: -26.1476,
+    lon: 28.0436,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'listing-demo-2',
+    title: 'Shared house room, walk to campus',
+    description: 'Cozy shared bathroom room in a student-friendly house, close to shops and taxis.',
+    price: 3800,
+    currency: 'ZAR',
+    location: '4 Baker Street',
+    suburb: 'Braamfontein',
+    safetyRating: 'medium',
+    safetyNotes: 'Well-lit street, some load-shedding related outages.',
+    landlordId: 'landlord-demo-2',
+    landlordName: 'Thabo K.',
+    landlordLivesHere: true,
+    images: [],
+    amenities: { wifi: true, parking: false, bathroom: 'shared' },
+    requirements: { genderPreference: 'any', childrenAllowed: false, maxChildren: 0, smokingAllowed: false, petsAllowed: false },
+    lat: -26.1926,
+    lon: 28.0305,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'listing-demo-3',
+    title: 'Garden cottage, private entrance',
+    description: 'Self-contained garden flat with its own kitchenette and entrance, very quiet family plot.',
+    price: 8200,
+    currency: 'ZAR',
+    location: '88 Pine Road',
+    suburb: 'Melville',
+    safetyRating: 'high',
+    safetyNotes: 'Alarm system with armed response.',
+    landlordId: 'landlord-demo-1',
+    landlordName: 'Naledi M.',
+    landlordLivesHere: false,
+    images: [],
+    amenities: { wifi: true, parking: true, bathroom: 'private' },
+    requirements: { genderPreference: 'any', childrenAllowed: true, maxChildren: 2, smokingAllowed: false, petsAllowed: true },
+    lat: -26.1867,
+    lon: 27.9799,
+    featuredUntil: null,
+    createdAt: new Date().toISOString()
+  }
+]
 
-const initialServices: HandymanService[] = []
+const initialRoommates: RoommateSeeker[] = [
+  {
+    id: 'roommate-demo-1',
+    name: 'Lerato S.',
+    gender: 'women',
+    childrenCount: 0,
+    budget: 5000,
+    currency: 'ZAR',
+    location: 'Near Sandton City',
+    suburb: 'Sandton',
+    bio: 'Quiet professional, work from home most days, looking for a clean and safe shared place.'
+  },
+  {
+    id: 'roommate-demo-2',
+    name: 'Sipho N.',
+    gender: 'men',
+    childrenCount: 1,
+    budget: 4200,
+    currency: 'ZAR',
+    location: 'Close to schools',
+    suburb: 'Randburg',
+    bio: 'Single dad, easygoing, happy to split chores and share a lift club to town.'
+  }
+]
+
+const initialLifts: LiftClub[] = [
+  {
+    id: 'lift-demo-1',
+    driverName: 'Mpho D.',
+    origin: 'Rosebank',
+    destination: 'Sandton CBD',
+    departureTime: '07:00',
+    days: 'Mon-Fri',
+    pricePerSeat: 25,
+    currency: 'ZAR',
+    availableSeats: 2,
+    totalSeats: 4
+  },
+  {
+    id: 'lift-demo-2',
+    driverName: 'Zanele P.',
+    origin: 'Braamfontein',
+    destination: 'Wits Campus',
+    departureTime: '07:30',
+    days: 'Mon-Fri',
+    pricePerSeat: 15,
+    currency: 'ZAR',
+    availableSeats: 3,
+    totalSeats: 3
+  }
+]
+
+const initialServices: HandymanService[] = [
+  {
+    id: 'service-demo-1',
+    ownerId: 'owner-demo-1',
+    businessName: 'Fix-It Plumbing',
+    category: 'Plumbing',
+    location: 'Rosebank & surrounds',
+    suburb: 'Rosebank',
+    rating: 4.6,
+    contactNumber: '071 234 5678',
+    priceEstimate: 'From R350 call-out',
+    description: 'Leaks, geysers, blocked drains — same day response.',
+    image: '',
+    reviewsCount: 23
+  },
+  {
+    id: 'service-demo-2',
+    ownerId: 'owner-demo-2',
+    businessName: 'SafeGate Security',
+    category: 'Security',
+    location: 'Melville & surrounds',
+    suburb: 'Melville',
+    rating: 4.9,
+    contactNumber: '082 345 6789',
+    priceEstimate: 'From R500/month',
+    description: 'Armed response, alarm installation, and patrol services.',
+    image: '',
+    reviewsCount: 41
+  },
+  {
+    id: 'service-demo-3',
+    ownerId: 'owner-demo-3',
+    businessName: 'Speedy Bakkie Transport',
+    category: 'Bakkie / Transport',
+    location: 'Braamfontein & surrounds',
+    suburb: 'Braamfontein',
+    rating: 4.3,
+    contactNumber: '073 456 7890',
+    priceEstimate: 'From R250 per trip',
+    description: 'Furniture moves, deliveries, and student move-ins.',
+    image: '',
+    reviewsCount: 12
+  }
+]
 
 
 // Phase 4 Community Interfaces
@@ -453,10 +688,16 @@ const listingsSlice = createSlice({
   }
 })
 
+// Deliberately EMPTY, unlike the other demo seeds. A demo listing only
+// populates a browse view, but a seeded room request lands in a real
+// landlord's action queue — they would try to answer an applicant who does
+// not exist. Requests must only ever come from a real tenant action.
+const initialRequests: RoomRequest[] = []
+
 const requestsSlice = createSlice({
   name: 'requests',
   initialState: {
-    items: [] as RoomRequest[]
+    items: initialRequests
   },
   reducers: {
     setRequests: (state, action: PayloadAction<RoomRequest[]>) => {
@@ -611,7 +852,28 @@ const networkingSlice = createSlice({
   }
 })
 
-const initialTokens: UtilityToken[] = []
+const initialTokens: UtilityToken[] = [
+  {
+    id: 'token-demo-1',
+    landlordId: 'landlord-demo-1',
+    landlordName: 'Naledi M.',
+    meterNumber: '04821193756',
+    price: 200,
+    currency: 'ZAR',
+    tokenCode: '',
+    status: 'available'
+  },
+  {
+    id: 'token-demo-2',
+    landlordId: 'landlord-demo-2',
+    landlordName: 'Thabo K.',
+    meterNumber: '04821194502',
+    price: 100,
+    currency: 'ZAR',
+    tokenCode: '',
+    status: 'available'
+  }
+]
 
 const utilitiesSlice = createSlice({
   name: 'utilities',
@@ -646,13 +908,280 @@ const utilitiesSlice = createSlice({
 })
 
 // Community Hub Mock Data
-const initialTools: ToolItem[] = []
+const initialTools: ToolItem[] = [
+  {
+    id: 'tool-demo-1',
+    ownerId: 'landlord-demo-1',
+    ownerName: 'Naledi M.',
+    title: 'Cordless drill set',
+    description: 'Bosch 18V drill with two batteries and a bit set.',
+    pricePerDay: 50,
+    currency: 'ZAR',
+    deposit: 300,
+    location: 'Rosebank',
+    status: 'available'
+  },
+  {
+    id: 'tool-demo-2',
+    ownerId: 'landlord-demo-2',
+    ownerName: 'Thabo K.',
+    title: 'Extension ladder (3m)',
+    description: 'Sturdy aluminium ladder, good for gutter cleaning.',
+    pricePerDay: 40,
+    currency: 'ZAR',
+    deposit: 200,
+    location: 'Braamfontein',
+    status: 'available'
+  }
+]
 
-const initialChores: ChoreAssignment[] = []
+const initialChores: ChoreAssignment[] = [
+  {
+    id: 'chore-demo-1',
+    listingId: 'listing-demo-2',
+    roommateId: 'roommate-demo-1',
+    roommateName: 'Lerato S.',
+    taskName: 'Take out the bins',
+    dayOfWeek: 'Monday',
+    status: 'pending'
+  },
+  {
+    id: 'chore-demo-2',
+    listingId: 'listing-demo-2',
+    roommateId: 'roommate-demo-2',
+    roommateName: 'Sipho N.',
+    taskName: 'Clean shared kitchen',
+    dayOfWeek: 'Wednesday',
+    status: 'completed',
+    completedAt: new Date().toISOString()
+  }
+]
 
-const initialNotices: NoticeEvent[] = []
+const initialNotices: NoticeEvent[] = [
+  {
+    id: 'notice-demo-1',
+    title: 'Water outage scheduled Thursday',
+    description: 'City maintenance on the main line — expect low pressure from 9am to 2pm.',
+    type: 'notice',
+    postedBy: 'Naledi M.',
+    postedById: 'landlord-demo-1',
+    timestamp: new Date().toISOString(),
+    rsvps: [],
+    vibes: [],
+    echos: []
+  },
+  {
+    id: 'notice-demo-2',
+    title: 'Street braai this Saturday',
+    description: 'Bring a side dish, meat is sorted. 4pm at the corner park.',
+    type: 'event',
+    postedBy: 'Thabo K.',
+    postedById: 'landlord-demo-2',
+    timestamp: new Date().toISOString(),
+    eventDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+    rsvps: ['roommate-demo-1'],
+    vibes: [],
+    echos: []
+  }
+]
 
-const initialDisputes: CommunityDispute[] = []
+const initialDisputes: CommunityDispute[] = [
+  {
+    id: 'dispute-demo-1',
+    title: 'Noise after quiet hours',
+    description: 'Loud music most nights past 11pm from the shared lounge.',
+    category: 'Noise',
+    reportedBy: 'Lerato S.',
+    reportedById: 'roommate-demo-1',
+    againstUser: 'Sipho N.',
+    againstUserId: 'roommate-demo-2',
+    mediatorId: '',
+    mediatorName: '',
+    status: 'pending',
+    timestamp: new Date().toISOString()
+  }
+]
+
+const initialCommunities: Community[] = [
+  {
+    id: 'community-demo-1',
+    name: 'Rosebank Residents',
+    kind: 'suburb',
+    description: 'Neighbours in and around Rosebank looking out for each other.',
+    location: 'Rosebank',
+    suburb: 'Rosebank',
+    createdBy: 'landlord-demo-1',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'community-demo-2',
+    name: 'Baker Street Block',
+    kind: 'block',
+    description: 'The households on and around Baker Street, Braamfontein.',
+    location: 'Braamfontein',
+    suburb: 'Braamfontein',
+    createdBy: 'landlord-demo-2',
+    createdAt: new Date().toISOString()
+  }
+]
+
+const initialAlerts: Alert[] = [
+  {
+    id: 'alert-demo-1',
+    title: 'Suspicious vehicle reported',
+    description: 'A white bakkie circling the block slowly for the past hour, no plates visible.',
+    kind: 'suspicious',
+    category: 'security',
+    severity: 'warning',
+    status: 'active',
+    suburb: 'Rosebank',
+    createdBy: 'landlord-demo-1',
+    createdAt: new Date().toISOString(),
+    lat: -26.1476,
+    lon: 28.0436
+  }
+]
+
+const initialMarketItems: MarketItem[] = [
+  {
+    id: 'market-demo-1',
+    title: 'Bunk bed frame, good condition',
+    description: 'Moving out — solid wood bunk bed, no mattress. Buyer collects.',
+    price: 900,
+    currency: 'ZAR',
+    category: 'Furniture',
+    suburb: 'Rosebank',
+    status: 'available',
+    createdBy: 'landlord-demo-1',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'market-demo-2',
+    title: 'Microwave, barely used',
+    description: 'Upgrading kitchens — this one still works perfectly.',
+    price: 350,
+    currency: 'ZAR',
+    category: 'Appliances',
+    suburb: 'Braamfontein',
+    status: 'available',
+    createdBy: 'landlord-demo-2',
+    createdAt: new Date().toISOString()
+  }
+]
+
+const initialVendors: Vendor[] = [
+  {
+    id: 'vendor-demo-1',
+    name: 'Corner Spaza Shop',
+    category: 'Grocery',
+    description: 'Everyday essentials, airtime, and cold drinks.',
+    contactNumber: '071 555 1234',
+    status: 'active',
+    rating: 4.4,
+    reviewsCount: 18,
+    lat: -26.1480,
+    lon: 28.0440
+  },
+  {
+    id: 'vendor-demo-2',
+    name: 'Braam Fresh Produce',
+    category: 'Fruit & Veg',
+    description: 'Daily fresh produce delivered from local farms.',
+    contactNumber: '073 555 6789',
+    status: 'active',
+    rating: 4.7,
+    reviewsCount: 9
+  }
+]
+
+const initialGroupBuys: GroupBuy[] = [
+  {
+    id: 'groupbuy-demo-1',
+    title: 'Bulk order: bottled water crates',
+    description: 'Splitting a pallet order to get the wholesale rate — need 20 pledges.',
+    targetAmount: 20,
+    currentPledges: 12,
+    status: 'open',
+    createdBy: 'landlord-demo-1',
+    endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+  }
+]
+
+const initialSkills: Skill[] = [
+  {
+    id: 'skill-demo-1',
+    userId: 'roommate-demo-1',
+    title: 'Basic bookkeeping',
+    category: 'Admin',
+    description: 'Can help small vendors set up simple spreadsheets and invoices.',
+    experienceLevel: 'Intermediate',
+    contactInfo: '082 111 2233'
+  },
+  {
+    id: 'skill-demo-2',
+    userId: 'roommate-demo-2',
+    title: 'Guitar lessons',
+    category: 'Music',
+    description: 'Beginner-friendly guitar lessons, weekends only.',
+    experienceLevel: 'Advanced',
+    contactInfo: '083 222 3344'
+  }
+]
+
+const initialLostFound: LostFound[] = [
+  {
+    id: 'lostfound-demo-1',
+    title: 'Found: grey tabby cat',
+    description: 'Friendly grey tabby found near the Baker Street corner, no collar.',
+    type: 'found',
+    location: 'Braamfontein',
+    contactInfo: '084 333 4455',
+    status: 'active'
+  }
+]
+
+const initialCareCircle: CareCircleCheck[] = [
+  {
+    id: 'care-demo-1',
+    name: 'Mrs. Dlamini (No. 14)',
+    status: 'ok',
+    lastCheckedAt: new Date().toISOString(),
+    checkedByName: 'Naledi M.'
+  },
+  {
+    id: 'care-demo-2',
+    name: 'Mr. van Zyl (No. 7)',
+    status: 'pending',
+    lastCheckedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  }
+]
+
+const initialSharedResources: SharedResource[] = [
+  {
+    id: 'resource-demo-1',
+    name: 'Community WiFi hotspot',
+    type: 'hotspot',
+    status: 'active',
+    description: 'Shared fibre hotspot for the block, ask an admin for the password.',
+    location: 'Rosebank community hall',
+    latitude: -26.1470,
+    longitude: 28.0430
+  }
+]
+
+const initialNeighbourhoodStatus: NeighbourhoodStatus[] = [
+  {
+    id: 'status-demo-1',
+    service: 'electricity',
+    status: 'outage',
+    suburb: 'Rosebank',
+    updatedAt: new Date().toISOString(),
+    startsAt: new Date().toISOString(),
+    endsAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+    source: 'official',
+    providerId: null
+  }
+]
 
 const communitySlice = createSlice({
   name: 'community',
@@ -662,16 +1191,16 @@ const communitySlice = createSlice({
     notices: initialNotices,
     disputes: initialDisputes,
     reputationScores: {} as Record<string, number>,
-    communities: [] as Community[],
-    alerts: [] as Alert[],
-    marketItems: [] as MarketItem[],
-    vendors: [] as Vendor[],
-    groupBuys: [] as GroupBuy[],
-    skills: [] as Skill[],
-    lostFound: [] as LostFound[],
-    careCircle: [] as CareCircleCheck[],
-    sharedResources: [] as SharedResource[],
-    neighbourhoodStatus: [] as NeighbourhoodStatus[],
+    communities: initialCommunities,
+    alerts: initialAlerts,
+    marketItems: initialMarketItems,
+    vendors: initialVendors,
+    groupBuys: initialGroupBuys,
+    skills: initialSkills,
+    lostFound: initialLostFound,
+    careCircle: initialCareCircle,
+    sharedResources: initialSharedResources,
+    neighbourhoodStatus: initialNeighbourhoodStatus,
     // Community ids the signed-in user actually belongs to, and a member count
     // per community — both derived from res_community_members, which nothing
     // previously read on the client (the "Communities" tab used to hardcode []).
@@ -2329,6 +2858,77 @@ export const selectMatchedRoommates = createSelector(
       if (maxBudget > 0 && rm.budget > maxBudget) return false;
       return true;
     });
+  }
+)
+
+// A viewer's "home suburbs" for area targeting: every suburb they're
+// concretely tied to, derived from data that already exists rather than a
+// separate location-preferences table —
+//  - landlord: the suburbs of the rooms/properties they list
+//  - tenant: the suburb of any listing they have a pending OR approved
+//    request against (pending counts too — someone mid-application to a
+//    Rosebank room should still see "Rosebank" notices while deciding)
+const selectViewerSuburbs = createSelector(
+  [
+    (state: RootState) => state.listings.items,
+    (state: RootState) => state.requests.items,
+    (state: RootState, viewerId: string | undefined) => viewerId
+  ],
+  (listings, requests, viewerId) => {
+    if (!viewerId) return new Set<string>()
+    const suburbs = new Set<string>()
+    for (const l of listings) {
+      if (l.landlordId === viewerId) suburbs.add(l.suburb.toLowerCase())
+    }
+    for (const r of requests) {
+      if (r.tenantId === viewerId && (r.status === 'approved' || r.status === 'pending')) {
+        const listing = listings.find(l => l.id === r.listingId)
+        if (listing) suburbs.add(listing.suburb.toLowerCase())
+      }
+    }
+    return suburbs
+  }
+)
+
+// Notice visibility resolves in three stages, each of which can hide a
+// notice a prior stage let through:
+//  1. Expiry (isNoticeCurrentlyVisible) — free window or paid extension
+//  2. Explicit blocklist (excludedUserIds) — always wins, even over the
+//     poster's own audience choice, so "everyone except these two" is
+//     expressible without inverting the whole audience model
+//  3. Audience targeting — 'my_tenants' (approved-request landlords only)
+//     or 'targeted' (viewer's home suburb intersects targetSuburbs)
+// The poster can always see their own notice regardless of 1-3, so they can
+// check on / renew something that's expired or under-targeted.
+// Boosted notices (featuredUntil) sort first, same convention as featured
+// listings/market items.
+export const selectVisibleNotices = createSelector(
+  [
+    (state: RootState) => state.community.notices,
+    (state: RootState) => state.requests.items,
+    (state: RootState, viewerId: string | undefined) => viewerId,
+    (state: RootState, viewerId: string | undefined) => selectViewerSuburbs(state, viewerId)
+  ],
+  (notices, requests, viewerId, viewerSuburbs) => {
+    const isFeatured = (n: NoticeEvent) => !!n.featuredUntil && new Date(n.featuredUntil).getTime() > Date.now()
+    const visible = notices.filter(n => {
+      const isOwner = !!viewerId && n.postedById === viewerId
+      if (isOwner) return true
+
+      if (!isNoticeCurrentlyVisible(n)) return false
+      if (viewerId && n.excludedUserIds?.includes(viewerId)) return false
+
+      if (n.audience === 'my_tenants') {
+        if (!viewerId) return false
+        return requests.some(r => r.landlordId === n.postedById && r.tenantId === viewerId && r.status === 'approved')
+      }
+      if (n.audience === 'targeted') {
+        if (!n.targetSuburbs || n.targetSuburbs.length === 0) return true
+        return n.targetSuburbs.some(s => viewerSuburbs.has(s.toLowerCase()))
+      }
+      return true
+    })
+    return [...visible].sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
   }
 )
 

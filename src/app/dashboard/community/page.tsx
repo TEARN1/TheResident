@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -20,7 +21,9 @@ import {
   pledgeGroupBuy,
   resolveLostFound,
   toUUID,
-  fetchSupabaseData
+  fetchSupabaseData,
+  isGuestUser,
+  selectVisibleNotices
 } from '../../../store'
 import {
   joinCommunity,
@@ -57,8 +60,20 @@ const VibeMap = dynamic(() => import('../components/VibeMap'), {
 
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
-  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'rooms' | 'resources' | 'admin'>('overview')
+  const searchParams = useSearchParams()
+  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'rooms' | 'resources' | 'admin'>(
+    searchParams.get('tab') === 'vibemap' ? 'vibemap' : 'overview'
+  )
   const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
+
+  // Lets a "Map" quick-link elsewhere in the app (e.g. the top bar) land
+  // straight on VibeMap via /dashboard/community?tab=vibemap even when this
+  // page was already mounted — the useState initializer above only fires on
+  // first mount, so a repeat visit needs this effect to still catch the param.
+  useEffect(() => {
+    if (searchParams.get('tab') === 'vibemap') setSubTab('vibemap')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
   // Dispute Modal State
@@ -77,7 +92,7 @@ export default function CommunityPage() {
   const roommates = useSelector((state: RootState) => state.networking.roommates)
 
   // Data from Redux
-  const communityNotices = useSelector((state: RootState) => state.community.notices)
+  const communityNotices = useSelector((state: RootState) => selectVisibleNotices(state, currentUser?.id))
   const communityTools = useSelector((state: RootState) => state.community.tools)
   const communityChores = useSelector((state: RootState) => state.community.chores)
   const communityDisputes = useSelector((state: RootState) => state.community.disputes)
@@ -92,6 +107,41 @@ export default function CommunityPage() {
   const myCommunityIds = useSelector((state: RootState) => state.community.myCommunityIds)
   const communityMemberCounts = useSelector((state: RootState) => state.community.communityMemberCounts)
 
+  // Community Events always point at a real Gruvs-owned `events` row
+  // (CONTRACT.md §8) rather than carrying their own free-text title/date —
+  // same convention already used for res_lift_clubs.event_id. These two
+  // effects mirror the fetch pattern in services/page.tsx exactly.
+  const [upcomingGruvsEvents, setUpcomingGruvsEvents] = useState<{ id: string; title: string; startsAt: string }[]>([])
+  const [gruvsEventInfo, setGruvsEventInfo] = useState<Record<string, { title: string; startsAt: string }>>({})
+
+  useEffect(() => {
+    let cancelled = false
+    if (subTab !== 'notices' || !supabase) return
+    supabase
+      .from('events')
+      .select('id, title, starts_at')
+      .gte('starts_at', new Date().toISOString())
+      .order('starts_at', { ascending: true })
+      .limit(20)
+      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
+        if (!cancelled && data) setUpcomingGruvsEvents(data.map(e => ({ id: e.id, title: e.title, startsAt: e.starts_at })))
+      })
+    return () => { cancelled = true }
+  }, [subTab])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!supabase) return
+    const ids = [...new Set(communityNotices.map(n => n.eventId).filter((id): id is string => !!id))]
+    if (ids.length === 0) return
+    supabase.from('events').select('id, title, starts_at').in('id', ids)
+      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
+        if (cancelled || !data) return
+        setGruvsEventInfo(prev => ({ ...prev, ...Object.fromEntries(data.map(e => [e.id, { title: e.title, startsAt: e.starts_at }])) }))
+      })
+    return () => { cancelled = true }
+  }, [communityNotices])
+
   // Server-held facts a client must not invent: verification + household.
   const [isVerified, setIsVerified] = useState(false)
   // Communities where the current user is admin/founder — drives the small
@@ -104,7 +154,7 @@ export default function CommunityPage() {
   const [householdMembers, setHouseholdMembers] = useState<Array<{ userId: string; name: string; role: string }>>([])
 
   useEffect(() => {
-    if (!currentUser || currentUser.id === 'visitor-guest' || !supabase) return
+    if (!currentUser || isGuestUser(currentUser) || !supabase) return
     let cancelled = false
 
     const load = async () => {
@@ -137,7 +187,7 @@ export default function CommunityPage() {
   }, [currentUser, listings, requests, roommates])
 
   useEffect(() => {
-    if (!currentUser || currentUser.id === 'visitor-guest' || !supabase || myCommunityIds.length === 0) {
+    if (!currentUser || isGuestUser(currentUser) || !supabase || myCommunityIds.length === 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setAdminCommunities([])
       return
@@ -204,13 +254,27 @@ export default function CommunityPage() {
       createdAt: n.updatedAt
     }))
 
-  const handlePostNotice = (data: { title: string; description: string; type: 'notice' | 'event' }) => {
+  const handlePostNotice = (data: {
+    title: string
+    description: string
+    type: 'notice' | 'event' | 'landlord_announcement'
+    audience?: 'everyone' | 'my_tenants' | 'targeted'
+    targetSuburbs?: string[]
+    excludedUserIds?: string[]
+    eventId?: string
+  }) => {
     if (!currentUser) return
+    if (data.audience === 'my_tenants' && (data.type !== 'landlord_announcement' || currentUser.role !== 'landlord')) return
+    if (data.type === 'event' && !data.eventId) return
     dispatch(addNoticeEvent({
       id: `notice-${Date.now()}`,
       title: data.title,
       description: data.description,
       type: data.type,
+      eventId: data.type === 'event' ? data.eventId : undefined,
+      audience: data.type !== 'event' ? (data.audience || 'everyone') : undefined,
+      targetSuburbs: data.audience === 'targeted' ? data.targetSuburbs : undefined,
+      excludedUserIds: data.excludedUserIds,
       postedBy: currentUser.name,
       postedById: currentUser.id,
       timestamp: new Date().toISOString(),
@@ -477,6 +541,8 @@ export default function CommunityPage() {
                <NoticeBoardTab
                   communityNotices={communityNotices}
                   currentUser={currentUser}
+                  upcomingGruvsEvents={upcomingGruvsEvents}
+                  gruvsEventInfo={gruvsEventInfo}
                   handleVibeNotice={(id) => dispatch(vibeNotice({ noticeId: id, userName: currentUser?.name || '' }))}
                   handleEchoNotice={(id) => dispatch(echoNotice({ noticeId: id, userName: currentUser?.name || '' }))}
                   handleRSVPToEvent={(id) => dispatch(rsvpToEvent({ noticeId: id, userName: currentUser?.name || '' }))}

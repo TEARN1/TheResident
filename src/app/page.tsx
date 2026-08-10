@@ -1,17 +1,47 @@
 'use client'
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
-import { ArrowRight, Shield, Lock, Crown, Download, Smartphone } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useDispatch, useSelector } from 'react-redux'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, Shield, Lock, Crown, Download, Smartphone, X, LogIn, Loader } from 'lucide-react'
 import Link from 'next/link'
 import styles from './page.module.css'
+import { AppDispatch, RootState } from '../store'
+import { performLogin } from '../utils/authLogin'
 
 export default function Home() {
   const [showIosModal, setShowIosModal] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const [loginLoading, setLoginLoading] = useState(false)
+
+  const dispatch = useDispatch<AppDispatch>()
+  const router = useRouter()
+  const failedAttempts = useSelector((state: RootState) => state.auth.failedAttempts)
+  const lockedUntil = useSelector((state: RootState) => state.auth.lockedUntil)
+
+  const handleInlineLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email || !password) return
+    setLoginLoading(true)
+    setLoginError(null)
+    const result = await performLogin({ email, password, dispatch, failedAttempts, lockedUntil })
+    setLoginLoading(false)
+    if (!result.ok) {
+      setLoginError(result.error)
+      return
+    }
+    router.push('/dashboard')
+  }
+
   return (
     <main className={styles.main}>
       {/* Background Effects */}
       <div className={styles.backgroundEffects}>
         <div className={`${styles.glowBlob} ${styles.glowTop}`} />
+        <div className={`${styles.glowBlob} ${styles.glowMid}`} />
         <div className={`${styles.glowBlob} ${styles.glowBottom}`} />
       </div>
 
@@ -22,17 +52,80 @@ export default function Home() {
           THE RESIDENT
         </div>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-          <Link href="/auth" style={{ color: '#fff', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            Log In
-          </Link>
+          <button
+            onClick={() => setShowLogin(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: '#fff', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer' }}
+          >
+            <LogIn size={15} /> Log In
+          </button>
           <Link href="/auth" className="btn-gold">
             Join Your Suburb
           </Link>
         </div>
+
+        <AnimatePresence>
+          {showLogin && (
+            <motion.form
+              onSubmit={handleInlineLogin}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className={`glass-panel ${styles.loginPopover}`}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', margin: 0 }}>Log In</h3>
+                <button type="button" onClick={() => setShowLogin(false)} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}>
+                  <X size={16} />
+                </button>
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="name@domain.com"
+                required
+                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: '#fff', fontSize: '0.85rem', marginBottom: '0.6rem', outline: 'none' }}
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="secure key..."
+                required
+                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: '#fff', fontSize: '0.85rem', marginBottom: '0.8rem', outline: 'none' }}
+              />
+              {loginError && (
+                <p style={{ fontSize: '0.72rem', color: '#f87171', marginBottom: '0.6rem', lineHeight: 1.4 }}>{loginError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="btn-primary"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                {loginLoading ? <Loader size={14} className="animate-spin" /> : <LogIn size={14} />}
+                {loginLoading ? 'Logging in…' : 'Log In'}
+              </button>
+              <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.8rem', textAlign: 'center' }}>
+                New here? <Link href="/auth" style={{ color: 'var(--gold-primary)' }}>Create an account</Link>
+              </p>
+            </motion.form>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* Hero */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '0 1rem' }}>
+        <motion.span
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className={styles.badge}
+        >
+          Now live across South African suburbs
+        </motion.span>
+
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -49,7 +142,7 @@ export default function Home() {
           transition={{ delay: 0.5, duration: 1 }}
           className={styles.subtitle}
         >
-          The community-powered ecosystem connecting neighbors. 
+          The community-powered ecosystem connecting neighbors.
           Coordinate lift clubs, access spaza marketplaces, share tools, and keep your street safe.
         </motion.p>
 
@@ -66,21 +159,21 @@ export default function Home() {
           <a href="/theresident.apk" download className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.08)', padding: '12px 24px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer' }}>
             <Download size={16} /> Download Android APK
           </a>
-          <button 
-            onClick={() => setShowIosModal(true)} 
-            className="btn-secondary" 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              background: 'rgba(255,255,255,0.08)', 
-              padding: '12px 24px', 
-              borderRadius: '8px', 
-              border: '1px solid rgba(255,255,255,0.2)', 
-              color: '#fff', 
-              fontSize: '0.95rem', 
-              fontWeight: 'bold', 
-              cursor: 'pointer' 
+          <button
+            onClick={() => setShowIosModal(true)}
+            className="btn-secondary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(255,255,255,0.08)',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              fontSize: '0.95rem',
+              fontWeight: 'bold',
+              cursor: 'pointer'
             }}
           >
             <Smartphone size={16} /> Install on iPhone
@@ -91,9 +184,9 @@ export default function Home() {
       {/* Features */}
       <div className={styles.featuresGrid}>
         {[
-          { icon: Shield, title: "Trusted Neighbors", desc: "Vibe check ratings and reputation scores ensure you only transact with verified local residents." },
-          { icon: Crown, title: "Local Listings", desc: "Find spaza shops, handyman services, secure rooms, and bakkie transport directly in your suburb." },
-          { icon: Lock, title: "Safety Net", desc: "Keep your street secure with coordinated mutual aid checks and real-time community panic alerts." }
+          { icon: Shield, title: "Trusted Neighbors", desc: "Vibe check ratings and reputation scores ensure you only transact with verified local residents.", accent: 'var(--accent-teal)', glow: 'radial-gradient(circle at 20% 0%, rgba(45, 212, 191, 0.08), transparent 60%)', iconBg: 'rgba(45, 212, 191, 0.1)' },
+          { icon: Crown, title: "Local Listings", desc: "Find spaza shops, handyman services, secure rooms, and bakkie transport directly in your suburb.", accent: 'var(--gold-primary)', glow: 'radial-gradient(circle at 20% 0%, rgba(212, 175, 55, 0.1), transparent 60%)', iconBg: 'rgba(212, 175, 55, 0.1)' },
+          { icon: Lock, title: "Safety Net", desc: "Keep your street secure with coordinated mutual aid checks and real-time community panic alerts.", accent: 'var(--accent-rose)', glow: 'radial-gradient(circle at 20% 0%, rgba(251, 113, 133, 0.08), transparent 60%)', iconBg: 'rgba(251, 113, 133, 0.1)' }
         ].map((feature, i) => (
           <motion.div
             key={i}
@@ -101,6 +194,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1 + (i * 0.2), duration: 0.8 }}
             className={`glass-panel ${styles.featureCard}`}
+            style={{ '--feature-accent': feature.accent, '--feature-glow': feature.glow, '--feature-icon-bg': feature.iconBg } as React.CSSProperties}
           >
             <div className={styles.iconWrapper}>
               <feature.icon className={styles.icon} size={24} />
@@ -138,7 +232,7 @@ export default function Home() {
             <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.4' }}>
               To run The Resident on your iPhone like a native mobile app, follow these simple Safari steps:
             </p>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <span style={{ background: '#312e81', color: '#c7d2fe', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>1</span>
@@ -154,7 +248,7 @@ export default function Home() {
               </div>
             </div>
 
-            <button 
+            <button
               onClick={() => setShowIosModal(false)}
               style={{
                 width: '100%',

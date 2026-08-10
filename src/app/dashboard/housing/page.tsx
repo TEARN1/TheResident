@@ -15,7 +15,8 @@ import {
   selectMatchedRoommates,
   addRequest,
   addListing,
-  updateRequestStatus
+  updateRequestStatus,
+  isGuestUser
 } from '../../../store'
 import { approveRequest, rejectRequest, waitlistRequest, saveRequest } from '../../../store/actions'
 import { useGeolocation } from '../../../hooks/useGeolocation'
@@ -27,11 +28,21 @@ import ReviewForm from '../components/ReviewForm'
 import ReviewsList from '../components/ReviewsList'
 import SavedSearches from '../components/SavedSearches'
 import OpenInMapsButton from '../components/OpenInMapsButton'
+import Link from 'next/link'
 import UpgradeButton from '../components/UpgradeButton'
 import PropertiesPanel, { type ResProperty } from '../components/PropertiesPanel'
 
+// Top of the budget slider. Well above the real ceiling for a single room so
+// the control can express any listing on the platform; the max position means
+// "no limit" rather than this literal amount.
+const PRICE_CEILING_MAX = 20000
+
 export default function HousingPage() {
   const dispatch = useDispatch<AppDispatch>()
+  // Two audiences, two jobs: someone WITH an empty room lands on their own
+  // properties (list it, see who applied), someone WHO NEEDS a room lands on
+  // the search. Defaulting everyone to 'rooms' made a landlord's first screen
+  // a feed of other people's listings — the one thing they didn't come for.
   const [activeTab, setActiveTab] = useState<'rooms' | 'roommates' | 'properties'>('rooms')
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const { locationLoading, handleGetLiveLocation } = useGeolocation(setAlertNotification)
@@ -39,7 +50,16 @@ export default function HousingPage() {
   // Filter States
   const [searchInputValue, setSearchInputValue] = useState('')
   const [searchLocation, setSearchLocation] = useState('')
-  const [filterPrice, setFilterPrice] = useState<number>(3000)
+  // 0 means "no ceiling" (selectFilteredListings only applies maxPrice when > 0).
+  //
+  // This defaulted to 3000 with a slider that capped at 5000, which quietly
+  // broke the marketplace: every room above R3 000 was hidden from every
+  // tenant on arrival, and a room above R5 000 could not be revealed at ALL —
+  // no slider position existed that showed it. A landlord could list a R6 500
+  // cottage, pay to boost it, and never be seen. Rooms in that band are
+  // completely normal here, so the default is now "show me everything" and the
+  // ceiling only applies once a tenant deliberately sets one.
+  const [filterPrice, setFilterPrice] = useState<number>(0)
   const [filterWifi, setFilterWifi] = useState(false)
   const [filterParking, setFilterParking] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
@@ -86,6 +106,16 @@ export default function HousingPage() {
     const handler = setTimeout(() => setSearchLocation(searchInputValue), 300)
     return () => clearTimeout(handler)
   }, [searchInputValue])
+
+  // Steers only the FIRST render once the role is known (it arrives async from
+  // session bootstrap). Guarded by a ref so it never yanks the tab back while
+  // a landlord is deliberately browsing Rooms.
+  const hasSteeredTab = React.useRef(false)
+  useEffect(() => {
+    if (hasSteeredTab.current || !currentUser) return
+    hasSteeredTab.current = true
+    if (currentUser.role === 'landlord') setActiveTab('properties')
+  }, [currentUser])
 
   const loadMyProperties = React.useCallback(async () => {
     if (!supabase || !currentUser?.id || currentUser.role !== 'landlord') return
@@ -158,9 +188,20 @@ export default function HousingPage() {
     setAlertNotification('Property listed successfully!')
   }
 
+  // A signed-out guest has no id, so the request row it built was orphaned —
+  // it never reached the landlord, yet the UI still said "Application sent".
+  // Someone looking for a room would sit waiting on a reply that could never
+  // come. Refuse the write and say so instead.
+  const isGuest = isGuestUser(currentUser)
+
   const handleApply = (e: React.FormEvent) => {
     e.preventDefault()
     if (!activeListing) return
+    if (isGuest) {
+      setActiveListing(null)
+      setAlertNotification('Create an account to request this room — guests can browse, but a landlord needs to know who is asking.')
+      return
+    }
     const request: RoomRequest = {
       id: `req-${Date.now()}`,
       tenantId: currentUser?.id || '',
@@ -192,7 +233,7 @@ export default function HousingPage() {
 
   const applySavedSearch = (filters: SearchFilters) => {
     setSearchInputValue(filters.suburb || '')
-    setFilterPrice(typeof filters.maxPrice === 'number' ? filters.maxPrice : 3000)
+    setFilterPrice(typeof filters.maxPrice === 'number' ? filters.maxPrice : 0)
     setFilterWifi(!!filters.wifi)
     setFilterParking(!!filters.parking)
     setShowFilters(true)
@@ -365,13 +406,26 @@ export default function HousingPage() {
                      <div className="space-y-4">
                         <div className="flex justify-between items-end">
                            <label className="text-[10px] uppercase font-black tracking-[0.2em] text-gray-500">Price Ceiling</label>
-                           <span className="text-gold-primary font-black text-sm">{formatCurrency(filterPrice)}</span>
+                           <span className="text-gold-primary font-black text-sm">
+                              {filterPrice === 0 ? 'Any price' : formatCurrency(filterPrice)}
+                           </span>
                         </div>
+                        {/* Full-right is "no ceiling", not "R20 000 exactly" — otherwise the
+                            top of the range silently becomes a hard cap again. */}
                         <input
-                           type="range" min={500} max={5000} step={50}
-                           value={filterPrice} onChange={(e) => setFilterPrice(Number(e.target.value))}
+                           type="range" min={500} max={PRICE_CEILING_MAX} step={250}
+                           value={filterPrice === 0 ? PRICE_CEILING_MAX : filterPrice}
+                           onChange={(e) => {
+                              const v = Number(e.target.value)
+                              setFilterPrice(v >= PRICE_CEILING_MAX ? 0 : v)
+                           }}
                            className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-gold-primary"
                         />
+                        <p className="text-[10px] text-gray-500">
+                           {filterPrice === 0
+                              ? 'Showing every room. Drag left to set a budget.'
+                              : `Hiding rooms above ${formatCurrency(filterPrice)}.`}
+                        </p>
                      </div>
 
                      <div className="space-y-4">
@@ -398,7 +452,7 @@ export default function HousingPage() {
                      <div className="flex items-center justify-end">
                         <button
                            onClick={() => {
-                              setFilterPrice(3000); setFilterWifi(false); setFilterParking(false); setSearchInputValue('');
+                              setFilterPrice(0); setFilterWifi(false); setFilterParking(false); setSearchInputValue('');
                            }}
                            className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500/50 hover:text-red-500 transition-colors"
                         >
@@ -420,7 +474,13 @@ export default function HousingPage() {
                 className="glass-panel overflow-hidden flex flex-col hover:border-gold-primary/40 transition-all duration-500 group bg-black/40"
               >
                 <div className="relative h-56 bg-gray-900 overflow-hidden">
-                  <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                  {item.images[0] ? (
+                    <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+                      <Home size={40} className="text-gold-primary/20" />
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
                   <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
                      <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl">
@@ -502,6 +562,13 @@ export default function HousingPage() {
                   <div className="mt-auto pt-6 border-t border-white/5 space-y-2">
                      {item.landlordId === currentUser?.id ? (
                         <UpgradeButton item="room_boost" targetId={item.id} className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest" />
+                     ) : isGuest ? (
+                        <Link
+                           href="/auth"
+                           className="w-full flex items-center justify-center gap-2 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                        >
+                           Sign up to request
+                        </Link>
                      ) : (
                         <button
                            onClick={() => setActiveListing(item)}

@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
-import { loginUser, registerFailedAttempt, resetFailedAttempts, addLog, RootState, toUUID } from '../../store'
+import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
+import { performLogin } from '../../utils/authLogin'
 import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 
@@ -39,7 +40,7 @@ function GruvsMark() {
 
 export default function AuthPage() {
   const router = useRouter()
-  const dispatch = useDispatch()
+  const dispatch = useDispatch<AppDispatch>()
 
   const [theme, setTheme] = useState<'day' | 'night'>('day')
 
@@ -121,103 +122,17 @@ export default function AuthPage() {
     return sanitized
   }
 
-  // Brute force check
-  const isLocked = (emailKey: string) => {
-    const lockTime = lockedUntil[emailKey] || 0
-    if (lockTime > Date.now()) {
-      return Math.ceil((lockTime - Date.now()) / 1000)
-    }
-    return 0
-  }
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password) return
 
     setErrorMessage(null)
-
-    // Check account lockout status
-    const secondsLeft = isLocked(email)
-    if (secondsLeft > 0) {
-      dispatch(addLog({
-        ip: '127.0.0.1',
-        action: 'Attempted login to locked account blocked',
-        type: 'brute_force_blocked',
-        details: `Failed authorization request for locked account ${email}. Lock expires in ${secondsLeft}s.`
-      }))
-      setErrorMessage(`Account locked due to brute force protection. Try again in ${secondsLeft} seconds.`)
+    const result = await performLogin({ email, password, dispatch, failedAttempts, lockedUntil, fallbackRole: role })
+    if (!result.ok) {
+      setErrorMessage(result.error)
       return
     }
-
-    if (!supabase) {
-      setErrorMessage('Database offline / not configured.')
-      return
-    }
-
-    // Real Supabase Login
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
-
-    if (error) {
-      dispatch(registerFailedAttempt(email))
-      const attempts = (failedAttempts[email] || 0) + 1
-      
-      dispatch(addLog({
-        ip: '127.0.0.1',
-        action: 'Failed login attempt recorded',
-        type: 'auth_failed',
-        details: `Incorrect credentials entered for ${email}. Failed attempts: ${attempts}/5`
-      }))
-
-      if (attempts >= 5) {
-        setErrorMessage('Brute force defense triggered. Account locked for 60 seconds.')
-      } else {
-        setErrorMessage(`Invalid credentials: ${error.message} (Attempt ${attempts} of 5 before account lockout).`)
-      }
-      return
-    }
-
-    const session = data.session
-    const user = data.user
-
-    if (session && user) {
-      // Session cookies are managed by @supabase/ssr (createBrowserClient);
-      // middleware.ts validates them via supabase.auth.getUser().
-
-      // ONE ACCOUNT across The Gruvs & The Resident: this idempotent, caller-only
-      // RPC guarantees both the shared master profile AND the Resident satellite
-      // exist — so someone who signed up on The Gruvs is whole here on first login
-      // (and vice-versa). Server-side + auth.uid()-scoped; best-effort.
-      await supabase.rpc('ensure_res_profile').then(() => {}, () => {})
-
-      // Fetch their res_profile role
-      const { data: dbProfile } = await supabase
-        .from('res_profiles')
-        .select('role')
-        .eq('id', toUUID(user.id))
-        .single()
-
-      const userRole = dbProfile?.role || role || 'visitor'
-
-      dispatch(resetFailedAttempts(email))
-      dispatch(loginUser({
-        id: user.id,
-        name: user.user_metadata?.name || name || 'Resident User',
-        email: user.email!,
-        role: userRole as 'tenant' | 'landlord' | 'visitor'
-      }))
-
-      dispatch(addLog({
-        ip: '127.0.0.1',
-        action: `Logged in safely: Supabase session authenticated`,
-        type: 'auth_success',
-        details: `Email: ${email}`
-      }))
-
-      router.push('/dashboard')
-    }
+    router.push('/dashboard')
   }
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -325,7 +240,7 @@ export default function AuthPage() {
   const handleVisitorLogin = () => {
     // Visitor guests don't have Supabase auth records, so we set a guest token
     const visitorUser = {
-      id: 'visitor-guest',
+      id: GUEST_USER_ID,
       name: 'Guest Visitor',
       email: 'visitor@theresidentcrew.com',
       role: 'visitor' as const,

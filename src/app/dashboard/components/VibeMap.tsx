@@ -1,14 +1,15 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import 'leaflet/dist/leaflet.css'
 import { Navigation, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader } from 'lucide-react'
 import { useSelector } from 'react-redux'
-import { RootState } from '../../../store'
+import { RootState, isGuestUser } from '../../../store'
 import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../utils/mapZones'
 import { fetchSavedPins, saveNewPin, deleteSavedPin, type SavedPin } from '../../../utils/savedPins'
 import { distanceMetres } from '../../../utils/logic'
-import type { GeocodeResult } from '../../../utils/geocode'
+import { searchPlaces, type GeocodeResult } from '../../../utils/geocode'
 import MapSearchBox from './MapSearchBox'
 import SavedPinsPanel from './SavedPinsPanel'
 import DistanceMatrixPanel, { type MatrixPoint } from './DistanceMatrixPanel'
@@ -59,6 +60,7 @@ const DURATION_OPTIONS: Array<{ hours: number; label: string }> = [
 type Drawer = 'none' | 'pins' | 'matrix' | 'geofence'
 
 export default function VibeMap() {
+  const searchParams = useSearchParams()
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<import('leaflet').Map | null>(null)
@@ -73,7 +75,10 @@ export default function VibeMap() {
   const [zones, setZones] = useState<SharedZone[]>([])
   const [loading, setLoading] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
-  const [showLegend, setShowLegend] = useState(false)
+  // Visible by default — a color-coded map with the legend hidden behind a
+  // toggle just reads as a wash of same-ish dots; showing it up front is
+  // what actually makes the color-by-kind strategy legible.
+  const [showLegend, setShowLegend] = useState(true)
   const [drawer, setDrawer] = useState<Drawer>('none')
 
   const [pendingPoint, setPendingPoint] = useState<{ label: string; lat: number; lon: number } | null>(null)
@@ -92,7 +97,7 @@ export default function VibeMap() {
   const [reportSubmitting, setReportSubmitting] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
 
-  const currentUserId = currentUser && currentUser.id !== 'visitor-guest' ? currentUser.id : null
+  const currentUserId = !isGuestUser(currentUser) && currentUser ? currentUser.id : null
 
   const refreshSavedPins = async () => {
     if (!currentUserId) { setSavedPins([]); return }
@@ -113,7 +118,18 @@ export default function VibeMap() {
       .map(z => ({ pin, zone: z }))
   )
 
+  // A "Directions" link elsewhere in the app (listings, services) routes here
+  // as /dashboard/community?tab=vibemap&place=<address> rather than deep-linking
+  // out to Google Maps — the shared zone reports, saved pins and geofence
+  // alerts only exist on our own map, so handing the user to an external app
+  // drops every layer that makes this map worth opening.
+  const focusPlace = searchParams.get('place')
+
   useEffect(() => {
+    // An explicit place from the URL wins over "where am I" — otherwise the
+    // geolocation callback would land and yank the view back off the address
+    // the user actually asked to see.
+    if (focusPlace) return
     if (!('geolocation' in navigator)) {
       setLocationDenied(true)
       return
@@ -123,7 +139,19 @@ export default function VibeMap() {
       () => setLocationDenied(true),
       { timeout: 8000 }
     )
-  }, [])
+  }, [focusPlace])
+
+  useEffect(() => {
+    if (!focusPlace) return
+    let cancelled = false
+    searchPlaces(focusPlace).then(results => {
+      if (cancelled || results.length === 0) return
+      const hit = results[0]
+      setCenter({ lat: hit.lat, lon: hit.lon })
+      setPendingPoint({ label: hit.label, lat: hit.lat, lon: hit.lon })
+    })
+    return () => { cancelled = true }
+  }, [focusPlace])
 
   const loadZones = async (lat: number, lon: number) => {
     setLoading(true)
@@ -201,12 +229,27 @@ export default function VibeMap() {
         }).addTo(group)
       }
 
+      const isVerified = zone.status === 'confirmed' || zone.status === 'official'
+
+      // A soft, borderless halo under every marker (not just geofence hits)
+      // so the map reads as colored zones of activity rather than a scatter
+      // of same-size dots — the halo is what carries the "strategy of color"
+      // at a glance, before anyone reads a popup or the legend.
+      L.circleMarker([zone.lat, zone.lon], {
+        radius: (8 + zone.severity * 2) * 2.2,
+        color: 'transparent',
+        fillColor: color,
+        fillOpacity: isVerified ? 0.16 : 0.09,
+        weight: 0,
+        interactive: false
+      }).addTo(group)
+
       const marker = L.circleMarker([zone.lat, zone.lon], {
         radius: 8 + zone.severity * 2,
-        color,
+        color: isVerified ? '#ffffff' : color,
         fillColor: color,
-        fillOpacity: zone.status === 'confirmed' || zone.status === 'official' ? 0.85 : 0.4,
-        weight: 2
+        fillOpacity: isVerified ? 0.95 : 0.55,
+        weight: isVerified ? 2.5 : 2
       })
 
       const sourceLabel = zone.source_app === 'gruvs' ? 'The Gruvs' : 'The Resident'
@@ -235,7 +278,7 @@ export default function VibeMap() {
         if (!container) return
         container.innerHTML = ''
 
-        if (!currentUser || currentUser.id === 'visitor-guest') {
+        if (isGuestUser(currentUser)) {
           const note = document.createElement('span')
           note.textContent = 'Sign in to confirm or dispute this.'
           note.style.opacity = '0.6'
@@ -417,13 +460,25 @@ export default function VibeMap() {
             <Layers size={18} />
           </button>
           {showLegend && (
-            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl w-[170px]">
-              {Object.entries(KIND_LABEL).map(([kind, label]) => (
-                <div key={kind} className="flex items-center gap-2 text-[10px] text-gray-300 py-1">
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: KIND_COLOR[kind] }} />
-                  {label}
-                </div>
-              ))}
+            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl w-[190px]">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Map key</p>
+              {Object.entries(KIND_LABEL).map(([kind, label]) => {
+                const count = zones.filter(z => z.kind === kind).length
+                return (
+                  <div key={kind} className="flex items-center gap-2 text-[11px] text-gray-200 py-1">
+                    <div
+                      className="w-3 h-3 rounded-full shrink-0 shadow-[0_0_8px_var(--dot-color)]"
+                      style={{ background: KIND_COLOR[kind], ['--dot-color' as string]: KIND_COLOR[kind] }}
+                    />
+                    <span className="flex-1">{label}</span>
+                    {count > 0 && <span className="text-gray-500 font-bold">{count}</span>}
+                  </div>
+                )
+              })}
+              <div className="flex items-center gap-2 text-[10px] text-gray-500 pt-2 mt-1 border-t border-white/5">
+                <div className="w-3 h-3 rounded-full shrink-0 bg-white/80 border border-white" />
+                Confirmed / official
+              </div>
             </div>
           )}
         </div>
