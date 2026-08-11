@@ -64,13 +64,18 @@ export default function CommunityPage() {
     searchParams.get('tab') === 'vibemap' ? 'vibemap' : 'overview'
   )
   const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
+  // Arriving via the top bar's "Map" quick-link (?tab=vibemap) means the
+  // user wants the map, not the Community Hub chrome around it — so that
+  // entry point drops straight into fullscreen instead of a page with a
+  // header and tab bar still eating screen space above the map.
+  const [mapFullscreen, setMapFullscreen] = useState(searchParams.get('tab') === 'vibemap')
 
   // Lets a "Map" quick-link elsewhere in the app (e.g. the top bar) land
   // straight on VibeMap via /dashboard/community?tab=vibemap even when this
   // page was already mounted — the useState initializer above only fires on
   // first mount, so a repeat visit needs this effect to still catch the param.
   useEffect(() => {
-    if (searchParams.get('tab') === 'vibemap') setSubTab('vibemap')
+    if (searchParams.get('tab') === 'vibemap') { setSubTab('vibemap'); setMapFullscreen(true) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
@@ -419,7 +424,28 @@ export default function CommunityPage() {
 
   const goToTab = (id: typeof subTab) => { setPreMapTab(id as Exclude<typeof subTab, 'vibemap'>); setSubTab(id) }
   const toggleVibeMap = () => {
-    if (subTab === 'vibemap') { setSubTab(preMapTab) } else { setPreMapTab(subTab as Exclude<typeof subTab, 'vibemap'>); setSubTab('vibemap') }
+    if (subTab === 'vibemap') { setSubTab(preMapTab); setMapFullscreen(false) } else { setPreMapTab(subTab as Exclude<typeof subTab, 'vibemap'>); setSubTab('vibemap'); setMapFullscreen(true) }
+  }
+  const exitFullscreenMap = () => { setMapFullscreen(false); setSubTab(preMapTab) }
+
+  // The map's own value is the map — Community Hub's header, tab bar and
+  // page padding around it just eat screen space a mobile user needs for
+  // actually reading streets. Fullscreen skips all of that and renders
+  // VibeMap alone, with its own exit control to get back.
+  if (subTab === 'vibemap' && mapFullscreen) {
+    return (
+      <div className="fixed inset-0 z-[1000] bg-black">
+        <button
+          onClick={exitFullscreenMap}
+          aria-label="Exit fullscreen map"
+          title="Exit map"
+          className="absolute top-3 left-3 z-[1001] flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2.5 text-gray-200 hover:text-white shadow-2xl"
+        >
+          <X size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Exit</span>
+        </button>
+        <VibeMap fullscreen />
+      </div>
+    )
   }
 
   return (

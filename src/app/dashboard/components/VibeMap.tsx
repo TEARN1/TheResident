@@ -59,7 +59,7 @@ const DURATION_OPTIONS: Array<{ hours: number; label: string }> = [
 
 type Drawer = 'none' | 'pins' | 'matrix' | 'geofence'
 
-export default function VibeMap() {
+export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }) {
   const searchParams = useSearchParams()
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -526,18 +526,20 @@ export default function VibeMap() {
   }
 
   return (
-    <div className="glass-panel p-3 md:p-4">
-      <div className="flex justify-between items-center mb-3 px-1">
-        <div>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Navigation size={20} className="text-gold-primary" /> Shared Living Map
-          </h3>
-          <p className="text-gray-500 text-xs mt-0.5">From both The Resident and The Gruvs — click anywhere to report or search a place.</p>
+    <div className={fullscreen ? 'h-full w-full' : 'glass-panel p-3 md:p-4'}>
+      {!fullscreen && (
+        <div className="flex justify-between items-center mb-3 px-1">
+          <div>
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Navigation size={20} className="text-gold-primary" /> Shared Living Map
+            </h3>
+            <p className="text-gray-500 text-xs mt-0.5">From both The Resident and The Gruvs — click anywhere to report or search a place.</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Full-bleed map with floating controls, like Google Maps rather than a boxed embed */}
-      <div className="relative rounded-2xl overflow-hidden border border-white/5 h-[70vh] min-h-[420px]">
+      <div className={fullscreen ? 'relative overflow-hidden h-full w-full' : 'relative rounded-2xl overflow-hidden border border-white/5 h-[70vh] min-h-[420px]'}>
         <div ref={mapContainerRef} className="absolute inset-0" style={{ background: '#111' }} />
 
         {/* Search — floating top-left */}
