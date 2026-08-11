@@ -451,17 +451,27 @@ export default function HousingPage() {
                >
                   <div className="glass-panel p-8 bg-black/40 border-gold-primary/10 grid grid-cols-1 md:grid-cols-3 gap-10">
                      <div className="space-y-4">
-                        <div className="flex justify-between items-end">
+                        <div className="flex justify-between items-end gap-2">
                            <label className="text-[10px] uppercase font-black tracking-[0.2em] text-gray-500">Price Ceiling</label>
-                           <span className="text-gold-primary font-black text-sm">
-                              {filterPrice === 0 ? 'Any price' : formatCurrency(filterPrice)}
-                           </span>
+                           <input
+                              type="number" min={0} step={250}
+                              placeholder="Any"
+                              value={filterPrice === 0 ? '' : filterPrice}
+                              onChange={(e) => {
+                                 const raw = e.target.value
+                                 if (raw === '') { setFilterPrice(0); return }
+                                 setFilterPrice(Math.max(0, Number(raw)))
+                              }}
+                              className="w-24 bg-black border border-white/10 rounded-lg px-2 py-1 text-right text-gold-primary font-black text-sm outline-none focus:border-gold-primary/50"
+                           />
                         </div>
                         {/* Full-right is "no ceiling", not "R20 000 exactly" — otherwise the
-                            top of the range silently becomes a hard cap again. */}
+                            top of the range silently becomes a hard cap again. Typing a value
+                            above the slider's own max is honoured too, via filterPrice sitting
+                            outside [0, PRICE_CEILING_MAX] until the slider is touched again. */}
                         <input
-                           type="range" min={500} max={PRICE_CEILING_MAX} step={250}
-                           value={filterPrice === 0 ? PRICE_CEILING_MAX : filterPrice}
+                           type="range" min={500} max={Math.max(PRICE_CEILING_MAX, filterPrice)} step={250}
+                           value={filterPrice === 0 ? Math.max(PRICE_CEILING_MAX, filterPrice) : filterPrice}
                            onChange={(e) => {
                               const v = Number(e.target.value)
                               setFilterPrice(v >= PRICE_CEILING_MAX ? 0 : v)

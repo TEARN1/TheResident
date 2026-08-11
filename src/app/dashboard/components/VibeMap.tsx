@@ -632,6 +632,16 @@ export default function VibeMap() {
           >
             <Maximize size={16} />
           </button>
+          {livePosition && (
+            <button
+              onClick={() => mapRef.current?.setView([livePosition.lat, livePosition.lon], 16)}
+              aria-label="Recenter on my location"
+              className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gold-primary hover:text-white shadow-2xl"
+              title="Back to my location"
+            >
+              <Navigation size={16} />
+            </button>
+          )}
         </div>
 
         {/* Tools drawer toggle — floating left, below search */}

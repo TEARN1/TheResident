@@ -462,28 +462,29 @@ export default function CommunityPage() {
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-x-8 gap-y-4 overflow-x-auto no-scrollbar">
+        {/* One scrollable row instead of stacked per-category groups — the
+            stacked version could run to 3+ rows tall on narrow screens
+            before you'd even reached the page content below it. */}
+        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-1">
           {clusters.map(cluster => (
-            <div key={cluster.id} className="space-y-1.5 min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 ml-1">{cluster.label}</p>
-              <div className="flex items-center gap-1.5">
-                {cluster.tabs.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => goToTab(t.id as typeof subTab)}
-                    className={`px-3.5 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap border ${
-                      subTab === t.id
-                        ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20'
-                        : 'text-gray-400 border-white/5 hover:text-white hover:border-white/20'
-                    }`}
-                  >
-                    <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-black/10' : cluster.accent}`}>
-                      <t.icon size={11} />
-                    </span>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+            <div key={cluster.id} className="flex items-center gap-1.5 shrink-0 pr-4 border-r border-white/5 last:border-r-0 last:pr-0">
+              {cluster.tabs.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => goToTab(t.id as typeof subTab)}
+                  title={cluster.label}
+                  className={`px-3 py-1.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap border ${
+                    subTab === t.id
+                      ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20'
+                      : 'text-gray-400 border-white/5 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-black/10' : cluster.accent}`}>
+                    <t.icon size={11} />
+                  </span>
+                  {t.label}
+                </button>
+              ))}
             </div>
           ))}
         </div>
