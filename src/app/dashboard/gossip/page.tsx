@@ -322,18 +322,31 @@ export default function GossipPage() {
 
   return (
     <div className="space-y-6">
-      <div className="glass-panel p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <MessageSquare size={20} className="text-gold-primary" />
+      <div className="glass-panel p-6 relative overflow-hidden border-gold-primary/10">
+        {/* A quiet gold glow behind the composer instead of a flat panel —
+            the one place in the app people write something new deserves to
+            feel a little more alive than a bare textarea. */}
+        <div
+          className="absolute -top-24 -right-24 w-64 h-64 rounded-full opacity-[0.08] pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #D4AF37 0%, transparent 70%)' }}
+        />
+        <div className="flex items-center gap-2 mb-4 relative">
+          <div className="p-1.5 bg-gold-primary/10 rounded-lg">
+            <MessageSquare size={18} className="text-gold-primary" />
+          </div>
           <h2 className="text-xl font-bold text-white">Gossip Feed</h2>
+          <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-auto hidden sm:inline">What's the word, neighbour?</span>
         </div>
         <textarea
           value={composerBody}
           onChange={e => setComposerBody(e.target.value)}
           maxLength={2000}
-          placeholder="What's happening in the neighbourhood?"
-          className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/40"
+          placeholder="Spotted something? Heard something? Say it here…"
+          className="w-full bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all relative"
         />
+        {composerBody.length > 0 && (
+          <p className="text-[10px] text-gray-600 text-right mt-1">{composerBody.length}/2000</p>
+        )}
 
         {mediaPreview && (
           <div className="relative mt-3 rounded-lg overflow-hidden border border-white/10 bg-black">
@@ -377,8 +390,8 @@ export default function GossipPage() {
                   onClick={() => setSelectedBackground(preset.key)}
                   title={preset.label}
                   style={{ backgroundImage: preset.css }}
-                  className={`w-10 h-8 rounded-lg border-2 transition-all ${
-                    selectedBackground === preset.key ? 'border-gold-primary scale-105' : 'border-white/10 hover:border-white/30'
+                  className={`w-11 h-9 rounded-lg border-2 transition-all hover:scale-110 hover:-translate-y-0.5 ${
+                    selectedBackground === preset.key ? 'border-gold-primary scale-110 -translate-y-0.5 shadow-lg shadow-gold-primary/20' : 'border-white/10 hover:border-white/30'
                   }`}
                 />
               ))}
@@ -413,7 +426,7 @@ export default function GossipPage() {
           <button
             onClick={submitPost}
             disabled={posting || uploading || (!composerBody.trim() && !mediaFile)}
-            className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2 px-5 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+            className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-gold-primary/10 hover:shadow-gold-primary/25"
           >
             {uploading ? <Loader size={13} className="animate-spin" /> : <Send size={13} />}
             {uploading ? 'Uploading…' : posting ? 'Posting…' : 'Post'}
@@ -499,10 +512,10 @@ export default function GossipPage() {
             }
 
             return (
-              <div key={post.id} className="glass-panel p-5">
+              <div key={post.id} className="glass-panel p-5 transition-all hover:border-gold-primary/15">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
+                    <div className="w-9 h-9 rounded-full bg-gold-primary/10 ring-1 ring-gold-primary/20 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
                       {profileMap[post.author_id]?.avatar_url
                         ? <img src={profileMap[post.author_id].avatar_url as string} alt="" className="w-full h-full object-cover" />
                         : nameOf(post.author_id).charAt(0).toUpperCase()}
