@@ -108,7 +108,7 @@ test('over-budget scores lower but is not excluded', () => {
 
 const lift = (id: string, o: [number, number], d: [number, number]): LiftClub & { originPoint: { lat: number; lon: number }; destPoint: { lat: number; lon: number } } => ({
   id,
-  driverName: 'D',
+  driverId: 'driver-1', driverName: 'D',
   origin: 'o',
   destination: 'd',
   departureTime: '07:00',

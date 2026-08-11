@@ -4,16 +4,14 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import {
-  Shield, LogOut, Home, X, AlertTriangle,
+  Home, AlertTriangle,
   Wifi, Users, CheckCircle2,
   Briefcase,
-  Megaphone, Wrench, Loader, Menu,
-  ShieldCheck, MessageCircle, MessagesSquare, Map as MapIcon
+  Megaphone, Wrench, Loader,
+  ShieldCheck, MessageCircle, MessagesSquare, Map as MapIcon, UserRound
 } from 'lucide-react'
 import {
   loginUser,
-  logoutUser,
-  setLanguage,
   RootState,
   AppDispatch,
   markAllNotificationsRead,
@@ -23,15 +21,12 @@ import {
 import { supabase } from '../../utils/supabase'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
 import { t } from '../../utils/i18n'
-import { hasHouseholdPlus } from '../../utils/subscriptions'
-import UpgradeButton from './components/UpgradeButton'
 import Link from 'next/link'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const dispatch = useDispatch()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
@@ -42,14 +37,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const dataStatus = useSelector((state: RootState) => state.ui.dataStatus)
   const failedTables = useSelector((state: RootState) => state.ui.failedTables)
   const pendingWrites = useSelector((state: RootState) => state.ui.offlineQueue.length)
-  const [showPlusUpsell, setShowPlusUpsell] = useState(false)
 
-  // Dark-only for now — see the removed toggle below for why. Pinned
-  // explicitly so a stale data-theme left on the element by the auth page
-  // (which kept its own separate theme state) can't leak into the dashboard.
+  // Dark-only for now — see the removed toggle below for why. Pinned to
+  // 'night' explicitly (never 'light') so a real light mode left active by
+  // the auth/landing pages' own toggle can't leak in here — the dashboard is
+  // built from hardcoded dark Tailwind utilities, not these CSS variables,
+  // so 'light' would produce a half-styled mess rather than an actual
+  // light dashboard.
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', 'day')
+      document.documentElement.setAttribute('data-theme', 'night')
     }
   }, [])
 
@@ -96,13 +93,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return unsubscribe
   }, [currentUser, dispatch])
 
-  useEffect(() => {
-    if (!currentUser || isGuestUser(currentUser)) return
-    let cancelled = false
-    hasHouseholdPlus().then(has => { if (!cancelled) setShowPlusUpsell(!has) })
-    return () => { cancelled = true }
-  }, [currentUser])
-
   // Close the notifications dropdown on an outside click — previously the
   // only way to close it was clicking the bell a second time.
   useEffect(() => {
@@ -115,12 +105,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showNotifMenu])
-
-  const handleLogout = () => {
-    document.cookie = 'guest-mode=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-    dispatch(logoutUser())
-    router.push('/auth')
-  }
 
   if (!currentUser) {
     return (
@@ -140,15 +124,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: t('navMaintenance', lang), href: '/dashboard/services', icon: Wrench },
     { name: t('navCommunity', lang), href: '/dashboard/community', icon: Users },
   ]
+  // Next of Kin lives inside Profile now (it's your safety/trust info, the
+  // same category as everything else there) rather than being its own
+  // primary destination — freeing a bottom-bar slot for Profile itself,
+  // which used to be buried in the hamburger panel despite being a page
+  // people actually need to reach often (edit info, check verification).
+  // Net: still six items, just a more coherent set of six.
   const socialItems = [
-    { name: 'Next of Kin', href: '/dashboard/trust-circle', icon: ShieldCheck },
+    { name: 'Profile', href: '/dashboard/profile', icon: UserRound },
     { name: 'Feed', href: '/dashboard/gossip', icon: MessagesSquare },
     { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   ]
   const navItems = [...coreItems, ...socialItems]
 
-  // So the top bar can orient the user to which section they're in.
-  const pageTitle = navItems.find(item => item.href === pathname) || navItems[0]
+  // Next of Kin and Business aren't in the bottom bar but are still real
+  // routes — without this, visiting either would show the wrong tab (or
+  // none) highlighted as "current" in the top bar title.
+  const pageTitle =
+    pathname === '/dashboard/trust-circle' ? { name: 'Next of Kin', href: pathname, icon: ShieldCheck } :
+    pathname === '/dashboard/business' ? { name: 'My Business', href: pathname, icon: Briefcase } :
+    navItems.find(item => item.href === pathname) || navItems[0]
 
   return (
     <div className="dashboard-wrapper">
@@ -184,92 +179,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
       </div>
 
-      {/* Mobile Drawer Sidebar Backdrop */}
-      {isSidebarOpen && (
-        <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />
-      )}
-
-      <aside className={`sidebar-container ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-logo">
-          <Shield size={24} color="#D4AF37" />
-          <span className="sidebar-logo-text">THE RESIDENT</span>
-          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(false)} aria-label="Close menu">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="sidebar-profile">
-          <div className="sidebar-profile-info">
-            <div className="sidebar-profile-avatar">{currentUser.name.charAt(0)}</div>
-            <div className="sidebar-profile-details">
-              <span className="sidebar-profile-name">{currentUser.name}</span>
-              <span className="sidebar-profile-role">{currentUser.role}</span>
-            </div>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <span className="sidebar-nav-section-label">{t('menuLabel', lang)}</span>
-          {coreItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar-nav-item ${pathname === item.href ? 'active' : ''}`}
-              onClick={() => setIsSidebarOpen(false)}
-            >
-              <item.icon size={16} /> {item.name}
-            </Link>
-          ))}
-          <span className="sidebar-nav-section-label" style={{ marginTop: '0.75rem' }}>Social &amp; Safety</span>
-          {socialItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar-nav-item ${pathname === item.href ? 'active' : ''}`}
-              onClick={() => setIsSidebarOpen(false)}
-            >
-              <item.icon size={16} /> {item.name}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          {showPlusUpsell && !isGuestUser(currentUser) && (
-            <div className="bg-gold-primary/5 border border-gold-primary/15 rounded-xl p-3 mb-1">
-              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-2">Household Plus</p>
-              <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">Priority mediation, extra feed storage, an ad-free view.</p>
-              <UpgradeButton item="plus" className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-2 rounded-lg text-[9px] uppercase tracking-widest transition-all active:scale-95" />
-            </div>
-          )}
-          <div className="lang-switcher">
-            {['en', 'zu', 'xh', 'af'].map(l => (
-              <button
-                key={l}
-                onClick={() => dispatch(setLanguage(l as 'en' | 'zu' | 'xh' | 'af'))}
-                className={`lang-switcher-btn ${lang === l ? 'active' : ''}`}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          {/* The day/night toggle used to live here. It was a promise the app
-              can't keep: "day" and "night" differ by 5/255 on the background
-              and nothing else, because the UI hardcodes dark styling in ~1200
-              places against 19 theme-aware variables. Rather than ship a
-              control that visibly does nothing, The Resident is dark-only
-              until that styling is consolidated onto the CSS variables. */}
-          <button className="sidebar-nav-item" onClick={handleLogout}>
-            <LogOut size={16} /> {t('logOut', lang)}
-          </button>
-        </div>
-      </aside>
+      {/* No hamburger / "More" panel anymore — Profile, Next of Kin, Business,
+          language and Log Out all live on the Profile page now (see
+          ProfilePage), reached via the bottom-bar Profile tab. A menu button
+          that only ever opened a settings panel had nothing left to hold. */}
 
       <div className="dashboard-main-content">
         <header className="dashboard-top-bar">
-          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)} aria-label="Open menu">
-            <Menu size={22} />
-          </button>
-
           <div className="dashboard-page-title">
             <pageTitle.icon size={18} />
             <span>{pageTitle.name}</span>
@@ -332,6 +248,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+
+      <nav className="bottom-nav-bar">
+        {navItems.map(item => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`bottom-nav-item ${pathname === item.href ? 'active' : ''}`}
+          >
+            <item.icon size={20} />
+            <span>{item.name}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   )
 }

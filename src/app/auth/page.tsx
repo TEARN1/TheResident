@@ -42,18 +42,23 @@ export default function AuthPage() {
   const router = useRouter()
   const dispatch = useDispatch<AppDispatch>()
 
-  const [theme, setTheme] = useState<'day' | 'night'>('day')
+  // 'light' is a real, separate theme (see globals.css) — not the old 'day'
+  // value, which the rest of the app still sets and which was never actually
+  // distinct from dark (a 5/255 background difference). This toggle is the
+  // one place in the app where switching genuinely changes the palette.
+  const [theme, setTheme] = useState<'light' | 'night'>('night')
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      const currentTheme = document.documentElement.getAttribute('data-theme') as 'day' | 'night' || 'day'
+      const currentTheme = document.documentElement.getAttribute('data-theme')
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTheme(currentTheme)
+      setTheme(currentTheme === 'light' ? 'light' : 'night')
+      document.documentElement.setAttribute('data-theme', currentTheme === 'light' ? 'light' : 'night')
     }
   }, [])
 
   const toggleTheme = () => {
-    const nextTheme = theme === 'day' ? 'night' : 'day'
+    const nextTheme = theme === 'night' ? 'light' : 'night'
     setTheme(nextTheme)
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-theme', nextTheme)
@@ -64,7 +69,12 @@ export default function AuthPage() {
   const lockedUntil = useSelector((state: RootState) => state.auth.lockedUntil)
   
   // Tab control: 'login' | 'signup'
-  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('signup')
+  // Log In first: most people who reach /auth already have an account (the
+  // landing page's own inline login covers the common case; this page is
+  // mainly landed on directly, e.g. a bookmark or the "Join Your Suburb"
+  // link) — defaulting to the signup form put a returning resident one extra
+  // click away from where they actually needed to be.
+  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login')
   
   // Common Form Fields
   const [email, setEmail] = useState('')
@@ -271,12 +281,14 @@ export default function AuthPage() {
     <div style={containerStyle}>
       <div style={overlayStyle} />
       
-      <button 
+      <button
         onClick={toggleTheme}
         style={themeToggleStyle}
-        title="Toggle Day/Night Theme"
+        title={theme === 'night' ? 'Switch to light theme' : 'Switch to dark theme'}
+        aria-label={theme === 'night' ? 'Switch to light theme' : 'Switch to dark theme'}
+        aria-pressed={theme === 'light'}
       >
-        {theme === 'day' ? <Moon size={16} /> : <Sun size={16} />}
+        {theme === 'night' ? <Sun size={16} /> : <Moon size={16} />}
       </button>
       
       {securityMessage && (

@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux'
 import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
+import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/BlockUserButton'
 
 interface GossipPost {
@@ -110,7 +111,7 @@ export default function GossipPage() {
       .order('id', { ascending: false })
       .limit(PAGE_SIZE)
     if (postsError) {
-      setError(postsError.message)
+      setError(humanizeSupabaseError(postsError.message))
       setLoading(false)
       return
     }
@@ -135,7 +136,7 @@ export default function GossipPage() {
       .order('id', { ascending: false })
       .limit(PAGE_SIZE)
     if (postsError) {
-      setError(postsError.message)
+      setError(humanizeSupabaseError(postsError.message))
       loadingMoreRef.current = false
       setLoadingMore(false)
       return
@@ -273,7 +274,7 @@ export default function GossipPage() {
 
     setPosting(false)
     if (insertError) {
-      setError(insertError.message)
+      setError(humanizeSupabaseError(insertError.message))
       return
     }
     setComposerBody('')
@@ -305,7 +306,7 @@ export default function GossipPage() {
     setCommentLoading(prev => ({ ...prev, [postId]: true }))
     const { error: rpcError } = await supabase.rpc('res_comment_gossip', { p_post: postId, p_body: body })
     if (rpcError) {
-      setError(rpcError.message)
+      setError(humanizeSupabaseError(rpcError.message))
       setCommentLoading(prev => ({ ...prev, [postId]: false }))
       return
     }

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import 'leaflet/dist/leaflet.css'
 import { Navigation, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader } from 'lucide-react'
@@ -81,13 +81,25 @@ export default function VibeMap() {
   const [showLegend, setShowLegend] = useState(true)
   const [drawer, setDrawer] = useState<Drawer>('none')
 
+  // The legend used to be pure decoration — a static color key with no way
+  // to act on it. Now each row is a real filter: unchecking "Heavy traffic"
+  // actually hides those markers, and "Confirmed only" cuts noise from
+  // unverified reports. Defaults to everything visible (opt-out, not opt-in),
+  // so a first-time visitor sees the full picture before narrowing it down.
+  const [activeKinds, setActiveKinds] = useState<Set<string>>(new Set(Object.keys(KIND_LABEL)))
+  const [confirmedOnly, setConfirmedOnly] = useState(false)
+  // Bumped on every pan/zoom so the legend's per-kind counts can reflect
+  // "what's on screen right now" instead of the whole 15km fetch radius —
+  // a count that never changes as you zoom in isn't telling you anything.
+  const [boundsTick, setBoundsTick] = useState(0)
+
   const [pendingPoint, setPendingPoint] = useState<{ label: string; lat: number; lon: number } | null>(null)
   const [savedPins, setSavedPins] = useState<SavedPin[]>([])
   const [pinsLoading, setPinsLoading] = useState(false)
 
   const [matrixPoints, setMatrixPoints] = useState<MatrixPoint[]>([])
   const [alertRadiusM, setAlertRadiusM] = useState(500)
-  const [livePosition, setLivePosition] = useState<{ lat: number; lon: number } | null>(null)
+  const [livePosition, setLivePosition] = useState<{ lat: number; lon: number; accuracy?: number } | null>(null)
 
   // Report-a-closure form, opened from the pending-point action card.
   const [showReportForm, setShowReportForm] = useState(false)
@@ -117,6 +129,29 @@ export default function VibeMap() {
       .filter(z => distanceMetres(pin, z) <= alertRadiusM)
       .map(z => ({ pin, zone: z }))
   )
+
+  // What the legend/filter row and the marker layer both agree is "on the
+  // map right now" — kept in one place so the legend's counts and what
+  // actually renders can never drift apart. Memoized so toggling an
+  // unrelated bit of UI state doesn't tear down and rebuild every marker.
+  const filteredZones = useMemo(() => zones.filter(z => {
+    if (!activeKinds.has(z.kind)) return false
+    if (confirmedOnly && z.status !== 'confirmed' && z.status !== 'official') return false
+    return true
+  }), [zones, activeKinds, confirmedOnly])
+
+  const toggleKind = (kind: string) => {
+    setActiveKinds(prev => {
+      const next = new Set(prev)
+      if (next.has(kind)) next.delete(kind); else next.add(kind)
+      return next
+    })
+  }
+
+  // Reference point for "how far is this from me" in each popup — a live
+  // GPS fix if the user has one running, otherwise wherever the map is
+  // centred (their approximate location or a searched place).
+  const distanceOrigin = livePosition || center
 
   // A "Directions" link elsewhere in the app (listings, services) routes here
   // as /dashboard/community?tab=vibemap&place=<address> rather than deep-linking
@@ -196,6 +231,11 @@ export default function VibeMap() {
         setPendingPoint({ label: `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`, lat: e.latlng.lat, lon: e.latlng.lng })
       })
 
+      // Drives the legend's "in view" counts (see boundsTick) and gives a
+      // real sense of real-world distance while panning/zooming.
+      map.on('moveend zoomend', () => setBoundsTick(t => t + 1))
+      L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map)
+
       if (center) loadZones(center.lat, center.lon)
     })
 
@@ -214,9 +254,16 @@ export default function VibeMap() {
     if (!L || !group) return
     group.clearLayers()
 
-    zones.forEach(zone => {
+    const now = Date.now()
+
+    filteredZones.forEach(zone => {
       const color = KIND_COLOR[zone.kind] || '#D4AF37'
       const isGeofenceHit = geofenceHits.some(h => h.zone.id === zone.id)
+      // A report with more disputes than confirmations shouldn't read as
+      // trustworthy as one the community has backed up — flagged the same
+      // way a geofence hit is (a pulsing outer ring), so "this is contested"
+      // is visible before anyone opens the popup to read the raw counts.
+      const isContested = zone.disputeCount > 0 && zone.disputeCount >= zone.confirmCount
 
       if (isGeofenceHit) {
         L.circleMarker([zone.lat, zone.lon], {
@@ -227,9 +274,31 @@ export default function VibeMap() {
           weight: 2,
           className: 'res-geofence-pulse'
         }).addTo(group)
+      } else if (isContested) {
+        L.circleMarker([zone.lat, zone.lon], {
+          radius: 14 + zone.severity * 2,
+          color: '#a855f7',
+          fillColor: '#a855f7',
+          fillOpacity: 0.1,
+          weight: 1.5,
+          dashArray: '4 3',
+          className: 'res-geofence-pulse'
+        }).addTo(group)
       }
 
       const isVerified = zone.status === 'confirmed' || zone.status === 'official'
+
+      // Fade toward the last 2 hours before a report's own end time instead
+      // of it just vanishing outright once expired — a report that's about
+      // to clear should visibly read as "on its way out", not identical to
+      // one that just went up.
+      const FADE_WINDOW_MS = 2 * 60 * 60 * 1000
+      let expiryFactor = 1
+      if (zone.endsAt) {
+        const msLeft = new Date(zone.endsAt).getTime() - now
+        if (msLeft <= 0) expiryFactor = 0.3
+        else if (msLeft < FADE_WINDOW_MS) expiryFactor = 0.4 + 0.6 * (msLeft / FADE_WINDOW_MS)
+      }
 
       // A soft, borderless halo under every marker (not just geofence hits)
       // so the map reads as colored zones of activity rather than a scatter
@@ -239,7 +308,7 @@ export default function VibeMap() {
         radius: (8 + zone.severity * 2) * 2.2,
         color: 'transparent',
         fillColor: color,
-        fillOpacity: isVerified ? 0.16 : 0.09,
+        fillOpacity: (isVerified ? 0.16 : 0.09) * expiryFactor,
         weight: 0,
         interactive: false
       }).addTo(group)
@@ -248,7 +317,7 @@ export default function VibeMap() {
         radius: 8 + zone.severity * 2,
         color: isVerified ? '#ffffff' : color,
         fillColor: color,
-        fillOpacity: isVerified ? 0.95 : 0.55,
+        fillOpacity: (isVerified ? 0.95 : 0.55) * expiryFactor,
         weight: isVerified ? 2.5 : 2
       })
 
@@ -256,18 +325,27 @@ export default function VibeMap() {
       const expiry = zone.endsAt
         ? new Date(zone.endsAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })
         : null
+      const distanceLabel = distanceOrigin
+        ? (() => {
+            const m = distanceMetres(distanceOrigin, zone)
+            return m < 1000 ? `${Math.round(m)}m away` : `${(m / 1000).toFixed(1)}km away`
+          })()
+        : null
       const popupId = `zone-popup-${zone.id}`
       marker.bindPopup(`
         <div style="font-family:inherit;min-width:190px">
-          <strong>${KIND_LABEL[zone.kind] || zone.kind}</strong>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <strong>${KIND_LABEL[zone.kind] || zone.kind}</strong>
+            ${distanceLabel ? `<span style="font-size:0.75em;opacity:0.6;white-space:nowrap">${distanceLabel}</span>` : ''}
+          </div>
           ${zone.label ? `<div>${zone.label}</div>` : ''}
           ${zone.note ? `<div style="opacity:0.7;font-size:0.85em;margin-top:4px">${zone.note}</div>` : ''}
-          ${expiry ? `<div style="font-size:0.75em;margin-top:6px;color:#D4AF37">Clears by ${expiry}</div>` : ''}
+          ${expiry ? `<div style="font-size:0.75em;margin-top:6px;color:${expiryFactor < 1 ? '#f59e0b' : '#D4AF37'}">${now >= new Date(zone.endsAt as string).getTime() ? 'Cleared' : 'Clears by'} ${expiry}</div>` : ''}
           <div style="font-size:0.75em;opacity:0.6;margin-top:6px">
             Reported via ${sourceLabel} · ${zone.status}
           </div>
-          <div style="font-size:0.75em;margin-top:4px">
-            ✓ ${zone.confirmCount} confirmed &nbsp; ✗ ${zone.disputeCount} disputed
+          <div style="font-size:0.75em;margin-top:4px;${isContested ? 'color:#c084fc;font-weight:600' : ''}">
+            ✓ ${zone.confirmCount} confirmed &nbsp; ✗ ${zone.disputeCount} disputed${isContested ? ' — contested' : ''}
           </div>
           <div id="${popupId}" style="display:flex;gap:6px;margin-top:8px"></div>
         </div>
@@ -312,7 +390,7 @@ export default function VibeMap() {
       marker.addTo(group)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zones, currentUser, savedPins, alertRadiusM])
+  }, [filteredZones, currentUser, savedPins, alertRadiusM, distanceOrigin])
 
   useEffect(() => {
     const L = leafletRef.current
@@ -356,6 +434,21 @@ export default function VibeMap() {
     layer.clearLayers()
     if (!livePosition) return
 
+    // A dot with a fixed 6px glow implies pinpoint precision the Geolocation
+    // API never actually provides. Drawing the browser's own reported
+    // accuracy as a real, to-scale circle (pos.coords.accuracy, metres) is
+    // the honest version — the dot is where you probably are, the circle is
+    // how sure the device actually is.
+    if (livePosition.accuracy && Number.isFinite(livePosition.accuracy)) {
+      L.circle([livePosition.lat, livePosition.lon], {
+        radius: livePosition.accuracy,
+        color: '#3b82f6',
+        weight: 1,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.08
+      }).addTo(layer)
+    }
+
     L.marker([livePosition.lat, livePosition.lon], {
       icon: L.divIcon({
         className: '',
@@ -363,7 +456,11 @@ export default function VibeMap() {
         iconSize: [14, 14],
         iconAnchor: [7, 7]
       })
-    }).bindPopup('You (live)').addTo(layer)
+    }).bindPopup(
+      livePosition.accuracy
+        ? `You (live) — accurate to ±${Math.round(livePosition.accuracy)}m`
+        : 'You (live)'
+    ).addTo(layer)
   }, [livePosition])
 
   const addMatrixPoint = (p: MatrixPoint) => {
@@ -450,32 +547,61 @@ export default function VibeMap() {
           </div>
         </div>
 
-        {/* Layers / legend toggle — floating top-right */}
+        {/* Layers / legend toggle — floating top-right. Each row is now a
+            real filter (see activeKinds/confirmedOnly), and counts reflect
+            what's actually in view, not the whole 15km fetch radius. */}
         <div className="absolute top-3 right-3 z-[500] flex flex-col items-end gap-2">
           <button
             onClick={() => setShowLegend(v => !v)}
             className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-2.5 text-gray-300 hover:text-white shadow-2xl"
-            title="Legend"
+            title="Legend and filters"
+            aria-label={showLegend ? 'Hide map legend and filters' : 'Show map legend and filters'}
+            aria-pressed={showLegend}
           >
             <Layers size={18} />
           </button>
           {showLegend && (
-            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl w-[190px]">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Map key</p>
+            // Compact icon-only strip below ~380px wide (a phone in portrait
+            // with the map at full width); the full labelled key otherwise —
+            // the 190px fixed panel used to eat most of a phone-width map.
+            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl w-[52px] sm:w-[200px]">
+              <p className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Map key — tap to filter</p>
               {Object.entries(KIND_LABEL).map(([kind, label]) => {
-                const count = zones.filter(z => z.kind === kind).length
+                const bounds = mapRef.current?.getBounds()
+                const count = zones.filter(z => z.kind === kind && (!bounds || bounds.contains([z.lat, z.lon]))).length
+                const active = activeKinds.has(kind)
+                // Referenced so this recomputes per pan/zoom via boundsTick;
+                // the value itself isn't rendered, it's just the dependency.
+                void boundsTick
                 return (
-                  <div key={kind} className="flex items-center gap-2 text-[11px] text-gray-200 py-1">
+                  <button
+                    key={kind}
+                    onClick={() => toggleKind(kind)}
+                    aria-pressed={active}
+                    aria-label={`${active ? 'Hide' : 'Show'} ${label} reports${count > 0 ? ` (${count} in view)` : ''}`}
+                    title={label}
+                    className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${active ? 'text-gray-200' : 'text-gray-600 opacity-50'} hover:opacity-100`}
+                  >
                     <div
-                      className="w-3 h-3 rounded-full shrink-0 shadow-[0_0_8px_var(--dot-color)]"
-                      style={{ background: KIND_COLOR[kind], ['--dot-color' as string]: KIND_COLOR[kind] }}
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ background: KIND_COLOR[kind], boxShadow: active ? `0 0 8px ${KIND_COLOR[kind]}` : 'none' }}
                     />
-                    <span className="flex-1">{label}</span>
-                    {count > 0 && <span className="text-gray-500 font-bold">{count}</span>}
-                  </div>
+                    <span className="hidden sm:inline flex-1 text-left">{label}</span>
+                    {count > 0 && <span className="hidden sm:inline text-gray-500 font-bold">{count}</span>}
+                  </button>
                 )
               })}
-              <div className="flex items-center gap-2 text-[10px] text-gray-500 pt-2 mt-1 border-t border-white/5">
+              <label className="flex items-center gap-2 text-[10px] text-gray-400 pt-2 mt-1 border-t border-white/5 cursor-pointer py-1">
+                <input
+                  type="checkbox"
+                  checked={confirmedOnly}
+                  onChange={e => setConfirmedOnly(e.target.checked)}
+                  className="accent-gold-primary w-3 h-3 shrink-0"
+                  aria-label="Show confirmed and official reports only"
+                />
+                <span className="hidden sm:inline">Confirmed only</span>
+              </label>
+              <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-500 pt-1">
                 <div className="w-3 h-3 rounded-full shrink-0 bg-white/80 border border-white" />
                 Confirmed / official
               </div>
@@ -483,21 +609,25 @@ export default function VibeMap() {
           )}
         </div>
 
-        {/* Zoom + refresh — floating bottom-right, Google-Maps-style stacked controls */}
+        {/* Zoom + refresh — floating bottom-right, Google-Maps-style stacked
+            controls. p-2.5 rather than p-2: Leaflet's own zoom buttons are
+            sized for a mouse, these are meant for a thumb. */}
         <div className="absolute bottom-3 right-3 z-[500] flex flex-col gap-1.5">
-          <button onClick={() => zoom(1)} className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl" title="Zoom in"><Plus size={16} /></button>
-          <button onClick={() => zoom(-1)} className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl" title="Zoom out"><Minus size={16} /></button>
+          <button onClick={() => zoom(1)} aria-label="Zoom in" className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl" title="Zoom in"><Plus size={16} /></button>
+          <button onClick={() => zoom(-1)} aria-label="Zoom out" className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl" title="Zoom out"><Minus size={16} /></button>
           <button
             onClick={() => center && loadZones(center.lat, center.lon)}
             disabled={!center || loading}
-            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl disabled:opacity-40"
+            aria-label={loading ? 'Refreshing reports' : 'Refresh reports'}
+            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl disabled:opacity-40"
             title="Refresh reports"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
             onClick={() => mapRef.current?.invalidateSize()}
-            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl"
+            aria-label="Fix map size"
+            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl"
             title="Fix map size"
           >
             <Maximize size={16} />
@@ -517,11 +647,13 @@ export default function VibeMap() {
           ))}
         </div>
 
-        {/* Stats chip — floating bottom-left */}
+        {/* Stats chip — floating bottom-left. Counts the FILTERED set, not
+            the raw fetch — otherwise "12 nearby" while a filter has hidden
+            9 of them would just read as broken. */}
         <div className="absolute bottom-3 left-3 z-[500] bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2 shadow-2xl flex items-center gap-3 text-[10px] text-gray-300">
-          <span>{zones.length} nearby</span>
+          <span>{filteredZones.length}{filteredZones.length !== zones.length ? ` of ${zones.length}` : ''} nearby</span>
           <span className="text-gray-600">·</span>
-          <span className="flex items-center gap-1"><Check size={10} className="text-green-500" /> {zones.filter(z => z.status === 'confirmed' || z.status === 'official').length} confirmed</span>
+          <span className="flex items-center gap-1"><Check size={10} className="text-green-500" /> {filteredZones.filter(z => z.status === 'confirmed' || z.status === 'official').length} confirmed</span>
           {geofenceHits.length > 0 && (
             <>
               <span className="text-gray-600">·</span>
@@ -680,6 +812,37 @@ export default function VibeMap() {
           0% { opacity: 0.9; }
           70% { opacity: 0.15; }
           100% { opacity: 0.9; }
+        }
+        /* A pulsing ring is decorative, not informational — the contested/
+           geofence marker underneath it already conveys the state, so it's
+           safe to just hold it at a steady visible opacity instead. */
+        @media (prefers-reduced-motion: reduce) {
+          .res-geofence-pulse {
+            animation: none;
+            opacity: 0.5;
+          }
+        }
+        /* Leaflet's scale control shares the bottom-left corner with our own
+           floating stats chip — pushed up clear of it rather than the two
+           overlapping. */
+        .leaflet-bottom.leaflet-left {
+          margin-bottom: 44px;
+        }
+        .leaflet-control-scale-line {
+          background: rgba(0,0,0,0.6);
+          border-color: rgba(255,255,255,0.4) !important;
+          color: #e5e5e5;
+          backdrop-filter: blur(4px);
+        }
+        /* Legally required, so it has to stay — but at the map's default
+           faint grey-on-dark it was barely legible, which isn't "present",
+           it's "technically present". */
+        .leaflet-control-attribution {
+          background: rgba(0,0,0,0.65) !important;
+          color: #c7c7c7 !important;
+        }
+        .leaflet-control-attribution a {
+          color: #e8c766 !important;
         }
       `}</style>
     </div>

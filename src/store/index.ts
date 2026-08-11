@@ -86,6 +86,14 @@ export interface Listing {
   /** Owning res_properties row, if this room belongs to a multi-room property. */
   propertyId?: string
   createdAt?: string
+  /**
+   * A "post it in seconds" listing (minimal fields, no amenities/requirements
+   * filled in) — was a wholly separate community-hub board with its own
+   * fetch/create form, even though the row is the SAME res_listings table
+   * with this one flag set. Merged into Housing: same list, same filters,
+   * distinguished only by this badge, per res_listings.quick_post.
+   */
+  quickPost?: boolean
 }
 
 export interface RoomRequest {
@@ -124,6 +132,11 @@ export interface RoommateSeeker {
 
 export interface LiftClub {
   id: string
+  /** The posting driver's user id. res_lift_clubs has always carried this
+   *  (driver_id) — the client just never read it past resolving driverName,
+   *  which meant there was no way to look up or show a driver's real trust
+   *  info (TrustBadge) on a lift card. */
+  driverId: string
   driverName: string
   origin: string
   destination: string
@@ -399,6 +412,7 @@ const initialRoommates: RoommateSeeker[] = [
 const initialLifts: LiftClub[] = [
   {
     id: 'lift-demo-1',
+    driverId: 'landlord-demo-1',
     driverName: 'Mpho D.',
     origin: 'Rosebank',
     destination: 'Sandton CBD',
@@ -411,6 +425,7 @@ const initialLifts: LiftClub[] = [
   },
   {
     id: 'lift-demo-2',
+    driverId: 'landlord-demo-2',
     driverName: 'Zanele P.',
     origin: 'Braamfontein',
     destination: 'Wits Campus',
@@ -766,7 +781,7 @@ const networkingSlice = createSlice({
       state.roommates = action.payload.map(r => ({ ...r, id: toUUID(r.id) }))
     },
     setLifts: (state, action: PayloadAction<LiftClub[]>) => {
-      state.lifts = action.payload.map(l => ({ ...l, id: toUUID(l.id) }))
+      state.lifts = action.payload.map(l => ({ ...l, id: toUUID(l.id), driverId: toUUID(l.driverId) }))
     },
     setServices: (state, action: PayloadAction<HandymanService[]>) => {
       state.services = action.payload.map(s => ({ ...s, id: toUUID(s.id), ownerId: toUUID(s.ownerId) }))
@@ -794,6 +809,7 @@ const networkingSlice = createSlice({
     addLiftClub: (state, action: PayloadAction<LiftClub>) => {
       const lift = { ...action.payload }
       lift.id = toUUID(lift.id)
+      lift.driverId = toUUID(lift.driverId)
       state.lifts.push(lift)
     },
     addService: (state, action: PayloadAction<HandymanService>) => {
@@ -1731,7 +1747,8 @@ export const fetchSupabaseData = createAsyncThunk(
         verifiedByUserId: item.verified_by_user_id || undefined,
         featuredUntil: item.featured_until || null,
         propertyId: item.property_id || undefined,
-        createdAt: item.created_at || undefined
+        createdAt: item.created_at || undefined,
+        quickPost: !!item.quick_post
       }))))
     }
 
@@ -1783,6 +1800,7 @@ export const fetchSupabaseData = createAsyncThunk(
       if (!data) return
       dispatch(setLifts(data.map(item => ({
         id: item.id,
+        driverId: item.driver_id,
         driverName: nameOf(item.driver_id),
         origin: item.origin,
         destination: item.destination,

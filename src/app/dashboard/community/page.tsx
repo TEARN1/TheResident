@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, X, Shield, Users, Zap, Droplets, Lock,
+  Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, X, Shield, Users, Droplets, Lock,
   LayoutGrid, AlertTriangle, ListChecks, Sparkles, DoorOpen, Map as MapIcon
 } from 'lucide-react'
 import {
@@ -46,7 +46,6 @@ import SafetyTab from '../components/SafetyTab'
 import MarketTab from '../components/MarketTab'
 import HouseholdTab from '../components/HouseholdTab'
 import CommunitiesTab from '../components/CommunitiesTab'
-import EmptyRoomBoard from '../components/EmptyRoomBoard'
 import SharedResourcesTab from '../components/SharedResourcesTab'
 import CommunityAdminTab from '../components/CommunityAdminTab'
 import GruvsConnectionsWidget from '../components/GruvsConnectionsWidget'
@@ -61,7 +60,7 @@ const VibeMap = dynamic(() => import('../components/VibeMap'), {
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
   const searchParams = useSearchParams()
-  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'rooms' | 'resources' | 'admin'>(
+  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'resources' | 'admin'>(
     searchParams.get('tab') === 'vibemap' ? 'vibemap' : 'overview'
   )
   const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
@@ -373,7 +372,6 @@ export default function CommunityPage() {
       accent: 'text-sky-400 bg-sky-400/10',
       tabs: [
         { id: 'notices', label: 'Notices', icon: Megaphone },
-        { id: 'rooms', label: 'Empty Rooms', icon: Zap },
         { id: 'communities', label: 'Groups', icon: Users },
       ],
     },
@@ -590,9 +588,6 @@ export default function CommunityPage() {
                 isModerator={isModerator}
                 onModerate={handleModerate}
               />
-            )}
-            {subTab === 'rooms' && (
-              <EmptyRoomBoard currentUserId={currentUser?.id || ''} defaultCurrency={defaultCurrency} />
             )}
             {subTab === 'resources' && (
               <SharedResourcesTab currentUserId={currentUser?.id || ''} communityId={myCommunityIds[0] || null} />

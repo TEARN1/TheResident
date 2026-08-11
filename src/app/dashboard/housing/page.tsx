@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -49,6 +49,7 @@ export default function HousingPage() {
 
   // Filter States
   const [searchInputValue, setSearchInputValue] = useState('')
+  const [showSuburbSuggestions, setShowSuburbSuggestions] = useState(false)
   const [searchLocation, setSearchLocation] = useState('')
   // 0 means "no ceiling" (selectFilteredListings only applies maxPrice when > 0).
   //
@@ -61,6 +62,7 @@ export default function HousingPage() {
   // ceiling only applies once a tenant deliberately sets one.
   const [filterPrice, setFilterPrice] = useState<number>(0)
   const [filterWifi, setFilterWifi] = useState(false)
+  const [filterQuickPostOnly, setFilterQuickPostOnly] = useState(false)
   const [filterParking, setFilterParking] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
@@ -73,6 +75,7 @@ export default function HousingPage() {
   const [newLocation, setNewLocation] = useState('')
   const [newSuburb, setNewSuburb] = useState('')
   const [newLivesHere, setNewLivesHere] = useState(false)
+  const [newQuickPost, setNewQuickPost] = useState(false)
   const [newWifi, setNewWifi] = useState(true)
   const [newParking, setNewParking] = useState(true)
   const [newBathroom, setNewBathroom] = useState<'shared' | 'private' | 'ensuite'>('shared')
@@ -107,6 +110,23 @@ export default function HousingPage() {
     return () => clearTimeout(handler)
   }, [searchInputValue])
 
+  // Distinct suburbs that actually have listings, matched against what's
+  // typed so far — the search field used to be a bare substring match with
+  // no way to know which suburb names would return anything before hitting
+  // enter. Capped at 6 so it never grows into its own scrollable list.
+  const suburbSuggestions = useMemo(() => {
+    const q = searchInputValue.trim().toLowerCase()
+    const counts = new Map<string, number>()
+    for (const l of allListings) {
+      if (q && !l.suburb.toLowerCase().includes(q)) continue
+      counts.set(l.suburb, (counts.get(l.suburb) || 0) + 1)
+    }
+    return [...counts.entries()]
+      .map(([suburb, count]) => ({ suburb, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6)
+  }, [allListings, searchInputValue])
+
   // Steers only the FIRST render once the role is known (it arrives async from
   // session bootstrap). Guarded by a ref so it never yanks the tab back while
   // a landlord is deliberately browsing Rooms.
@@ -138,7 +158,9 @@ export default function HousingPage() {
 
   // A boosted listing sorts first while its purchase is still active.
   const isFeatured = (l: Listing) => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > Date.now()
-  const filteredListings = [...filteredListingsRaw].sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
+  const filteredListings = [...filteredListingsRaw]
+    .filter(l => !filterQuickPostOnly || l.quickPost)
+    .sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
 
   const filteredRoommates = useSelector((state: RootState) => selectMatchedRoommates(
     state,
@@ -180,11 +202,13 @@ export default function HousingPage() {
         petsAllowed: false
       },
       propertyId: newPropertyId || undefined,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      quickPost: newQuickPost
     }
     dispatch(addListing(listing))
     setShowCreateModal(false)
     setNewPropertyId('')
+    setNewQuickPost(false)
     setAlertNotification('Property listed successfully!')
   }
 
@@ -356,15 +380,18 @@ export default function HousingPage() {
         <div className="space-y-8">
           {/* Search & Action Bar */}
           <div className="flex flex-col lg:flex-row gap-4">
-             <div className="flex-1 glass-panel p-2 flex items-center gap-2 bg-black/60 shadow-inner">
+             <div className="flex-1 glass-panel p-2 flex items-center gap-2 bg-black/60 shadow-inner relative">
                 <div className="flex-1 flex items-center bg-black/40 rounded-xl px-4 py-1.5 border border-white/5 focus-within:border-gold-primary/40 transition-colors">
                    <Search size={18} className="text-gray-600" />
                    <input
                       type="text"
                       value={searchInputValue}
-                      onChange={(e) => setSearchInputValue(e.target.value)}
+                      onChange={(e) => { setSearchInputValue(e.target.value); setShowSuburbSuggestions(true) }}
+                      onFocus={() => setShowSuburbSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowSuburbSuggestions(false), 150)}
                       placeholder="Enter Suburb, City or Complex..."
                       className="bg-transparent border-none text-white px-3 py-2 w-full outline-none text-sm font-bold placeholder:text-gray-700 placeholder:uppercase placeholder:tracking-widest"
+                      autoComplete="off"
                    />
                    <button
                       onClick={() => handleGetLiveLocation(setSearchInputValue)}
@@ -373,6 +400,26 @@ export default function HousingPage() {
                       {locationLoading ? <Loader size={18} className="animate-spin" /> : <MapPin size={18} />}
                    </button>
                 </div>
+
+                {/* Suggests suburbs that actually HAVE listings, with a live
+                    count, instead of a free-text field where a typo just
+                    silently returns nothing. Sourced from allListings — real
+                    data, zero extra network calls. */}
+                {showSuburbSuggestions && suburbSuggestions.length > 0 && (
+                   <div className="absolute top-full left-0 right-24 mt-1 z-20 bg-black border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                      {suburbSuggestions.map(s => (
+                         <button
+                            key={s.suburb}
+                            type="button"
+                            onMouseDown={() => { setSearchInputValue(s.suburb); setShowSuburbSuggestions(false) }}
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-200 hover:bg-gold-primary/10 hover:text-gold-primary transition-colors text-left"
+                         >
+                            <span className="flex items-center gap-2"><MapPin size={13} className="text-gray-600" /> {s.suburb}</span>
+                            <span className="text-[10px] text-gray-500 font-bold">{s.count} room{s.count === 1 ? '' : 's'}</span>
+                         </button>
+                      ))}
+                   </div>
+                )}
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -440,6 +487,14 @@ export default function HousingPage() {
                            </label>
 
                            <label className="flex items-center gap-3 cursor-pointer group">
+                              <div className={`w-10 h-6 rounded-full p-1 transition-all border ${filterQuickPostOnly ? 'bg-gold-primary border-gold-primary' : 'bg-white/5 border-white/10'}`}>
+                                 <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${filterQuickPostOnly ? 'translate-x-4' : 'translate-x-0'}`} />
+                              </div>
+                              <input type="checkbox" className="hidden" checked={filterQuickPostOnly} onChange={e => setFilterQuickPostOnly(e.target.checked)} />
+                              <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${filterQuickPostOnly ? 'text-white' : 'text-gray-600'}`}>Quick Posts Only</span>
+                           </label>
+
+                           <label className="flex items-center gap-3 cursor-pointer group">
                               <div className={`w-10 h-6 rounded-full p-1 transition-all border ${filterParking ? 'bg-gold-primary border-gold-primary' : 'bg-white/5 border-white/10'}`}>
                                  <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${filterParking ? 'translate-x-4' : 'translate-x-0'}`} />
                               </div>
@@ -483,8 +538,15 @@ export default function HousingPage() {
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
                   <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                     <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl">
-                        <span className="text-xs font-black text-white tracking-tight uppercase">Verified</span>
+                     <div className="flex items-center gap-1.5">
+                        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl">
+                           <span className="text-xs font-black text-white tracking-tight uppercase">Verified</span>
+                        </div>
+                        {item.quickPost && (
+                           <div className="bg-gold-primary/90 backdrop-blur-md px-3 py-1.5 rounded-xl" title="Posted fast with minimal details — same listing, just quicker to put up.">
+                              <span className="text-xs font-black text-black tracking-tight uppercase">Quick Post</span>
+                           </div>
+                        )}
                      </div>
                      <div className="bg-gold-primary text-black px-4 py-2 rounded-xl shadow-xl">
                         <span className="text-lg font-black tracking-tighter">{formatCurrency(item.price, item.currency)}</span>
@@ -710,6 +772,9 @@ export default function HousingPage() {
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-400 uppercase tracking-widest">
                            <input type="checkbox" checked={newLivesHere} onChange={e => setNewLivesHere(e.target.checked)} className="accent-gold-primary" /> I Live On-Site
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gold-primary uppercase tracking-widest" title="Marks this as a fast, low-friction post — shows a Quick Post badge and can be filtered separately, but it's the same listing as any other.">
+                           <input type="checkbox" checked={newQuickPost} onChange={e => setNewQuickPost(e.target.checked)} className="accent-gold-primary" /> Quick Post
                         </label>
                      </div>
                      {/* Who this room suits — feeds roommateCompatibility's hard filters directly.

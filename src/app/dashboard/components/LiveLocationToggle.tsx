@@ -16,7 +16,10 @@ import { supabase } from '../../../utils/supabase'
 
 interface Props {
   userId: string | null
-  onPosition: (pos: { lat: number; lon: number } | null) => void
+  // accuracy is the browser's own 1-sigma confidence radius in metres —
+  // surfaced so the map can show it honestly instead of drawing a plain dot
+  // that implies pinpoint precision the Geolocation API never actually gives.
+  onPosition: (pos: { lat: number; lon: number; accuracy?: number } | null) => void
 }
 
 export default function LiveLocationToggle({ userId, onPosition }: Props) {
@@ -46,9 +49,9 @@ export default function LiveLocationToggle({ userId, onPosition }: Props) {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       pos => {
-        const point = { lat: pos.coords.latitude, lon: pos.coords.longitude }
+        const point = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy }
         onPosition(point)
-        channelRef.current?.track({ ...point, at: new Date().toISOString() })
+        channelRef.current?.track({ lat: point.lat, lon: point.lon, at: new Date().toISOString() })
       },
       () => { /* silently stop trying if permission is denied mid-session */ },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
@@ -72,6 +75,7 @@ export default function LiveLocationToggle({ userId, onPosition }: Props) {
         <div>
           <p className="text-xs text-white font-medium">Share my live location</p>
           <p className="text-[10px] text-gray-500">Live sharing with your Care Circle — coming soon. This proves the mechanism on your own map for now.</p>
+          <p className="text-[10px] text-gray-600 mt-0.5">Shown with its real accuracy radius — a phone GPS is typically 5–20m outdoors, more indoors, never pinpoint.</p>
         </div>
       </div>
       <button

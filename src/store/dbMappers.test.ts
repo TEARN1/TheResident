@@ -47,7 +47,7 @@ test('base table payloads only use real schema columns', () => {
     location: 'l', suburb: 's', bio: 'b'
   }))
   assertKeysInSchema('res_lift_clubs', db.liftToRow({
-    id: 'lift-1', driverName: 'x', origin: 'a', destination: 'b', departureTime: '07:00',
+    id: 'lift-1', driverId: 'u1', driverName: 'x', origin: 'a', destination: 'b', departureTime: '07:00',
     days: 'Mon', pricePerSeat: 20, currency: 'ZAR', availableSeats: 3, totalSeats: 4
   }, UID))
   assertKeysInSchema('res_handyman_services', db.serviceToRow({

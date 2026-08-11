@@ -154,6 +154,7 @@ export default function ServicesPage() {
     if (!currentUser) return
     const newLift: LiftClub = {
       id: `lift-${Date.now()}`,
+      driverId: currentUser.id,
       driverName: currentUser.name || '',
       origin: liftOrigin,
       destination: liftDestination,
@@ -281,19 +282,48 @@ export default function ServicesPage() {
 
       {activeTab === 'lifts' && (
         <div className="space-y-4">
-           <div className="flex justify-end">
-              <button
-                 onClick={() => setShowLiftModal(true)}
-                 className="w-full md:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
-              >
-                 <Plus size={18} /> Post a Lift
-              </button>
-           </div>
+           {/* Riding with a stranger is a real safety decision, not just a
+               transaction — so posting/offering a lift is gated by the same
+               next-of-kin trust circle that already gates Move Assist below,
+               rather than open to anyone the moment they sign up. Browsing
+               and booking an existing lift stays open to everyone; this only
+               gates OFFERING one. */}
+           {trustGate && !trustGate.unlocked ? (
+              <a href="/dashboard/trust-circle" className="w-full flex items-center justify-between gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-6 py-4 hover:border-gold-primary/40 transition-all">
+                 <span className="flex items-center gap-3 text-left">
+                    <Lock size={18} className="text-gold-primary shrink-0" />
+                    <span>
+                       <span className="block text-xs font-black text-white uppercase tracking-widest">Build trust to offer a lift</span>
+                       <span className="block text-[11px] text-gray-500 mt-0.5">
+                          {trustGate.status === 'building' ? 'Your next-of-kin circle is growing — almost there.' : 'Add people to your next-of-kin circle first — offering a ride to strangers needs a real safety trail.'}
+                       </span>
+                    </span>
+                 </span>
+                 <span className="text-[10px] font-black text-gold-primary uppercase tracking-widest shrink-0">Next of Kin →</span>
+              </a>
+           ) : (
+              <div className="flex justify-end">
+                 <button
+                    onClick={() => setShowLiftModal(true)}
+                    className="w-full md:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+                 >
+                    <Plus size={18} /> Post a Lift
+                 </button>
+              </div>
+           )}
            {lifts.map(lift => (
              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={lift.id} className="glass-panel p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 bg-black/40 border-white/5 group hover:border-gold-primary/30 transition-all">
                 <div className="flex-1 space-y-4">
                    <div className="flex justify-between items-center">
-                      <h3 className="text-xl font-black text-white tracking-tight uppercase group-hover:text-gold-primary transition-colors italic">{lift.driverName}</h3>
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                         <h3 className="text-xl font-black text-white tracking-tight uppercase group-hover:text-gold-primary transition-colors italic">{lift.driverName}</h3>
+                         {/* The one piece of real trust info riders had before getting
+                             in this driver's car was a first name. TrustBadge pulls
+                             their actual verification/reputation — driver_id was
+                             already on this row, just never read past the display
+                             name (see LiftClub.driverId). */}
+                         <TrustBadge userId={lift.driverId} compact />
+                      </div>
                       <div className="bg-gold-primary/10 border border-gold-primary/20 text-gold-primary px-4 py-1 rounded-xl font-black text-sm tracking-tighter">
                          {formatCurrency(lift.pricePerSeat, lift.currency)} <span className="text-[10px] opacity-60 ml-1">PER SEAT</span>
                       </div>
@@ -365,12 +395,22 @@ export default function ServicesPage() {
                     <p className="text-xs text-gray-500 font-bold uppercase tracking-widest opacity-60">Verified skills helping to grow the local economy</p>
                  </div>
               </div>
-              <button
-                 onClick={() => setShowBusinessRegModal(true)}
-                 className="w-full lg:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
-              >
-                 <Plus size={20} /> Advertise My Skills
-              </button>
+              {trustGate && !trustGate.unlocked ? (
+                 <a href="/dashboard/trust-circle" className="w-full lg:w-auto flex items-center gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-6 py-4 hover:border-gold-primary/40 transition-all">
+                    <Lock size={16} className="text-gold-primary shrink-0" />
+                    <span className="text-left">
+                       <span className="block text-[11px] font-black text-white uppercase tracking-widest">Build trust to list</span>
+                       <span className="block text-[10px] text-gray-500 mt-0.5">Grow your next-of-kin circle first →</span>
+                    </span>
+                 </a>
+              ) : (
+                 <button
+                    onClick={() => setShowBusinessRegModal(true)}
+                    className="w-full lg:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+                 >
+                    <Plus size={20} /> Advertise My Skills
+                 </button>
+              )}
            </div>
 
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

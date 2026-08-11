@@ -11,6 +11,13 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --card-bg: rgba(20, 20, 20, 0.6);
   --input-bg: rgba(0, 0, 0, 0.3);
+  /* Referenced throughout auth/page.tsx's inline styles but never actually
+     defined anywhere — an undefined custom property makes the property that
+     reads it compute to nothing, so the "glass" card had no background tint
+     at all, only whatever backdrop-filter: blur happened to produce.
+     Defining them here (dark defaults) fixes that regardless of theme. */
+  --glass-bg: rgba(15, 15, 15, 0.55);
+  --shadow-color: rgba(0, 0, 0, 0.45);
   /* Landing-page accent palette — used sparingly (background glow, hover
      accents) to break up what was an all-gold-on-black page; the gold
      stays the dominant brand color everywhere else. */
@@ -24,6 +31,28 @@
   --foreground: #ffffff;
 }
 
+/* A genuine light theme — deliberately its OWN value ('light'), not a
+   redefinition of 'day'. The dashboard forces data-theme="night" on every
+   mount and is built almost entirely from hardcoded dark Tailwind utilities
+   (text-white, bg-black, …) rather than these variables, so it can never
+   honor a real light mode without that being rewritten wholesale (see the
+   removed dashboard theme toggle). Scoping light mode to its own attribute
+   value means the public auth/landing pages — which DO read every color
+   through these variables — can have a real, working toggle without any
+   risk of the dashboard flashing an unstyled, half-light page. */
+[data-theme='light'] {
+  --background: #f7f5f0;
+  --foreground: #1a1712;
+  --gold-primary: #a67c1f;
+  --gold-secondary: #8a6a19;
+  --gold-dim: rgba(166, 124, 31, 0.14);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --input-bg: rgba(0, 0, 0, 0.04);
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --shadow-color: rgba(30, 25, 15, 0.12);
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
@@ -32,29 +61,43 @@ body {
 }
 
 /* Dashboard Specific Layout */
+/* Primary navigation lives in .bottom-nav-bar, fixed to the viewport bottom
+   (see below) — so the page itself is just a column: top bar, then content.
+   .more-panel (profile/language/logout — the things that don't fit six tabs
+   at the bottom) still slides in as an off-canvas sheet using the same
+   mechanism the old sidebar drawer used on mobile. */
 .dashboard-wrapper {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background: var(--background);
 }
 
-.sidebar-container {
+.more-panel {
   width: 280px;
+  max-width: 85vw;
   background: #0d0d0d;
   border-right: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   height: 100vh;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  transform: translateX(-100%);
   transition: transform 0.3s ease;
-  z-index: 50;
+  z-index: 70;
+}
+
+.more-panel.open {
+  transform: translateX(0);
 }
 
 .dashboard-main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .dashboard-top-bar {
@@ -368,11 +411,14 @@ body {
   background: rgba(212, 175, 55, 0.18);
 }
 
-/* The hamburger/close buttons only make sense once the sidebar becomes an
-   off-canvas drawer below 1024px; hidden by default so desktop doesn't show a
-   button that does nothing (the sidebar is already visible in the flex row). */
+/* The hamburger is now the ONLY entry point to .more-panel (profile,
+   language, logout) at every viewport — primary navigation moved to the
+   fixed bottom bar, so this button is never redundant the way it was when
+   the sidebar sat visible in a desktop flex row. */
 .mobile-menu-btn {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: #aaa;
@@ -391,27 +437,70 @@ body {
   margin-left: auto;
 }
 
-@media (max-width: 1024px) {
-  .mobile-menu-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 65;
+}
 
-  .sidebar-container {
-    position: fixed;
-    transform: translateX(-100%);
-  }
-  .sidebar-container.open {
-    transform: translateX(0);
-  }
-  .sidebar-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
-    z-index: 45;
-  }
+/* Fixed bottom tab bar — the app's primary navigation. Six destinations is
+   more than a typical mobile bottom bar wants, so each item is compact
+   (icon + micro-label) and the strip scrolls horizontally rather than
+   shrinking items past legibility on narrow phones. */
+.bottom-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  overflow-x: auto;
+  background: rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--glass-border);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  z-index: 60;
+}
+
+.bottom-nav-item {
+  flex: 1 0 auto;
+  min-width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.4rem 0.6rem;
+  color: #888;
+  text-decoration: none;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+  border-top: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.bottom-nav-item:hover {
+  color: #ccc;
+}
+
+.bottom-nav-item.active {
+  color: var(--gold-primary);
+  border-top-color: var(--gold-primary);
+}
+
+/* Room for the fixed bottom bar so the last bit of page content is never
+   hidden behind it — the bar's own height varies slightly with the safe-area
+   inset, so this is a deliberately generous flat estimate rather than a
+   brittle exact match. */
+.dashboard-page-body {
+  padding-bottom: 5rem;
+}
+
+@media (max-width: 1024px) {
 
   .dashboard-page-title span {
     display: none; /* icon only on small screens to save top-bar space */
