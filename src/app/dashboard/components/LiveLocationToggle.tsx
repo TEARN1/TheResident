@@ -9,21 +9,32 @@
  * per-user Supabase Realtime presence channel (`live-loc-<userId>`), so a
  * second tab/device watching the same channel could pick it up. Actually
  * notifying a Care Circle is out of scope here — that's owned elsewhere.
+ *
+ * `sharing`/`onSharingChange` are lifted to the parent (VibeMap) rather than
+ * owned here, because VibeMap renders this twice — once as a compact toggle
+ * in the floating control stack (the previous location was three taps deep
+ * inside the Alerts drawer, where almost nobody found it) and once with its
+ * full description inside that same drawer. Two independent instances would
+ * mean two independent geolocation watches and two toggle states that could
+ * disagree with each other.
  */
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Radio } from 'lucide-react'
 import { supabase } from '../../../utils/supabase'
 
 interface Props {
   userId: string | null
+  sharing: boolean
+  onSharingChange: (sharing: boolean) => void
   // accuracy is the browser's own 1-sigma confidence radius in metres —
   // surfaced so the map can show it honestly instead of drawing a plain dot
   // that implies pinpoint precision the Geolocation API never actually gives.
   onPosition: (pos: { lat: number; lon: number; accuracy?: number } | null) => void
+  // Icon-only variant for the map's floating control stack.
+  compact?: boolean
 }
 
-export default function LiveLocationToggle({ userId, onPosition }: Props) {
-  const [sharing, setSharing] = useState(false)
+export default function LiveLocationToggle({ userId, sharing, onSharingChange, onPosition, compact = false }: Props) {
   const watchIdRef = useRef<number | null>(null)
   const channelRef = useRef<ReturnType<NonNullable<typeof supabase>['channel']> | null>(null)
 
@@ -68,6 +79,20 @@ export default function LiveLocationToggle({ userId, onPosition }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sharing, userId])
 
+  if (compact) {
+    return (
+      <button
+        onClick={() => onSharingChange(!sharing)}
+        aria-label={sharing ? 'Stop sharing my live location' : 'Show my live location'}
+        aria-pressed={sharing}
+        title={sharing ? 'Live location on — tap to stop' : 'Show my live location'}
+        className={`bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 shadow-2xl transition-all ${sharing ? 'text-gold-primary' : 'text-gray-300 hover:text-white'}`}
+      >
+        <Radio size={16} className={sharing ? 'animate-pulse' : ''} />
+      </button>
+    )
+  }
+
   return (
     <div className="flex items-center justify-between p-3 bg-white/2 border border-white/5 rounded-xl">
       <div className="flex items-center gap-2">
@@ -79,7 +104,7 @@ export default function LiveLocationToggle({ userId, onPosition }: Props) {
         </div>
       </div>
       <button
-        onClick={() => setSharing(s => !s)}
+        onClick={() => onSharingChange(!sharing)}
         className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ${sharing ? 'bg-gold-primary' : 'bg-white/10'}`}
         style={{ height: '22px' }}
       >

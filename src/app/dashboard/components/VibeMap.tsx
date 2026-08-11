@@ -100,6 +100,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const [matrixPoints, setMatrixPoints] = useState<MatrixPoint[]>([])
   const [alertRadiusM, setAlertRadiusM] = useState(500)
   const [livePosition, setLivePosition] = useState<{ lat: number; lon: number; accuracy?: number } | null>(null)
+  const [locationSharing, setLocationSharing] = useState(false)
 
   // Report-a-closure form, opened from the pending-point action card.
   const [showReportForm, setShowReportForm] = useState(false)
@@ -667,6 +668,11 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
               <Navigation size={16} />
             </button>
           )}
+          {/* Live location was previously reachable only by opening the
+              Alerts drawer — a setting almost nobody would stumble into.
+              This is the actual answer to "where do I click to see my live
+              location?": right here, in the always-visible control stack. */}
+          <LiveLocationToggle userId={currentUserId} sharing={locationSharing} onSharingChange={setLocationSharing} onPosition={setLivePosition} compact />
         </div>
 
         {/* Tools drawer toggle — floating left, below search */}
@@ -832,7 +838,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                   <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Alerts near saved places</p>
                   <p className="text-lg font-bold text-white">{geofenceHits.length}</p>
                 </div>
-                <LiveLocationToggle userId={currentUserId} onPosition={setLivePosition} />
+                <LiveLocationToggle userId={currentUserId} sharing={locationSharing} onSharingChange={setLocationSharing} onPosition={setLivePosition} />
               </div>
             )}
           </div>
