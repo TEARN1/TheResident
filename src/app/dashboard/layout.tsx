@@ -8,7 +8,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, Map as MapIcon, UserRound
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound
 } from 'lucide-react'
 import {
   loginUser,
@@ -191,20 +191,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span>{pageTitle.name}</span>
           </div>
 
+          {/* The "Map" shortcut used to live here on every single page — dead
+              weight on the 5 of 6 tabs that have nothing to do with the map.
+              VibeMap is one tap away from Community's own tab bar (and its
+              fullscreen entry), so this bar now only carries what's actually
+              page-agnostic: notifications. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto' }}>
-             <Link
-               href="/dashboard/community?tab=vibemap"
-               title="Open the shared living map"
-               style={{
-                 display: 'flex', alignItems: 'center', gap: '6px',
-                 background: pathname === '/dashboard/community' ? 'rgba(212, 175, 55, 0.12)' : 'transparent',
-                 border: '1px solid ' + (pathname === '/dashboard/community' ? 'rgba(212, 175, 55, 0.3)' : 'transparent'),
-                 color: '#D4AF37', padding: '0.4rem 0.7rem', borderRadius: '8px',
-                 fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em'
-               }}
-             >
-               <MapIcon size={16} /> <span className="hidden sm:inline">Map</span>
-             </Link>
              <div ref={notifMenuRef} style={{ position: 'relative' }}>
                 <button onClick={() => setShowNotifMenu(!showNotifMenu)} style={{ background: 'transparent', border: 'none', color: '#D4AF37', position: 'relative', cursor: 'pointer' }}>
                    <Megaphone size={20} />
