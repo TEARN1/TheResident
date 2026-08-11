@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2
 } from 'lucide-react'
 import {
   RootState,
@@ -15,6 +15,7 @@ import {
   selectMatchedRoommates,
   addRequest,
   addListing,
+  deleteListing,
   updateRequestStatus,
   isGuestUser
 } from '../../../store'
@@ -99,6 +100,14 @@ export default function HousingPage() {
 
   // Reviews toggle (per listing card)
   const [reviewsOpenFor, setReviewsOpenFor] = useState<string | null>(null)
+
+  const [confirmDeleteListingId, setConfirmDeleteListingId] = useState<string | null>(null)
+  const handleDeleteListing = (id: string) => {
+    dispatch(deleteListing(id))
+    setConfirmDeleteListingId(null)
+    setAlertNotification('Listing removed.')
+    setTimeout(() => setAlertNotification(null), 3000)
+  }
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const allListings = useSelector((state: RootState) => state.listings.items)
@@ -633,7 +642,32 @@ export default function HousingPage() {
 
                   <div className="mt-auto pt-6 border-t border-white/5 space-y-2">
                      {item.landlordId === currentUser?.id ? (
-                        <UpgradeButton item="room_boost" targetId={item.id} className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest" />
+                        <>
+                          <UpgradeButton item="room_boost" targetId={item.id} className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest" />
+                          {confirmDeleteListingId === item.id ? (
+                             <div className="flex items-center gap-2">
+                                <button
+                                   onClick={() => handleDeleteListing(item.id)}
+                                   className="flex-1 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
+                                >
+                                   Confirm delete
+                                </button>
+                                <button
+                                   onClick={() => setConfirmDeleteListingId(null)}
+                                   className="px-4 bg-white/5 hover:bg-white/10 text-gray-400 font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
+                                >
+                                   Cancel
+                                </button>
+                             </div>
+                          ) : (
+                             <button
+                                onClick={() => setConfirmDeleteListingId(item.id)}
+                                className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-red-500/5 border border-transparent hover:border-red-500/20 text-gray-600 hover:text-red-400 font-bold py-2 rounded-xl transition-all text-[10px] uppercase tracking-widest"
+                             >
+                                <Trash2 size={12} /> Delete listing
+                             </button>
+                          )}
+                        </>
                      ) : isGuest ? (
                         <Link
                            href="/auth"

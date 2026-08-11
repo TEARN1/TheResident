@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette } from 'lucide-react'
+import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2 } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
@@ -300,6 +300,16 @@ export default function GossipPage() {
     }
   }
 
+  const deletePost = async (postId: string) => {
+    if (!supabase) return
+    const { error: deleteError } = await supabase.from('res_gossip_posts').delete().eq('id', postId)
+    if (deleteError) {
+      setError(humanizeSupabaseError(deleteError.message))
+      return
+    }
+    setPosts(prev => prev.filter(p => p.id !== postId))
+  }
+
   const submitComment = async (postId: string) => {
     const body = (commentDraft[postId] || '').trim()
     if (!supabase || !body) return
@@ -456,7 +466,9 @@ export default function GossipPage() {
                     style={{ backgroundImage: bgCss }}
                   >
                     <div className="absolute top-3 right-3">
-                      {post.author_id !== myId && <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
+                      {post.author_id === myId
+                        ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-black/50 hover:bg-red-500/80 text-white/80 hover:text-white rounded-full p-1.5 transition-all"><Trash2 size={13} /></button>
+                        : <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
                     </div>
                     <p className="text-lg sm:text-xl font-bold text-white text-center leading-snug whitespace-pre-wrap drop-shadow-md max-w-md">
                       {post.body}
@@ -525,7 +537,9 @@ export default function GossipPage() {
                       <p className="text-[10px] text-gray-600">{new Date(post.created_at).toLocaleString()}</p>
                     </div>
                   </div>
-                  {post.author_id !== myId && <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
+                  {post.author_id === myId
+                    ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="text-gray-600 hover:text-red-400 transition-all p-1"><Trash2 size={15} /></button>
+                    : <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
                 </div>
                 {post.body && <p className="text-sm text-gray-300 mt-3 leading-relaxed whitespace-pre-wrap">{post.body}</p>}
 
