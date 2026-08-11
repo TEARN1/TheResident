@@ -215,7 +215,13 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       // is against OSM's own tile usage policy. No API key required.
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 19,
+        // CARTO's raster tiles are only rendered up to z19 (maxNativeZoom) —
+        // past that Leaflet upscales the z19 tile instead of requesting a
+        // tile that doesn't exist. Letting the map itself go to z21 gets the
+        // scale bar down to roughly street-width (~10m) for road-closure
+        // reports, where "which side of the road" actually matters.
+        maxZoom: 21,
+        maxNativeZoom: 19,
         subdomains: 'abcd'
       }).addTo(map)
 
@@ -225,10 +231,19 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       liveMarkerRef.current = L.layerGroup().addTo(map)
       mapRef.current = map
 
+      // Minimum zoom for a report pin to be trustworthy: at zoom 15 the scale
+      // bar reads roughly 300m — any looser than that and a "road closed"
+      // pin could land on the wrong street entirely. Clicking while zoomed
+      // out further re-centres and zooms in on the clicked point instead of
+      // dropping the pin at an unreliable location.
+      const MIN_REPORT_ZOOM = 15
       map.on('click', (e: import('leaflet').LeafletMouseEvent) => {
         setShowReportForm(false)
         setReportError(null)
         setPendingPoint({ label: `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`, lat: e.latlng.lat, lon: e.latlng.lng })
+        if (map.getZoom() < MIN_REPORT_ZOOM) {
+          map.setView(e.latlng, MIN_REPORT_ZOOM)
+        }
       })
 
       // Drives the legend's "in view" counts (see boundsTick) and gives a
@@ -509,7 +524,15 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       setReportNote('')
       if (center) loadZones(center.lat, center.lon)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      // reportZone can reject with a Supabase PostgrestError, which is a
+      // plain object (not an Error instance) — String(err) on that produces
+      // the useless literal text "[object Object]" instead of the real
+      // message.
+      const msg = err instanceof Error
+        ? err.message
+        : (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string')
+          ? (err as { message: string }).message
+          : String(err)
       if (msg.includes('rate_limited')) {
         setReportError('Too many reports in the last hour — try again shortly.')
       } else {
