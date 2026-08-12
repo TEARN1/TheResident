@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import 'leaflet/dist/leaflet.css'
-import { Navigation, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader } from 'lucide-react'
+import { Navigation, LocateFixed, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState, isGuestUser } from '../../../store'
 import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../utils/mapZones'
@@ -101,6 +101,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const [alertRadiusM, setAlertRadiusM] = useState(500)
   const [livePosition, setLivePosition] = useState<{ lat: number; lon: number; accuracy?: number } | null>(null)
   const [locationSharing, setLocationSharing] = useState(false)
+  const [locating, setLocating] = useState(false)
 
   // Report-a-closure form, opened from the pending-point action card.
   const [showReportForm, setShowReportForm] = useState(false)
@@ -549,6 +550,29 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     if (map) map.setZoom(map.getZoom() + delta)
   }
 
+  // Standard "locate me" behaviour (Google/Apple Maps): one tap turns on
+  // live sharing AND jumps straight to your position at street level —
+  // not two separate actions (a toggle, then a wait, then a manual
+  // recenter). Zoom 18 puts the scale bar at roughly 40-50m, matching what
+  // you'd actually want to judge "which street is this" at.
+  const STREET_LEVEL_ZOOM = 18
+  const handleLocateMe = () => {
+    if (locationSharing && livePosition) {
+      mapRef.current?.setView([livePosition.lat, livePosition.lon], STREET_LEVEL_ZOOM)
+      return
+    }
+    setLocationSharing(true)
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        mapRef.current?.setView([pos.coords.latitude, pos.coords.longitude], STREET_LEVEL_ZOOM)
+        setLocating(false)
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    )
+  }
+
   return (
     <div className={fullscreen ? 'h-full w-full' : 'glass-panel p-3 md:p-4'}>
       {!fullscreen && (
@@ -658,21 +682,21 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           >
             <Maximize size={16} />
           </button>
-          {livePosition && (
-            <button
-              onClick={() => mapRef.current?.setView([livePosition.lat, livePosition.lon], 16)}
-              aria-label="Recenter on my location"
-              className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gold-primary hover:text-white shadow-2xl"
-              title="Back to my location"
-            >
-              <Navigation size={16} />
-            </button>
-          )}
           {/* Live location was previously reachable only by opening the
-              Alerts drawer — a setting almost nobody would stumble into.
-              This is the actual answer to "where do I click to see my live
-              location?": right here, in the always-visible control stack. */}
-          <LiveLocationToggle userId={currentUserId} sharing={locationSharing} onSharingChange={setLocationSharing} onPosition={setLivePosition} compact />
+              Alerts drawer — a setting almost nobody would stumble into —
+              and even found, it just flipped a switch with no visible
+              result. One tap now: turn on AND jump to street level, the way
+              every map app's locate-me button actually behaves. */}
+          <button
+            onClick={handleLocateMe}
+            disabled={locating}
+            aria-label={locationSharing ? 'Recenter on my location' : 'Show my live location'}
+            aria-pressed={locationSharing}
+            title={locationSharing ? 'Back to my location' : 'Show my live location'}
+            className={`bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 shadow-2xl transition-all disabled:opacity-60 ${locationSharing ? 'text-gold-primary' : 'text-gray-300 hover:text-white'}`}
+          >
+            {locating ? <Loader size={16} className="animate-spin" /> : <LocateFixed size={16} className={locationSharing ? 'animate-pulse' : ''} />}
+          </button>
         </div>
 
         {/* Tools drawer toggle — floating left, below search */}
