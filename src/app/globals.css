@@ -328,6 +328,49 @@ body {
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
+.guest-summary-banner {
+  margin: 0 1rem 0.75rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.02));
+  border: 1px solid rgba(212,175,55,0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.4;
+}
+
+.guest-summary-banner strong {
+  color: #fff;
+}
+
+.guest-summary-banner-cta {
+  flex-shrink: 0;
+  background: var(--gold-primary);
+  color: #000;
+  font-weight: 900;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.guest-summary-banner-dismiss {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  padding: 0.25rem;
+}
+.guest-summary-banner-dismiss:hover {
+  color: rgba(255,255,255,0.8);
+}
+
 .notif-badge {
   position: absolute;
   top: -4px;

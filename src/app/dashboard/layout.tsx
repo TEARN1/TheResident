@@ -8,7 +8,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles
 } from 'lucide-react'
 import {
   loginUser,
@@ -30,6 +30,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
+  // Guests previously got the "you should sign up" pitch as five separate
+  // small nudges scattered across Housing, Services and Profile, each only
+  // seen if that specific screen happened to render it. One banner, said
+  // once, dismissible — rather than the same pitch repeating on every tab.
+  const [guestBannerDismissed, setGuestBannerDismissed] = useState(true)
+  /* eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount */
+  useEffect(() => {
+    setGuestBannerDismissed(typeof window !== 'undefined' && sessionStorage.getItem('guestBannerDismissed') === '1')
+  }, [])
+  const dismissGuestBanner = () => {
+    sessionStorage.setItem('guestBannerDismissed', '1')
+    setGuestBannerDismissed(true)
+  }
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const notifications = useSelector((state: RootState) => state.notifications)
@@ -147,37 +160,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="dashboard-wrapper">
+      {/* These four could previously all be true at once — a loading spinner,
+          a failed-table warning, an offline-queue count, and a one-off toast
+          stacked three-deep above every page. Only one is ever the MOST
+          urgent thing to tell someone, so show just that one, worst-first:
+          a failed fetch beats "still loading", which beats routine offline
+          queuing, which beats a transient success toast. */}
       <div className="top-alert-banner-stack">
-        {alertNotification && (
-          <div className="top-alert-banner">
-            <CheckCircle2 size={18} color="#22c55e" />
-            <span>{alertNotification}</span>
-          </div>
-        )}
-
-        {/* Live-data status: these are real signals from the sync layer, not
-            decoration — this banner went silent when the dashboard was split
-            into routed pages, so failed fetches and queued offline writes were
-            happening invisibly. */}
-        {dataStatus === 'loading' && (
-          <div className="top-alert-banner">
-            <Loader size={18} color="#D4AF37" className="animate-spin" />
-            <span>Loading your community data…</span>
-          </div>
-        )}
-        {dataStatus === 'error' && failedTables.length > 0 && (
+        {dataStatus === 'error' && failedTables.length > 0 ? (
           <div className="top-alert-banner">
             <AlertTriangle size={18} color="#ef4444" />
             <span>Some data couldn&apos;t load ({failedTables.join(', ')}). Retrying automatically.</span>
           </div>
-        )}
-        {pendingWrites > 0 && (
+        ) : dataStatus === 'loading' ? (
+          <div className="top-alert-banner">
+            <Loader size={18} color="#D4AF37" className="animate-spin" />
+            <span>Loading your community data…</span>
+          </div>
+        ) : pendingWrites > 0 ? (
           <div className="top-alert-banner">
             <Wifi size={18} color="#D4AF37" />
             <span>{pendingWrites} change{pendingWrites === 1 ? '' : 's'} waiting to sync — you&apos;re offline.</span>
           </div>
-        )}
+        ) : alertNotification ? (
+          <div className="top-alert-banner">
+            <CheckCircle2 size={18} color="#22c55e" />
+            <span>{alertNotification}</span>
+          </div>
+        ) : null}
       </div>
+
+      {currentUser && isGuestUser(currentUser) && !guestBannerDismissed && (
+        <div className="guest-summary-banner">
+          <Sparkles size={16} className="shrink-0" style={{ color: '#D4AF37' }} />
+          <span>
+            <strong>You&apos;re browsing as a guest.</strong> Sign up free to save listings, message neighbours, post to the feed, and build the trust circle other residents can see.
+          </span>
+          <Link href="/auth" className="guest-summary-banner-cta">Sign up</Link>
+          <button onClick={dismissGuestBanner} aria-label="Dismiss" className="guest-summary-banner-dismiss">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* No hamburger / "More" panel anymore — Profile, Next of Kin, Business,
           language and Log Out all live on the Profile page now (see
