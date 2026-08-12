@@ -7,6 +7,7 @@ import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/BlockUserButton'
+import EmptyState from '../components/EmptyState'
 
 interface GossipPost {
   id: string
@@ -450,9 +451,8 @@ export default function GossipPage() {
           <Loader size={16} className="animate-spin" /> Loading feed…
         </div>
       ) : posts.length === 0 ? (
-        <div className="glass-panel p-12 text-center text-gray-500">
-          <MessageSquare size={48} className="mx-auto mb-4 opacity-10" />
-          <p>Nothing posted yet. Be the first.</p>
+        <div className="glass-panel">
+          <EmptyState icon={MessageSquare} title="Nothing posted yet" subtitle="Be the first to say something." />
         </div>
       ) : (
         <div className="space-y-4">

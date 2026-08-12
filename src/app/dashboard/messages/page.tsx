@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux'
 import { Send, MessageCircle, ArrowLeft, Loader, Clock } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
+import EmptyState from '../components/EmptyState'
 
 // DMs route through Gruvs' EXISTING shared `messages` table (CONTRACT.md §4):
 // sender_id, recipient_id, body, message_type, is_request, created_at.
@@ -217,10 +218,7 @@ export default function MessagesPage() {
       ) : error && threads.length === 0 ? (
         <p className="text-[11px] text-red-400">{error}</p>
       ) : threads.length === 0 ? (
-        <div className="py-12 text-center text-gray-500">
-          <MessageCircle size={48} className="mx-auto mb-4 opacity-10" />
-          <p>No conversations yet.</p>
-        </div>
+        <EmptyState icon={MessageCircle} title="No conversations yet" subtitle="Message a landlord, driver or neighbour to start one." />
       ) : (
         <div className="space-y-2">
           {threads

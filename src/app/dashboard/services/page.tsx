@@ -24,6 +24,7 @@ import FollowButton from '../components/FollowButton'
 import TrustBadge from '../components/TrustBadge'
 import OpenInMapsButton from '../components/OpenInMapsButton'
 import UpgradeButton from '../components/UpgradeButton'
+import EmptyState from '../components/EmptyState'
 import { directionsUrlForAddress } from '../../../utils/navigation'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
@@ -413,6 +414,11 @@ export default function ServicesPage() {
               )}
            </div>
 
+           {services.length === 0 ? (
+             <div className="glass-panel">
+               <EmptyState icon={Briefcase} title="No local pros listed yet" subtitle="Be the first to advertise your skills to the neighbourhood." />
+             </div>
+           ) : (
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
              {services.map(srv => (
                <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-black/40 hover:border-gold-primary/40 transition-all duration-500 shadow-2xl">
@@ -498,6 +504,7 @@ export default function ServicesPage() {
                </motion.div>
              ))}
            </div>
+           )}
 
            {/* Service Logs Section */}
            {incomingOrders.length > 0 && (

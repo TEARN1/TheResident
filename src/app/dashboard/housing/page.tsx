@@ -32,6 +32,7 @@ import OpenInMapsButton from '../components/OpenInMapsButton'
 import Link from 'next/link'
 import UpgradeButton from '../components/UpgradeButton'
 import PropertiesPanel, { type ResProperty } from '../components/PropertiesPanel'
+import EmptyState from '../components/EmptyState'
 
 // Top of the budget slider. Well above the real ceiling for a single room so
 // the control can express any listing on the platform; the max position means
@@ -538,7 +539,14 @@ export default function HousingPage() {
              )}
           </AnimatePresence>
 
-          {/* Listings Grid */}
+          {/* Listings Grid — previously if filters excluded everything this
+              area just rendered a blank grid with no explanation, reading as
+              a broken page rather than "your filters are too narrow". */}
+          {filteredListings.length === 0 ? (
+            <div className="glass-panel">
+              <EmptyState icon={Home} title="No rooms match your filters" subtitle="Try widening your price ceiling or clearing a filter." />
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {filteredListings.map((item) => (
               <motion.div
@@ -688,6 +696,7 @@ export default function HousingPage() {
               </motion.div>
             ))}
           </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
