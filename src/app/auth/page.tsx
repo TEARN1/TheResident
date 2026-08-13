@@ -10,31 +10,23 @@ import { performLogin } from '../../utils/authLogin'
 import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 
-// Cross-app SSO mark for The Gruvs. No Gruvs brand asset ships in this repo,
-// so rather than a placeholder emoji this renders as a proper monogram badge
-// in the app's own gold theme — a logo treatment, not a random icon.
+// Cross-app SSO mark for The Gruvs — their real logo (public/gruvs-logo.png),
+// not a placeholder monogram.
 function GruvsMark() {
   return (
-    <span
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/gruvs-logo.png"
+      alt="The Gruvs"
       aria-hidden="true"
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         width: '22px',
         height: '22px',
         borderRadius: '50%',
-        background: 'var(--gold-primary)',
-        color: '#0a0a0a',
-        fontSize: '0.7rem',
-        fontWeight: 900,
-        fontFamily: 'var(--font-heading), serif',
-        flexShrink: 0,
-        lineHeight: 1
+        objectFit: 'cover',
+        flexShrink: 0
       }}
-    >
-      G
-    </span>
+    />
   )
 }
 
