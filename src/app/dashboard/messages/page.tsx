@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
+import { useSearchParams } from 'next/navigation'
 import { Send, MessageCircle, ArrowLeft, Loader, Clock } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
@@ -37,6 +38,7 @@ interface Thread {
 export default function MessagesPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const myId = currentUser?.id
+  const searchParams = useSearchParams()
 
   const [threads, setThreads] = useState<Thread[]>([])
   const [profileMap, setProfileMap] = useState<Record<string, ProfileHit>>({})
@@ -94,6 +96,21 @@ export default function MessagesPage() {
     const p = profileMap[id]
     return p?.display_name || p?.username || 'Resident'
   }
+
+  // Deep-link support (/dashboard/messages?to=<userId>) — used by "Chat
+  // Seller"-style buttons elsewhere in the app that previously had nowhere
+  // to send someone, since there was no way to open a specific person's
+  // thread without it already existing in the list.
+  useEffect(() => {
+    const to = searchParams.get('to')
+    if (!to || !supabase || !myId || to === myId) return
+    setActiveThread(to)
+    if (!profileMap[to]) {
+      supabase.from('profiles').select('id, username, display_name, avatar_url').eq('id', to).maybeSingle()
+        .then(({ data }) => { if (data) setProfileMap(prev => ({ ...prev, [to]: data as ProfileHit })) })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, myId])
 
   const loadThread = useCallback(async (otherId: string) => {
     if (!supabase || !myId) return

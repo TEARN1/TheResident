@@ -722,9 +722,12 @@ export default function HousingPage() {
                       <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest">{rm.childrenCount}</span>
                    </div>
                 </div>
-                <button className="w-full mt-4 bg-gold-primary text-black font-black py-3 rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95">
+                <Link
+                  href={`/dashboard/messages?to=${rm.id}`}
+                  className="w-full mt-4 bg-gold-primary text-black font-black py-3 rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95 flex items-center justify-center"
+                >
                    Invite to Share
-                </button>
+                </Link>
              </motion.div>
            ))}
         </div>

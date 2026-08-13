@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import Link from 'next/link'
 import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin, EyeOff, Eye } from 'lucide-react'
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../store'
 import UpgradeButton from './UpgradeButton'
@@ -154,7 +155,9 @@ export default function MarketTab({
                              </button>
                            </>
                          )}
-                         <button className="text-gold-primary text-[10px] font-bold hover:underline">Chat Seller</button>
+                         {item.createdBy !== currentUserId && (
+                           <Link href={`/dashboard/messages?to=${item.createdBy}`} className="text-gold-primary text-[10px] font-bold hover:underline">Chat Seller</Link>
+                         )}
                       </div>
                    </div>
                 </div>
