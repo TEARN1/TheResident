@@ -44,8 +44,27 @@ export default function HouseholdTab({
   chores,
   reputationScores,
   currentUserId,
-  onComplete
+  onComplete,
+  onRotate
 }: HouseholdTabProps) {
+  const [rotating, setRotating] = useState(false)
+  // "Rotate Chores" had no handler at all despite onRotate already existing
+  // as a prop and store/actions.ts already having a real res_rotate_chores
+  // RPC wired up (rotateChores) — nothing ever called either of them. Reuses
+  // the current chore titles (or a sensible default set for a household with
+  // none yet) rotated across a standard weekly cycle.
+  const handleRotate = async () => {
+    if (!onRotate) return
+    const tasks = [...new Set(chores.map(c => c.title))]
+    const taskList = tasks.length > 0 ? tasks : ['Kitchen', 'Bathroom', 'Trash', 'Common Area']
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].slice(0, taskList.length)
+    setRotating(true)
+    try {
+      await onRotate(taskList, days)
+    } finally {
+      setRotating(false)
+    }
+  }
   // #9: one tenant, one landlord at a time — a tenancy has to have a real
   // way to end, or an approved tenant can never legitimately move again.
   const [activeTenancies, setActiveTenancies] = useState<ActiveTenancy[]>([])
@@ -97,8 +116,12 @@ export default function HouseholdTab({
            <h2 className="text-2xl font-bold text-white">{householdName}</h2>
            <p className="text-gray-500 text-sm">Household Management & Shared Responsibilities</p>
         </div>
-        <button className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 px-4 py-2 rounded-lg text-sm transition-all">
-           <RotateCcw size={16} /> Rotate Chores
+        <button
+          onClick={handleRotate}
+          disabled={rotating}
+          className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50"
+        >
+           <RotateCcw size={16} className={rotating ? 'animate-spin' : ''} /> {rotating ? 'Rotating…' : 'Rotate Chores'}
         </button>
       </div>
 

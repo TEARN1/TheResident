@@ -16,6 +16,7 @@ import {
   vibeNotice,
   echoNotice,
   addDispute,
+  updateDisputeStatus,
   addMarketItem,
   addTool,
   pledgeGroupBuy,
@@ -35,7 +36,8 @@ import {
   respondToAlert,
   resolveAlertRpc,
   reportStatus,
-  reportContent
+  reportContent,
+  rotateChores
 } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
 import NoticeBoardTab from '../components/NoticeBoardTab'
@@ -352,7 +354,9 @@ export default function CommunityPage() {
     description: d.description,
     category: d.category,
     reportedBy: d.reportedBy,
+    reportedById: d.reportedById,
     againstUser: d.againstUser,
+    againstUserId: d.againstUserId,
     status: (d.status === 'mediating' ? 'investigating' : d.status) as 'pending' | 'resolved' | 'investigating',
     timestamp: d.timestamp,
     resolutionDetails: d.resolutionDetails
@@ -662,7 +666,12 @@ export default function CommunityPage() {
               <ChoreSchedulerTab communityChores={adaptedChores} currentUser={currentUser} reputationScores={reputationScores} handleCompleteChore={handleCompleteChore} />
             )}
             {subTab === 'disputes' && (
-              <DisputesTab communityDisputes={adaptedDisputes} currentUser={currentUser} onFileDispute={() => setShowDisputeModal(true)} />
+              <DisputesTab
+                communityDisputes={adaptedDisputes}
+                currentUser={currentUser}
+                onFileDispute={() => setShowDisputeModal(true)}
+                onModerate={(disputeId, status, resolutionDetails) => dispatch(updateDisputeStatus({ disputeId, status, resolutionDetails }))}
+              />
             )}
             {subTab === 'household' && (
               <HouseholdTab
@@ -672,6 +681,10 @@ export default function CommunityPage() {
                 chores={adaptedChores}
                 reputationScores={reputationScores}
                 currentUserId={currentUser?.id || ''}
+                onRotate={(tasks, days) => {
+                  if (!householdListingId) return
+                  dispatch(rotateChores({ listingId: householdListingId, tasks, days }))
+                }}
                 styles={{}}
               />
             )}
