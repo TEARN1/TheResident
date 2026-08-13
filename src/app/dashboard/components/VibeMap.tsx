@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import 'leaflet/dist/leaflet.css'
-import { Navigation, LocateFixed, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader } from 'lucide-react'
+import { Navigation, LocateFixed, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState, isGuestUser } from '../../../store'
 import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../utils/mapZones'
@@ -69,6 +69,19 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const pinsLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const liveMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const leafletRef = useRef<typeof import('leaflet') | null>(null)
+  const tileLayerRef = useRef<import('leaflet').TileLayer | null>(null)
+
+  // The map used to be locked to CARTO's light "Voyager" basemap — a bright
+  // white rectangle sitting in the middle of an otherwise all-dark app.
+  // Dark Matter is the same OSM data via CARTO's dark render, so this is a
+  // reskin, not a different data source. Defaults to dark to match the rest
+  // of the UI; Voyager stays available for anyone who finds streets/labels
+  // easier to read on light.
+  const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark')
+  const TILE_SOURCES: Record<'dark' | 'light', string> = {
+    dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
+    light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+  }
 
   const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null)
   const [locationDenied, setLocationDenied] = useState(false)
@@ -215,7 +228,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       // often — tile.openstreetmap.org is OSM's lightweight demo server, it
       // renders under-mapped areas infrequently, and production hotlinking it
       // is against OSM's own tile usage policy. No API key required.
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      tileLayerRef.current = L.tileLayer(TILE_SOURCES[mapTheme], {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         // CARTO's raster tiles are only rendered up to z19 (maxNativeZoom) —
         // past that Leaflet upscales the z19 tile instead of requesting a
@@ -258,6 +271,14 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
     return () => { cancelled = true }
   }, [center])
+
+  // Swaps tiles in place via setUrl rather than tearing down/recreating the
+  // layer — the map itself, its zoom/pan state, and every marker layer stay
+  // untouched, only the underlying imagery changes.
+  useEffect(() => {
+    tileLayerRef.current?.setUrl(TILE_SOURCES[mapTheme])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapTheme])
 
   useEffect(() => {
     if (!center || !mapRef.current) return
@@ -696,6 +717,14 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             className={`bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 shadow-2xl transition-all disabled:opacity-60 ${locationSharing ? 'text-gold-primary' : 'text-gray-300 hover:text-white'}`}
           >
             {locating ? <Loader size={16} className="animate-spin" /> : <LocateFixed size={16} className={locationSharing ? 'animate-pulse' : ''} />}
+          </button>
+          <button
+            onClick={() => setMapTheme(t => t === 'dark' ? 'light' : 'dark')}
+            aria-label={mapTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
+            title={mapTheme === 'dark' ? 'Light map' : 'Dark map'}
+            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl"
+          >
+            {mapTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
 
