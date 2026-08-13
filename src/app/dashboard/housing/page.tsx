@@ -316,17 +316,11 @@ export default function HousingPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10 pb-32">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-             <div className="p-2 bg-gold-primary/10 rounded-lg">
-                <Home size={28} className="text-gold-primary" />
-             </div>
-             <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase italic">Housing <span className="text-gold-primary">Portal</span></h1>
-          </div>
-          <p className="text-gray-500 text-sm font-bold uppercase tracking-widest opacity-60 ml-1">Curated Living Spaces & Verified Resident Matches</p>
-        </div>
-
+      {/* The big icon+title+tagline block that used to live here duplicated
+          what the top bar already shows (icon + "Housing") — pure vertical
+          space with no new information. The tab switcher is the only part
+          of this header that actually does something. */}
+      <header className="flex justify-end">
         <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl w-full md:w-auto">
           <button
             onClick={() => setActiveTab('rooms')}
