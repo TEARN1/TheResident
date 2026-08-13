@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon } from 'lucide-react'
 import { RootState, AppDispatch, updateProfile, updatePreferences, setLanguage, logoutUser, isGuestUser } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/UpgradeButton'
@@ -39,6 +39,21 @@ export default function ProfilePage() {
     document.cookie = 'guest-mode=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
     dispatch(logoutUser())
     router.push('/auth')
+  }
+
+  // Dashboard theme — separate from the auth/landing pages' own toggle
+  // (which uses 'day'/'night'), and separate from `lang`. Persisted directly
+  // to the same localStorage key dashboard/layout.tsx reads on mount, since
+  // this page doesn't own the <html data-theme> attribute the layout does.
+  const [dashboardTheme, setDashboardThemeState] = useState<'night' | 'light'>('night')
+  useEffect(() => {
+    const stored = localStorage.getItem('dashboardTheme')
+    setDashboardThemeState(stored === 'light' ? 'light' : 'night')
+  }, [])
+  const setDashboardTheme = (theme: 'night' | 'light') => {
+    localStorage.setItem('dashboardTheme', theme)
+    document.documentElement.setAttribute('data-theme', theme)
+    setDashboardThemeState(theme)
   }
 
   const [hasPlus, setHasPlus] = useState<boolean | null>(null)
@@ -160,6 +175,30 @@ export default function ProfilePage() {
     </div>
   )
 
+  const themeCard = (
+    <div className="glass-panel p-6 space-y-3">
+      <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+        {dashboardTheme === 'night' ? <Moon size={16} /> : <Sun size={16} />} Appearance
+      </h2>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setDashboardTheme('night')}
+          aria-pressed={dashboardTheme === 'night'}
+          className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${dashboardTheme === 'night' ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'}`}
+        >
+          <Moon size={14} /> Dark
+        </button>
+        <button
+          onClick={() => setDashboardTheme('light')}
+          aria-pressed={dashboardTheme === 'light'}
+          className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${dashboardTheme === 'light' ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'}`}
+        >
+          <Sun size={14} /> Light
+        </button>
+      </div>
+    </div>
+  )
+
   if (guest) {
     return (
       <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6 pb-24">
@@ -171,6 +210,7 @@ export default function ProfilePage() {
             <LogIn size={14} /> Create an account
           </Link>
         </div>
+        {themeCard}
         {languageCard}
       </div>
     )
@@ -366,6 +406,7 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {themeCard}
       {languageCard}
 
       <button

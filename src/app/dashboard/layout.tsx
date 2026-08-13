@@ -51,15 +51,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const failedTables = useSelector((state: RootState) => state.ui.failedTables)
   const pendingWrites = useSelector((state: RootState) => state.ui.offlineQueue.length)
 
-  // Dark-only for now — see the removed toggle below for why. Pinned to
-  // 'night' explicitly (never 'light') so a real light mode left active by
-  // the auth/landing pages' own toggle can't leak in here — the dashboard is
-  // built from hardcoded dark Tailwind utilities, not these CSS variables,
-  // so 'light' would produce a half-styled mess rather than an actual
-  // light dashboard.
+  // A real light mode left active by the auth/landing pages' own toggle
+  // used to leak in here and render a half-styled mess, because the
+  // dashboard is built from hardcoded dark Tailwind utilities rather than
+  // the CSS variables those pages read. globals.css now carries a scoped
+  // [data-theme='light'] .dashboard-wrapper override layer for the common
+  // utility classes, so a real (if not 100% exhaustive) light dashboard is
+  // possible — this reads the same localStorage key Profile's toggle
+  // writes to, defaulting to dark for anyone who hasn't chosen yet.
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', 'night')
+      const stored = localStorage.getItem('dashboardTheme')
+      document.documentElement.setAttribute('data-theme', stored === 'light' ? 'light' : 'night')
     }
   }, [])
 

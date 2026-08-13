@@ -60,6 +60,65 @@ body {
   overflow-x: hidden;
 }
 
+/* Dashboard light-mode override layer.
+   Every dashboard page is written with hardcoded dark Tailwind utilities
+   (bg-black, text-white, border-white/10, …) rather than the CSS variables
+   above — rewriting every page to use variables instead is a much bigger
+   job than this pass. This block remaps the small set of utility classes
+   that account for the vast majority of dashboard surfaces, scoped to
+   `.dashboard-wrapper` under `[data-theme='light']` so it can never leak
+   into the (already-correct) dark dashboard or the auth/landing pages.
+   Anything NOT covered here (a one-off inline style, a rare utility class)
+   will still render dark-on-light in a few spots — this is a real, usable
+   light dashboard, not a pixel-perfect one yet. */
+[data-theme='light'] .dashboard-wrapper {
+  background: var(--background);
+}
+[data-theme='light'] .dashboard-wrapper .bg-black,
+[data-theme='light'] .dashboard-wrapper .bg-black\/80,
+[data-theme='light'] .dashboard-wrapper .bg-black\/70,
+[data-theme='light'] .dashboard-wrapper .bg-black\/60,
+[data-theme='light'] .dashboard-wrapper .bg-black\/40,
+[data-theme='light'] .dashboard-wrapper .bg-black\/20 {
+  background-color: #ffffff !important;
+}
+[data-theme='light'] .dashboard-wrapper .bg-black\/2,
+[data-theme='light'] .dashboard-wrapper .bg-white\/2,
+[data-theme='light'] .dashboard-wrapper .bg-white\/5,
+[data-theme='light'] .dashboard-wrapper .bg-white\/10 {
+  background-color: rgba(20, 17, 10, 0.04) !important;
+}
+[data-theme='light'] .dashboard-wrapper .text-white {
+  color: #1a1712 !important;
+}
+[data-theme='light'] .dashboard-wrapper .text-gray-300,
+[data-theme='light'] .dashboard-wrapper .text-gray-400 {
+  color: #4a463d !important;
+}
+[data-theme='light'] .dashboard-wrapper .text-gray-500,
+[data-theme='light'] .dashboard-wrapper .text-gray-600,
+[data-theme='light'] .dashboard-wrapper .text-gray-700 {
+  color: #7a7568 !important;
+}
+[data-theme='light'] .dashboard-wrapper .border-white\/5,
+[data-theme='light'] .dashboard-wrapper .border-white\/10,
+[data-theme='light'] .dashboard-wrapper .border-white\/20 {
+  border-color: rgba(20, 17, 10, 0.12) !important;
+}
+[data-theme='light'] .dashboard-wrapper input,
+[data-theme='light'] .dashboard-wrapper textarea,
+[data-theme='light'] .dashboard-wrapper select {
+  color: #1a1712 !important;
+}
+[data-theme='light'] .dashboard-wrapper .bottom-nav-bar {
+  background: #ffffff;
+  border-top-color: rgba(20, 17, 10, 0.1);
+}
+[data-theme='light'] .dashboard-wrapper .dashboard-top-bar {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border-bottom-color: rgba(20, 17, 10, 0.1);
+}
+
 /* Dashboard Specific Layout */
 /* Primary navigation lives in .bottom-nav-bar, fixed to the viewport bottom
    (see below) — so the page itself is just a column: top bar, then content.
