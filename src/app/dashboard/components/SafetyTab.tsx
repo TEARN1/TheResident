@@ -47,7 +47,6 @@ interface SafetyTabProps {
   onRespond?: (alertId: string, status: 'coming' | 'arrived' | 'stood_down') => void
   onResolve?: (alertId: string) => void
   onReportStatus?: (kind: 'power' | 'water' | 'network' | 'fiber' | 'road', status: 'up' | 'down', endsAt?: string | null) => void
-  styles?: Record<string, React.CSSProperties>
 }
 
 const SERVICES: Array<{ key: 'power' | 'water' | 'network' | 'fiber' | 'road'; label: string; Icon: typeof Zap }> = [

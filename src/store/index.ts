@@ -203,7 +203,7 @@ export interface ToolItem {
   currency: string
   deposit: number
   location: string
-  status: 'available' | 'rented'
+  status: 'available' | 'rented' | 'pending_return'
   rentedBy?: string
   rentedByName?: string
   rentedUntil?: string

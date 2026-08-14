@@ -37,7 +37,9 @@ import {
   resolveAlertRpc,
   reportStatus,
   reportContent,
-  rotateChores
+  rotateChores,
+  requestToolReturn,
+  confirmToolReturn
 } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
 import NoticeBoardTab from '../components/NoticeBoardTab'
@@ -660,6 +662,8 @@ export default function CommunityPage() {
                   setAlertNotification('Tool listed for your neighbours to borrow.')
                   setTimeout(() => setAlertNotification(null), 3000)
                 }}
+                onRequestReturn={(toolId) => dispatch(requestToolReturn(toolId))}
+                onConfirmReturn={(toolId) => dispatch(confirmToolReturn(toolId))}
               />
             )}
             {subTab === 'chores' && (
@@ -685,7 +689,6 @@ export default function CommunityPage() {
                   if (!householdListingId) return
                   dispatch(rotateChores({ listingId: householdListingId, tasks, days }))
                 }}
-                styles={{}}
               />
             )}
             {subTab === 'communities' && (

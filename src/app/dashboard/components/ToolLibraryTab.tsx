@@ -10,9 +10,10 @@ interface Tool {
   pricePerDay: number
   deposit: number
   location: string
-  status: 'available' | 'rented' | 'maintenance'
+  status: 'available' | 'rented' | 'maintenance' | 'pending_return'
   ownerName: string
   ownerId: string
+  rentedBy?: string
 }
 
 interface ToolLibraryTabProps {
@@ -21,6 +22,12 @@ interface ToolLibraryTabProps {
   handleRentTool?: (tool: Tool) => void
   handleAddTool?: (tool: { title: string; description: string; pricePerDay: number; deposit: number; location: string }) => void
   formatCurrency: (amount: number) => string
+  // The borrow half of this feature (handleRentTool, above) was fully
+  // wired; the return half — res_request_tool_return /
+  // res_confirm_tool_return — had no UI calling it anywhere, so a borrowed
+  // tool had no way to ever come back to "available" through the app.
+  onRequestReturn?: (toolId: string) => void
+  onConfirmReturn?: (toolId: string) => void
 }
 
 export default function ToolLibraryTab({
@@ -28,7 +35,9 @@ export default function ToolLibraryTab({
   currentUser,
   handleRentTool,
   handleAddTool,
-  formatCurrency
+  formatCurrency,
+  onRequestReturn,
+  onConfirmReturn
 }: ToolLibraryTabProps) {
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
@@ -110,8 +119,8 @@ export default function ToolLibraryTab({
                          {formatCurrency(tool.pricePerDay)} <span className="text-[10px] text-gray-500 font-bold">/ DAY</span>
                       </div>
                    </div>
-                   <span className={`text-[9px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest ${tool.status === 'available' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-gray-500/10 text-gray-500 border-gray-500/20'}`}>
-                      {tool.status}
+                   <span className={`text-[9px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest ${tool.status === 'available' ? 'bg-green-500/10 text-green-500 border-green-500/20' : tool.status === 'pending_return' ? 'bg-gold-primary/10 text-gold-primary border-gold-primary/20' : 'bg-gray-500/10 text-gray-500 border-gray-500/20'}`}>
+                      {tool.status === 'pending_return' ? 'return pending' : tool.status}
                    </span>
                 </div>
 
@@ -149,6 +158,25 @@ export default function ToolLibraryTab({
                      >
                         Secure Rental Slot
                      </button>
+                   )}
+                   {tool.status === 'rented' && tool.rentedBy === currentUser?.id && (
+                     <button
+                        onClick={() => onRequestReturn?.(tool.id)}
+                        className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95"
+                     >
+                        Mark as Returned
+                     </button>
+                   )}
+                   {tool.status === 'pending_return' && tool.ownerId === currentUser?.id && (
+                     <button
+                        onClick={() => onConfirmReturn?.(tool.id)}
+                        className="w-full bg-gold-primary text-black font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-gold-primary/10"
+                     >
+                        Confirm Return
+                     </button>
+                   )}
+                   {tool.status === 'pending_return' && tool.rentedBy === currentUser?.id && (
+                     <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest font-bold">Waiting for owner to confirm</p>
                    )}
                 </div>
               </div>

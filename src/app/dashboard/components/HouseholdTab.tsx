@@ -28,7 +28,6 @@ interface HouseholdTabProps {
   currentUserId: string
   onRotate?: (tasks: string[], days: string[]) => void
   onComplete?: (id: string) => void
-  styles: Record<string, React.CSSProperties>
 }
 
 interface ActiveTenancy {
