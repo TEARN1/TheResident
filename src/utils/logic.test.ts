@@ -44,6 +44,7 @@ const listing = (over: Partial<Listing> = {}): Listing => ({
     smokingAllowed: false,
     petsAllowed: false
   },
+  listingType: 'rent',
   ...over
 })
 

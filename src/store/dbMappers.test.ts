@@ -36,7 +36,8 @@ test('base table payloads only use real schema columns', () => {
     location: 'l', suburb: 's', safetyRating: 'high', safetyNotes: '',
     landlordId: UID, landlordName: 'NAME MUST NOT LEAK', landlordLivesHere: true, images: [],
     amenities: { wifi: true, parking: false, bathroom: 'shared' },
-    requirements: { genderPreference: 'any', childrenAllowed: true, maxChildren: 0, smokingAllowed: false, petsAllowed: false }
+    requirements: { genderPreference: 'any', childrenAllowed: true, maxChildren: 0, smokingAllowed: false, petsAllowed: false },
+    listingType: 'rent'
   }))
   assertKeysInSchema('res_room_requests', db.requestToRow({
     id: 'req-1', tenantId: UID, tenantName: 'x', listingId: 'listing-1', listingTitle: 'x',

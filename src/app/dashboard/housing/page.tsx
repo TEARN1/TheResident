@@ -65,6 +65,9 @@ export default function HousingPage() {
   const [filterPrice, setFilterPrice] = useState<number>(0)
   const [filterWifi, setFilterWifi] = useState(false)
   const [filterQuickPostOnly, setFilterQuickPostOnly] = useState(false)
+  // Rent vs Buy — same res_listings table and same filters, distinguished
+  // by listing_type, same pattern as the quick-post merge above.
+  const [filterListingType, setFilterListingType] = useState<'rent' | 'sale'>('rent')
   const [filterParking, setFilterParking] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
@@ -78,6 +81,7 @@ export default function HousingPage() {
   const [newSuburb, setNewSuburb] = useState('')
   const [newLivesHere, setNewLivesHere] = useState(false)
   const [newQuickPost, setNewQuickPost] = useState(false)
+  const [newListingType, setNewListingType] = useState<'rent' | 'sale'>('rent')
   const [newWifi, setNewWifi] = useState(true)
   const [newParking, setNewParking] = useState(true)
   const [newBathroom, setNewBathroom] = useState<'shared' | 'private' | 'ensuite'>('shared')
@@ -170,6 +174,7 @@ export default function HousingPage() {
   const isFeatured = (l: Listing) => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > Date.now()
   const filteredListings = [...filteredListingsRaw]
     .filter(l => !filterQuickPostOnly || l.quickPost)
+    .filter(l => (l.listingType || 'rent') === filterListingType)
     .sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
 
   const filteredRoommates = useSelector((state: RootState) => selectMatchedRoommates(
@@ -213,12 +218,14 @@ export default function HousingPage() {
       },
       propertyId: newPropertyId || undefined,
       createdAt: new Date().toISOString(),
-      quickPost: newQuickPost
+      quickPost: newQuickPost,
+      listingType: newListingType
     }
     dispatch(addListing(listing))
     setShowCreateModal(false)
     setNewPropertyId('')
     setNewQuickPost(false)
+    setNewListingType('rent')
     setAlertNotification('Property listed successfully!')
   }
 
@@ -344,6 +351,23 @@ export default function HousingPage() {
           )}
         </div>
       </header>
+
+      {activeTab === 'rooms' && (
+        <div className="flex bg-black/20 p-1 rounded-xl border border-white/5 w-full sm:w-fit">
+          <button
+            onClick={() => setFilterListingType('rent')}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'rent' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+          >
+            Rent
+          </button>
+          <button
+            onClick={() => setFilterListingType('sale')}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'sale' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+          >
+            Buy
+          </button>
+        </div>
+      )}
 
       {/* Landlord Notifications for Applications */}
       {currentUser?.role === 'landlord' && landlordTrackedRequests.length > 0 && (
@@ -790,6 +814,13 @@ export default function HousingPage() {
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Suburb / Area</label>
                            <input value={newSuburb} onChange={e => setNewSuburb(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="e.g. Kreuzberg" />
+                        </div>
+                     </div>
+                     <div className="space-y-2">
+                        <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Listing Type</label>
+                        <div className="flex bg-black border border-white/10 rounded-xl p-1 w-fit">
+                           <button type="button" onClick={() => setNewListingType('rent')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'rent' ? 'bg-gold-primary text-black' : 'text-gray-500'}`}>Rent</button>
+                           <button type="button" onClick={() => setNewListingType('sale')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'sale' ? 'bg-gold-primary text-black' : 'text-gray-500'}`}>Sell</button>
                         </div>
                      </div>
                      {myProperties.length > 0 && (

@@ -50,7 +50,8 @@ test('Redux Store - Room Listings & Requests Workflow', () => {
       maxChildren: 1,
       smokingAllowed: false,
       petsAllowed: false
-    }
+    },
+    listingType: 'rent' as const
   }
 
   // Test listing creation

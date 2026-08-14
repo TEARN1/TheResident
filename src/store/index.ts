@@ -94,6 +94,10 @@ export interface Listing {
    * distinguished only by this badge, per res_listings.quick_post.
    */
   quickPost?: boolean
+  /** 'rent' (default) or 'sale' — res_listings.listing_type. Same table,
+   *  same filters/search, distinguished only by this field, same pattern
+   *  as quickPost above. */
+  listingType: 'rent' | 'sale'
 }
 
 export interface RoomRequest {
@@ -339,7 +343,8 @@ const initialListings: Listing[] = [
     requirements: { genderPreference: 'any', childrenAllowed: false, maxChildren: 0, smokingAllowed: false, petsAllowed: true },
     lat: -26.1476,
     lon: 28.0436,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    listingType: 'rent'
   },
   {
     id: 'listing-demo-2',
@@ -359,7 +364,8 @@ const initialListings: Listing[] = [
     requirements: { genderPreference: 'any', childrenAllowed: false, maxChildren: 0, smokingAllowed: false, petsAllowed: false },
     lat: -26.1926,
     lon: 28.0305,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    listingType: 'rent'
   },
   {
     id: 'listing-demo-3',
@@ -380,7 +386,8 @@ const initialListings: Listing[] = [
     lat: -26.1867,
     lon: 27.9799,
     featuredUntil: null,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    listingType: 'rent'
   }
 ]
 
@@ -1748,7 +1755,8 @@ export const fetchSupabaseData = createAsyncThunk(
         featuredUntil: item.featured_until || null,
         propertyId: item.property_id || undefined,
         createdAt: item.created_at || undefined,
-        quickPost: !!item.quick_post
+        quickPost: !!item.quick_post,
+        listingType: (item.listing_type === 'sale' ? 'sale' : 'rent') as 'rent' | 'sale'
       }))))
     }
 
