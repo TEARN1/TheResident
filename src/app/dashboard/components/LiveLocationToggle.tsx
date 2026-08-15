@@ -51,7 +51,19 @@ export default function LiveLocationToggle({ userId, onPosition }: Props) {
         channelRef.current?.track({ ...point, at: new Date().toISOString() })
       },
       () => { /* silently stop trying if permission is denied mid-session */ },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+      // Deliberately NOT high-accuracy. `enableHighAccuracy: true` with a 5s
+      // maximumAge pins the GPS radio on continuously — the most battery-hostile
+      // geolocation config available, and this runs for as long as the toggle is
+      // on. That cost is only justified by turn-by-turn navigation; this feature
+      // is "roughly where I am, shared with people I trust", which coarse
+      // network positioning answers well. A 30s cached fix is accepted rather
+      // than forcing a fresh one, and precision is left to the platform.
+      //
+      // It is also the more honest privacy default: streaming metre-level
+      // location continuously is a far bigger disclosure than the toggle's
+      // label implies. Flip these two values back if a feature genuinely needs
+      // navigation-grade precision — and say so in the UI when you do.
+      { enableHighAccuracy: false, maximumAge: 30000, timeout: 15000 }
     )
 
     return () => {

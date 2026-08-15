@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import 'leaflet/dist/leaflet.css'
 import { Navigation, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader } from 'lucide-react'
 import { useSelector } from 'react-redux'
@@ -107,10 +107,25 @@ export default function VibeMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId])
 
-  const geofenceHits = savedPins.flatMap(pin =>
-    zones
-      .filter(z => distanceMetres(pin, z) <= alertRadiusM)
-      .map(z => ({ pin, zone: z }))
+  // O(pins × zones) distance scan. Computed inline it re-ran on EVERY render —
+  // including every keystroke in the report form and every drawer toggle — and
+  // handed back a new array identity each time, which then invalidated the
+  // marker effect below and forced a full map rebuild. Memoised on the only
+  // three inputs that can actually change the answer.
+  const geofenceHits = useMemo(
+    () => savedPins.flatMap(pin =>
+      zones
+        .filter(z => distanceMetres(pin, z) <= alertRadiusM)
+        .map(z => ({ pin, zone: z }))
+    ),
+    [savedPins, zones, alertRadiusM]
+  )
+
+  // Set of zone ids that trip a geofence — lets the marker loop do an O(1)
+  // lookup instead of a linear .some() scan per zone (it was O(zones × hits)).
+  const geofenceZoneIds = useMemo(
+    () => new Set(geofenceHits.map(h => h.zone.id)),
+    [geofenceHits]
   )
 
   useEffect(() => {
@@ -144,7 +159,14 @@ export default function VibeMap() {
       if (cancelled || !mapContainerRef.current || mapRef.current) return
       leafletRef.current = L
 
-      const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([startLat, startLon], startZoom)
+      // preferCanvas: every zone/pin is a circleMarker. Leaflet's default
+      // renderer gives each one its own SVG DOM node, so a busy city becomes
+      // hundreds of nodes that the browser lays out and repaints on every pan.
+      // Canvas draws them all into ONE element — same visuals, a fraction of
+      // the cost, and it degrades gracefully on a cheap Android handset, which
+      // is the actual launch device here.
+      const map = L.map(mapContainerRef.current, { zoomControl: false, preferCanvas: true })
+        .setView([startLat, startLon], startZoom)
       // CARTO's basemaps, not tile.openstreetmap.org directly: same underlying
       // OSM street data, but CARTO's own render pipeline refreshes far more
       // often — tile.openstreetmap.org is OSM's lightweight demo server, it
@@ -188,7 +210,7 @@ export default function VibeMap() {
 
     zones.forEach(zone => {
       const color = KIND_COLOR[zone.kind] || '#D4AF37'
-      const isGeofenceHit = geofenceHits.some(h => h.zone.id === zone.id)
+      const isGeofenceHit = geofenceZoneIds.has(zone.id)
 
       if (isGeofenceHit) {
         L.circleMarker([zone.lat, zone.lon], {
@@ -268,8 +290,15 @@ export default function VibeMap() {
 
       marker.addTo(group)
     })
+    // Depends on geofenceZoneIds, NOT savedPins/alertRadiusM directly: dragging
+    // the alert-radius slider used to tear down and rebuild every zone marker on
+    // each tick, even when the set of tripped zones never changed. The memo
+    // above keeps its identity stable, so the map only rebuilds when the picture
+    // actually differs. (The disable below is pre-existing — it suppresses the
+    // deliberate omission of `center`, which must NOT retrigger a rebuild on
+    // every pan. Keep it on the line directly above the dep array.)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zones, currentUser, savedPins, alertRadiusM])
+  }, [zones, currentUser, geofenceZoneIds])
 
   useEffect(() => {
     const L = leafletRef.current
@@ -398,7 +427,29 @@ export default function VibeMap() {
 
       {/* Full-bleed map with floating controls, like Google Maps rather than a boxed embed */}
       <div className="relative rounded-2xl overflow-hidden border border-white/5 h-[70vh] min-h-[420px]">
-        <div ref={mapContainerRef} className="absolute inset-0" style={{ background: '#111' }} />
+        {/* A Leaflet canvas is invisible to assistive tech: this component had
+            ZERO aria/role/tabIndex in 632 lines, so a screen-reader or
+            keyboard-only user got an unlabelled black rectangle and no way to
+            learn what was on it. Labelling the region and exposing a text
+            summary below is the minimum that makes the map's information
+            available without sight — and the geofence count is safety
+            information, so it must not be visual-only. */}
+        <div
+          ref={mapContainerRef}
+          className="absolute inset-0"
+          style={{ background: '#111' }}
+          role="region"
+          aria-label="Neighbourhood map showing reported zones near you"
+        />
+
+        {/* Screen-reader equivalent of the map + a polite live region so a new
+            alert near a saved place is ANNOUNCED, not just drawn in red. */}
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {zones.length} zones reported nearby.
+          {geofenceHits.length > 0
+            ? ` ${geofenceHits.length} ${geofenceHits.length === 1 ? 'alert is' : 'alerts are'} near a place you saved.`
+            : ' No alerts near your saved places.'}
+        </div>
 
         {/* Search — floating top-left */}
         <div className="absolute top-3 left-3 right-3 md:right-auto md:w-[340px] z-[500]">
