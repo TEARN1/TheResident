@@ -362,6 +362,37 @@ export interface TrafficReport {
   createdAt?: string
 }
 
+/**
+ * A collective infrastructure fault: many neighbours, one broken thing.
+ *
+ * The counters are maintained server-side by the escalate_faults job, never by
+ * the client — self-reported evidence would be worthless. See
+ * src/utils/faults.ts for the scoring rules and supabase/migrations for the
+ * write paths.
+ */
+export interface Fault {
+  id: string
+  kind: string
+  sector: 'electricity' | 'water' | 'sanitation' | 'refuse' | 'telecoms' | 'roads'
+  status: string
+  detail: string
+  lat: number
+  lon: number
+  suburb: string
+  /** Distinct neighbours confirming — the number that makes it evidence. */
+  distinctReporters: number
+  affectedCount: number
+  disputeCount: number
+  confidence: number
+  priority: number
+  createdAt: string
+  escalatedAt: string | null
+  acknowledgedAt: string | null
+  providerReference: string | null
+  /** Times residents reopened this after a provider claimed it fixed. */
+  falseClosureCount: number
+}
+
 export interface NeighbourhoodStatus {
   id: string
   service: 'electricity' | 'water' | 'network' | 'fiber' | 'road'
@@ -518,9 +549,22 @@ const networkingSlice = createSlice({
     lifts: initialLifts,
     services: initialServices,
     dispatches: [] as ServiceDispatch[],
-    trafficReports: [] as TrafficReport[]
+    trafficReports: [] as TrafficReport[],
+    faults: [] as Fault[]
   },
   reducers: {
+    /**
+     * Replaces the fault list wholesale from the server.
+     *
+     * There is deliberately no client-side reducer that adds a fault or
+     * increments a count: reporting and vouching go through RPCs so the
+     * clustering and proximity rules cannot be bypassed, and the counters come
+     * back from the escalate_faults job. Optimism here would show a resident a
+     * number that no utility would ever see.
+     */
+    setFaults: (state, action: PayloadAction<Fault[]>) => {
+      state.faults = action.payload
+    },
     setRoommates: (state, action: PayloadAction<RoommateSeeker[]>) => {
       state.roommates = action.payload.map(r => ({ ...r, id: toUUID(r.id) }))
     },
@@ -1049,6 +1093,7 @@ export const {
   setServices,
   setDispatches,
   setTrafficReports,
+  setFaults,
   addRoommateSeeker,
   addLiftClub,
   addService,
@@ -1629,6 +1674,38 @@ export const fetchSupabaseData = createAsyncThunk(
       }))))
     }
 
+    // 23. Collective infrastructure faults
+    const fetchFaults = async () => {
+      const { data, error } = await supabase!
+        .from('res_faults')
+        .select('*')
+        .not('status', 'in', '("lapsed","rejected","verified")')
+        .order('priority', { ascending: false })
+        .limit(100)
+      if (error) return markFailed('res_faults', error.message)
+      if (!data) return
+      dispatch(setFaults(data.map(item => ({
+        id: item.id,
+        kind: item.kind,
+        sector: item.sector as Fault['sector'],
+        status: item.status,
+        detail: item.detail || '',
+        lat: Number(item.lat),
+        lon: Number(item.lon),
+        suburb: item.suburb || '',
+        distinctReporters: item.distinct_reporters ?? 0,
+        affectedCount: item.affected_count ?? 0,
+        disputeCount: item.dispute_count ?? 0,
+        confidence: Number(item.confidence ?? 0),
+        priority: Number(item.priority ?? 0),
+        createdAt: item.created_at,
+        escalatedAt: item.escalated_at || null,
+        acknowledgedAt: item.acknowledged_at || null,
+        providerReference: item.provider_reference || null,
+        falseClosureCount: item.false_closure_count ?? 0
+      }))))
+    }
+
     // Listings + services first so requests/dispatches can resolve titles,
     // then everything else in parallel.
     await Promise.all([fetchListings(), fetchServices()])
@@ -1653,7 +1730,8 @@ export const fetchSupabaseData = createAsyncThunk(
       fetchCareCircle(),
       fetchSharedResources(),
       fetchNeighbourhoodStatus(),
-      fetchTrafficReports()
+      fetchTrafficReports(),
+      fetchFaults()
     ])
 
     dispatch(setDataStatus({
@@ -1732,10 +1810,14 @@ interface SyncStore {
  * while offline — replay passes the action WITHOUT dispatching it, so the
  * reducer doesn't apply the same optimistic change twice.
  */
+// Returns true when the write reached Supabase (or there was nothing to send),
+// false when it failed. replayOfflineQueue needs this: a queued write may only
+// be dropped once it has actually landed, and previously the queue was cleared
+// before replay so a failed replay lost the write silently.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const syncActionToSupabase = async (store: SyncStore, action: any, options: { replay?: boolean } = {}) => {
+export const syncActionToSupabase = async (store: SyncStore, action: any, options: { replay?: boolean } = {}): Promise<boolean> => {
   const isSim = typeof global !== 'undefined' && (global as unknown as { __simulationMode?: boolean }).__simulationMode
-  if (!supabase && !isSim) return
+  if (!supabase && !isSim) return true
 
   const state = store.getState()
   const currentUser = state.auth.currentUser
@@ -2153,6 +2235,8 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
       }, 'id', toUUID(id))
     }
 
+    return true
+
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`Error syncing with Supabase${syncLabel ? ` (${syncLabel})` : ''}:`, message)
@@ -2198,6 +2282,8 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
         }
       }
     }
+
+    return false
   }
 }
 
@@ -2212,29 +2298,90 @@ export const supabaseSyncMiddleware: Middleware<false, RootState> = store => nex
  * Each queued action is sent straight to Supabase — NOT re-dispatched — because
  * its optimistic change is already in Redux from the first attempt.
  */
+/**
+ * Guards against two 'online' events replaying the same writes concurrently.
+ *
+ * This used to be done by clearing the queue before replaying — which also
+ * meant a replay that failed threw the write away, because the replay path is
+ * barred from re-queueing. The queue is now emptied only by confirmed success,
+ * so re-entrancy needs its own flag.
+ */
+let replayInFlight = false
+
+/**
+ * Replays writes held while offline, in the order they were made.
+ *
+ * Each item is removed ONLY once Supabase has confirmed it. A failed attempt
+ * increments a counter and the write stays queued for the next attempt, until
+ * MAX_REPLAY_ATTEMPTS — at which point it is dropped and the user is told
+ * plainly, rather than the change vanishing without a word.
+ *
+ * Queued actions are sent straight to Supabase, never re-dispatched: their
+ * optimistic change is already in Redux from the first attempt.
+ */
 export const replayOfflineQueue = createAsyncThunk(
   'ui/replayOfflineQueue',
   async (_, { getState, dispatch }) => {
+    if (replayInFlight) return
     const queued = (getState() as RootState).ui.offlineQueue
     if (queued.length === 0 || !supabase || isOffline()) return
 
-    // Clear first so a second 'online' event can't replay the same writes twice.
-    dispatch(clearOfflineQueue())
-
+    replayInFlight = true
     const syncStore: SyncStore = {
       getState: () => getState() as RootState,
       dispatch: dispatch as unknown as (action: unknown) => unknown
     }
 
-    for (const item of queued) {
-      await syncActionToSupabase(syncStore, { type: item.action, payload: item.payload }, { replay: true })
+    let synced = 0
+    let retrying = 0
+    let abandoned = 0
+
+    try {
+      for (const item of queued) {
+        // Connectivity can drop again mid-replay. Stop rather than burn
+        // attempts on writes that cannot possibly succeed right now.
+        if (isOffline()) break
+
+        const ok = await syncActionToSupabase(
+          syncStore, { type: item.action, payload: item.payload }, { replay: true })
+
+        if (ok) {
+          dispatch(dequeueOfflineAction(item.id))
+          synced++
+        } else {
+          dispatch(failOfflineAction(item.id))
+          if (item.attempts + 1 >= MAX_REPLAY_ATTEMPTS) abandoned++
+          else retrying++
+        }
+      }
+    } finally {
+      replayInFlight = false
     }
 
-    dispatch(addNotification({
-      title: 'Back online',
-      message: `Synced ${queued.length} change${queued.length === 1 ? '' : 's'} made while you were offline.`,
-      read: false
-    }))
+    if (synced > 0) {
+      dispatch(addNotification({
+        title: 'Back online',
+        message: `Synced ${synced} change${synced === 1 ? '' : 's'} made while you were offline.`,
+        read: false
+      }))
+    }
+    if (retrying > 0) {
+      dispatch(addNotification({
+        title: 'Still syncing',
+        message: `${retrying} change${retrying === 1 ? '' : 's'} did not save yet — we will try again.`,
+        read: false
+      }))
+    }
+    if (abandoned > 0) {
+      // Never silent. A write we have given up on is exactly the thing a user
+      // must be told about, because only they can redo it.
+      dispatch(addNotification({
+        title: 'Some changes were not saved',
+        message: `${abandoned} change${abandoned === 1 ? '' : 's'} failed repeatedly and had to be dropped. ` +
+                 `Please check and redo ${abandoned === 1 ? 'it' : 'them'}.`,
+        read: false
+      }))
+    }
 
     // One reconcile at the end, rather than after every replayed write.
     dispatch(fetchSupabaseData())
@@ -2245,9 +2392,23 @@ export const replayOfflineQueue = createAsyncThunk(
 
 const MAX_OFFLINE_QUEUE = 100
 
+/** Attempts before a queued write is abandoned — and the user told about it. */
+const MAX_REPLAY_ATTEMPTS = 5
+
+let queueSeq = 0
+const nextQueueId = () => `q-${Date.now().toString(36)}-${(queueSeq++).toString(36)}`
+
+export interface QueuedWrite {
+  /** Stable identity, so a confirmed write can be removed without index maths. */
+  id: string
+  action: string
+  payload: unknown
+  attempts: number
+}
+
 interface UIState {
   language: 'en' | 'zu' | 'xh' | 'af'
-  offlineQueue: Array<{ action: string; payload: unknown }>
+  offlineQueue: QueuedWrite[]
   dataStatus: 'idle' | 'loading' | 'ready' | 'error'
   failedTables: string[]
 }
@@ -2271,11 +2432,33 @@ const uiSlice = createSlice({
       state.failedTables = action.payload.failedTables
     },
     queueOfflineAction: (state, action: PayloadAction<{ action: string; payload: unknown }>) => {
-      state.offlineQueue.push(action.payload)
+      state.offlineQueue.push({
+        id: nextQueueId(),
+        action: action.payload.action,
+        payload: action.payload.payload,
+        attempts: 0
+      })
       // Bound the queue: a long offline session must not grow memory forever.
       // The oldest writes are dropped first.
       if (state.offlineQueue.length > MAX_OFFLINE_QUEUE) {
         state.offlineQueue.splice(0, state.offlineQueue.length - MAX_OFFLINE_QUEUE)
+      }
+    },
+    /** Removes a write Supabase has CONFIRMED. The only success path. */
+    dequeueOfflineAction: (state, action: PayloadAction<string>) => {
+      state.offlineQueue = state.offlineQueue.filter(q => q.id !== action.payload)
+    },
+    /**
+     * Records a failed replay. The write STAYS queued and is retried next
+     * time, until MAX_REPLAY_ATTEMPTS — dropping it earlier is precisely how
+     * the old implementation lost data.
+     */
+    failOfflineAction: (state, action: PayloadAction<string>) => {
+      const item = state.offlineQueue.find(q => q.id === action.payload)
+      if (!item) return
+      item.attempts += 1
+      if (item.attempts >= MAX_REPLAY_ATTEMPTS) {
+        state.offlineQueue = state.offlineQueue.filter(q => q.id !== action.payload)
       }
     },
     clearOfflineQueue: (state) => {
@@ -2284,7 +2467,7 @@ const uiSlice = createSlice({
   }
 })
 
-export const { setLanguage, setDataStatus, queueOfflineAction, clearOfflineQueue } = uiSlice.actions
+export const { setLanguage, setDataStatus, queueOfflineAction, dequeueOfflineAction, failOfflineAction, clearOfflineQueue } = uiSlice.actions
 
 export const selectFilteredListings = createSelector(
   [

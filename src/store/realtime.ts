@@ -95,6 +95,11 @@ export const subscribeToRealtime = (dispatch: AppDispatch, userId: string): (() 
     .channel('res-safety')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'res_alerts' }, refetchSoon)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'res_neighbourhood_status' }, refetchSoon)
+    // Faults ride the safety channel deliberately. Watching the confirmation
+    // count climb is what prompts the next neighbour to vouch, and a fault
+    // that only updates on a tab change would lose that entirely.
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_faults' }, refetchSoon)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_fault_vouches' }, refetchSoon)
     .subscribe()
   channels.push(safety)
 

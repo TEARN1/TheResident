@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -40,6 +40,9 @@ import ToolLibraryTab from '../components/ToolLibraryTab'
 import ChoreSchedulerTab from '../components/ChoreSchedulerTab'
 import DisputesTab from '../components/DisputesTab'
 import SafetyTab from '../components/SafetyTab'
+import FaultsTab from '../components/FaultsTab'
+import { fetchMyVouches } from '../../../utils/faultsApi'
+import type { VouchKind } from '../../../utils/faults'
 import MarketTab from '../components/MarketTab'
 import HouseholdTab from '../components/HouseholdTab'
 import CommunitiesTab from '../components/CommunitiesTab'
@@ -57,7 +60,7 @@ const VibeMap = dynamic(() => import('../components/VibeMap'), {
 
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
-  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'rooms' | 'resources' | 'admin'>('overview')
+  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'faults' | 'market' | 'household' | 'communities' | 'vibemap' | 'rooms' | 'resources' | 'admin'>('overview')
   const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
@@ -84,6 +87,18 @@ export default function CommunityPage() {
   const reputationScores = useSelector((state: RootState) => state.community.reputationScores)
   const alerts = useSelector((state: RootState) => state.community.alerts)
   const neighbourhoodStatus = useSelector((state: RootState) => state.community.neighbourhoodStatus)
+  const faults = useSelector((state: RootState) => state.networking.faults)
+
+  // Which faults this user has already vouched on. Kept in local state rather
+  // than Redux: it is a per-user view of someone else's rows, not shared
+  // application state, and it must never be optimistic — showing a vouch that
+  // the proximity gate rejected would be a lie about what the provider sees.
+  const [myVouches, setMyVouches] = useState<Record<string, VouchKind>>({})
+  const refreshVouches = useCallback(async () => {
+    if (faults.length === 0) { setMyVouches({}); return }
+    setMyVouches(await fetchMyVouches(faults.map(f => f.id)))
+  }, [faults])
+  useEffect(() => { void refreshVouches() }, [refreshVouches])
   const marketItems = useSelector((state: RootState) => state.community.marketItems)
   const vendors = useSelector((state: RootState) => state.community.vendors)
   const groupBuys = useSelector((state: RootState) => state.community.groupBuys)
@@ -329,6 +344,7 @@ export default function CommunityPage() {
       accent: 'text-rose-400 bg-rose-400/10',
       tabs: [
         { id: 'safety', label: 'Safety', icon: ShieldCheck },
+        { id: 'faults', label: 'Faults', icon: Zap },
         { id: 'disputes', label: 'Disputes', icon: Gavel },
         { id: 'household', label: 'Household', icon: Home },
         { id: 'chores', label: 'Chores', icon: Award },
@@ -549,6 +565,15 @@ export default function CommunityPage() {
                 onRespond={(id, status) => dispatch(respondToAlert({ alertId: id, status }))}
                 onResolve={(id) => dispatch(resolveAlertRpc({ alertId: id }))}
                 onReportStatus={(kind, status, endsAt) => dispatch(reportStatus({ kind, status, suburb, endsAt }))}
+              />
+            )}
+            {subTab === 'faults' && (
+              <FaultsTab
+                faults={faults}
+                currentUserId={currentUser?.id || ''}
+                suburb={suburb}
+                myVouches={myVouches}
+                onChanged={() => { void refreshVouches(); dispatch(fetchSupabaseData()) }}
               />
             )}
             {subTab === 'tools' && (

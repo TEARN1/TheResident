@@ -451,5 +451,13 @@ export const SCHEMA_COLUMNS: Record<string, string[]> = {
   res_care_circle: ['id', 'subject_id', 'carer_id', 'cadence', 'last_ok_at', 'status', 'note', 'created_at', 'updated_at'],
   res_shared_resources: ['id', 'owner_id', 'kind', 'title', 'access_note', 'availability', 'is_free', 'price_note', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id'],
   res_neighbourhood_status: ['id', 'reporter_id', 'kind', 'status', 'detail', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'starts_at', 'ends_at', 'source', 'provider_id'],
-  res_traffic_reports: ['id', 'reporter_id', 'suburb', 'city', 'lat', 'lon', 'report_type', 'description', 'created_at']
+  res_traffic_reports: ['id', 'reporter_id', 'suburb', 'city', 'lat', 'lon', 'report_type', 'description', 'created_at'],
+  // Collective infrastructure faults. The counters (distinct_reporters,
+  // affected_count, weighted_score, confidence, priority) are READ-ONLY to the
+  // client — they are maintained by the escalate_faults job, and there is no
+  // *ToRow mapper for this table on purpose: every write goes through
+  // res_report_fault / res_vouch_fault so the clustering and proximity rules
+  // cannot be bypassed by a direct insert.
+  res_faults: ['id', 'kind', 'sector', 'title', 'detail', 'geom', 'lat', 'lon', 'suburb', 'city', 'community_id', 'reported_by', 'status', 'severity', 'distinct_reporters', 'affected_count', 'dispute_count', 'weighted_score', 'confidence', 'priority', 'provider_id', 'escalated_at', 'acknowledged_at', 'provider_reference', 'resolved_claimed_at', 'verified_at', 'false_closure_count', 'last_vouch_at', 'created_at', 'updated_at', 'archived_at', 'expires_at', 'managed_by'],
+  res_fault_vouches: ['id', 'fault_id', 'user_id', 'kind', 'lat', 'lon', 'distance_m', 'note', 'created_at', 'updated_at']
 }
