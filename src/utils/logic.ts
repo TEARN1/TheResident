@@ -10,23 +10,16 @@ import type { Listing, RoommateSeeker, LiftClub, LandlordPreferences } from '../
 
 // ── Geo (#29, #30) ────────────────────────────────────────────────────────────
 
-export interface Point {
-  lat: number
-  lon: number
-}
+// Point and distanceMetres moved to ./geo, which imports nothing at all, so
+// the Supabase edge runtime can use the same distance maths as the client
+// without transitively pulling in Redux through this file's store types.
+// Re-exported here so every existing import site keeps working unchanged.
+export type { Point } from './geo'
+export { distanceMetres } from './geo'
 
-const EARTH_RADIUS_M = 6_371_000
-const toRad = (deg: number) => (deg * Math.PI) / 180
-
-// Logic 1: Great-circle distance in metres.
-export function distanceMetres(a: Point, b: Point): number {
-  const dLat = toRad(b.lat - a.lat)
-  const dLon = toRad(b.lon - a.lon)
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2
-  return EARTH_RADIUS_M * 2 * Math.asin(Math.sqrt(h))
-}
+import { distanceMetres as distanceMetresImpl } from './geo'
+import type { Point } from './geo'
+const distanceMetres = distanceMetresImpl
 
 // Logic 2: Distance bands classification.
 export function distanceBand(metres: number): string {

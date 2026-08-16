@@ -160,6 +160,36 @@ export const TRANSITIONS: Transition[] = [
     note: 'Subject away or opted out.' },
   { entity: 'res_care_circle', from: 'paused', to: 'active', actors: ['user'], guard: 'isCareParty', reversible: true,
     note: 'Check-ins resume after a pause.' },
+
+  // ── res_faults — collective infrastructure faults ────────────────────────
+  // The machine that turns individual complaints into evidence a utility can
+  // act on, and then holds them to what they said. See src/utils/faults.ts.
+  { entity: 'res_faults', from: 'reported', to: 'corroborated', actors: ['job'], guard: null, reversible: true,
+    note: 'Neighbours are confirming, but not yet enough to send to the provider.' },
+  { entity: 'res_faults', from: 'reported', to: 'escalated', actors: ['job'], guard: null, reversible: true,
+    note: 'Immediate physical danger — sent without waiting for corroboration.' },
+  { entity: 'res_faults', from: 'corroborated', to: 'escalated', actors: ['job'], guard: null, reversible: true,
+    note: 'Evidence threshold met; the provider has been notified.' },
+  { entity: 'res_faults', from: 'escalated', to: 'acknowledged', actors: ['user'], guard: 'isProviderAdmin', reversible: true,
+    note: 'The provider confirms they have received it, usually with a reference.' },
+  { entity: 'res_faults', from: 'acknowledged', to: 'in_progress', actors: ['user'], guard: 'isProviderAdmin', reversible: true,
+    note: 'A crew is assigned or on site.' },
+  { entity: 'res_faults', from: 'in_progress', to: 'resolved', actors: ['user'], guard: 'isProviderAdmin', reversible: true,
+    note: 'The provider says it is fixed. A claim, not yet a fact — residents verify next.' },
+  { entity: 'res_faults', from: 'escalated', to: 'resolved', actors: ['user'], guard: 'isFaultParty', reversible: true,
+    note: 'Fixed before anyone formally acknowledged it, which happens often.' },
+  { entity: 'res_faults', from: 'corroborated', to: 'resolved', actors: ['user'], guard: 'isFaultParty', reversible: true,
+    note: 'Came back on its own before it ever reached the provider.' },
+  { entity: 'res_faults', from: 'resolved', to: 'verified', actors: ['job'], guard: null, reversible: true,
+    note: 'Enough residents confirm it is genuinely fixed. This is what closes the loop — a provider marking a job done is a claim; the neighbours are the fact.' },
+  { entity: 'res_faults', from: 'resolved', to: 'escalated', actors: ['job'], guard: null, reversible: true,
+    note: 'Residents report it is still broken after a resolution claim. Reopened, and the false closure is on the record.' },
+  { entity: 'res_faults', from: 'reported', to: 'rejected', actors: ['job'], guard: null, reversible: true,
+    note: 'Neighbours actively dispute it. Held, not deleted — the reporter may still be right.' },
+  { entity: 'res_faults', from: 'corroborated', to: 'lapsed', actors: ['job'], guard: null, reversible: true,
+    note: 'Confidence decayed with nobody re-confirming; almost certainly fixed quietly.' },
+  { entity: 'res_faults', from: 'reported', to: 'lapsed', actors: ['job'], guard: null, reversible: true,
+    note: 'A lone report nobody ever confirmed.' },
 ]
 
 /**
@@ -180,6 +210,7 @@ export const INITIAL_STATES: Record<string, string> = {
   res_market_items: 'available',
   res_lost_found: 'open',
   res_care_circle: 'active',
+  res_faults: 'reported',
 }
 
 /** Every state an entity can be in, derived — never hand-maintained. */

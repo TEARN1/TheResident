@@ -1,4 +1,4 @@
-// Generates supabase/migrations/20260815000500_seed_transitions.sql from
+// Generates supabase/migrations/20260815999000_seed_transitions.sql from
 // src/utils/lifecycle.ts.
 //
 // The point: the transition table exists in two places (TypeScript for the UI
@@ -13,7 +13,12 @@
 import { writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { TRANSITIONS, INITIAL_STATES, statesOf, entities } from '../src/utils/lifecycle'
 
-const OUT = 'supabase/migrations/20260815000500_seed_transitions.sql'
+// Deliberately a high timestamp so this file sorts AFTER every DDL migration.
+// It is a PROJECTION of the schema: it widens status constraints on tables that
+// earlier migrations create. At 000500 it silently skipped res_faults, because
+// that table is not created until 000700 and the to_regclass guard quietly
+// passed over it — the constraint was simply never applied.
+const OUT = 'supabase/migrations/20260815999000_seed_transitions.sql'
 
 const q = (s: string | null) => (s === null ? 'null' : `'${s.replace(/'/g, "''")}'`)
 
@@ -21,7 +26,7 @@ function build(): string {
   const lines: string[] = []
 
   lines.push('-- ═══════════════════════════════════════════════════════════════════════════')
-  lines.push('-- 20260815000500_seed_transitions  ***GENERATED — DO NOT EDIT BY HAND***')
+  lines.push('-- 20260815999000_seed_transitions  ***GENERATED — DO NOT EDIT BY HAND***')
   lines.push('--')
   lines.push('-- Source: src/utils/lifecycle.ts')
   lines.push('-- Regenerate: npm run gen:transitions')

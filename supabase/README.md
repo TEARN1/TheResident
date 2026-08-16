@@ -20,7 +20,7 @@ tests/         SQL assertions run against a throwaway database
 1. **Migrations are forward-only.** Never edit an applied migration; add a new
    one. `resident_schema.sql` at the repo root is frozen history — the state of
    the database before this directory existed.
-2. **`20260815000500_seed_transitions.sql` is generated.** It comes from
+2. **`20260815999000_seed_transitions.sql` is generated.** It comes from
    `src/utils/lifecycle.ts` via `npm run gen:transitions`. Editing it by hand
    makes TypeScript and Postgres disagree about what automation may do; CI
    fails the build if it is stale.
@@ -37,11 +37,15 @@ tests/         SQL assertions run against a throwaway database
 
 | File | What it establishes |
 |---|---|
-| `20260815000100_universal_columns` | `updated_at` on all 44 `res_*` tables; `archived_at` / `expires_at` / `managed_by` on the 24 automatable ones |
+| `20260815000100_universal_columns` | `updated_at` on all 45 `res_*` tables; `archived_at` / `expires_at` / `managed_by` on the 25 automatable ones |
 | `20260815000200_audit_log` | `res_audit_log` (append-only, service-role only) + `res_audit()` |
 | `20260815000300_automation_substrate` | `res_policies` (kill switch), `res_jobs`, `res_job_runs`, `res_effect_keys`, leasing, `res_revert()` |
 | `20260815000400_transitions` | `res_transitions`, guards, and `res_transition()` — the one door for status changes |
-| `20260815000500_seed_transitions` | **generated** — the 52 modelled transitions and widened status constraints |
+| `20260815000600_register_jobs` | `heartbeat` + `expire_traffic_reports`, both disabled |
+| `20260815000700_faults` | `res_faults`, `res_fault_vouches`, `res_report_fault()`, `res_vouch_fault()`, `res_provider_queue()` |
+| `20260815000750_fault_guards` | Adds `isProviderAdmin` / `isFaultParty` to `res_transition_guard` |
+| `20260815000800_register_fault_jobs` | `escalate_faults`, disabled |
+| `20260815999000_seed_transitions` | **generated, and deliberately last** — 65 transitions across 12 entities, plus widened status constraints. It must sort after all DDL, because it constrains tables the earlier migrations create |
 
 ## Applying
 

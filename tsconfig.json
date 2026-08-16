@@ -30,5 +30,8 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "scripts"]
+    // supabase/functions is Deno, not Next.js: URL imports, explicit .ts
+  // extensions and the Deno global are all correct there and all errors here.
+  // It has its own config in supabase/functions/deno.json.
+  "exclude": ["node_modules", "scripts", "supabase/functions"]
 }

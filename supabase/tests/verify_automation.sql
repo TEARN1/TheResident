@@ -97,6 +97,36 @@ begin
     raise exception 'the auto_closed alert transition is not guarded by notCritical';
   end if;
 
+  -- ── 11. Fault layer: evidence must not be client-writable ───────────────
+  -- res_faults counters and res_fault_vouches rows are what make a fault
+  -- credible. If a client could write either directly, the evidence would be
+  -- self-reported and the whole mechanism worthless.
+  select count(*) into v_count
+    from information_schema.role_table_grants
+   where table_schema = 'public' and table_name = 'res_fault_vouches'
+     and privilege_type = 'INSERT' and grantee in ('anon','authenticated','PUBLIC');
+  if v_count > 0 then
+    raise exception 'res_fault_vouches is directly insertable by a client role — the proximity gate can be bypassed';
+  end if;
+
+  select count(*) into v_count from pg_policies
+   where schemaname = 'public' and tablename = 'res_faults' and cmd = 'UPDATE';
+  if v_count > 0 then
+    raise exception 'res_faults has an UPDATE policy; counters must only be written by the escalate_faults job';
+  end if;
+
+  -- ── 12. The danger path is intact ───────────────────────────────────────
+  -- A downed conductor escalates on the first report. If this transition ever
+  -- disappears, faults that can kill someone would silently start queuing
+  -- behind a five-neighbour corroboration threshold.
+  if not exists (
+    select 1 from res_transitions
+     where entity = 'res_faults' and from_state = 'reported' and to_state = 'escalated'
+       and 'job' = any(actors)
+  ) then
+    raise exception 'the immediate-danger escalation path for res_faults is missing';
+  end if;
+
   raise notice 'verify_automation: all checks passed';
 end $$;
 

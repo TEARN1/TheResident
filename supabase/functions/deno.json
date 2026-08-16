@@ -1,0 +1,11 @@
+{
+  "//": "Deno config for the edge functions. Kept separate from the root tsconfig.json because these files use URL imports, explicit .ts extensions and the Deno global — all correct under Deno, all errors under the Next.js compiler.",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "strict": true,
+    "lib": ["deno.window", "esnext"]
+  },
+  "imports": {
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
+  }
+}

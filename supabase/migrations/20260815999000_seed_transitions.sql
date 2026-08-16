@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- 20260815000500_seed_transitions  ***GENERATED — DO NOT EDIT BY HAND***
+-- 20260815999000_seed_transitions  ***GENERATED — DO NOT EDIT BY HAND***
 --
 -- Source: src/utils/lifecycle.ts
 -- Regenerate: npm run gen:transitions
@@ -67,13 +67,27 @@ values
   ('res_care_circle', 'overdue', 'active', array['user']::text[], 'isCareParty', false, 'Check-in received.'),
   ('res_care_circle', 'escalated', 'active', array['user']::text[], 'isCareParty', false, 'Check-in received after escalation.'),
   ('res_care_circle', 'active', 'paused', array['user']::text[], 'isCareParty', true, 'Subject away or opted out.'),
-  ('res_care_circle', 'paused', 'active', array['user']::text[], 'isCareParty', true, 'Check-ins resume after a pause.');
+  ('res_care_circle', 'paused', 'active', array['user']::text[], 'isCareParty', true, 'Check-ins resume after a pause.'),
+  ('res_faults', 'reported', 'corroborated', array['job']::text[], null, true, 'Neighbours are confirming, but not yet enough to send to the provider.'),
+  ('res_faults', 'reported', 'escalated', array['job']::text[], null, true, 'Immediate physical danger — sent without waiting for corroboration.'),
+  ('res_faults', 'corroborated', 'escalated', array['job']::text[], null, true, 'Evidence threshold met; the provider has been notified.'),
+  ('res_faults', 'escalated', 'acknowledged', array['user']::text[], 'isProviderAdmin', true, 'The provider confirms they have received it, usually with a reference.'),
+  ('res_faults', 'acknowledged', 'in_progress', array['user']::text[], 'isProviderAdmin', true, 'A crew is assigned or on site.'),
+  ('res_faults', 'in_progress', 'resolved', array['user']::text[], 'isProviderAdmin', true, 'The provider says it is fixed. A claim, not yet a fact — residents verify next.'),
+  ('res_faults', 'escalated', 'resolved', array['user']::text[], 'isFaultParty', true, 'Fixed before anyone formally acknowledged it, which happens often.'),
+  ('res_faults', 'corroborated', 'resolved', array['user']::text[], 'isFaultParty', true, 'Came back on its own before it ever reached the provider.'),
+  ('res_faults', 'resolved', 'verified', array['job']::text[], null, true, 'Enough residents confirm it is genuinely fixed. This is what closes the loop — a provider marking a job done is a claim; the neighbours are the fact.'),
+  ('res_faults', 'resolved', 'escalated', array['job']::text[], null, true, 'Residents report it is still broken after a resolution claim. Reopened, and the false closure is on the record.'),
+  ('res_faults', 'reported', 'rejected', array['job']::text[], null, true, 'Neighbours actively dispute it. Held, not deleted — the reporter may still be right.'),
+  ('res_faults', 'corroborated', 'lapsed', array['job']::text[], null, true, 'Confidence decayed with nobody re-confirming; almost certainly fixed quietly.'),
+  ('res_faults', 'reported', 'lapsed', array['job']::text[], null, true, 'A lone report nobody ever confirmed.');
 
 delete from public.res_initial_states;
 insert into public.res_initial_states (entity, state) values
   ('res_alerts', 'active'),
   ('res_care_circle', 'active'),
   ('res_community_disputes', 'pending'),
+  ('res_faults', 'reported'),
   ('res_group_buys', 'open'),
   ('res_listings', 'open'),
   ('res_lost_found', 'open'),
@@ -143,6 +157,23 @@ begin
     end loop;
     alter table public.res_community_disputes add constraint res_community_disputes_status_check
       check (status in ('escalated', 'mediating', 'pending', 'resolved', 'stale_closed'));
+  end if;
+  -- res_faults
+  if to_regclass('public.res_faults') is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_faults'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
+      execute format('alter table public.res_faults drop constraint %I', v_con);
+    end loop;
+    alter table public.res_faults add constraint res_faults_status_check
+      check (status in ('acknowledged', 'corroborated', 'escalated', 'in_progress', 'lapsed', 'rejected', 'reported', 'resolved', 'verified'));
   end if;
   -- res_group_buys
   if to_regclass('public.res_group_buys') is not null then

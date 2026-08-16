@@ -50,38 +50,46 @@ export const expireTrafficReports: Job = {
 
     if (error) throw new Error(`select failed: ${error.message}`)
 
+    interface ReportRow {
+      id: string
+      report_type: string
+      created_at: string
+      suburb: string | null
+    }
+    const scanned = (rows ?? []) as ReportRow[]
+
     const now = Date.now()
-    const expired = (rows ?? []).filter(r => {
-      const ttl = TTL_HOURS[r.report_type as string] ?? DEFAULT_TTL_HOURS
-      const ageHours = (now - new Date(r.created_at as string).getTime()) / 3_600_000
+    const expired = scanned.filter((r: ReportRow) => {
+      const ttl = TTL_HOURS[r.report_type] ?? DEFAULT_TTL_HOURS
+      const ageHours = (now - new Date(r.created_at).getTime()) / 3_600_000
       return ageHours > ttl
     })
 
-    ctx.log(`scanned ${rows?.length ?? 0}, ${expired.length} past TTL`)
+    ctx.log(`scanned ${scanned.length}, ${expired.length} past TTL`)
 
     if (ctx.dryRun) {
       return {
-        rowsScanned: rows?.length ?? 0,
+        rowsScanned: scanned.length,
         rowsAffected: 0,
-        wouldAffect: expired.map(r => ({
+        wouldAffect: expired.map((r: ReportRow) => ({
           id: r.id,
           type: r.report_type,
           suburb: r.suburb,
-          ageHours: Math.round((now - new Date(r.created_at as string).getTime()) / 3_600_000),
-          ttlHours: TTL_HOURS[r.report_type as string] ?? DEFAULT_TTL_HOURS,
+          ageHours: Math.round((now - new Date(r.created_at).getTime()) / 3_600_000),
+          ttlHours: TTL_HOURS[r.report_type] ?? DEFAULT_TTL_HOURS,
         })),
       }
     }
 
     for (const r of expired) {
-      const ttl = TTL_HOURS[r.report_type as string] ?? DEFAULT_TTL_HOURS
-      const ageHours = Math.round((now - new Date(r.created_at as string).getTime()) / 3_600_000)
+      const ttl = TTL_HOURS[r.report_type] ?? DEFAULT_TTL_HOURS
+      const ageHours = Math.round((now - new Date(r.created_at).getTime()) / 3_600_000)
 
       // Archived, never deleted. A hazard report is evidence about a place;
       // it may matter later even once it stops being current.
       await guard.update(
         'res_traffic_reports',
-        r.id as string,
+        r.id,
         { archived_at: new Date().toISOString() },
         'traffic_report.expire',
         `${r.report_type} report is ${ageHours}h old, past its ${ttl}h freshness window`,
@@ -90,11 +98,11 @@ export const expireTrafficReports: Job = {
     }
 
     return {
-      rowsScanned: rows?.length ?? 0,
+      rowsScanned: scanned.length,
       rowsAffected: guard.rowsAffected,
       detail: {
-        byType: expired.reduce((acc: Record<string, number>, r) => {
-          const k = r.report_type as string
+        byType: expired.reduce((acc: Record<string, number>, r: ReportRow) => {
+          const k = r.report_type
           acc[k] = (acc[k] ?? 0) + 1
           return acc
         }, {}),
