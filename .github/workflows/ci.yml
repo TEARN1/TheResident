@@ -1,0 +1,135 @@
+name: CI
+
+# The review gate for automation. A scheduled job that runs while nobody is
+# watching has to be held to a higher standard than code a human triggers, so
+# these checks are the difference between "we think it's fine" and "it cannot
+# merge unless it is".
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  app:
+    name: Lint, tests, security fuzzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.9.0'
+          cache: npm
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Attack fuzzer
+        run: npm run fuzzer
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-for-build-only
+
+  generated:
+    name: Generated files are current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.9.0'
+          cache: npm
+      - run: npm ci
+
+      # If lifecycle.ts changed without regenerating the seed, TypeScript and
+      # Postgres now disagree about what a job may do. Fail loudly here rather
+      # than discover it when a job takes an illegal transition at 3am.
+      - name: Transition seed matches lifecycle.ts
+        run: npm run gen:transitions -- --check
+
+  migrations:
+    name: Migrations replay onto a clean database
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ['5432:5432']
+    steps:
+      - uses: actions/checkout@v4
+
+      # A migration that only works against the current production database is
+      # not a migration, it's a one-off. This proves the whole history applies
+      # from zero, in order.
+      - name: Apply baseline then every migration in order
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
+            create extension if not exists "uuid-ossp";
+            create extension if not exists pgcrypto;
+            -- Minimal Gruvs-owned surface the Resident schema references
+            -- (CONTRACT.md §2): enough to let the migrations apply, no more.
+            create table if not exists public.profiles (
+              id uuid primary key, username text, display_name text,
+              city text, is_verified boolean default false,
+              vibe_score numeric, social_integrity_score numeric,
+              resident_trust_tier text, badges text[], xp int,
+              created_at timestamptz default now());
+            create table if not exists public.events (id uuid primary key);
+            create table if not exists public.notifications (
+              id bigserial primary key, recipient_id uuid, actor_id uuid,
+              type text, title text, body text, data jsonb,
+              read boolean default false, created_at timestamptz default now());
+            create or replace function public.touch_updated_at() returns trigger
+              language plpgsql as $$ begin new.updated_at = now(); return new; end $$;
+            create or replace function public.award_xp(p_user uuid, p_xp int)
+              returns void language plpgsql as $$ begin end $$;
+            create role service_role;
+            create role authenticated;
+            create role anon;
+            create or replace function auth.uid() returns uuid
+              language sql stable as $$ select null::uuid $$;
+          SQL
+        continue-on-error: false
+
+      - name: Replay migrations
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f resident_schema.sql
+          for f in supabase/migrations/*.sql; do
+            echo "── $f"
+            psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      - name: Verify the automation substrate
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/verify_automation.sql
+
+  secrets:
+    name: No service-role key in client code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # NEXT_PUBLIC_* is shipped to the browser. A service-role key there
+      # bypasses every RLS policy in the database for every visitor.
+      - name: Scan src/ for service-role material
+        run: |
+          if grep -rniE 'service_role|SUPABASE_SERVICE|servicerole' src/ --include='*.ts' --include='*.tsx'; then
+            echo "::error::service-role material referenced in client code"
+            exit 1
+          fi
+          echo "clean"
