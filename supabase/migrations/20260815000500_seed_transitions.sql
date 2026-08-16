@@ -84,127 +84,199 @@ insert into public.res_initial_states (entity, state) values
   ('res_utility_tokens', 'available');
 
 -- ── Widen status check constraints to the full modelled state set ─────────
+--
+-- Constraints are matched by the COLUMN they constrain, not by a text
+-- match on their definition. res_listings carries both a `status` check
+-- and a `doc_review_status` check, and matching on the substring would
+-- silently drop the wrong one — removing document-review validation while
+-- appearing to succeed.
 do $$
 declare v_con text;
 begin
   -- res_alerts
   if to_regclass('public.res_alerts') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_alerts'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_alerts'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_alerts drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_alerts add constraint res_alerts_status_check
       check (status in ('active', 'auto_closed', 'false_alarm', 'resolved', 'responded'));
   end if;
   -- res_care_circle
   if to_regclass('public.res_care_circle') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_care_circle'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_care_circle'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_care_circle drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_care_circle add constraint res_care_circle_status_check
       check (status in ('active', 'escalated', 'overdue', 'paused'));
   end if;
   -- res_community_disputes
   if to_regclass('public.res_community_disputes') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_community_disputes'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_community_disputes'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_community_disputes drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_community_disputes add constraint res_community_disputes_status_check
       check (status in ('escalated', 'mediating', 'pending', 'resolved', 'stale_closed'));
   end if;
   -- res_group_buys
   if to_regclass('public.res_group_buys') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_group_buys'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_group_buys'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_group_buys drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_group_buys add constraint res_group_buys_status_check
       check (status in ('cancelled', 'completed', 'expired_short', 'open', 'threshold_met'));
   end if;
   -- res_listings
   if to_regclass('public.res_listings') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_listings'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_listings'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_listings drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_listings add constraint res_listings_status_check
       check (status in ('archived', 'expired', 'expiring', 'flagged', 'open', 'paused', 'suspended', 'taken'));
   end if;
   -- res_lost_found
   if to_regclass('public.res_lost_found') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_lost_found'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_lost_found'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_lost_found drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_lost_found add constraint res_lost_found_status_check
       check (status in ('open', 'reunited', 'stale_archived'));
   end if;
   -- res_market_items
   if to_regclass('public.res_market_items') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_market_items'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_market_items'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_market_items drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_market_items add constraint res_market_items_status_check
       check (status in ('available', 'expired', 'gone', 'pending'));
   end if;
   -- res_room_requests
   if to_regclass('public.res_room_requests') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_room_requests'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_room_requests'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_room_requests drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_room_requests add constraint res_room_requests_status_check
       check (status in ('approved', 'auto_expired', 'pending', 'rejected', 'withdrawn'));
   end if;
   -- res_service_dispatches
   if to_regclass('public.res_service_dispatches') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_service_dispatches'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_service_dispatches'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_service_dispatches drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_service_dispatches add constraint res_service_dispatches_status_check
       check (status in ('abandoned', 'accepted', 'completed', 'disputed', 'pending'));
   end if;
   -- res_tool_library
   if to_regclass('public.res_tool_library') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_tool_library'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_tool_library'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_tool_library drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_tool_library add constraint res_tool_library_status_check
       check (status in ('available', 'overdue', 'rented'));
   end if;
   -- res_utility_tokens
   if to_regclass('public.res_utility_tokens') is not null then
-    select conname into v_con from pg_constraint
-     where conrelid = 'public.res_utility_tokens'::regclass and contype = 'c'
-       and pg_get_constraintdef(oid) ilike '%status%' limit 1;
-    if v_con is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_utility_tokens'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
       execute format('alter table public.res_utility_tokens drop constraint %I', v_con);
-    end if;
+    end loop;
     alter table public.res_utility_tokens add constraint res_utility_tokens_status_check
       check (status in ('available', 'claimed'));
   end if;
