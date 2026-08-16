@@ -4,55 +4,53 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
-import { loginUser, registerFailedAttempt, resetFailedAttempts, addLog, RootState, toUUID } from '../../store'
+import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
+import { performLogin } from '../../utils/authLogin'
 import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 
-// Cross-app SSO mark for The Gruvs. No Gruvs brand asset ships in this repo,
-// so rather than a placeholder emoji this renders as a proper monogram badge
-// in the app's own gold theme — a logo treatment, not a random icon.
+// Cross-app SSO mark for The Gruvs — their real logo (public/gruvs-logo.png),
+// not a placeholder monogram.
 function GruvsMark() {
   return (
-    <span
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/gruvs-logo.png"
+      alt="The Gruvs"
       aria-hidden="true"
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         width: '22px',
         height: '22px',
         borderRadius: '50%',
-        background: 'var(--gold-primary)',
-        color: '#0a0a0a',
-        fontSize: '0.7rem',
-        fontWeight: 900,
-        fontFamily: 'var(--font-heading), serif',
-        flexShrink: 0,
-        lineHeight: 1
+        objectFit: 'cover',
+        flexShrink: 0
       }}
-    >
-      G
-    </span>
+    />
   )
 }
 
 export default function AuthPage() {
   const router = useRouter()
-  const dispatch = useDispatch()
+  const dispatch = useDispatch<AppDispatch>()
 
-  const [theme, setTheme] = useState<'day' | 'night'>('day')
+  // 'light' is a real, separate theme (see globals.css) — not the old 'day'
+  // value, which the rest of the app still sets and which was never actually
+  // distinct from dark (a 5/255 background difference). This toggle is the
+  // one place in the app where switching genuinely changes the palette.
+  const [theme, setTheme] = useState<'light' | 'night'>('night')
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      const currentTheme = document.documentElement.getAttribute('data-theme') as 'day' | 'night' || 'day'
+      const currentTheme = document.documentElement.getAttribute('data-theme')
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTheme(currentTheme)
+      setTheme(currentTheme === 'light' ? 'light' : 'night')
+      document.documentElement.setAttribute('data-theme', currentTheme === 'light' ? 'light' : 'night')
     }
   }, [])
 
   const toggleTheme = () => {
-    const nextTheme = theme === 'day' ? 'night' : 'day'
+    const nextTheme = theme === 'night' ? 'light' : 'night'
     setTheme(nextTheme)
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-theme', nextTheme)
@@ -63,7 +61,12 @@ export default function AuthPage() {
   const lockedUntil = useSelector((state: RootState) => state.auth.lockedUntil)
   
   // Tab control: 'login' | 'signup'
-  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('signup')
+  // Log In first: most people who reach /auth already have an account (the
+  // landing page's own inline login covers the common case; this page is
+  // mainly landed on directly, e.g. a bookmark or the "Join Your Suburb"
+  // link) — defaulting to the signup form put a returning resident one extra
+  // click away from where they actually needed to be.
+  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login')
   
   // Common Form Fields
   const [email, setEmail] = useState('')
@@ -121,103 +124,17 @@ export default function AuthPage() {
     return sanitized
   }
 
-  // Brute force check
-  const isLocked = (emailKey: string) => {
-    const lockTime = lockedUntil[emailKey] || 0
-    if (lockTime > Date.now()) {
-      return Math.ceil((lockTime - Date.now()) / 1000)
-    }
-    return 0
-  }
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password) return
 
     setErrorMessage(null)
-
-    // Check account lockout status
-    const secondsLeft = isLocked(email)
-    if (secondsLeft > 0) {
-      dispatch(addLog({
-        ip: '127.0.0.1',
-        action: 'Attempted login to locked account blocked',
-        type: 'brute_force_blocked',
-        details: `Failed authorization request for locked account ${email}. Lock expires in ${secondsLeft}s.`
-      }))
-      setErrorMessage(`Account locked due to brute force protection. Try again in ${secondsLeft} seconds.`)
+    const result = await performLogin({ email, password, dispatch, failedAttempts, lockedUntil, fallbackRole: role })
+    if (!result.ok) {
+      setErrorMessage(result.error)
       return
     }
-
-    if (!supabase) {
-      setErrorMessage('Database offline / not configured.')
-      return
-    }
-
-    // Real Supabase Login
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
-
-    if (error) {
-      dispatch(registerFailedAttempt(email))
-      const attempts = (failedAttempts[email] || 0) + 1
-      
-      dispatch(addLog({
-        ip: '127.0.0.1',
-        action: 'Failed login attempt recorded',
-        type: 'auth_failed',
-        details: `Incorrect credentials entered for ${email}. Failed attempts: ${attempts}/5`
-      }))
-
-      if (attempts >= 5) {
-        setErrorMessage('Brute force defense triggered. Account locked for 60 seconds.')
-      } else {
-        setErrorMessage(`Invalid credentials: ${error.message} (Attempt ${attempts} of 5 before account lockout).`)
-      }
-      return
-    }
-
-    const session = data.session
-    const user = data.user
-
-    if (session && user) {
-      // Session cookies are managed by @supabase/ssr (createBrowserClient);
-      // middleware.ts validates them via supabase.auth.getUser().
-
-      // ONE ACCOUNT across The Gruvs & The Resident: this idempotent, caller-only
-      // RPC guarantees both the shared master profile AND the Resident satellite
-      // exist — so someone who signed up on The Gruvs is whole here on first login
-      // (and vice-versa). Server-side + auth.uid()-scoped; best-effort.
-      await supabase.rpc('ensure_res_profile').then(() => {}, () => {})
-
-      // Fetch their res_profile role
-      const { data: dbProfile } = await supabase
-        .from('res_profiles')
-        .select('role')
-        .eq('id', toUUID(user.id))
-        .single()
-
-      const userRole = dbProfile?.role || role || 'visitor'
-
-      dispatch(resetFailedAttempts(email))
-      dispatch(loginUser({
-        id: user.id,
-        name: user.user_metadata?.name || name || 'Resident User',
-        email: user.email!,
-        role: userRole as 'tenant' | 'landlord' | 'visitor'
-      }))
-
-      dispatch(addLog({
-        ip: '127.0.0.1',
-        action: `Logged in safely: Supabase session authenticated`,
-        type: 'auth_success',
-        details: `Email: ${email}`
-      }))
-
-      router.push('/dashboard')
-    }
+    router.push('/dashboard')
   }
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -325,7 +242,7 @@ export default function AuthPage() {
   const handleVisitorLogin = () => {
     // Visitor guests don't have Supabase auth records, so we set a guest token
     const visitorUser = {
-      id: 'visitor-guest',
+      id: GUEST_USER_ID,
       name: 'Guest Visitor',
       email: 'visitor@theresidentcrew.com',
       role: 'visitor' as const,
@@ -356,12 +273,14 @@ export default function AuthPage() {
     <div style={containerStyle}>
       <div style={overlayStyle} />
       
-      <button 
+      <button
         onClick={toggleTheme}
         style={themeToggleStyle}
-        title="Toggle Day/Night Theme"
+        title={theme === 'night' ? 'Switch to light theme' : 'Switch to dark theme'}
+        aria-label={theme === 'night' ? 'Switch to light theme' : 'Switch to dark theme'}
+        aria-pressed={theme === 'light'}
       >
-        {theme === 'day' ? <Moon size={16} /> : <Sun size={16} />}
+        {theme === 'night' ? <Sun size={16} /> : <Moon size={16} />}
       </button>
       
       {securityMessage && (

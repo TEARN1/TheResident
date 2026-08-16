@@ -65,6 +65,20 @@ export const PRICING: Record<string, PriceEntry> = {
     label: 'Feature a room listing (7 days)',
     reasoning: 'Priced above the Market boost (longer window, higher-value transaction — a room, not a used item) but still under one night of the room itself.'
   },
+  notice_boost: {
+    amountZarCents: 1000,
+    cadence: 'one_time',
+    billingType: 'self_serve',
+    label: 'Boost a notice to the top of the wall (24h)',
+    reasoning: 'Cheapest boost in the table — a community notice has no transaction value behind it, this only buys attention, so it must stay impulse-cheap.'
+  },
+  notice_extend_visibility: {
+    amountZarCents: 500,
+    cadence: 'one_time',
+    billingType: 'self_serve',
+    label: 'Keep a notice visible past its free 8h window (+24h)',
+    reasoning: 'Framed as an hourly cost (~R0.20/hr over the 24h block it buys) but sold as one self-serve block, the same way room_boost sells "7 days" rather than literal per-day charges — a real per-second meter has no natural checkout UI and no payment processor bills that granularly anyway.'
+  },
 
   // ── B2B — anchors for a sales conversation, not self-serve amounts ────
   local_business_sponsorship: {

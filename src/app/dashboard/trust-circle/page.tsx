@@ -62,7 +62,7 @@ export default function TrustCirclePage() {
   const [error, setError] = useState<string | null>(null)
 
   const loadGate = useCallback(async () => {
-    if (!supabase || !myId) return
+    if (!supabase || !myId) { setGateLoading(false); return }
     setGateLoading(true)
     const { data, error: rpcError } = await supabase.rpc('res_trust_gate')
     if (!rpcError && data) {
@@ -72,7 +72,7 @@ export default function TrustCirclePage() {
   }, [myId])
 
   const loadConnections = useCallback(async () => {
-    if (!supabase || !myId) return
+    if (!supabase || !myId) { setRowsLoading(false); return }
     setRowsLoading(true)
     const { data, error: rowsError } = await supabase
       .from('res_trust_connections')

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { MapPin, Users, Plus, ShieldCheck, ArrowRight, Info, Check } from 'lucide-react'
 
 interface Community {
@@ -100,7 +101,7 @@ export default function CommunitiesTab({
          <div className="text-center md:text-left space-y-2">
             <h4 className="font-black text-white uppercase tracking-widest">Trust & Hierarchy Audit</h4>
             <p className="text-sm text-gray-400 leading-relaxed max-w-2xl">Verified groups have higher reputation limits and access to emergency dispatch features. Ensure your profile is verified to join premium complex groups or to apply for Street Captain status.</p>
-            <button className="text-blue-400 text-xs font-black uppercase tracking-widest hover:underline pt-2">View Verification Requirements →</button>
+            <Link href="/dashboard/profile" className="text-blue-400 text-xs font-black uppercase tracking-widest hover:underline pt-2 inline-block">View Verification Requirements →</Link>
          </div>
       </div>
     </div>

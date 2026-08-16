@@ -2,10 +2,12 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette } from 'lucide-react'
+import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2 } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
+import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/BlockUserButton'
+import EmptyState from '../components/EmptyState'
 
 interface GossipPost {
   id: string
@@ -100,7 +102,7 @@ export default function GossipPage() {
   }, [])
 
   const loadPosts = useCallback(async () => {
-    if (!supabase) return
+    if (!supabase) { setLoading(false); return }
     setLoading(true)
     setError(null)
     const { data, error: postsError } = await supabase
@@ -110,7 +112,7 @@ export default function GossipPage() {
       .order('id', { ascending: false })
       .limit(PAGE_SIZE)
     if (postsError) {
-      setError(postsError.message)
+      setError(humanizeSupabaseError(postsError.message))
       setLoading(false)
       return
     }
@@ -135,7 +137,7 @@ export default function GossipPage() {
       .order('id', { ascending: false })
       .limit(PAGE_SIZE)
     if (postsError) {
-      setError(postsError.message)
+      setError(humanizeSupabaseError(postsError.message))
       loadingMoreRef.current = false
       setLoadingMore(false)
       return
@@ -273,7 +275,7 @@ export default function GossipPage() {
 
     setPosting(false)
     if (insertError) {
-      setError(insertError.message)
+      setError(humanizeSupabaseError(insertError.message))
       return
     }
     setComposerBody('')
@@ -299,13 +301,23 @@ export default function GossipPage() {
     }
   }
 
+  const deletePost = async (postId: string) => {
+    if (!supabase) return
+    const { error: deleteError } = await supabase.from('res_gossip_posts').delete().eq('id', postId)
+    if (deleteError) {
+      setError(humanizeSupabaseError(deleteError.message))
+      return
+    }
+    setPosts(prev => prev.filter(p => p.id !== postId))
+  }
+
   const submitComment = async (postId: string) => {
     const body = (commentDraft[postId] || '').trim()
     if (!supabase || !body) return
     setCommentLoading(prev => ({ ...prev, [postId]: true }))
     const { error: rpcError } = await supabase.rpc('res_comment_gossip', { p_post: postId, p_body: body })
     if (rpcError) {
-      setError(rpcError.message)
+      setError(humanizeSupabaseError(rpcError.message))
       setCommentLoading(prev => ({ ...prev, [postId]: false }))
       return
     }
@@ -321,18 +333,31 @@ export default function GossipPage() {
 
   return (
     <div className="space-y-6">
-      <div className="glass-panel p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <MessageSquare size={20} className="text-gold-primary" />
+      <div className="glass-panel p-6 relative overflow-hidden border-gold-primary/10">
+        {/* A quiet gold glow behind the composer instead of a flat panel —
+            the one place in the app people write something new deserves to
+            feel a little more alive than a bare textarea. */}
+        <div
+          className="absolute -top-24 -right-24 w-64 h-64 rounded-full opacity-[0.08] pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #D4AF37 0%, transparent 70%)' }}
+        />
+        <div className="flex items-center gap-2 mb-4 relative">
+          <div className="p-1.5 bg-gold-primary/10 rounded-lg">
+            <MessageSquare size={18} className="text-gold-primary" />
+          </div>
           <h2 className="text-xl font-bold text-white">Gossip Feed</h2>
+          <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-auto hidden sm:inline">What's the word, neighbour?</span>
         </div>
         <textarea
           value={composerBody}
           onChange={e => setComposerBody(e.target.value)}
           maxLength={2000}
-          placeholder="What's happening in the neighbourhood?"
-          className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/40"
+          placeholder="Spotted something? Heard something? Say it here…"
+          className="w-full bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all relative"
         />
+        {composerBody.length > 0 && (
+          <p className="text-[10px] text-gray-600 text-right mt-1">{composerBody.length}/2000</p>
+        )}
 
         {mediaPreview && (
           <div className="relative mt-3 rounded-lg overflow-hidden border border-white/10 bg-black">
@@ -376,8 +401,8 @@ export default function GossipPage() {
                   onClick={() => setSelectedBackground(preset.key)}
                   title={preset.label}
                   style={{ backgroundImage: preset.css }}
-                  className={`w-10 h-8 rounded-lg border-2 transition-all ${
-                    selectedBackground === preset.key ? 'border-gold-primary scale-105' : 'border-white/10 hover:border-white/30'
+                  className={`w-11 h-9 rounded-lg border-2 transition-all hover:scale-110 hover:-translate-y-0.5 ${
+                    selectedBackground === preset.key ? 'border-gold-primary scale-110 -translate-y-0.5 shadow-lg shadow-gold-primary/20' : 'border-white/10 hover:border-white/30'
                   }`}
                 />
               ))}
@@ -412,7 +437,7 @@ export default function GossipPage() {
           <button
             onClick={submitPost}
             disabled={posting || uploading || (!composerBody.trim() && !mediaFile)}
-            className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2 px-5 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+            className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-gold-primary/10 hover:shadow-gold-primary/25"
           >
             {uploading ? <Loader size={13} className="animate-spin" /> : <Send size={13} />}
             {uploading ? 'Uploading…' : posting ? 'Posting…' : 'Post'}
@@ -426,9 +451,8 @@ export default function GossipPage() {
           <Loader size={16} className="animate-spin" /> Loading feed…
         </div>
       ) : posts.length === 0 ? (
-        <div className="glass-panel p-12 text-center text-gray-500">
-          <MessageSquare size={48} className="mx-auto mb-4 opacity-10" />
-          <p>Nothing posted yet. Be the first.</p>
+        <div className="glass-panel">
+          <EmptyState icon={MessageSquare} title="Nothing posted yet" subtitle="Be the first to say something." />
         </div>
       ) : (
         <div className="space-y-4">
@@ -442,7 +466,9 @@ export default function GossipPage() {
                     style={{ backgroundImage: bgCss }}
                   >
                     <div className="absolute top-3 right-3">
-                      {post.author_id !== myId && <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
+                      {post.author_id === myId
+                        ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-black/50 hover:bg-red-500/80 text-white/80 hover:text-white rounded-full p-1.5 transition-all"><Trash2 size={13} /></button>
+                        : <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
                     </div>
                     <p className="text-lg sm:text-xl font-bold text-white text-center leading-snug whitespace-pre-wrap drop-shadow-md max-w-md">
                       {post.body}
@@ -498,10 +524,10 @@ export default function GossipPage() {
             }
 
             return (
-              <div key={post.id} className="glass-panel p-5">
+              <div key={post.id} className="glass-panel p-5 transition-all hover:border-gold-primary/15">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
+                    <div className="w-9 h-9 rounded-full bg-gold-primary/10 ring-1 ring-gold-primary/20 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
                       {profileMap[post.author_id]?.avatar_url
                         ? <img src={profileMap[post.author_id].avatar_url as string} alt="" className="w-full h-full object-cover" />
                         : nameOf(post.author_id).charAt(0).toUpperCase()}
@@ -511,7 +537,9 @@ export default function GossipPage() {
                       <p className="text-[10px] text-gray-600">{new Date(post.created_at).toLocaleString()}</p>
                     </div>
                   </div>
-                  {post.author_id !== myId && <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
+                  {post.author_id === myId
+                    ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="text-gray-600 hover:text-red-400 transition-all p-1"><Trash2 size={15} /></button>
+                    : <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
                 </div>
                 {post.body && <p className="text-sm text-gray-300 mt-3 leading-relaxed whitespace-pre-wrap">{post.body}</p>}
 

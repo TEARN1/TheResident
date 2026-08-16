@@ -1,14 +1,15 @@
 'use client'
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import 'leaflet/dist/leaflet.css'
-import { Navigation, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader } from 'lucide-react'
+import { Navigation, LocateFixed, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon } from 'lucide-react'
 import { useSelector } from 'react-redux'
-import { RootState } from '../../../store'
+import { RootState, isGuestUser } from '../../../store'
 import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../utils/mapZones'
 import { fetchSavedPins, saveNewPin, deleteSavedPin, type SavedPin } from '../../../utils/savedPins'
 import { distanceMetres } from '../../../utils/logic'
-import type { GeocodeResult } from '../../../utils/geocode'
+import { searchPlaces, type GeocodeResult } from '../../../utils/geocode'
 import MapSearchBox from './MapSearchBox'
 import SavedPinsPanel from './SavedPinsPanel'
 import DistanceMatrixPanel, { type MatrixPoint } from './DistanceMatrixPanel'
@@ -58,7 +59,8 @@ const DURATION_OPTIONS: Array<{ hours: number; label: string }> = [
 
 type Drawer = 'none' | 'pins' | 'matrix' | 'geofence'
 
-export default function VibeMap() {
+export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }) {
+  const searchParams = useSearchParams()
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<import('leaflet').Map | null>(null)
@@ -67,14 +69,42 @@ export default function VibeMap() {
   const pinsLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const liveMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const leafletRef = useRef<typeof import('leaflet') | null>(null)
+  const tileLayerRef = useRef<import('leaflet').TileLayer | null>(null)
+
+  // The map used to be locked to CARTO's light "Voyager" basemap — a bright
+  // white rectangle sitting in the middle of an otherwise all-dark app.
+  // Dark Matter is the same OSM data via CARTO's dark render, so this is a
+  // reskin, not a different data source. Defaults to dark to match the rest
+  // of the UI; Voyager stays available for anyone who finds streets/labels
+  // easier to read on light.
+  const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark')
+  const TILE_SOURCES: Record<'dark' | 'light', string> = {
+    dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
+    light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+  }
 
   const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null)
   const [locationDenied, setLocationDenied] = useState(false)
   const [zones, setZones] = useState<SharedZone[]>([])
   const [loading, setLoading] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
-  const [showLegend, setShowLegend] = useState(false)
+  // Visible by default — a color-coded map with the legend hidden behind a
+  // toggle just reads as a wash of same-ish dots; showing it up front is
+  // what actually makes the color-by-kind strategy legible.
+  const [showLegend, setShowLegend] = useState(true)
   const [drawer, setDrawer] = useState<Drawer>('none')
+
+  // The legend used to be pure decoration — a static color key with no way
+  // to act on it. Now each row is a real filter: unchecking "Heavy traffic"
+  // actually hides those markers, and "Confirmed only" cuts noise from
+  // unverified reports. Defaults to everything visible (opt-out, not opt-in),
+  // so a first-time visitor sees the full picture before narrowing it down.
+  const [activeKinds, setActiveKinds] = useState<Set<string>>(new Set(Object.keys(KIND_LABEL)))
+  const [confirmedOnly, setConfirmedOnly] = useState(false)
+  // Bumped on every pan/zoom so the legend's per-kind counts can reflect
+  // "what's on screen right now" instead of the whole 15km fetch radius —
+  // a count that never changes as you zoom in isn't telling you anything.
+  const [boundsTick, setBoundsTick] = useState(0)
 
   const [pendingPoint, setPendingPoint] = useState<{ label: string; lat: number; lon: number } | null>(null)
   const [savedPins, setSavedPins] = useState<SavedPin[]>([])
@@ -82,7 +112,9 @@ export default function VibeMap() {
 
   const [matrixPoints, setMatrixPoints] = useState<MatrixPoint[]>([])
   const [alertRadiusM, setAlertRadiusM] = useState(500)
-  const [livePosition, setLivePosition] = useState<{ lat: number; lon: number } | null>(null)
+  const [livePosition, setLivePosition] = useState<{ lat: number; lon: number; accuracy?: number } | null>(null)
+  const [locationSharing, setLocationSharing] = useState(false)
+  const [locating, setLocating] = useState(false)
 
   // Report-a-closure form, opened from the pending-point action card.
   const [showReportForm, setShowReportForm] = useState(false)
@@ -92,7 +124,7 @@ export default function VibeMap() {
   const [reportSubmitting, setReportSubmitting] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
 
-  const currentUserId = currentUser && currentUser.id !== 'visitor-guest' ? currentUser.id : null
+  const currentUserId = !isGuestUser(currentUser) && currentUser ? currentUser.id : null
 
   const refreshSavedPins = async () => {
     if (!currentUserId) { setSavedPins([]); return }
@@ -128,7 +160,41 @@ export default function VibeMap() {
     [geofenceHits]
   )
 
+  // What the legend/filter row and the marker layer both agree is "on the
+  // map right now" — kept in one place so the legend's counts and what
+  // actually renders can never drift apart. Memoized so toggling an
+  // unrelated bit of UI state doesn't tear down and rebuild every marker.
+  const filteredZones = useMemo(() => zones.filter(z => {
+    if (!activeKinds.has(z.kind)) return false
+    if (confirmedOnly && z.status !== 'confirmed' && z.status !== 'official') return false
+    return true
+  }), [zones, activeKinds, confirmedOnly])
+
+  const toggleKind = (kind: string) => {
+    setActiveKinds(prev => {
+      const next = new Set(prev)
+      if (next.has(kind)) next.delete(kind); else next.add(kind)
+      return next
+    })
+  }
+
+  // Reference point for "how far is this from me" in each popup — a live
+  // GPS fix if the user has one running, otherwise wherever the map is
+  // centred (their approximate location or a searched place).
+  const distanceOrigin = livePosition || center
+
+  // A "Directions" link elsewhere in the app (listings, services) routes here
+  // as /dashboard/community?tab=vibemap&place=<address> rather than deep-linking
+  // out to Google Maps — the shared zone reports, saved pins and geofence
+  // alerts only exist on our own map, so handing the user to an external app
+  // drops every layer that makes this map worth opening.
+  const focusPlace = searchParams.get('place')
+
   useEffect(() => {
+    // An explicit place from the URL wins over "where am I" — otherwise the
+    // geolocation callback would land and yank the view back off the address
+    // the user actually asked to see.
+    if (focusPlace) return
     if (!('geolocation' in navigator)) {
       setLocationDenied(true)
       return
@@ -138,7 +204,19 @@ export default function VibeMap() {
       () => setLocationDenied(true),
       { timeout: 8000 }
     )
-  }, [])
+  }, [focusPlace])
+
+  useEffect(() => {
+    if (!focusPlace) return
+    let cancelled = false
+    searchPlaces(focusPlace).then(results => {
+      if (cancelled || results.length === 0) return
+      const hit = results[0]
+      setCenter({ lat: hit.lat, lon: hit.lon })
+      setPendingPoint({ label: hit.label, lat: hit.lat, lon: hit.lon })
+    })
+    return () => { cancelled = true }
+  }, [focusPlace])
 
   const loadZones = async (lat: number, lon: number) => {
     setLoading(true)
@@ -172,9 +250,15 @@ export default function VibeMap() {
       // often — tile.openstreetmap.org is OSM's lightweight demo server, it
       // renders under-mapped areas infrequently, and production hotlinking it
       // is against OSM's own tile usage policy. No API key required.
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      tileLayerRef.current = L.tileLayer(TILE_SOURCES[mapTheme], {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 19,
+        // CARTO's raster tiles are only rendered up to z19 (maxNativeZoom) —
+        // past that Leaflet upscales the z19 tile instead of requesting a
+        // tile that doesn't exist. Letting the map itself go to z21 gets the
+        // scale bar down to roughly street-width (~10m) for road-closure
+        // reports, where "which side of the road" actually matters.
+        maxZoom: 21,
+        maxNativeZoom: 19,
         subdomains: 'abcd'
       }).addTo(map)
 
@@ -184,17 +268,39 @@ export default function VibeMap() {
       liveMarkerRef.current = L.layerGroup().addTo(map)
       mapRef.current = map
 
+      // Minimum zoom for a report pin to be trustworthy: at zoom 15 the scale
+      // bar reads roughly 300m — any looser than that and a "road closed"
+      // pin could land on the wrong street entirely. Clicking while zoomed
+      // out further re-centres and zooms in on the clicked point instead of
+      // dropping the pin at an unreliable location.
+      const MIN_REPORT_ZOOM = 15
       map.on('click', (e: import('leaflet').LeafletMouseEvent) => {
         setShowReportForm(false)
         setReportError(null)
         setPendingPoint({ label: `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`, lat: e.latlng.lat, lon: e.latlng.lng })
+        if (map.getZoom() < MIN_REPORT_ZOOM) {
+          map.setView(e.latlng, MIN_REPORT_ZOOM)
+        }
       })
+
+      // Drives the legend's "in view" counts (see boundsTick) and gives a
+      // real sense of real-world distance while panning/zooming.
+      map.on('moveend zoomend', () => setBoundsTick(t => t + 1))
+      L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map)
 
       if (center) loadZones(center.lat, center.lon)
     })
 
     return () => { cancelled = true }
   }, [center])
+
+  // Swaps tiles in place via setUrl rather than tearing down/recreating the
+  // layer — the map itself, its zoom/pan state, and every marker layer stay
+  // untouched, only the underlying imagery changes.
+  useEffect(() => {
+    tileLayerRef.current?.setUrl(TILE_SOURCES[mapTheme])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapTheme])
 
   useEffect(() => {
     if (!center || !mapRef.current) return
@@ -208,9 +314,18 @@ export default function VibeMap() {
     if (!L || !group) return
     group.clearLayers()
 
-    zones.forEach(zone => {
+    const now = Date.now()
+
+    filteredZones.forEach(zone => {
       const color = KIND_COLOR[zone.kind] || '#D4AF37'
+      // O(1) Set lookup rather than a linear .some() per zone — the scan was
+      // O(zones x hits) inside a loop that already runs once per zone.
       const isGeofenceHit = geofenceZoneIds.has(zone.id)
+      // A report with more disputes than confirmations shouldn't read as
+      // trustworthy as one the community has backed up — flagged the same
+      // way a geofence hit is (a pulsing outer ring), so "this is contested"
+      // is visible before anyone opens the popup to read the raw counts.
+      const isContested = zone.disputeCount > 0 && zone.disputeCount >= zone.confirmCount
 
       if (isGeofenceHit) {
         L.circleMarker([zone.lat, zone.lon], {
@@ -221,32 +336,78 @@ export default function VibeMap() {
           weight: 2,
           className: 'res-geofence-pulse'
         }).addTo(group)
+      } else if (isContested) {
+        L.circleMarker([zone.lat, zone.lon], {
+          radius: 14 + zone.severity * 2,
+          color: '#a855f7',
+          fillColor: '#a855f7',
+          fillOpacity: 0.1,
+          weight: 1.5,
+          dashArray: '4 3',
+          className: 'res-geofence-pulse'
+        }).addTo(group)
       }
+
+      const isVerified = zone.status === 'confirmed' || zone.status === 'official'
+
+      // Fade toward the last 2 hours before a report's own end time instead
+      // of it just vanishing outright once expired — a report that's about
+      // to clear should visibly read as "on its way out", not identical to
+      // one that just went up.
+      const FADE_WINDOW_MS = 2 * 60 * 60 * 1000
+      let expiryFactor = 1
+      if (zone.endsAt) {
+        const msLeft = new Date(zone.endsAt).getTime() - now
+        if (msLeft <= 0) expiryFactor = 0.3
+        else if (msLeft < FADE_WINDOW_MS) expiryFactor = 0.4 + 0.6 * (msLeft / FADE_WINDOW_MS)
+      }
+
+      // A soft, borderless halo under every marker (not just geofence hits)
+      // so the map reads as colored zones of activity rather than a scatter
+      // of same-size dots — the halo is what carries the "strategy of color"
+      // at a glance, before anyone reads a popup or the legend.
+      L.circleMarker([zone.lat, zone.lon], {
+        radius: (8 + zone.severity * 2) * 2.2,
+        color: 'transparent',
+        fillColor: color,
+        fillOpacity: (isVerified ? 0.16 : 0.09) * expiryFactor,
+        weight: 0,
+        interactive: false
+      }).addTo(group)
 
       const marker = L.circleMarker([zone.lat, zone.lon], {
         radius: 8 + zone.severity * 2,
-        color,
+        color: isVerified ? '#ffffff' : color,
         fillColor: color,
-        fillOpacity: zone.status === 'confirmed' || zone.status === 'official' ? 0.85 : 0.4,
-        weight: 2
+        fillOpacity: (isVerified ? 0.95 : 0.55) * expiryFactor,
+        weight: isVerified ? 2.5 : 2
       })
 
       const sourceLabel = zone.source_app === 'gruvs' ? 'The Gruvs' : 'The Resident'
       const expiry = zone.endsAt
         ? new Date(zone.endsAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })
         : null
+      const distanceLabel = distanceOrigin
+        ? (() => {
+            const m = distanceMetres(distanceOrigin, zone)
+            return m < 1000 ? `${Math.round(m)}m away` : `${(m / 1000).toFixed(1)}km away`
+          })()
+        : null
       const popupId = `zone-popup-${zone.id}`
       marker.bindPopup(`
         <div style="font-family:inherit;min-width:190px">
-          <strong>${KIND_LABEL[zone.kind] || zone.kind}</strong>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <strong>${KIND_LABEL[zone.kind] || zone.kind}</strong>
+            ${distanceLabel ? `<span style="font-size:0.75em;opacity:0.6;white-space:nowrap">${distanceLabel}</span>` : ''}
+          </div>
           ${zone.label ? `<div>${zone.label}</div>` : ''}
           ${zone.note ? `<div style="opacity:0.7;font-size:0.85em;margin-top:4px">${zone.note}</div>` : ''}
-          ${expiry ? `<div style="font-size:0.75em;margin-top:6px;color:#D4AF37">Clears by ${expiry}</div>` : ''}
+          ${expiry ? `<div style="font-size:0.75em;margin-top:6px;color:${expiryFactor < 1 ? '#f59e0b' : '#D4AF37'}">${now >= new Date(zone.endsAt as string).getTime() ? 'Cleared' : 'Clears by'} ${expiry}</div>` : ''}
           <div style="font-size:0.75em;opacity:0.6;margin-top:6px">
             Reported via ${sourceLabel} · ${zone.status}
           </div>
-          <div style="font-size:0.75em;margin-top:4px">
-            ✓ ${zone.confirmCount} confirmed &nbsp; ✗ ${zone.disputeCount} disputed
+          <div style="font-size:0.75em;margin-top:4px;${isContested ? 'color:#c084fc;font-weight:600' : ''}">
+            ✓ ${zone.confirmCount} confirmed &nbsp; ✗ ${zone.disputeCount} disputed${isContested ? ' — contested' : ''}
           </div>
           <div id="${popupId}" style="display:flex;gap:6px;margin-top:8px"></div>
         </div>
@@ -257,7 +418,7 @@ export default function VibeMap() {
         if (!container) return
         container.innerHTML = ''
 
-        if (!currentUser || currentUser.id === 'visitor-guest') {
+        if (isGuestUser(currentUser)) {
           const note = document.createElement('span')
           note.textContent = 'Sign in to confirm or dispute this.'
           note.style.opacity = '0.6'
@@ -297,8 +458,13 @@ export default function VibeMap() {
     // actually differs. (The disable below is pre-existing — it suppresses the
     // deliberate omission of `center`, which must NOT retrigger a rebuild on
     // every pan. Keep it on the line directly above the dep array.)
+    // savedPins/alertRadiusM are deliberately absent: they feed geofenceZoneIds,
+    // and depending on them directly rebuilt every marker on each drag of the
+    // alert-radius slider even when the tripped set never changed. Verified the
+    // body references neither (the only matches are in comments), so there is no
+    // stale closure.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zones, currentUser, geofenceZoneIds])
+  }, [filteredZones, currentUser, geofenceZoneIds, distanceOrigin])
 
   useEffect(() => {
     const L = leafletRef.current
@@ -342,6 +508,21 @@ export default function VibeMap() {
     layer.clearLayers()
     if (!livePosition) return
 
+    // A dot with a fixed 6px glow implies pinpoint precision the Geolocation
+    // API never actually provides. Drawing the browser's own reported
+    // accuracy as a real, to-scale circle (pos.coords.accuracy, metres) is
+    // the honest version — the dot is where you probably are, the circle is
+    // how sure the device actually is.
+    if (livePosition.accuracy && Number.isFinite(livePosition.accuracy)) {
+      L.circle([livePosition.lat, livePosition.lon], {
+        radius: livePosition.accuracy,
+        color: '#3b82f6',
+        weight: 1,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.08
+      }).addTo(layer)
+    }
+
     L.marker([livePosition.lat, livePosition.lon], {
       icon: L.divIcon({
         className: '',
@@ -349,7 +530,11 @@ export default function VibeMap() {
         iconSize: [14, 14],
         iconAnchor: [7, 7]
       })
-    }).bindPopup('You (live)').addTo(layer)
+    }).bindPopup(
+      livePosition.accuracy
+        ? `You (live) — accurate to ±${Math.round(livePosition.accuracy)}m`
+        : 'You (live)'
+    ).addTo(layer)
   }, [livePosition])
 
   const addMatrixPoint = (p: MatrixPoint) => {
@@ -398,7 +583,15 @@ export default function VibeMap() {
       setReportNote('')
       if (center) loadZones(center.lat, center.lon)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      // reportZone can reject with a Supabase PostgrestError, which is a
+      // plain object (not an Error instance) — String(err) on that produces
+      // the useless literal text "[object Object]" instead of the real
+      // message.
+      const msg = err instanceof Error
+        ? err.message
+        : (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string')
+          ? (err as { message: string }).message
+          : String(err)
       if (msg.includes('rate_limited')) {
         setReportError('Too many reports in the last hour — try again shortly.')
       } else {
@@ -414,26 +607,50 @@ export default function VibeMap() {
     if (map) map.setZoom(map.getZoom() + delta)
   }
 
+  // Standard "locate me" behaviour (Google/Apple Maps): one tap turns on
+  // live sharing AND jumps straight to your position at street level —
+  // not two separate actions (a toggle, then a wait, then a manual
+  // recenter). Zoom 18 puts the scale bar at roughly 40-50m, matching what
+  // you'd actually want to judge "which street is this" at.
+  const STREET_LEVEL_ZOOM = 18
+  const handleLocateMe = () => {
+    if (locationSharing && livePosition) {
+      mapRef.current?.setView([livePosition.lat, livePosition.lon], STREET_LEVEL_ZOOM)
+      return
+    }
+    setLocationSharing(true)
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        mapRef.current?.setView([pos.coords.latitude, pos.coords.longitude], STREET_LEVEL_ZOOM)
+        setLocating(false)
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    )
+  }
+
   return (
-    <div className="glass-panel p-3 md:p-4">
-      <div className="flex justify-between items-center mb-3 px-1">
-        <div>
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Navigation size={20} className="text-gold-primary" /> Shared Living Map
-          </h3>
-          <p className="text-gray-500 text-xs mt-0.5">From both The Resident and The Gruvs — click anywhere to report or search a place.</p>
+    <div className={fullscreen ? 'h-full w-full' : 'glass-panel p-3 md:p-4'}>
+      {!fullscreen && (
+        <div className="flex justify-between items-center mb-3 px-1">
+          <div>
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Navigation size={20} className="text-gold-primary" /> Shared Living Map
+            </h3>
+            <p className="text-gray-500 text-xs mt-0.5">From both The Resident and The Gruvs — click anywhere to report or search a place.</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Full-bleed map with floating controls, like Google Maps rather than a boxed embed */}
-      <div className="relative rounded-2xl overflow-hidden border border-white/5 h-[70vh] min-h-[420px]">
+      <div className={fullscreen ? 'relative overflow-hidden h-full w-full' : 'relative rounded-2xl overflow-hidden border border-white/5 h-[70vh] min-h-[420px]'}>
         {/* A Leaflet canvas is invisible to assistive tech: this component had
-            ZERO aria/role/tabIndex in 632 lines, so a screen-reader or
-            keyboard-only user got an unlabelled black rectangle and no way to
-            learn what was on it. Labelling the region and exposing a text
-            summary below is the minimum that makes the map's information
-            available without sight — and the geofence count is safety
-            information, so it must not be visual-only. */}
+            ZERO aria/role/tabIndex, so a screen-reader or keyboard-only user got
+            an unlabelled black rectangle and no way to learn what was on it.
+            Labelling the region and exposing a text summary below is the minimum
+            that makes the map's information available without sight — and the
+            geofence count is safety information, so it must not be visual-only. */}
         <div
           ref={mapContainerRef}
           className="absolute inset-0"
@@ -443,9 +660,11 @@ export default function VibeMap() {
         />
 
         {/* Screen-reader equivalent of the map + a polite live region so a new
-            alert near a saved place is ANNOUNCED, not just drawn in red. */}
+            alert near a saved place is ANNOUNCED, not just drawn in red.
+            Counts filteredZones, not zones: the legend filters are real, so the
+            announcement must describe what is actually on the map right now. */}
         <div className="sr-only" aria-live="polite" aria-atomic="true">
-          {zones.length} zones reported nearby.
+          {filteredZones.length} zones shown nearby.
           {geofenceHits.length > 0
             ? ` ${geofenceHits.length} ${geofenceHits.length === 1 ? 'alert is' : 'alerts are'} near a place you saved.`
             : ' No alerts near your saved places.'}
@@ -458,45 +677,113 @@ export default function VibeMap() {
           </div>
         </div>
 
-        {/* Layers / legend toggle — floating top-right */}
+        {/* Layers / legend toggle — floating top-right. Each row is now a
+            real filter (see activeKinds/confirmedOnly), and counts reflect
+            what's actually in view, not the whole 15km fetch radius. */}
         <div className="absolute top-3 right-3 z-[500] flex flex-col items-end gap-2">
           <button
             onClick={() => setShowLegend(v => !v)}
             className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-2.5 text-gray-300 hover:text-white shadow-2xl"
-            title="Legend"
+            title="Legend and filters"
+            aria-label={showLegend ? 'Hide map legend and filters' : 'Show map legend and filters'}
+            aria-pressed={showLegend}
           >
             <Layers size={18} />
           </button>
           {showLegend && (
-            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl w-[170px]">
-              {Object.entries(KIND_LABEL).map(([kind, label]) => (
-                <div key={kind} className="flex items-center gap-2 text-[10px] text-gray-300 py-1">
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: KIND_COLOR[kind] }} />
-                  {label}
-                </div>
-              ))}
+            // Compact icon-only strip below ~380px wide (a phone in portrait
+            // with the map at full width); the full labelled key otherwise —
+            // the 190px fixed panel used to eat most of a phone-width map.
+            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl w-[52px] sm:w-[200px]">
+              <p className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Map key — tap to filter</p>
+              {Object.entries(KIND_LABEL).map(([kind, label]) => {
+                const bounds = mapRef.current?.getBounds()
+                const count = zones.filter(z => z.kind === kind && (!bounds || bounds.contains([z.lat, z.lon]))).length
+                const active = activeKinds.has(kind)
+                // Referenced so this recomputes per pan/zoom via boundsTick;
+                // the value itself isn't rendered, it's just the dependency.
+                void boundsTick
+                return (
+                  <button
+                    key={kind}
+                    onClick={() => toggleKind(kind)}
+                    aria-pressed={active}
+                    aria-label={`${active ? 'Hide' : 'Show'} ${label} reports${count > 0 ? ` (${count} in view)` : ''}`}
+                    title={label}
+                    className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${active ? 'text-gray-200' : 'text-gray-600 opacity-50'} hover:opacity-100`}
+                  >
+                    <div
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ background: KIND_COLOR[kind], boxShadow: active ? `0 0 8px ${KIND_COLOR[kind]}` : 'none' }}
+                    />
+                    <span className="hidden sm:inline flex-1 text-left">{label}</span>
+                    {count > 0 && <span className="hidden sm:inline text-gray-500 font-bold">{count}</span>}
+                  </button>
+                )
+              })}
+              <label className="flex items-center gap-2 text-[10px] text-gray-400 pt-2 mt-1 border-t border-white/5 cursor-pointer py-1">
+                <input
+                  type="checkbox"
+                  checked={confirmedOnly}
+                  onChange={e => setConfirmedOnly(e.target.checked)}
+                  className="accent-gold-primary w-3 h-3 shrink-0"
+                  aria-label="Show confirmed and official reports only"
+                />
+                <span className="hidden sm:inline">Confirmed only</span>
+              </label>
+              <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-500 pt-1">
+                <div className="w-3 h-3 rounded-full shrink-0 bg-white/80 border border-white" />
+                Confirmed / official
+              </div>
             </div>
           )}
         </div>
 
-        {/* Zoom + refresh — floating bottom-right, Google-Maps-style stacked controls */}
+        {/* Zoom + refresh — floating bottom-right, Google-Maps-style stacked
+            controls. p-2.5 rather than p-2: Leaflet's own zoom buttons are
+            sized for a mouse, these are meant for a thumb. */}
         <div className="absolute bottom-3 right-3 z-[500] flex flex-col gap-1.5">
-          <button onClick={() => zoom(1)} className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl" title="Zoom in"><Plus size={16} /></button>
-          <button onClick={() => zoom(-1)} className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl" title="Zoom out"><Minus size={16} /></button>
+          <button onClick={() => zoom(1)} aria-label="Zoom in" className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl" title="Zoom in"><Plus size={16} /></button>
+          <button onClick={() => zoom(-1)} aria-label="Zoom out" className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl" title="Zoom out"><Minus size={16} /></button>
           <button
             onClick={() => center && loadZones(center.lat, center.lon)}
             disabled={!center || loading}
-            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl disabled:opacity-40"
+            aria-label={loading ? 'Refreshing reports' : 'Refresh reports'}
+            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl disabled:opacity-40"
             title="Refresh reports"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
             onClick={() => mapRef.current?.invalidateSize()}
-            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2 text-gray-300 hover:text-white shadow-2xl"
+            aria-label="Fix map size"
+            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl"
             title="Fix map size"
           >
             <Maximize size={16} />
+          </button>
+          {/* Live location was previously reachable only by opening the
+              Alerts drawer — a setting almost nobody would stumble into —
+              and even found, it just flipped a switch with no visible
+              result. One tap now: turn on AND jump to street level, the way
+              every map app's locate-me button actually behaves. */}
+          <button
+            onClick={handleLocateMe}
+            disabled={locating}
+            aria-label={locationSharing ? 'Recenter on my location' : 'Show my live location'}
+            aria-pressed={locationSharing}
+            title={locationSharing ? 'Back to my location' : 'Show my live location'}
+            className={`bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 shadow-2xl transition-all disabled:opacity-60 ${locationSharing ? 'text-gold-primary' : 'text-gray-300 hover:text-white'}`}
+          >
+            {locating ? <Loader size={16} className="animate-spin" /> : <LocateFixed size={16} className={locationSharing ? 'animate-pulse' : ''} />}
+          </button>
+          <button
+            onClick={() => setMapTheme(t => t === 'dark' ? 'light' : 'dark')}
+            aria-label={mapTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
+            title={mapTheme === 'dark' ? 'Light map' : 'Dark map'}
+            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl"
+          >
+            {mapTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
         </div>
 
@@ -513,11 +800,13 @@ export default function VibeMap() {
           ))}
         </div>
 
-        {/* Stats chip — floating bottom-left */}
+        {/* Stats chip — floating bottom-left. Counts the FILTERED set, not
+            the raw fetch — otherwise "12 nearby" while a filter has hidden
+            9 of them would just read as broken. */}
         <div className="absolute bottom-3 left-3 z-[500] bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2 shadow-2xl flex items-center gap-3 text-[10px] text-gray-300">
-          <span>{zones.length} nearby</span>
+          <span>{filteredZones.length}{filteredZones.length !== zones.length ? ` of ${zones.length}` : ''} nearby</span>
           <span className="text-gray-600">·</span>
-          <span className="flex items-center gap-1"><Check size={10} className="text-green-500" /> {zones.filter(z => z.status === 'confirmed' || z.status === 'official').length} confirmed</span>
+          <span className="flex items-center gap-1"><Check size={10} className="text-green-500" /> {filteredZones.filter(z => z.status === 'confirmed' || z.status === 'official').length} confirmed</span>
           {geofenceHits.length > 0 && (
             <>
               <span className="text-gray-600">·</span>
@@ -661,7 +950,7 @@ export default function VibeMap() {
                   <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Alerts near saved places</p>
                   <p className="text-lg font-bold text-white">{geofenceHits.length}</p>
                 </div>
-                <LiveLocationToggle userId={currentUserId} onPosition={setLivePosition} />
+                <LiveLocationToggle userId={currentUserId} sharing={locationSharing} onSharingChange={setLocationSharing} onPosition={setLivePosition} />
               </div>
             )}
           </div>
@@ -676,6 +965,37 @@ export default function VibeMap() {
           0% { opacity: 0.9; }
           70% { opacity: 0.15; }
           100% { opacity: 0.9; }
+        }
+        /* A pulsing ring is decorative, not informational — the contested/
+           geofence marker underneath it already conveys the state, so it's
+           safe to just hold it at a steady visible opacity instead. */
+        @media (prefers-reduced-motion: reduce) {
+          .res-geofence-pulse {
+            animation: none;
+            opacity: 0.5;
+          }
+        }
+        /* Leaflet's scale control shares the bottom-left corner with our own
+           floating stats chip — pushed up clear of it rather than the two
+           overlapping. */
+        .leaflet-bottom.leaflet-left {
+          margin-bottom: 44px;
+        }
+        .leaflet-control-scale-line {
+          background: rgba(0,0,0,0.6);
+          border-color: rgba(255,255,255,0.4) !important;
+          color: #e5e5e5;
+          backdrop-filter: blur(4px);
+        }
+        /* Legally required, so it has to stay — but at the map's default
+           faint grey-on-dark it was barely legible, which isn't "present",
+           it's "technically present". */
+        .leaflet-control-attribution {
+          background: rgba(0,0,0,0.65) !important;
+          color: #c7c7c7 !important;
+        }
+        .leaflet-control-attribution a {
+          color: #e8c766 !important;
         }
       `}</style>
     </div>

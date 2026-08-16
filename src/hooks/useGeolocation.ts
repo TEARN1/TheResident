@@ -60,7 +60,17 @@ export const useGeolocation = (setAlertNotification: (msg: string | null) => voi
       },
       (error) => {
         setLocationLoading(false)
-        setAlertNotification(`Geolocation failed: ${error.message}`)
+        // error.message is a raw browser string ("User denied Geolocation")
+        // that reads like a crash report. error.code is the same three
+        // outcomes every time (the standard GeolocationPositionError codes),
+        // so map those to something a resident can actually act on instead.
+        const friendly =
+          error.code === error.PERMISSION_DENIED
+            ? 'Location access is blocked — allow it for this site in your browser settings, then try again.'
+            : error.code === error.POSITION_UNAVAILABLE
+            ? 'Could not determine your location right now — try again in a moment, or enter your suburb manually.'
+            : 'Location took too long to respond — try again, or enter your suburb manually.'
+        setAlertNotification(friendly)
         setTimeout(() => setAlertNotification(null), 4000)
       },
       { enableHighAccuracy: true, timeout: 8000 }
