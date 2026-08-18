@@ -190,6 +190,21 @@ export const TRANSITIONS: Transition[] = [
     note: 'Confidence decayed with nobody re-confirming; almost certainly fixed quietly.' },
   { entity: 'res_faults', from: 'reported', to: 'lapsed', actors: ['job'], guard: null, reversible: true,
     note: 'A lone report nobody ever confirmed.' },
+
+  // ── res_sponsorships — paid placement ────────────────────────────────────
+  // Sold off-platform in v1 (CONTRACT.md §6: the app holds no money), so a
+  // human confirms payment before a placement goes live. No job may activate
+  // one — automation can only ever END a placement, never start one.
+  { entity: 'res_sponsorships', from: 'pending', to: 'active', actors: ['operator'], guard: 'isSponsorshipAdmin', reversible: true,
+    note: 'Payment confirmed off-platform; the placement goes live.' },
+  { entity: 'res_sponsorships', from: 'pending', to: 'cancelled', actors: ['operator'], guard: 'isSponsorshipAdmin', reversible: true,
+    note: 'Sale fell through before it ever ran.' },
+  { entity: 'res_sponsorships', from: 'active', to: 'expired', actors: ['job'], guard: null, reversible: true,
+    note: 'The agreed term ended. The only status change automation may make here.' },
+  { entity: 'res_sponsorships', from: 'active', to: 'cancelled', actors: ['operator'], guard: 'isSponsorshipAdmin', reversible: true,
+    note: 'Cancelled mid-term by either side. No refund logic — money never moved through the app.' },
+  { entity: 'res_sponsorships', from: 'expired', to: 'active', actors: ['operator'], guard: 'isSponsorshipAdmin', reversible: true,
+    note: 'Renewed for a new term.' },
 ]
 
 /**
@@ -211,6 +226,7 @@ export const INITIAL_STATES: Record<string, string> = {
   res_lost_found: 'open',
   res_care_circle: 'active',
   res_faults: 'reported',
+  res_sponsorships: 'pending',
 }
 
 /** Every state an entity can be in, derived — never hand-maintained. */

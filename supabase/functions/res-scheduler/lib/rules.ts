@@ -38,6 +38,9 @@ export const FORBIDDEN_COLUMNS: readonly string[] = [
   // Money (peer-to-peer) — CONTRACT.md §6
   'price', 'price_per_seat', 'price_per_day', 'deposit', 'price_estimate',
   'display_price', 'amount', 'amount_zar_cents', 'currency', 'rate_note',
+  // A sponsorship rate agreed with a business off-platform. A job that
+  // could alter it could silently change what someone owes.
+  'rate_zar_cents',
   // Trust — CONTRACT.md §3, Gruvs-owned even where denormalised
   'vibe_score', 'social_integrity_score', 'is_verified', 'badges', 'xp',
   'reputation_score', 'resident_trust_tier',

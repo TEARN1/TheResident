@@ -27,6 +27,7 @@ import UpgradeButton from '../components/UpgradeButton'
 import { directionsUrlForAddress } from '../../../utils/navigation'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
+import SponsoredSlot from '../components/SponsoredSlot'
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
 const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
@@ -96,6 +97,13 @@ export default function ServicesPage() {
     TIER_RANK[(providerTiers[a.ownerId] || 'none') as 'premium' | 'priority' | 'none'] -
     TIER_RANK[(providerTiers[b.ownerId] || 'none') as 'premium' | 'priority' | 'none']
   )
+
+  // Which suburb's sponsors to show. The user's own listed suburb first (same
+  // derivation as the community page), falling back to the suburb of whatever
+  // they are currently looking at.
+  const sponsorSuburb = services.find(s => s.ownerId === currentUser?.id)?.suburb
+    || services[0]?.suburb
+    || ''
   const utilityTokens = useSelector((state: RootState) => state.utilities.tokens)
   const dispatches = useSelector((state: RootState) => state.networking.dispatches)
 
@@ -372,6 +380,12 @@ export default function ServicesPage() {
                  <Plus size={20} /> Advertise My Skills
               </button>
            </div>
+
+           {/* A sponsored slot sits ABOVE the grid and never inside it: the list
+               below is complete and unchanged, so nobody has been pushed down
+               to make room for a paying business. Renders nothing when no slot
+               is sold. */}
+           <SponsoredSlot surface="services" suburb={sponsorSuburb} />
 
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
              {services.map(srv => (

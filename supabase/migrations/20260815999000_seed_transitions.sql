@@ -80,7 +80,12 @@ values
   ('res_faults', 'resolved', 'escalated', array['job']::text[], null, true, 'Residents report it is still broken after a resolution claim. Reopened, and the false closure is on the record.'),
   ('res_faults', 'reported', 'rejected', array['job']::text[], null, true, 'Neighbours actively dispute it. Held, not deleted — the reporter may still be right.'),
   ('res_faults', 'corroborated', 'lapsed', array['job']::text[], null, true, 'Confidence decayed with nobody re-confirming; almost certainly fixed quietly.'),
-  ('res_faults', 'reported', 'lapsed', array['job']::text[], null, true, 'A lone report nobody ever confirmed.');
+  ('res_faults', 'reported', 'lapsed', array['job']::text[], null, true, 'A lone report nobody ever confirmed.'),
+  ('res_sponsorships', 'pending', 'active', array['operator']::text[], 'isSponsorshipAdmin', true, 'Payment confirmed off-platform; the placement goes live.'),
+  ('res_sponsorships', 'pending', 'cancelled', array['operator']::text[], 'isSponsorshipAdmin', true, 'Sale fell through before it ever ran.'),
+  ('res_sponsorships', 'active', 'expired', array['job']::text[], null, true, 'The agreed term ended. The only status change automation may make here.'),
+  ('res_sponsorships', 'active', 'cancelled', array['operator']::text[], 'isSponsorshipAdmin', true, 'Cancelled mid-term by either side. No refund logic — money never moved through the app.'),
+  ('res_sponsorships', 'expired', 'active', array['operator']::text[], 'isSponsorshipAdmin', true, 'Renewed for a new term.');
 
 delete from public.res_initial_states;
 insert into public.res_initial_states (entity, state) values
@@ -94,6 +99,7 @@ insert into public.res_initial_states (entity, state) values
   ('res_market_items', 'available'),
   ('res_room_requests', 'pending'),
   ('res_service_dispatches', 'pending'),
+  ('res_sponsorships', 'pending'),
   ('res_tool_library', 'available'),
   ('res_utility_tokens', 'available');
 
@@ -276,6 +282,23 @@ begin
     end loop;
     alter table public.res_service_dispatches add constraint res_service_dispatches_status_check
       check (status in ('abandoned', 'accepted', 'completed', 'disputed', 'pending'));
+  end if;
+  -- res_sponsorships
+  if to_regclass('public.res_sponsorships') is not null then
+    for v_con in
+      select con.conname from pg_constraint con
+       where con.conrelid = 'public.res_sponsorships'::regclass
+         and con.contype = 'c'
+         -- exactly one column, and that column is named "status"
+         and array_length(con.conkey, 1) = 1
+         and (select a.attname from pg_attribute a
+               where a.attrelid = con.conrelid
+                 and a.attnum = con.conkey[1]) = 'status'
+    loop
+      execute format('alter table public.res_sponsorships drop constraint %I', v_con);
+    end loop;
+    alter table public.res_sponsorships add constraint res_sponsorships_status_check
+      check (status in ('active', 'cancelled', 'expired', 'pending'));
   end if;
   -- res_tool_library
   if to_regclass('public.res_tool_library') is not null then

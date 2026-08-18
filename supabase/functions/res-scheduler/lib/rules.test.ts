@@ -47,7 +47,8 @@ test('auth.users and users are equally unreachable', () => {
 // ── The money boundary (CONTRACT.md §6) ────────────────────────────────────
 
 test('a job cannot change what anything costs', () => {
-  for (const col of ['price', 'price_per_seat', 'price_per_day', 'deposit', 'display_price']) {
+  for (const col of ['price', 'price_per_seat', 'price_per_day', 'deposit', 'display_price',
+                     'rate_zar_cents']) {
     throwsGuard(
       () => assertColumnsWritable('rogue', { [col]: 999 }),
       /forbidden column/)
@@ -139,7 +140,7 @@ test('the forbidden lists still contain the boundaries the contract requires', (
   for (const t of ['profiles', 'res_purchases', 'res_subscriptions']) {
     assert.ok(FORBIDDEN_TABLES.includes(t), `${t} must stay forbidden (CONTRACT.md §2/§6)`)
   }
-  for (const c of ['price', 'deposit', 'is_verified', 'reputation_score']) {
+  for (const c of ['price', 'deposit', 'is_verified', 'reputation_score', 'rate_zar_cents']) {
     assert.ok(FORBIDDEN_COLUMNS.includes(c), `${c} must stay forbidden (CONTRACT.md §3/§6)`)
   }
 })
