@@ -101,8 +101,15 @@ curl -X POST https://feevvddvrjmfbhffccbf.supabase.co/functions/v1/res-scheduler
 update res_jobs set enabled = true where name = 'expire_traffic_reports';
 ```
 
-Recommended order: `expire_traffic_reports` (archive-only, safest) →
-`expire_sponsorships` → `escalate_faults` (notifies people, so last).
+Recommended order:
+
+1. `metrics_rollup` and `daily_digest` — **first**. They write nothing to
+   domain tables, so they are safe to run early, and once they are on you can
+   watch what the other jobs do when you enable them rather than finding out
+   afterwards.
+2. `expire_traffic_reports` — archive-only, the safest thing that changes data.
+3. `expire_sponsorships`.
+4. `escalate_faults` — last, because it notifies people.
 
 ### 2.2 Stopping everything
 
@@ -236,9 +243,31 @@ select id, suburb, slot, ends_at from res_sponsorships
  where status = 'active' and ends_at < now() + interval '7 days';
 ```
 
-The `daily_digest` job that would send this to you automatically is **not
-built** — Layer 6 of [SELF-MANAGING.md](SELF-MANAGING.md). Until it is, this
-section is the manual version.
+These are the manual version. Once `metrics_rollup` and `daily_digest` are
+enabled (§2.1) the digest arrives every morning at 07:00 and covers all of it:
+what automation did, what it could not decide, and what looks wrong.
+
+Set who receives it first, or the job will correctly report that nobody is
+configured rather than quietly succeeding:
+
+```sql
+update res_policies
+   set params = jsonb_build_object('user_ids', jsonb_build_array('<your profiles.id>'))
+ where key = 'automation.digest_recipients';
+```
+
+To see what it would say without sending anything:
+
+```bash
+curl -X POST https://feevvddvrjmfbhffccbf.supabase.co/functions/v1/res-scheduler   -H "Authorization: Bearer $SCHEDULER_SECRET" -H "Content-Type: application/json"   -d '{"job":"daily_digest","dry_run":true}'
+```
+
+Open incidents, if you want them directly:
+
+```sql
+select kind, severity, message, opened_at
+  from res_incidents where closed_at is null order by severity, opened_at;
+```
 
 ---
 

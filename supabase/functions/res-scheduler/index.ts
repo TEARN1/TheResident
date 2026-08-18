@@ -22,12 +22,16 @@ import { heartbeat } from './jobs/heartbeat.ts'
 import { expireTrafficReports } from './jobs/expire_traffic_reports.ts'
 import { escalateFaults } from './jobs/escalate_faults.ts'
 import { expireSponsorships } from './jobs/expire_sponsorships.ts'
+import { metricsRollup } from './jobs/metrics_rollup.ts'
+import { dailyDigest } from './jobs/daily_digest.ts'
 
 const JOBS: Record<string, Job> = {
   [heartbeat.name]: heartbeat,
   [expireTrafficReports.name]: expireTrafficReports,
   [escalateFaults.name]: escalateFaults,
   [expireSponsorships.name]: expireSponsorships,
+  [metricsRollup.name]: metricsRollup,
+  [dailyDigest.name]: dailyDigest,
 }
 
 const SCHEDULER_SECRET = Deno.env.get('SCHEDULER_SECRET')
