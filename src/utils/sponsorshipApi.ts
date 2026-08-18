@@ -111,3 +111,20 @@ export async function fetchInventory(
     remaining: d.remaining,
   }
 }
+
+/**
+ * Records that someone opened a sponsored listing.
+ *
+ * Best-effort and deliberately silent: a counter must never break the thing
+ * the neighbour was actually trying to do. The server stores a DAILY TOTAL and
+ * nothing about who clicked — no user id, no session, no IP — so this cannot
+ * become a record of who looked at what.
+ */
+export async function recordSponsoredOpen(sponsorshipId: string): Promise<void> {
+  if (!supabase || !sponsorshipId) return
+  try {
+    await supabase.rpc('res_sponsorship_opened', { p_sponsorship: sponsorshipId })
+  } catch {
+    // Intentionally ignored.
+  }
+}

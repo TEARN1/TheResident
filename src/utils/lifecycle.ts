@@ -116,6 +116,8 @@ export const TRANSITIONS: Transition[] = [
     note: 'A mediator picks it up.' },
   { entity: 'res_community_disputes', from: 'mediating', to: 'resolved', actors: ['user'], guard: 'isDisputeParty', reversible: false,
     note: 'Outcome recorded.' },
+  { entity: 'res_community_disputes', from: 'pending', to: 'resolved', actors: ['user'], guard: 'isDisputeParty', reversible: false,
+    note: 'Settled between the parties without a mediator ever stepping in. Common, and the machine has to be able to represent it.' },
   { entity: 'res_community_disputes', from: 'pending', to: 'escalated', actors: ['job'], guard: null, reversible: true,
     note: 'Day 7 with no mediator. Propose tier — a human sees it before it moves.' },
   { entity: 'res_community_disputes', from: 'escalated', to: 'stale_closed', actors: ['job'], guard: null, reversible: true,
@@ -138,6 +140,8 @@ export const TRANSITIONS: Transition[] = [
     note: 'Sold or given away.' },
   { entity: 'res_market_items', from: 'pending', to: 'available', actors: ['user', 'job'], guard: null, reversible: true,
     note: 'Buyer fell through, or the pending hold timed out.' },
+  { entity: 'res_market_items', from: 'available', to: 'gone', actors: ['user'], guard: 'isItemOwner', reversible: true,
+    note: 'Sold or given away straight from the list, without a pending hold — which is how most small items actually go.' },
   { entity: 'res_market_items', from: 'available', to: 'expired', actors: ['job'], guard: null, reversible: true,
     note: 'Untouched past the staleness window.' },
 

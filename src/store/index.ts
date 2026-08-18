@@ -1,5 +1,7 @@
 import { configureStore, createSlice, PayloadAction, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import { supabase } from '../utils/supabase'
+import { transitionStatus } from './transition'
+import { saveSnapshot, clearSnapshots } from '../utils/offlineSnapshot'
 
 // Mappers between app models and the deployed schema live in dbMappers.ts;
 // toUUID is re-exported from there so existing imports keep working.
@@ -1684,7 +1686,7 @@ export const fetchSupabaseData = createAsyncThunk(
         .limit(100)
       if (error) return markFailed('res_faults', error.message)
       if (!data) return
-      dispatch(setFaults(data.map(item => ({
+      const mapped = data.map(item => ({
         id: item.id,
         kind: item.kind,
         sector: item.sector as Fault['sector'],
@@ -1703,7 +1705,14 @@ export const fetchSupabaseData = createAsyncThunk(
         acknowledgedAt: item.acknowledged_at || null,
         providerReference: item.provider_reference || null,
         falseClosureCount: item.false_closure_count ?? 0
-      }))))
+      }))
+      dispatch(setFaults(mapped))
+
+      // Keep the last known state on the device. Load shedding means no power
+      // and degraded towers, so the moment a resident most needs to know what
+      // is broken is exactly the moment they cannot fetch it.
+      const uid = (getState() as RootState).auth.currentUser?.id
+      if (uid) saveSnapshot('faults', uid, mapped)
     }
 
     // Listings + services first so requests/dispatches can resolve titles,
@@ -1889,6 +1898,10 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     }
 
     if (logoutUser.match(action)) {
+      // A shared phone is the normal case here, not the edge case: one
+      // person's last-known state must not survive into the next person's
+      // session.
+      clearSnapshots()
       if (supabase) {
         await supabase.auth.signOut()
       }
@@ -1924,7 +1937,8 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (updateRequestStatus.match(action)) {
       const { requestId, status } = action.payload
       syncLabel = 'the request decision'
-      await dbUpdate('res_room_requests', { status }, 'id', toUUID(requestId))
+      await transitionStatus('res_room_requests', toUUID(requestId), status,
+        `landlord ${status} the application`, { status })
     }
 
     // 4. Sync Roommate Seekers
@@ -1975,7 +1989,8 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (updateDispatchStatus.match(action)) {
       const { dispatchId, status } = action.payload
       syncLabel = 'the callout status'
-      await dbUpdate('res_service_dispatches', { status }, 'id', toUUID(dispatchId))
+      await transitionStatus('res_service_dispatches', toUUID(dispatchId), status,
+        `callout moved to ${status}`, { status })
     }
 
     // 8. Sync Prepaid Utility Vouchers (schema stores no voucher codes)
@@ -2090,7 +2105,14 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (updateDisputeStatus.match(action)) {
       const { disputeId, status, resolutionDetails } = action.payload
       syncLabel = 'the dispute update'
-      await dbUpdate('res_community_disputes', db.disputeStatusToRow(status, resolutionDetails), 'id', toUUID(disputeId))
+      // The resolution text is not a status, so it is written separately —
+      // res_transition only ever moves the status column.
+      await transitionStatus('res_community_disputes', toUUID(disputeId), status,
+        `dispute moved to ${status}`, db.disputeStatusToRow(status, resolutionDetails))
+      if (resolutionDetails) {
+        await dbUpdate('res_community_disputes',
+          { resolution_details: resolutionDetails }, 'id', toUUID(disputeId))
+      }
     }
 
     // 13. Sync Communities
@@ -2107,7 +2129,10 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
 
     if (resolveAlert.match(action)) {
       syncLabel = 'the alert resolution'
-      await dbUpdate('res_alerts', { status: 'resolved', resolved_at: new Date().toISOString() }, 'id', toUUID(action.payload))
+      await transitionStatus('res_alerts', toUUID(action.payload), 'resolved',
+        'stood down by a party to the alert',
+        { status: 'resolved', resolved_at: new Date().toISOString() })
+      await dbUpdate('res_alerts', { resolved_at: new Date().toISOString() }, 'id', toUUID(action.payload))
     }
 
     // 15. Sync Market Items
@@ -2118,7 +2143,8 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
 
     if (sellMarketItem.match(action)) {
       syncLabel = 'the item sale'
-      await dbUpdate('res_market_items', { status: 'gone' }, 'id', toUUID(action.payload))
+      await transitionStatus('res_market_items', toUUID(action.payload), 'gone',
+        'owner marked the item sold or given away', { status: 'gone' })
     }
 
     // 16. Sync Vendors
@@ -2166,7 +2192,8 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
 
     if (resolveLostFound.match(action)) {
       syncLabel = 'the lost & found update'
-      await dbUpdate('res_lost_found', { status: 'reunited' }, 'id', toUUID(action.payload))
+      await transitionStatus('res_lost_found', toUUID(action.payload), 'reunited',
+        'owner confirmed it found its way home', { status: 'reunited' })
     }
 
     // 20. Sync Care Circle Check (only an OK check-in maps to the schema)

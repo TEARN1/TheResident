@@ -54,6 +54,19 @@ jobs:
       - name: Transition seed matches lifecycle.ts
         run: npm run gen:transitions -- --check
 
+      # Layer 1 of docs/SELF-MANAGING.md: res_transition is the ONE door for
+      # status changes, so that rules are checked in one place and every move
+      # writes an audit row. A direct dbUpdate of a status column bypasses both
+      # silently — the write succeeds and simply leaves no trace. Easy to
+      # reintroduce by copying a neighbouring line, so it is checked here.
+      - name: Status changes go through res_transition
+        run: |
+          if grep -rnE "dbUpdate\([^)]*\{ *status[:,]" src/ --include='*.ts' --include='*.tsx'; then
+            echo "::error::Direct status write found. Use transitionStatus() from src/store/transition.ts."
+            exit 1
+          fi
+          echo "no direct status writes"
+
   migrations:
     name: Migrations replay onto a clean database
     runs-on: ubuntu-latest

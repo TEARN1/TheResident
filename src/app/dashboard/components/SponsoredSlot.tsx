@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Store, ChevronRight } from 'lucide-react'
-import { fetchSponsored, type SponsoredEntry } from '../../../utils/sponsorshipApi'
+import { fetchSponsored, recordSponsoredOpen, type SponsoredEntry } from '../../../utils/sponsorshipApi'
 import { SPONSORED_LABEL, isSellableSurface } from '../../../utils/sponsorship'
 import type { Surface } from '../../../utils/sponsorship'
 
@@ -59,12 +59,13 @@ export default function SponsoredSlot({ surface, suburb, category = null, onOpen
       {entries.map(entry => (
         <div
           key={entry.id}
-          onClick={() => onOpen?.(entry)}
+          onClick={() => { void recordSponsoredOpen(entry.id); onOpen?.(entry) }}
           role={onOpen ? 'button' : undefined}
           tabIndex={onOpen ? 0 : undefined}
           onKeyDown={e => {
             if (onOpen && (e.key === 'Enter' || e.key === ' ')) {
               e.preventDefault()
+              void recordSponsoredOpen(entry.id)
               onOpen(entry)
             }
           }}

@@ -4,10 +4,13 @@ import React, { useState } from 'react'
 import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin, EyeOff, Eye } from 'lucide-react'
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../store'
 import UpgradeButton from './UpgradeButton'
+import SponsoredSlot from './SponsoredSlot'
 
 interface MarketTabProps {
   marketItems: MarketItem[]
   vendors: Vendor[]
+  /** Suburb whose sponsored slots to show. Empty = show none. */
+  suburb?: string
   groupBuys: GroupBuy[]
   lostFound: LostFound[]
   currentUserId: string
@@ -25,6 +28,7 @@ type Section = 'market' | 'vendors' | 'groupbuys' | 'lostfound'
 export default function MarketTab({
   marketItems,
   vendors,
+  suburb = '',
   groupBuys,
   lostFound,
   currentUserId,
@@ -111,6 +115,9 @@ export default function MarketTab({
                <p>No items for sale in your area.</p>
             </div>
           ) : (
+            <div>
+            {/* Above the grid, never inside it — the list below is complete. */}
+            <SponsoredSlot surface="market" suburb={suburb} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[...marketItems].sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a))).map(item => (
                 <div key={item.id} className={`bg-black/40 border rounded-xl p-4 flex flex-col gap-3 transition-all group ${isFeatured(item) ? 'border-gold-primary/40' : 'border-white/5 hover:border-white/10'}`}>
@@ -160,12 +167,14 @@ export default function MarketTab({
                 </div>
               ))}
             </div>
+            </div>
           )}
         </div>
       )}
 
       {section === 'vendors' && (
         <div className="glass-panel p-6 space-y-4">
+           <SponsoredSlot surface="vendors" suburb={suburb} />
            {vendors.length === 0 ? (
               <div className="py-12 text-center text-gray-500">
                 <Store size={48} className="mx-auto mb-4 opacity-10" />

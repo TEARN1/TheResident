@@ -503,6 +503,7 @@ export default function CommunityPage() {
             )}
             {subTab === 'market' && (
               <MarketTab
+                suburb={suburb}
                 marketItems={marketItems}
                 vendors={vendors}
                 groupBuys={groupBuys}
