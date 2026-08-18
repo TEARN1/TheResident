@@ -39,6 +39,18 @@ import EmptyState from '../components/EmptyState'
 // "no limit" rather than this literal amount.
 const PRICE_CEILING_MAX = 20000
 
+// Guest houses are seasonal: listed to catch people in town for Gruvs
+// events, gone once the season's over rather than lingering as stale
+// inventory. res_listings.visible_until enforces this server-side too —
+// this is just the default a new guesthouse listing is created with.
+const GUESTHOUSE_SEASON_END = (() => {
+  const d = new Date()
+  d.setMonth(9, 31) // October is month index 9; day 31 rolls into November if short, October never is
+  d.setHours(23, 59, 59, 999)
+  if (d.getTime() < Date.now()) d.setFullYear(d.getFullYear() + 1)
+  return d.toISOString()
+})()
+
 export default function HousingPage() {
   const dispatch = useDispatch<AppDispatch>()
   // Two audiences, two jobs: someone WITH an empty room lands on their own
@@ -65,9 +77,9 @@ export default function HousingPage() {
   const [filterPrice, setFilterPrice] = useState<number>(0)
   const [filterWifi, setFilterWifi] = useState(false)
   const [filterQuickPostOnly, setFilterQuickPostOnly] = useState(false)
-  // Rent vs Buy — same res_listings table and same filters, distinguished
-  // by listing_type, same pattern as the quick-post merge above.
-  const [filterListingType, setFilterListingType] = useState<'rent' | 'sale'>('rent')
+  // Rent / Buy / Guest House — same res_listings table and same filters,
+  // distinguished by listing_type, same pattern as the quick-post merge above.
+  const [filterListingType, setFilterListingType] = useState<'rent' | 'sale' | 'guesthouse'>('rent')
   const [filterParking, setFilterParking] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
@@ -81,7 +93,8 @@ export default function HousingPage() {
   const [newSuburb, setNewSuburb] = useState('')
   const [newLivesHere, setNewLivesHere] = useState(false)
   const [newQuickPost, setNewQuickPost] = useState(false)
-  const [newListingType, setNewListingType] = useState<'rent' | 'sale'>('rent')
+  const [newListingType, setNewListingType] = useState<'rent' | 'sale' | 'guesthouse'>('rent')
+  const [newEventId, setNewEventId] = useState('')
   const [newWifi, setNewWifi] = useState(true)
   const [newParking, setNewParking] = useState(true)
   const [newBathroom, setNewBathroom] = useState<'shared' | 'private' | 'ensuite'>('shared')
@@ -159,6 +172,42 @@ export default function HousingPage() {
 
   useEffect(() => { loadMyProperties() }, [loadMyProperties])
 
+  // Guest houses link to a real Gruvs event (res_listings.event_id) rather
+  // than a free-text "near what" — same convention as LiftClub.eventId and
+  // NoticeEvent.eventId. Fetched once for the create-listing picker; and by
+  // id for whichever events existing guesthouse listings already reference,
+  // so a card can say "Near <real event name>" instead of just a date.
+  const [upcomingGruvsEvents, setUpcomingGruvsEvents] = useState<{ id: string; title: string; startsAt: string }[]>([])
+  const [gruvsEventInfo, setGruvsEventInfo] = useState<Record<string, { title: string; startsAt: string }>>({})
+
+  useEffect(() => {
+    let cancelled = false
+    if (!supabase) return
+    supabase
+      .from('events')
+      .select('id, title, starts_at')
+      .gte('starts_at', new Date().toISOString())
+      .order('starts_at', { ascending: true })
+      .limit(20)
+      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
+        if (!cancelled && data) setUpcomingGruvsEvents(data.map(e => ({ id: e.id, title: e.title, startsAt: e.starts_at })))
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!supabase) return
+    const ids = [...new Set(allListings.map(l => l.eventId).filter((id): id is string => !!id))]
+    if (ids.length === 0) return
+    supabase.from('events').select('id, title, starts_at').in('id', ids)
+      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
+        if (cancelled || !data) return
+        setGruvsEventInfo(prev => ({ ...prev, ...Object.fromEntries(data.map(e => [e.id, { title: e.title, startsAt: e.starts_at }])) }))
+      })
+    return () => { cancelled = true }
+  }, [allListings])
+
   const filteredListingsRaw = useSelector((state: RootState) => selectFilteredListings(
     state,
     searchLocation,
@@ -172,7 +221,12 @@ export default function HousingPage() {
 
   // A boosted listing sorts first while its purchase is still active.
   const isFeatured = (l: Listing) => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > Date.now()
+  // Past its visible_until (guesthouse listings default to end-of-October,
+  // see GUESTHOUSE_SEASON_END) — hidden from browse/search the same way an
+  // expired notice hides itself, without deleting the row.
+  const isVisible = (l: Listing) => !l.visibleUntil || new Date(l.visibleUntil).getTime() > Date.now()
   const filteredListings = [...filteredListingsRaw]
+    .filter(isVisible)
     .filter(l => !filterQuickPostOnly || l.quickPost)
     .filter(l => (l.listingType || 'rent') === filterListingType)
     .sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
@@ -219,13 +273,18 @@ export default function HousingPage() {
       propertyId: newPropertyId || undefined,
       createdAt: new Date().toISOString(),
       quickPost: newQuickPost,
-      listingType: newListingType
+      listingType: newListingType,
+      eventId: newListingType === 'guesthouse' ? (newEventId || null) : undefined,
+      // Not user-editable — guest houses are seasonal by design, always
+      // through end of October, not whatever a poster might pick.
+      visibleUntil: newListingType === 'guesthouse' ? GUESTHOUSE_SEASON_END : null
     }
     dispatch(addListing(listing))
     setShowCreateModal(false)
     setNewPropertyId('')
     setNewQuickPost(false)
     setNewListingType('rent')
+    setNewEventId('')
     setAlertNotification('Property listed successfully!')
   }
 
@@ -365,6 +424,13 @@ export default function HousingPage() {
             className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'sale' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
           >
             Buy
+          </button>
+          <button
+            onClick={() => setFilterListingType('guesthouse')}
+            title="Short-stay guest houses, listed only through the current event season"
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'guesthouse' ? 'bg-gold-primary text-black' : 'text-gray-500 hover:text-white'}`}
+          >
+            Guest Houses
           </button>
         </div>
       )}
@@ -592,10 +658,18 @@ export default function HousingPage() {
                               <span className="text-xs font-black text-black tracking-tight uppercase">Quick Post</span>
                            </div>
                         )}
+                        {item.listingType === 'guesthouse' && (
+                           <div
+                              className="bg-purple-500/90 backdrop-blur-md px-3 py-1.5 rounded-xl"
+                              title={item.visibleUntil ? `Listed through ${new Date(item.visibleUntil).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Guest house'}
+                           >
+                              <span className="text-xs font-black text-white tracking-tight uppercase">Guest House</span>
+                           </div>
+                        )}
                      </div>
                      <div className="bg-gold-primary text-black px-4 py-2 rounded-xl shadow-xl">
                         <span className="text-lg font-black tracking-tighter">{formatCurrency(item.price, item.currency)}</span>
-                        <span className="text-[10px] font-black ml-1 opacity-60">/ MO</span>
+                        <span className="text-[10px] font-black ml-1 opacity-60">/ {item.listingType === 'guesthouse' ? 'NIGHT' : 'MO'}</span>
                      </div>
                   </div>
                 </div>
@@ -627,6 +701,11 @@ export default function HousingPage() {
                         </div>
                         <OpenInMapsButton address={`${item.location}, ${item.suburb}`} />
                      </div>
+                     {item.listingType === 'guesthouse' && item.eventId && gruvsEventInfo[item.eventId] && (
+                        <div className="flex items-center gap-1.5 text-[10px] font-black text-purple-400 uppercase tracking-widest">
+                           <Building2 size={11} /> Near {gruvsEventInfo[item.eventId].title}
+                        </div>
+                     )}
                   </div>
 
                   <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80">{item.description}</p>
@@ -821,7 +900,26 @@ export default function HousingPage() {
                         <div className="flex bg-black border border-white/10 rounded-xl p-1 w-fit">
                            <button type="button" onClick={() => setNewListingType('rent')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'rent' ? 'bg-gold-primary text-black' : 'text-gray-500'}`}>Rent</button>
                            <button type="button" onClick={() => setNewListingType('sale')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'sale' ? 'bg-gold-primary text-black' : 'text-gray-500'}`}>Sell</button>
+                           <button type="button" onClick={() => setNewListingType('guesthouse')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'guesthouse' ? 'bg-gold-primary text-black' : 'text-gray-500'}`}>Guest House</button>
                         </div>
+                        {newListingType === 'guesthouse' && (
+                           <div className="space-y-2 pt-1">
+                              <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Near Which Gruvs Event (optional)</label>
+                              {upcomingGruvsEvents.length === 0 ? (
+                                 <p className="text-[11px] text-gray-500 bg-black/40 border border-white/10 rounded-xl p-3 leading-relaxed">No upcoming events found on The Gruvs — you can still list without one.</p>
+                              ) : (
+                                 <select value={newEventId} onChange={e => setNewEventId(e.target.value)} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40 cursor-pointer">
+                                    <option value="">No specific event</option>
+                                    {upcomingGruvsEvents.map(ev => (
+                                       <option key={ev.id} value={ev.id}>{ev.title} — {new Date(ev.startsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</option>
+                                    ))}
+                                 </select>
+                              )}
+                              <p className="text-[10px] text-gray-500 leading-relaxed">
+                                 Guest houses are seasonal — this listing automatically stops showing after {new Date(GUESTHOUSE_SEASON_END).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.
+                              </p>
+                           </div>
+                        )}
                      </div>
                      {myProperties.length > 0 && (
                         <div className="space-y-2">

@@ -94,10 +94,20 @@ export interface Listing {
    * distinguished only by this badge, per res_listings.quick_post.
    */
   quickPost?: boolean
-  /** 'rent' (default) or 'sale' — res_listings.listing_type. Same table,
-   *  same filters/search, distinguished only by this field, same pattern
-   *  as quickPost above. */
-  listingType: 'rent' | 'sale'
+  /** 'rent' (default), 'sale', or 'guesthouse' — res_listings.listing_type.
+   *  Same table, same filters/search, distinguished only by this field,
+   *  same pattern as quickPost above. */
+  listingType: 'rent' | 'sale' | 'guesthouse'
+  /** Optional link to a Gruvs-owned `events` row (res_listings.event_id) —
+   *  same convention as LiftClub.eventId. Used by guesthouse listings to
+   *  say which event they're near; not used by rent/sale listings. */
+  eventId?: string | null
+  /** res_listings.visible_until — once past, the listing is a normal
+   *  listing on paper but Housing hides it from search/browse the same way
+   *  an expired notice hides itself. Built for guesthouse listings tied to
+   *  a specific event season (e.g. only relevant through end of October),
+   *  but not exclusive to that type. */
+  visibleUntil?: string | null
 }
 
 export interface RoomRequest {
@@ -1756,7 +1766,9 @@ export const fetchSupabaseData = createAsyncThunk(
         propertyId: item.property_id || undefined,
         createdAt: item.created_at || undefined,
         quickPost: !!item.quick_post,
-        listingType: (item.listing_type === 'sale' ? 'sale' : 'rent') as 'rent' | 'sale'
+        listingType: (item.listing_type === 'sale' || item.listing_type === 'guesthouse' ? item.listing_type : 'rent') as 'rent' | 'sale' | 'guesthouse',
+        eventId: item.event_id || null,
+        visibleUntil: item.visible_until || null
       }))))
     }
 
