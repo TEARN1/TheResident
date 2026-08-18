@@ -24,6 +24,7 @@ import { escalateFaults } from './jobs/escalate_faults.ts'
 import { expireSponsorships } from './jobs/expire_sponsorships.ts'
 import { metricsRollup } from './jobs/metrics_rollup.ts'
 import { dailyDigest } from './jobs/daily_digest.ts'
+import { driftCheck } from './jobs/drift_check.ts'
 
 const JOBS: Record<string, Job> = {
   [heartbeat.name]: heartbeat,
@@ -32,6 +33,7 @@ const JOBS: Record<string, Job> = {
   [expireSponsorships.name]: expireSponsorships,
   [metricsRollup.name]: metricsRollup,
   [dailyDigest.name]: dailyDigest,
+  [driftCheck.name]: driftCheck,
 }
 
 const SCHEDULER_SECRET = Deno.env.get('SCHEDULER_SECRET')

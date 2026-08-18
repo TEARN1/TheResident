@@ -65,8 +65,17 @@ export const metricsRollup: Job = {
     const state = await readSystemState(ctx)
     const critical = criticalConditions(state)
 
+    // schema_drift is owned by drift_check, which runs daily and produces a
+    // specific message ("RLS has been turned OFF on res_faults"). This job runs
+    // hourly and only knows drift as a boolean, so if it also wrote that
+    // incident it would overwrite the useful message with a generic one twelve
+    // times before anyone read the digest. One incident, one owner.
+    const OWNED_BY_THIS_JOB = ['critical_alert_unprocessed', 'rate_of_change',
+                               'job_failing', 'provider_unresponsive']
+
     if (!ctx.dryRun) {
       for (const inc of critical) {
+        if (!OWNED_BY_THIS_JOB.includes(inc.kind)) continue
         await ctx.db.rpc('res_open_incident', {
           p_kind: inc.kind, p_severity: inc.severity, p_message: inc.message,
         })
@@ -74,8 +83,7 @@ export const metricsRollup: Job = {
       // Close what has recovered, so the digest reflects now rather than the
       // worst moment of the week.
       const stillOpen = new Set(critical.map(i => i.kind))
-      for (const kind of ['critical_alert_unprocessed', 'schema_drift', 'rate_of_change',
-                          'job_failing', 'provider_unresponsive']) {
+      for (const kind of OWNED_BY_THIS_JOB) {
         if (!stillOpen.has(kind)) {
           await ctx.db.rpc('res_close_incident', { p_kind: kind, p_auto: true })
         }
@@ -182,13 +190,57 @@ async function readSystemState(ctx: JobContext): Promise<SystemState> {
     .is('acknowledged_at', null)
     .lt('escalated_at', new Date(Date.now() - 8 * HOUR_MS).toISOString())
 
+  // Drift is owned by the drift_check job, which runs daily and knows how to
+  // tell a migration apart from a hand-edit. Reading its incident here rather
+  // than re-deriving it keeps one definition of "drifted" in the system.
+  const { data: driftIncident } = await ctx.db
+    .from('res_incidents')
+    .select('id')
+    .eq('kind', 'schema_drift')
+    .is('closed_at', null)
+    .maybeSingle()
+
   return {
     worstConsecutiveFailures: worst,
     criticalAlertsOpen: critical.length,
     oldestCriticalAlertMinutes: oldestMinutes,
     overdueAcknowledgements: overdue ?? 0,
-    // Wired to 0 until the drift check exists; see the digest job's note.
-    percentRowsChanged: 0,
-    driftDetected: false,
+    percentRowsChanged: await percentRowsChangedByAutomation(ctx),
+    driftDetected: driftIncident !== null,
   }
+}
+
+/**
+ * How much of the largest res_ table automation rewrote in 24h.
+ *
+ * This is the rate-of-change circuit breaker from Layer 8: automation touching
+ * a quarter of a table in a day is either a bug or a policy nobody meant to
+ * set, and either way it should stop and be looked at. Measured against the
+ * largest table rather than summed across all of them, so one big table cannot
+ * mask a small one being rewritten wholesale.
+ */
+async function percentRowsChangedByAutomation(ctx: JobContext): Promise<number> {
+  const since = new Date(Date.now() - 24 * HOUR_MS).toISOString()
+
+  const { data: audit } = await ctx.db
+    .from('res_audit_log')
+    .select('entity')
+    .eq('actor_kind', 'job')
+    .gte('at', since)
+
+  const rows = (audit ?? []) as Array<{ entity: string }>
+  if (rows.length === 0) return 0
+
+  const perEntity = new Map<string, number>()
+  for (const r of rows) perEntity.set(r.entity, (perEntity.get(r.entity) ?? 0) + 1)
+
+  let worst = 0
+  for (const [entity, changed] of perEntity) {
+    const { count } = await ctx.db.from(entity).select('*', { count: 'exact', head: true })
+    // An empty table cannot be 30% rewritten in any meaningful sense, and
+    // dividing by zero here would make a fresh install look like an emergency.
+    if (!count || count === 0) continue
+    worst = Math.max(worst, Math.round((changed / count) * 100))
+  }
+  return worst
 }

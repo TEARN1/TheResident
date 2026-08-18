@@ -107,9 +107,13 @@ Recommended order:
    domain tables, so they are safe to run early, and once they are on you can
    watch what the other jobs do when you enable them rather than finding out
    afterwards.
-2. `expire_traffic_reports` — archive-only, the safest thing that changes data.
-3. `expire_sponsorships`.
-4. `escalate_faults` — last, because it notifies people.
+2. `drift_check` — also writes no domain data, and it is the one that tells
+   you if the database has stopped matching the migrations. Note it re-accepts
+   the schema automatically when you apply a migration, so a normal deploy is
+   silent; if it speaks, somebody changed production by hand.
+3. `expire_traffic_reports` — archive-only, the safest thing that changes data.
+4. `expire_sponsorships`.
+5. `escalate_faults` — last, because it notifies people.
 
 ### 2.2 Stopping everything
 
@@ -197,6 +201,25 @@ No refund logic exists, because no money ever moved through the app.
   None of those are for sale and the code will not do them.
 - Be honest about how many people use the app. If asked, say the real number.
   See §3 of [SPONSORSHIP-PLAN.md](SPONSORSHIP-PLAN.md).
+
+---
+
+## 3b. After changing the schema by hand
+
+If you ever run DDL directly against production rather than through a
+migration, tell the drift check, or it will report your own change back to you
+every morning until you do:
+
+```sql
+select res_accept_schema('why you changed it, and who agreed');
+```
+
+That call is also what every migration ends with, which is why a normal deploy
+produces silence. To see what it currently considers drift:
+
+```bash
+curl -X POST https://feevvddvrjmfbhffccbf.supabase.co/functions/v1/res-scheduler   -H "Authorization: Bearer $SCHEDULER_SECRET" -H "Content-Type: application/json"   -d '{"job":"drift_check","dry_run":true}'
+```
 
 ---
 

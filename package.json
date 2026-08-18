@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx src/utils/security.test.ts && tsx src/store/store.test.ts && tsx src/store/dbMappers.test.ts && tsx src/store/offlineQueue.test.ts && tsx src/utils/logic.test.ts && tsx src/utils/lifecycle.test.ts && tsx src/utils/faults.test.ts && tsx src/utils/measure.test.ts && tsx src/utils/sponsorship.test.ts && tsx src/utils/offlineSnapshot.test.ts && tsx src/utils/anomaly.test.ts && tsx supabase/functions/res-scheduler/lib/rules.test.ts",
+    "test": "tsx src/utils/security.test.ts && tsx src/store/store.test.ts && tsx src/store/dbMappers.test.ts && tsx src/store/offlineQueue.test.ts && tsx src/utils/logic.test.ts && tsx src/utils/lifecycle.test.ts && tsx src/utils/faults.test.ts && tsx src/utils/measure.test.ts && tsx src/utils/sponsorship.test.ts && tsx src/utils/offlineSnapshot.test.ts && tsx src/utils/anomaly.test.ts && tsx src/utils/drift.test.ts && tsx supabase/functions/res-scheduler/lib/rules.test.ts",
     "gen:transitions": "tsx scripts/gen-transitions.ts",
     "fuzzer": "tsx scripts/attack-fuzzer.ts",
     "scale-test": "tsx scripts/scale-test.ts"
