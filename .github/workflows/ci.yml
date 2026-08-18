@@ -1,9 +1,20 @@
-name: CI
+name: CI (automation gates)
 
 # The review gate for automation. A scheduled job that runs while nobody is
 # watching has to be held to a higher standard than code a human triggers, so
 # these checks are the difference between "we think it's fine" and "it cannot
 # merge unless it is".
+#
+# Lint, unit tests, the security fuzzer and the production build deliberately
+# live in nextjs.yml, NOT here. This workflow used to repeat all four on
+# overlapping triggers, which meant every push ran them twice, burned double
+# the minutes and sent two failure emails for one problem. This file now holds
+# only the checks nextjs.yml does not do:
+#
+#   generated   the transition seed still matches lifecycle.ts, and no direct
+#               status write has crept back in
+#   migrations  the whole migration history replays onto a clean Postgres 17
+#   secrets     no service-role material in client code
 
 on:
   push:
@@ -11,32 +22,6 @@ on:
   pull_request:
 
 jobs:
-  app:
-    name: Lint, tests, security fuzzer
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20.9.0'
-          cache: npm
-      - run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Unit tests
-        run: npm test
-
-      - name: Attack fuzzer
-        run: npm run fuzzer
-
-      - name: Build
-        run: npm run build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-for-build-only
-
   generated:
     name: Generated files are current
     runs-on: ubuntu-latest
