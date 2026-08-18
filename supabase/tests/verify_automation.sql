@@ -4,8 +4,9 @@
 
 do $$
 declare
-  v_count int;
-  v_ok    boolean;
+  v_count  int;
+  v_ok     boolean;
+  v_leaked text;
 begin
   -- ── 1. Tables exist ──────────────────────────────────────────────────────
   select count(*) into v_count from information_schema.tables
@@ -62,12 +63,20 @@ begin
   end if;
 
   -- ── 7. No res_ function is executable by anon ────────────────────────────
-  select count(*) into v_count
+  -- This check existed and counted; it now NAMES the offenders, because when
+  -- it fired for real the count alone was not enough to act on.
+  --
+  -- It fired for real: the Supabase advisor found res_report_status granted to
+  -- PUBLIC (which includes anon) while SECURITY DEFINER, so anyone holding the
+  -- anon key — which ships in the browser bundle by design — could file
+  -- neighbourhood outage reports without signing in. Fixed in migration
+  -- 20260815001600.
+  select string_agg(distinct routine_name, ', ') into v_leaked
     from information_schema.role_routine_grants
    where routine_schema = 'public' and routine_name like 'res\_%'
      and grantee in ('anon','PUBLIC');
-  if v_count > 0 then
-    raise exception '% res_ function grant(s) to anon/PUBLIC', v_count;
+  if v_leaked is not null then
+    raise exception 'res_ function(s) executable by anon/PUBLIC: %', v_leaked;
   end if;
 
   -- ── 8. No job may be allowlisted against profiles (CONTRACT §2/§3) ───────
