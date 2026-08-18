@@ -1,24 +1,29 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { Navigation } from 'lucide-react'
-import { directionsUrlForAddress } from '../../../utils/navigation'
 
 /**
- * Deep-links into the resident's own Google Maps app rather than us building
- * turn-by-turn navigation from scratch — see src/utils/navigation.ts.
+ * Opens the address on OUR OWN VibeMap rather than deep-linking out to Google
+ * Maps. The shared zone reports (road closures, traffic, safety alerts), saved
+ * pins and geofence alerts only exist on our map — handing the resident off to
+ * an external app drops every layer that makes this map worth opening, and
+ * loses them out of the product entirely.
+ *
+ * VibeMap geocodes the `place` param and drops a pending pin there, so the
+ * resident lands on the address with "Save place" / "Report closure" /
+ * "Add to distances" already in reach.
  */
 export default function OpenInMapsButton({ address, className }: { address: string; className?: string }) {
   if (!address?.trim()) return null
   return (
-    <a
-      href={directionsUrlForAddress(address)}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link
+      href={`/dashboard/community?tab=vibemap&place=${encodeURIComponent(address)}`}
       onClick={e => e.stopPropagation()}
       className={className || 'inline-flex items-center gap-1.5 text-[10px] font-black text-gold-primary uppercase tracking-widest hover:underline'}
     >
-      <Navigation size={11} /> Directions
-    </a>
+      <Navigation size={11} /> View on map
+    </Link>
   )
 }

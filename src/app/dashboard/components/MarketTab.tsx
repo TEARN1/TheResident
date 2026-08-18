@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import Link from 'next/link'
 import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin, EyeOff, Eye } from 'lucide-react'
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../store'
 import UpgradeButton from './UpgradeButton'
@@ -44,6 +45,10 @@ export default function MarketTab({
   const isFeatured = (item: MarketItem) => !!item.featuredUntil && new Date(item.featuredUntil).getTime() > now
   const [section, setSection] = useState<Section>('market')
   const [showForm, setShowForm] = useState(false)
+  // "View Menu" had no onClick — and Vendor has no dedicated menu field
+  // anyway, just description/contactNumber/rating, so this expands what's
+  // actually there rather than pretending a real product menu exists.
+  const [expandedVendor, setExpandedVendor] = useState<string | null>(null)
   const [postTitle, setPostTitle] = useState('')
   const [postDesc, setPostDesc] = useState('')
   const [postPrice, setPostPrice] = useState('')
@@ -161,7 +166,9 @@ export default function MarketTab({
                              </button>
                            </>
                          )}
-                         <button className="text-gold-primary text-[10px] font-bold hover:underline">Chat Seller</button>
+                         {item.createdBy !== currentUserId && (
+                           <Link href={`/dashboard/messages?to=${item.createdBy}`} className="text-gold-primary text-[10px] font-bold hover:underline">Chat Seller</Link>
+                         )}
                       </div>
                    </div>
                 </div>
@@ -182,17 +189,33 @@ export default function MarketTab({
               </div>
            ) : (
              vendors.map(v => (
-               <div key={v.id} className="flex items-center justify-between p-4 bg-black/40 border border-white/5 rounded-xl hover:border-gold-primary/20 transition-all group">
-                  <div className="flex items-center gap-4">
-                     <div className="p-3 bg-gold-primary/10 rounded-xl group-hover:bg-gold-primary group-hover:text-black transition-colors">
-                        <Store size={24} className="text-gold-primary group-hover:text-inherit" />
+               <div key={v.id} className="bg-black/40 border border-white/5 rounded-xl hover:border-gold-primary/20 transition-all group overflow-hidden">
+                  <div className="flex items-center justify-between p-4">
+                     <div className="flex items-center gap-4">
+                        <div className="p-3 bg-gold-primary/10 rounded-xl group-hover:bg-gold-primary group-hover:text-black transition-colors">
+                           <Store size={24} className="text-gold-primary group-hover:text-inherit" />
+                        </div>
+                        <div>
+                           <h4 className="font-bold text-white group-hover:text-gold-primary transition-colors">{v.name}</h4>
+                           <p className="text-xs text-gray-500">{v.category}</p>
+                        </div>
                      </div>
-                     <div>
-                        <h4 className="font-bold text-white group-hover:text-gold-primary transition-colors">{v.name}</h4>
-                        <p className="text-xs text-gray-500">{v.category}</p>
-                     </div>
+                     <button
+                       onClick={() => setExpandedVendor(expandedVendor === v.id ? null : v.id)}
+                       className="bg-white/5 text-gray-400 border border-white/10 px-4 py-2 rounded-lg text-xs hover:text-white hover:bg-white/10 transition-all font-bold"
+                     >
+                       {expandedVendor === v.id ? 'Hide' : 'View Details'}
+                     </button>
                   </div>
-                  <button className="bg-white/5 text-gray-400 border border-white/10 px-4 py-2 rounded-lg text-xs hover:text-white hover:bg-white/10 transition-all font-bold">View Menu</button>
+                  {expandedVendor === v.id && (
+                    <div className="px-4 pb-4 pt-1 space-y-2 border-t border-white/5">
+                       <p className="text-sm text-gray-400 leading-relaxed">{v.description || 'No description added yet.'}</p>
+                       <div className="flex items-center gap-4 text-xs text-gray-500">
+                          {v.contactNumber && <span>📞 {v.contactNumber}</span>}
+                          <span>⭐ {v.rating.toFixed(1)} ({v.reviewsCount} reviews)</span>
+                       </div>
+                    </div>
+                  )}
                </div>
              ))
            )}

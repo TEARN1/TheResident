@@ -36,7 +36,8 @@ test('base table payloads only use real schema columns', () => {
     location: 'l', suburb: 's', safetyRating: 'high', safetyNotes: '',
     landlordId: UID, landlordName: 'NAME MUST NOT LEAK', landlordLivesHere: true, images: [],
     amenities: { wifi: true, parking: false, bathroom: 'shared' },
-    requirements: { genderPreference: 'any', childrenAllowed: true, maxChildren: 0, smokingAllowed: false, petsAllowed: false }
+    requirements: { genderPreference: 'any', childrenAllowed: true, maxChildren: 0, smokingAllowed: false, petsAllowed: false },
+    listingType: 'rent'
   }))
   assertKeysInSchema('res_room_requests', db.requestToRow({
     id: 'req-1', tenantId: UID, tenantName: 'x', listingId: 'listing-1', listingTitle: 'x',
@@ -47,7 +48,7 @@ test('base table payloads only use real schema columns', () => {
     location: 'l', suburb: 's', bio: 'b'
   }))
   assertKeysInSchema('res_lift_clubs', db.liftToRow({
-    id: 'lift-1', driverName: 'x', origin: 'a', destination: 'b', departureTime: '07:00',
+    id: 'lift-1', driverId: 'u1', driverName: 'x', origin: 'a', destination: 'b', departureTime: '07:00',
     days: 'Mon', pricePerSeat: 20, currency: 'ZAR', availableSeats: 3, totalSeats: 4
   }, UID))
   assertKeysInSchema('res_handyman_services', db.serviceToRow({

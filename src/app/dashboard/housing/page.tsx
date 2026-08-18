@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2
 } from 'lucide-react'
 import {
   RootState,
@@ -15,7 +15,9 @@ import {
   selectMatchedRoommates,
   addRequest,
   addListing,
-  updateRequestStatus
+  deleteListing,
+  updateRequestStatus,
+  isGuestUser
 } from '../../../store'
 import { approveRequest, rejectRequest, waitlistRequest, saveRequest } from '../../../store/actions'
 import { useGeolocation } from '../../../hooks/useGeolocation'
@@ -27,20 +29,45 @@ import ReviewForm from '../components/ReviewForm'
 import ReviewsList from '../components/ReviewsList'
 import SavedSearches from '../components/SavedSearches'
 import OpenInMapsButton from '../components/OpenInMapsButton'
+import Link from 'next/link'
 import UpgradeButton from '../components/UpgradeButton'
 import PropertiesPanel, { type ResProperty } from '../components/PropertiesPanel'
+import EmptyState from '../components/EmptyState'
+
+// Top of the budget slider. Well above the real ceiling for a single room so
+// the control can express any listing on the platform; the max position means
+// "no limit" rather than this literal amount.
+const PRICE_CEILING_MAX = 20000
 
 export default function HousingPage() {
   const dispatch = useDispatch<AppDispatch>()
+  // Two audiences, two jobs: someone WITH an empty room lands on their own
+  // properties (list it, see who applied), someone WHO NEEDS a room lands on
+  // the search. Defaulting everyone to 'rooms' made a landlord's first screen
+  // a feed of other people's listings — the one thing they didn't come for.
   const [activeTab, setActiveTab] = useState<'rooms' | 'roommates' | 'properties'>('rooms')
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const { locationLoading, handleGetLiveLocation } = useGeolocation(setAlertNotification)
 
   // Filter States
   const [searchInputValue, setSearchInputValue] = useState('')
+  const [showSuburbSuggestions, setShowSuburbSuggestions] = useState(false)
   const [searchLocation, setSearchLocation] = useState('')
-  const [filterPrice, setFilterPrice] = useState<number>(3000)
+  // 0 means "no ceiling" (selectFilteredListings only applies maxPrice when > 0).
+  //
+  // This defaulted to 3000 with a slider that capped at 5000, which quietly
+  // broke the marketplace: every room above R3 000 was hidden from every
+  // tenant on arrival, and a room above R5 000 could not be revealed at ALL —
+  // no slider position existed that showed it. A landlord could list a R6 500
+  // cottage, pay to boost it, and never be seen. Rooms in that band are
+  // completely normal here, so the default is now "show me everything" and the
+  // ceiling only applies once a tenant deliberately sets one.
+  const [filterPrice, setFilterPrice] = useState<number>(0)
   const [filterWifi, setFilterWifi] = useState(false)
+  const [filterQuickPostOnly, setFilterQuickPostOnly] = useState(false)
+  // Rent vs Buy — same res_listings table and same filters, distinguished
+  // by listing_type, same pattern as the quick-post merge above.
+  const [filterListingType, setFilterListingType] = useState<'rent' | 'sale'>('rent')
   const [filterParking, setFilterParking] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
@@ -53,6 +80,8 @@ export default function HousingPage() {
   const [newLocation, setNewLocation] = useState('')
   const [newSuburb, setNewSuburb] = useState('')
   const [newLivesHere, setNewLivesHere] = useState(false)
+  const [newQuickPost, setNewQuickPost] = useState(false)
+  const [newListingType, setNewListingType] = useState<'rent' | 'sale'>('rent')
   const [newWifi, setNewWifi] = useState(true)
   const [newParking, setNewParking] = useState(true)
   const [newBathroom, setNewBathroom] = useState<'shared' | 'private' | 'ensuite'>('shared')
@@ -77,6 +106,14 @@ export default function HousingPage() {
   // Reviews toggle (per listing card)
   const [reviewsOpenFor, setReviewsOpenFor] = useState<string | null>(null)
 
+  const [confirmDeleteListingId, setConfirmDeleteListingId] = useState<string | null>(null)
+  const handleDeleteListing = (id: string) => {
+    dispatch(deleteListing(id))
+    setConfirmDeleteListingId(null)
+    setAlertNotification('Listing removed.')
+    setTimeout(() => setAlertNotification(null), 3000)
+  }
+
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const allListings = useSelector((state: RootState) => state.listings.items)
   const requests = useSelector((state: RootState) => state.requests.items)
@@ -86,6 +123,33 @@ export default function HousingPage() {
     const handler = setTimeout(() => setSearchLocation(searchInputValue), 300)
     return () => clearTimeout(handler)
   }, [searchInputValue])
+
+  // Distinct suburbs that actually have listings, matched against what's
+  // typed so far — the search field used to be a bare substring match with
+  // no way to know which suburb names would return anything before hitting
+  // enter. Capped at 6 so it never grows into its own scrollable list.
+  const suburbSuggestions = useMemo(() => {
+    const q = searchInputValue.trim().toLowerCase()
+    const counts = new Map<string, number>()
+    for (const l of allListings) {
+      if (q && !l.suburb.toLowerCase().includes(q)) continue
+      counts.set(l.suburb, (counts.get(l.suburb) || 0) + 1)
+    }
+    return [...counts.entries()]
+      .map(([suburb, count]) => ({ suburb, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6)
+  }, [allListings, searchInputValue])
+
+  // Steers only the FIRST render once the role is known (it arrives async from
+  // session bootstrap). Guarded by a ref so it never yanks the tab back while
+  // a landlord is deliberately browsing Rooms.
+  const hasSteeredTab = React.useRef(false)
+  useEffect(() => {
+    if (hasSteeredTab.current || !currentUser) return
+    hasSteeredTab.current = true
+    if (currentUser.role === 'landlord') setActiveTab('properties')
+  }, [currentUser])
 
   const loadMyProperties = React.useCallback(async () => {
     if (!supabase || !currentUser?.id || currentUser.role !== 'landlord') return
@@ -108,7 +172,10 @@ export default function HousingPage() {
 
   // A boosted listing sorts first while its purchase is still active.
   const isFeatured = (l: Listing) => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > Date.now()
-  const filteredListings = [...filteredListingsRaw].sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
+  const filteredListings = [...filteredListingsRaw]
+    .filter(l => !filterQuickPostOnly || l.quickPost)
+    .filter(l => (l.listingType || 'rent') === filterListingType)
+    .sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
 
   const filteredRoommates = useSelector((state: RootState) => selectMatchedRoommates(
     state,
@@ -150,17 +217,32 @@ export default function HousingPage() {
         petsAllowed: false
       },
       propertyId: newPropertyId || undefined,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      quickPost: newQuickPost,
+      listingType: newListingType
     }
     dispatch(addListing(listing))
     setShowCreateModal(false)
     setNewPropertyId('')
+    setNewQuickPost(false)
+    setNewListingType('rent')
     setAlertNotification('Property listed successfully!')
   }
+
+  // A signed-out guest has no id, so the request row it built was orphaned —
+  // it never reached the landlord, yet the UI still said "Application sent".
+  // Someone looking for a room would sit waiting on a reply that could never
+  // come. Refuse the write and say so instead.
+  const isGuest = isGuestUser(currentUser)
 
   const handleApply = (e: React.FormEvent) => {
     e.preventDefault()
     if (!activeListing) return
+    if (isGuest) {
+      setActiveListing(null)
+      setAlertNotification('Create an account to request this room — guests can browse, but a landlord needs to know who is asking.')
+      return
+    }
     const request: RoomRequest = {
       id: `req-${Date.now()}`,
       tenantId: currentUser?.id || '',
@@ -192,7 +274,7 @@ export default function HousingPage() {
 
   const applySavedSearch = (filters: SearchFilters) => {
     setSearchInputValue(filters.suburb || '')
-    setFilterPrice(typeof filters.maxPrice === 'number' ? filters.maxPrice : 3000)
+    setFilterPrice(typeof filters.maxPrice === 'number' ? filters.maxPrice : 0)
     setFilterWifi(!!filters.wifi)
     setFilterParking(!!filters.parking)
     setShowFilters(true)
@@ -241,17 +323,11 @@ export default function HousingPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10 pb-32">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-             <div className="p-2 bg-gold-primary/10 rounded-lg">
-                <Home size={28} className="text-gold-primary" />
-             </div>
-             <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase italic">Housing <span className="text-gold-primary">Portal</span></h1>
-          </div>
-          <p className="text-gray-500 text-sm font-bold uppercase tracking-widest opacity-60 ml-1">Curated Living Spaces & Verified Resident Matches</p>
-        </div>
-
+      {/* The big icon+title+tagline block that used to live here duplicated
+          what the top bar already shows (icon + "Housing") — pure vertical
+          space with no new information. The tab switcher is the only part
+          of this header that actually does something. */}
+      <header className="flex justify-end">
         <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl w-full md:w-auto">
           <button
             onClick={() => setActiveTab('rooms')}
@@ -275,6 +351,23 @@ export default function HousingPage() {
           )}
         </div>
       </header>
+
+      {activeTab === 'rooms' && (
+        <div className="flex bg-black/20 p-1 rounded-xl border border-white/5 w-full sm:w-fit">
+          <button
+            onClick={() => setFilterListingType('rent')}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'rent' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+          >
+            Rent
+          </button>
+          <button
+            onClick={() => setFilterListingType('sale')}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'sale' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+          >
+            Buy
+          </button>
+        </div>
+      )}
 
       {/* Landlord Notifications for Applications */}
       {currentUser?.role === 'landlord' && landlordTrackedRequests.length > 0 && (
@@ -315,15 +408,18 @@ export default function HousingPage() {
         <div className="space-y-8">
           {/* Search & Action Bar */}
           <div className="flex flex-col lg:flex-row gap-4">
-             <div className="flex-1 glass-panel p-2 flex items-center gap-2 bg-black/60 shadow-inner">
+             <div className="flex-1 glass-panel p-2 flex items-center gap-2 bg-black/60 shadow-inner relative">
                 <div className="flex-1 flex items-center bg-black/40 rounded-xl px-4 py-1.5 border border-white/5 focus-within:border-gold-primary/40 transition-colors">
                    <Search size={18} className="text-gray-600" />
                    <input
                       type="text"
                       value={searchInputValue}
-                      onChange={(e) => setSearchInputValue(e.target.value)}
+                      onChange={(e) => { setSearchInputValue(e.target.value); setShowSuburbSuggestions(true) }}
+                      onFocus={() => setShowSuburbSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowSuburbSuggestions(false), 150)}
                       placeholder="Enter Suburb, City or Complex..."
                       className="bg-transparent border-none text-white px-3 py-2 w-full outline-none text-sm font-bold placeholder:text-gray-700 placeholder:uppercase placeholder:tracking-widest"
+                      autoComplete="off"
                    />
                    <button
                       onClick={() => handleGetLiveLocation(setSearchInputValue)}
@@ -332,6 +428,26 @@ export default function HousingPage() {
                       {locationLoading ? <Loader size={18} className="animate-spin" /> : <MapPin size={18} />}
                    </button>
                 </div>
+
+                {/* Suggests suburbs that actually HAVE listings, with a live
+                    count, instead of a free-text field where a typo just
+                    silently returns nothing. Sourced from allListings — real
+                    data, zero extra network calls. */}
+                {showSuburbSuggestions && suburbSuggestions.length > 0 && (
+                   <div className="absolute top-full left-0 right-24 mt-1 z-20 bg-black border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                      {suburbSuggestions.map(s => (
+                         <button
+                            key={s.suburb}
+                            type="button"
+                            onMouseDown={() => { setSearchInputValue(s.suburb); setShowSuburbSuggestions(false) }}
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-200 hover:bg-gold-primary/10 hover:text-gold-primary transition-colors text-left"
+                         >
+                            <span className="flex items-center gap-2"><MapPin size={13} className="text-gray-600" /> {s.suburb}</span>
+                            <span className="text-[10px] text-gray-500 font-bold">{s.count} room{s.count === 1 ? '' : 's'}</span>
+                         </button>
+                      ))}
+                   </div>
+                )}
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -363,15 +479,38 @@ export default function HousingPage() {
                >
                   <div className="glass-panel p-8 bg-black/40 border-gold-primary/10 grid grid-cols-1 md:grid-cols-3 gap-10">
                      <div className="space-y-4">
-                        <div className="flex justify-between items-end">
+                        <div className="flex justify-between items-end gap-2">
                            <label className="text-[10px] uppercase font-black tracking-[0.2em] text-gray-500">Price Ceiling</label>
-                           <span className="text-gold-primary font-black text-sm">{formatCurrency(filterPrice)}</span>
+                           <input
+                              type="number" min={0} step={250}
+                              placeholder="Any"
+                              value={filterPrice === 0 ? '' : filterPrice}
+                              onChange={(e) => {
+                                 const raw = e.target.value
+                                 if (raw === '') { setFilterPrice(0); return }
+                                 setFilterPrice(Math.max(0, Number(raw)))
+                              }}
+                              className="w-24 bg-black border border-white/10 rounded-lg px-2 py-1 text-right text-gold-primary font-black text-sm outline-none focus:border-gold-primary/50"
+                           />
                         </div>
+                        {/* Full-right is "no ceiling", not "R20 000 exactly" — otherwise the
+                            top of the range silently becomes a hard cap again. Typing a value
+                            above the slider's own max is honoured too, via filterPrice sitting
+                            outside [0, PRICE_CEILING_MAX] until the slider is touched again. */}
                         <input
-                           type="range" min={500} max={5000} step={50}
-                           value={filterPrice} onChange={(e) => setFilterPrice(Number(e.target.value))}
+                           type="range" min={500} max={Math.max(PRICE_CEILING_MAX, filterPrice)} step={250}
+                           value={filterPrice === 0 ? Math.max(PRICE_CEILING_MAX, filterPrice) : filterPrice}
+                           onChange={(e) => {
+                              const v = Number(e.target.value)
+                              setFilterPrice(v >= PRICE_CEILING_MAX ? 0 : v)
+                           }}
                            className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-gold-primary"
                         />
+                        <p className="text-[10px] text-gray-500">
+                           {filterPrice === 0
+                              ? 'Showing every room. Drag left to set a budget.'
+                              : `Hiding rooms above ${formatCurrency(filterPrice)}.`}
+                        </p>
                      </div>
 
                      <div className="space-y-4">
@@ -383,6 +522,14 @@ export default function HousingPage() {
                               </div>
                               <input type="checkbox" className="hidden" checked={filterWifi} onChange={e => setFilterWifi(e.target.checked)} />
                               <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${filterWifi ? 'text-white' : 'text-gray-600'}`}>WiFi</span>
+                           </label>
+
+                           <label className="flex items-center gap-3 cursor-pointer group">
+                              <div className={`w-10 h-6 rounded-full p-1 transition-all border ${filterQuickPostOnly ? 'bg-gold-primary border-gold-primary' : 'bg-white/5 border-white/10'}`}>
+                                 <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${filterQuickPostOnly ? 'translate-x-4' : 'translate-x-0'}`} />
+                              </div>
+                              <input type="checkbox" className="hidden" checked={filterQuickPostOnly} onChange={e => setFilterQuickPostOnly(e.target.checked)} />
+                              <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${filterQuickPostOnly ? 'text-white' : 'text-gray-600'}`}>Quick Posts Only</span>
                            </label>
 
                            <label className="flex items-center gap-3 cursor-pointer group">
@@ -398,7 +545,7 @@ export default function HousingPage() {
                      <div className="flex items-center justify-end">
                         <button
                            onClick={() => {
-                              setFilterPrice(3000); setFilterWifi(false); setFilterParking(false); setSearchInputValue('');
+                              setFilterPrice(0); setFilterWifi(false); setFilterParking(false); setSearchInputValue('');
                            }}
                            className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500/50 hover:text-red-500 transition-colors"
                         >
@@ -410,7 +557,14 @@ export default function HousingPage() {
              )}
           </AnimatePresence>
 
-          {/* Listings Grid */}
+          {/* Listings Grid — previously if filters excluded everything this
+              area just rendered a blank grid with no explanation, reading as
+              a broken page rather than "your filters are too narrow". */}
+          {filteredListings.length === 0 ? (
+            <div className="glass-panel">
+              <EmptyState icon={Home} title="No rooms match your filters" subtitle="Try widening your price ceiling or clearing a filter." />
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {filteredListings.map((item) => (
               <motion.div
@@ -420,11 +574,24 @@ export default function HousingPage() {
                 className="glass-panel overflow-hidden flex flex-col hover:border-gold-primary/40 transition-all duration-500 group bg-black/40"
               >
                 <div className="relative h-56 bg-gray-900 overflow-hidden">
-                  <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                  {item.images[0] ? (
+                    <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+                      <Home size={40} className="text-gold-primary/20" />
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
                   <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                     <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl">
-                        <span className="text-xs font-black text-white tracking-tight uppercase">Verified</span>
+                     <div className="flex items-center gap-1.5">
+                        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl">
+                           <span className="text-xs font-black text-white tracking-tight uppercase">Verified</span>
+                        </div>
+                        {item.quickPost && (
+                           <div className="bg-gold-primary/90 backdrop-blur-md px-3 py-1.5 rounded-xl" title="Posted fast with minimal details — same listing, just quicker to put up.">
+                              <span className="text-xs font-black text-black tracking-tight uppercase">Quick Post</span>
+                           </div>
+                        )}
                      </div>
                      <div className="bg-gold-primary text-black px-4 py-2 rounded-xl shadow-xl">
                         <span className="text-lg font-black tracking-tighter">{formatCurrency(item.price, item.currency)}</span>
@@ -501,7 +668,39 @@ export default function HousingPage() {
 
                   <div className="mt-auto pt-6 border-t border-white/5 space-y-2">
                      {item.landlordId === currentUser?.id ? (
-                        <UpgradeButton item="room_boost" targetId={item.id} className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest" />
+                        <>
+                          <UpgradeButton item="room_boost" targetId={item.id} className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest" />
+                          {confirmDeleteListingId === item.id ? (
+                             <div className="flex items-center gap-2">
+                                <button
+                                   onClick={() => handleDeleteListing(item.id)}
+                                   className="flex-1 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
+                                >
+                                   Confirm delete
+                                </button>
+                                <button
+                                   onClick={() => setConfirmDeleteListingId(null)}
+                                   className="px-4 bg-white/5 hover:bg-white/10 text-gray-400 font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
+                                >
+                                   Cancel
+                                </button>
+                             </div>
+                          ) : (
+                             <button
+                                onClick={() => setConfirmDeleteListingId(item.id)}
+                                className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-red-500/5 border border-transparent hover:border-red-500/20 text-gray-600 hover:text-red-400 font-bold py-2 rounded-xl transition-all text-[10px] uppercase tracking-widest"
+                             >
+                                <Trash2 size={12} /> Delete listing
+                             </button>
+                          )}
+                        </>
+                     ) : isGuest ? (
+                        <Link
+                           href="/auth"
+                           className="w-full flex items-center justify-center gap-2 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                        >
+                           Sign up to request
+                        </Link>
                      ) : (
                         <button
                            onClick={() => setActiveListing(item)}
@@ -515,6 +714,7 @@ export default function HousingPage() {
               </motion.div>
             ))}
           </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -546,9 +746,12 @@ export default function HousingPage() {
                       <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest">{rm.childrenCount}</span>
                    </div>
                 </div>
-                <button className="w-full mt-4 bg-gold-primary text-black font-black py-3 rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95">
+                <Link
+                  href={`/dashboard/messages?to=${rm.id}`}
+                  className="w-full mt-4 bg-gold-primary text-black font-black py-3 rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95 flex items-center justify-center"
+                >
                    Invite to Share
-                </button>
+                </Link>
              </motion.div>
            ))}
         </div>
@@ -613,6 +816,13 @@ export default function HousingPage() {
                            <input value={newSuburb} onChange={e => setNewSuburb(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="e.g. Kreuzberg" />
                         </div>
                      </div>
+                     <div className="space-y-2">
+                        <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Listing Type</label>
+                        <div className="flex bg-black border border-white/10 rounded-xl p-1 w-fit">
+                           <button type="button" onClick={() => setNewListingType('rent')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'rent' ? 'bg-gold-primary text-black' : 'text-gray-500'}`}>Rent</button>
+                           <button type="button" onClick={() => setNewListingType('sale')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'sale' ? 'bg-gold-primary text-black' : 'text-gray-500'}`}>Sell</button>
+                        </div>
+                     </div>
                      {myProperties.length > 0 && (
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Which Property Is This Room In?</label>
@@ -643,6 +853,9 @@ export default function HousingPage() {
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-400 uppercase tracking-widest">
                            <input type="checkbox" checked={newLivesHere} onChange={e => setNewLivesHere(e.target.checked)} className="accent-gold-primary" /> I Live On-Site
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gold-primary uppercase tracking-widest" title="Marks this as a fast, low-friction post — shows a Quick Post badge and can be filtered separately, but it's the same listing as any other.">
+                           <input type="checkbox" checked={newQuickPost} onChange={e => setNewQuickPost(e.target.checked)} className="accent-gold-primary" /> Quick Post
                         </label>
                      </div>
                      {/* Who this room suits — feeds roommateCompatibility's hard filters directly.

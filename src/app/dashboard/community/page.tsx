@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, X, Shield, Users, Zap, Droplets, Lock,
-  LayoutGrid, AlertTriangle, ListChecks, Sparkles, DoorOpen, Map as MapIcon
+  Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, X, Shield, Users, Droplets, Lock,
+  LayoutGrid, AlertTriangle, ListChecks, Sparkles, DoorOpen, Map as MapIcon, Zap
 } from 'lucide-react'
 import {
   RootState,
@@ -15,12 +16,15 @@ import {
   vibeNotice,
   echoNotice,
   addDispute,
+  updateDisputeStatus,
   addMarketItem,
   addTool,
   pledgeGroupBuy,
   resolveLostFound,
   toUUID,
-  fetchSupabaseData
+  fetchSupabaseData,
+  isGuestUser,
+  selectVisibleNotices
 } from '../../../store'
 import {
   joinCommunity,
@@ -32,7 +36,10 @@ import {
   respondToAlert,
   resolveAlertRpc,
   reportStatus,
-  reportContent
+  reportContent,
+  rotateChores,
+  requestToolReturn,
+  confirmToolReturn
 } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
 import NoticeBoardTab from '../components/NoticeBoardTab'
@@ -46,7 +53,6 @@ import type { VouchKind } from '../../../utils/faults'
 import MarketTab from '../components/MarketTab'
 import HouseholdTab from '../components/HouseholdTab'
 import CommunitiesTab from '../components/CommunitiesTab'
-import EmptyRoomBoard from '../components/EmptyRoomBoard'
 import SharedResourcesTab from '../components/SharedResourcesTab'
 import CommunityAdminTab from '../components/CommunityAdminTab'
 import GruvsConnectionsWidget from '../components/GruvsConnectionsWidget'
@@ -60,8 +66,26 @@ const VibeMap = dynamic(() => import('../components/VibeMap'), {
 
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
-  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'faults' | 'market' | 'household' | 'communities' | 'vibemap' | 'rooms' | 'resources' | 'admin'>('overview')
+  const searchParams = useSearchParams()
+  // 'rooms' was dropped on main (merged into Housing); 'faults' is added here.
+  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'faults' | 'market' | 'household' | 'communities' | 'vibemap' | 'resources' | 'admin'>(
+    searchParams.get('tab') === 'vibemap' ? 'vibemap' : 'overview'
+  )
   const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
+  // Arriving via the top bar's "Map" quick-link (?tab=vibemap) means the
+  // user wants the map, not the Community Hub chrome around it — so that
+  // entry point drops straight into fullscreen instead of a page with a
+  // header and tab bar still eating screen space above the map.
+  const [mapFullscreen, setMapFullscreen] = useState(searchParams.get('tab') === 'vibemap')
+
+  // Lets a "Map" quick-link elsewhere in the app (e.g. the top bar) land
+  // straight on VibeMap via /dashboard/community?tab=vibemap even when this
+  // page was already mounted — the useState initializer above only fires on
+  // first mount, so a repeat visit needs this effect to still catch the param.
+  useEffect(() => {
+    if (searchParams.get('tab') === 'vibemap') { setSubTab('vibemap'); setMapFullscreen(true) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
   // Dispute Modal State
@@ -80,7 +104,7 @@ export default function CommunityPage() {
   const roommates = useSelector((state: RootState) => state.networking.roommates)
 
   // Data from Redux
-  const communityNotices = useSelector((state: RootState) => state.community.notices)
+  const communityNotices = useSelector((state: RootState) => selectVisibleNotices(state, currentUser?.id))
   const communityTools = useSelector((state: RootState) => state.community.tools)
   const communityChores = useSelector((state: RootState) => state.community.chores)
   const communityDisputes = useSelector((state: RootState) => state.community.disputes)
@@ -107,6 +131,41 @@ export default function CommunityPage() {
   const myCommunityIds = useSelector((state: RootState) => state.community.myCommunityIds)
   const communityMemberCounts = useSelector((state: RootState) => state.community.communityMemberCounts)
 
+  // Community Events always point at a real Gruvs-owned `events` row
+  // (CONTRACT.md §8) rather than carrying their own free-text title/date —
+  // same convention already used for res_lift_clubs.event_id. These two
+  // effects mirror the fetch pattern in services/page.tsx exactly.
+  const [upcomingGruvsEvents, setUpcomingGruvsEvents] = useState<{ id: string; title: string; startsAt: string }[]>([])
+  const [gruvsEventInfo, setGruvsEventInfo] = useState<Record<string, { title: string; startsAt: string }>>({})
+
+  useEffect(() => {
+    let cancelled = false
+    if (subTab !== 'notices' || !supabase) return
+    supabase
+      .from('events')
+      .select('id, title, starts_at')
+      .gte('starts_at', new Date().toISOString())
+      .order('starts_at', { ascending: true })
+      .limit(20)
+      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
+        if (!cancelled && data) setUpcomingGruvsEvents(data.map(e => ({ id: e.id, title: e.title, startsAt: e.starts_at })))
+      })
+    return () => { cancelled = true }
+  }, [subTab])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!supabase) return
+    const ids = [...new Set(communityNotices.map(n => n.eventId).filter((id): id is string => !!id))]
+    if (ids.length === 0) return
+    supabase.from('events').select('id, title, starts_at').in('id', ids)
+      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
+        if (cancelled || !data) return
+        setGruvsEventInfo(prev => ({ ...prev, ...Object.fromEntries(data.map(e => [e.id, { title: e.title, startsAt: e.starts_at }])) }))
+      })
+    return () => { cancelled = true }
+  }, [communityNotices])
+
   // Server-held facts a client must not invent: verification + household.
   const [isVerified, setIsVerified] = useState(false)
   // Communities where the current user is admin/founder — drives the small
@@ -119,7 +178,7 @@ export default function CommunityPage() {
   const [householdMembers, setHouseholdMembers] = useState<Array<{ userId: string; name: string; role: string }>>([])
 
   useEffect(() => {
-    if (!currentUser || currentUser.id === 'visitor-guest' || !supabase) return
+    if (!currentUser || isGuestUser(currentUser) || !supabase) return
     let cancelled = false
 
     const load = async () => {
@@ -152,7 +211,7 @@ export default function CommunityPage() {
   }, [currentUser, listings, requests, roommates])
 
   useEffect(() => {
-    if (!currentUser || currentUser.id === 'visitor-guest' || !supabase || myCommunityIds.length === 0) {
+    if (!currentUser || isGuestUser(currentUser) || !supabase || myCommunityIds.length === 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setAdminCommunities([])
       return
@@ -219,13 +278,27 @@ export default function CommunityPage() {
       createdAt: n.updatedAt
     }))
 
-  const handlePostNotice = (data: { title: string; description: string; type: 'notice' | 'event' }) => {
+  const handlePostNotice = (data: {
+    title: string
+    description: string
+    type: 'notice' | 'event' | 'landlord_announcement'
+    audience?: 'everyone' | 'my_tenants' | 'targeted'
+    targetSuburbs?: string[]
+    excludedUserIds?: string[]
+    eventId?: string
+  }) => {
     if (!currentUser) return
+    if (data.audience === 'my_tenants' && (data.type !== 'landlord_announcement' || currentUser.role !== 'landlord')) return
+    if (data.type === 'event' && !data.eventId) return
     dispatch(addNoticeEvent({
       id: `notice-${Date.now()}`,
       title: data.title,
       description: data.description,
       type: data.type,
+      eventId: data.type === 'event' ? data.eventId : undefined,
+      audience: data.type !== 'event' ? (data.audience || 'everyone') : undefined,
+      targetSuburbs: data.audience === 'targeted' ? data.targetSuburbs : undefined,
+      excludedUserIds: data.excludedUserIds,
       postedBy: currentUser.name,
       postedById: currentUser.id,
       timestamp: new Date().toISOString(),
@@ -299,7 +372,9 @@ export default function CommunityPage() {
     description: d.description,
     category: d.category,
     reportedBy: d.reportedBy,
+    reportedById: d.reportedById,
     againstUser: d.againstUser,
+    againstUserId: d.againstUserId,
     status: (d.status === 'mediating' ? 'investigating' : d.status) as 'pending' | 'resolved' | 'investigating',
     timestamp: d.timestamp,
     resolutionDetails: d.resolutionDetails
@@ -324,7 +399,6 @@ export default function CommunityPage() {
       accent: 'text-sky-400 bg-sky-400/10',
       tabs: [
         { id: 'notices', label: 'Notices', icon: Megaphone },
-        { id: 'rooms', label: 'Empty Rooms', icon: Zap },
         { id: 'communities', label: 'Groups', icon: Users },
       ],
     },
@@ -373,22 +447,37 @@ export default function CommunityPage() {
 
   const goToTab = (id: typeof subTab) => { setPreMapTab(id as Exclude<typeof subTab, 'vibemap'>); setSubTab(id) }
   const toggleVibeMap = () => {
-    if (subTab === 'vibemap') { setSubTab(preMapTab) } else { setPreMapTab(subTab as Exclude<typeof subTab, 'vibemap'>); setSubTab('vibemap') }
+    if (subTab === 'vibemap') { setSubTab(preMapTab); setMapFullscreen(false) } else { setPreMapTab(subTab as Exclude<typeof subTab, 'vibemap'>); setSubTab('vibemap'); setMapFullscreen(true) }
+  }
+  const exitFullscreenMap = () => { setMapFullscreen(false); setSubTab(preMapTab) }
+
+  // The map's own value is the map — Community Hub's header, tab bar and
+  // page padding around it just eat screen space a mobile user needs for
+  // actually reading streets. Fullscreen skips all of that and renders
+  // VibeMap alone, with its own exit control to get back.
+  if (subTab === 'vibemap' && mapFullscreen) {
+    return (
+      <div className="fixed inset-0 z-[1000] bg-black">
+        <button
+          onClick={exitFullscreenMap}
+          aria-label="Exit fullscreen map"
+          title="Exit map"
+          className="absolute top-3 left-3 z-[1001] flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2.5 text-gray-200 hover:text-white shadow-2xl"
+        >
+          <X size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Exit</span>
+        </button>
+        <VibeMap fullscreen />
+      </div>
+    )
   }
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-32">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-             <div className="p-2 bg-gold-primary/10 rounded-lg">
-                <Users size={28} className="text-gold-primary" />
-             </div>
-             <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase italic">Community <span className="text-gold-primary">Hub</span></h1>
-          </div>
-          <p className="text-gray-500 text-sm font-bold uppercase tracking-widest opacity-60 ml-1">Connect, Share Resources & Protect Your Neighborhood</p>
-        </div>
-
+      {/* Duplicated what the top bar already shows (icon + "Community") —
+          removed for the same reason as Housing's and Services'. Kept the
+          VibeMap toggle, since that's the one thing here that actually does
+          something. */}
+      <header className="flex justify-end">
         <button
           onClick={toggleVibeMap}
           title="VibeMap"
@@ -416,28 +505,29 @@ export default function CommunityPage() {
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-x-8 gap-y-4 overflow-x-auto no-scrollbar">
+        {/* One scrollable row instead of stacked per-category groups — the
+            stacked version could run to 3+ rows tall on narrow screens
+            before you'd even reached the page content below it. */}
+        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-1">
           {clusters.map(cluster => (
-            <div key={cluster.id} className="space-y-1.5 min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 ml-1">{cluster.label}</p>
-              <div className="flex items-center gap-1.5">
-                {cluster.tabs.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => goToTab(t.id as typeof subTab)}
-                    className={`px-3.5 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap border ${
-                      subTab === t.id
-                        ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20'
-                        : 'text-gray-400 border-white/5 hover:text-white hover:border-white/20'
-                    }`}
-                  >
-                    <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-black/10' : cluster.accent}`}>
-                      <t.icon size={11} />
-                    </span>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+            <div key={cluster.id} className="flex items-center gap-1.5 shrink-0 pr-4 border-r border-white/5 last:border-r-0 last:pr-0">
+              {cluster.tabs.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => goToTab(t.id as typeof subTab)}
+                  title={cluster.label}
+                  className={`px-3 py-1.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap border ${
+                    subTab === t.id
+                      ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20'
+                      : 'text-gray-400 border-white/5 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-black/10' : cluster.accent}`}>
+                    <t.icon size={11} />
+                  </span>
+                  {t.label}
+                </button>
+              ))}
             </div>
           ))}
         </div>
@@ -493,6 +583,8 @@ export default function CommunityPage() {
                <NoticeBoardTab
                   communityNotices={communityNotices}
                   currentUser={currentUser}
+                  upcomingGruvsEvents={upcomingGruvsEvents}
+                  gruvsEventInfo={gruvsEventInfo}
                   handleVibeNotice={(id) => dispatch(vibeNotice({ noticeId: id, userName: currentUser?.name || '' }))}
                   handleEchoNotice={(id) => dispatch(echoNotice({ noticeId: id, userName: currentUser?.name || '' }))}
                   handleRSVPToEvent={(id) => dispatch(rsvpToEvent({ noticeId: id, userName: currentUser?.name || '' }))}
@@ -541,9 +633,6 @@ export default function CommunityPage() {
                 isModerator={isModerator}
                 onModerate={handleModerate}
               />
-            )}
-            {subTab === 'rooms' && (
-              <EmptyRoomBoard currentUserId={currentUser?.id || ''} defaultCurrency={defaultCurrency} />
             )}
             {subTab === 'resources' && (
               <SharedResourcesTab currentUserId={currentUser?.id || ''} communityId={myCommunityIds[0] || null} />
@@ -600,13 +689,20 @@ export default function CommunityPage() {
                   setAlertNotification('Tool listed for your neighbours to borrow.')
                   setTimeout(() => setAlertNotification(null), 3000)
                 }}
+                onRequestReturn={(toolId) => dispatch(requestToolReturn(toolId))}
+                onConfirmReturn={(toolId) => dispatch(confirmToolReturn(toolId))}
               />
             )}
             {subTab === 'chores' && (
               <ChoreSchedulerTab communityChores={adaptedChores} currentUser={currentUser} reputationScores={reputationScores} handleCompleteChore={handleCompleteChore} />
             )}
             {subTab === 'disputes' && (
-              <DisputesTab communityDisputes={adaptedDisputes} currentUser={currentUser} onFileDispute={() => setShowDisputeModal(true)} />
+              <DisputesTab
+                communityDisputes={adaptedDisputes}
+                currentUser={currentUser}
+                onFileDispute={() => setShowDisputeModal(true)}
+                onModerate={(disputeId, status, resolutionDetails) => dispatch(updateDisputeStatus({ disputeId, status, resolutionDetails }))}
+              />
             )}
             {subTab === 'household' && (
               <HouseholdTab
@@ -616,7 +712,10 @@ export default function CommunityPage() {
                 chores={adaptedChores}
                 reputationScores={reputationScores}
                 currentUserId={currentUser?.id || ''}
-                styles={{}}
+                onRotate={(tasks, days) => {
+                  if (!householdListingId) return
+                  dispatch(rotateChores({ listingId: householdListingId, tasks, days }))
+                }}
               />
             )}
             {subTab === 'communities' && (

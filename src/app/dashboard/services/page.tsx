@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2
+  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon
 } from 'lucide-react'
 import {
   RootState,
@@ -24,6 +24,7 @@ import FollowButton from '../components/FollowButton'
 import TrustBadge from '../components/TrustBadge'
 import OpenInMapsButton from '../components/OpenInMapsButton'
 import UpgradeButton from '../components/UpgradeButton'
+import EmptyState from '../components/EmptyState'
 import { directionsUrlForAddress } from '../../../utils/navigation'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
@@ -162,6 +163,7 @@ export default function ServicesPage() {
     if (!currentUser) return
     const newLift: LiftClub = {
       id: `lift-${Date.now()}`,
+      driverId: currentUser.id,
       driverName: currentUser.name || '',
       origin: liftOrigin,
       destination: liftDestination,
@@ -259,17 +261,9 @@ export default function ServicesPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10 pb-32">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-             <div className="p-2 bg-gold-primary/10 rounded-lg">
-                <Briefcase size={28} className="text-gold-primary" />
-             </div>
-             <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter uppercase italic">Services <span className="text-gold-primary">& Utils</span></h1>
-          </div>
-          <p className="text-gray-500 text-sm font-bold uppercase tracking-widest opacity-60 ml-1">P2P Logistics, Local Skills & Prepaid Energy Marketplace</p>
-        </div>
-
+      {/* Duplicated what the top bar already shows (icon + "Services") —
+          removed for the same reason as Housing's. */}
+      <header className="flex justify-end">
         <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl w-full md:w-auto overflow-x-auto no-scrollbar">
           {[
             { id: 'lifts', label: 'Lifts', icon: Car },
@@ -289,19 +283,48 @@ export default function ServicesPage() {
 
       {activeTab === 'lifts' && (
         <div className="space-y-4">
-           <div className="flex justify-end">
-              <button
-                 onClick={() => setShowLiftModal(true)}
-                 className="w-full md:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
-              >
-                 <Plus size={18} /> Post a Lift
-              </button>
-           </div>
+           {/* Riding with a stranger is a real safety decision, not just a
+               transaction — so posting/offering a lift is gated by the same
+               next-of-kin trust circle that already gates Move Assist below,
+               rather than open to anyone the moment they sign up. Browsing
+               and booking an existing lift stays open to everyone; this only
+               gates OFFERING one. */}
+           {trustGate && !trustGate.unlocked ? (
+              <a href="/dashboard/trust-circle" className="w-full flex items-center justify-between gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-6 py-4 hover:border-gold-primary/40 transition-all">
+                 <span className="flex items-center gap-3 text-left">
+                    <Lock size={18} className="text-gold-primary shrink-0" />
+                    <span>
+                       <span className="block text-xs font-black text-white uppercase tracking-widest">Build trust to offer a lift</span>
+                       <span className="block text-[11px] text-gray-500 mt-0.5">
+                          {trustGate.status === 'building' ? 'Your next-of-kin circle is growing — almost there.' : 'Add people to your next-of-kin circle first — offering a ride to strangers needs a real safety trail.'}
+                       </span>
+                    </span>
+                 </span>
+                 <span className="text-[10px] font-black text-gold-primary uppercase tracking-widest shrink-0">Next of Kin →</span>
+              </a>
+           ) : (
+              <div className="flex justify-end">
+                 <button
+                    onClick={() => setShowLiftModal(true)}
+                    className="w-full md:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+                 >
+                    <Plus size={18} /> Post a Lift
+                 </button>
+              </div>
+           )}
            {lifts.map(lift => (
              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={lift.id} className="glass-panel p-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 bg-black/40 border-white/5 group hover:border-gold-primary/30 transition-all">
                 <div className="flex-1 space-y-4">
                    <div className="flex justify-between items-center">
-                      <h3 className="text-xl font-black text-white tracking-tight uppercase group-hover:text-gold-primary transition-colors italic">{lift.driverName}</h3>
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                         <h3 className="text-xl font-black text-white tracking-tight uppercase group-hover:text-gold-primary transition-colors italic">{lift.driverName}</h3>
+                         {/* The one piece of real trust info riders had before getting
+                             in this driver's car was a first name. TrustBadge pulls
+                             their actual verification/reputation — driver_id was
+                             already on this row, just never read past the display
+                             name (see LiftClub.driverId). */}
+                         <TrustBadge userId={lift.driverId} compact />
+                      </div>
                       <div className="bg-gold-primary/10 border border-gold-primary/20 text-gold-primary px-4 py-1 rounded-xl font-black text-sm tracking-tighter">
                          {formatCurrency(lift.pricePerSeat, lift.currency)} <span className="text-[10px] opacity-60 ml-1">PER SEAT</span>
                       </div>
@@ -373,25 +396,47 @@ export default function ServicesPage() {
                     <p className="text-xs text-gray-500 font-bold uppercase tracking-widest opacity-60">Verified skills helping to grow the local economy</p>
                  </div>
               </div>
-              <button
-                 onClick={() => setShowBusinessRegModal(true)}
-                 className="w-full lg:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
-              >
-                 <Plus size={20} /> Advertise My Skills
-              </button>
+              {trustGate && !trustGate.unlocked ? (
+                 <a href="/dashboard/trust-circle" className="w-full lg:w-auto flex items-center gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-6 py-4 hover:border-gold-primary/40 transition-all">
+                    <Lock size={16} className="text-gold-primary shrink-0" />
+                    <span className="text-left">
+                       <span className="block text-[11px] font-black text-white uppercase tracking-widest">Build trust to list</span>
+                       <span className="block text-[10px] text-gray-500 mt-0.5">Grow your next-of-kin circle first →</span>
+                    </span>
+                 </a>
+              ) : (
+                 <button
+                    onClick={() => setShowBusinessRegModal(true)}
+                    className="w-full lg:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+                 >
+                    <Plus size={20} /> Advertise My Skills
+                 </button>
+              )}
            </div>
 
            {/* A sponsored slot sits ABOVE the grid and never inside it: the list
                below is complete and unchanged, so nobody has been pushed down
                to make room for a paying business. Renders nothing when no slot
-               is sold. */}
+               is sold — including when the list is empty, so a suburb with no
+               providers never shows an advert as its only content. */}
            <SponsoredSlot surface="services" suburb={sponsorSuburb} />
 
+           {services.length === 0 ? (
+             <div className="glass-panel">
+               <EmptyState icon={Briefcase} title="No local pros listed yet" subtitle="Be the first to advertise your skills to the neighbourhood." />
+             </div>
+           ) : (
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
              {services.map(srv => (
                <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-black/40 hover:border-gold-primary/40 transition-all duration-500 shadow-2xl">
                   <div className="h-44 bg-gray-900 relative overflow-hidden">
-                     <img src={srv.image} alt={srv.businessName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" />
+                     {srv.image ? (
+                       <img src={srv.image} alt={srv.businessName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" />
+                     ) : (
+                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+                         <ImageIcon size={32} className="text-gold-primary/20" />
+                       </div>
+                     )}
                      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-xl border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-2xl">
                         <Star size={14} className="text-gold-primary fill-gold-primary" />
                         <span className="text-xs font-black text-white">{srv.rating}</span>
@@ -466,6 +511,7 @@ export default function ServicesPage() {
                </motion.div>
              ))}
            </div>
+           )}
 
            {/* Service Logs Section */}
            {incomingOrders.length > 0 && (

@@ -4,36 +4,45 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import {
-  Shield, LogOut, Home, X, AlertTriangle,
+  Home, AlertTriangle,
   Wifi, Users, CheckCircle2,
   Briefcase,
-  Megaphone, Wrench, Loader, Menu, Sun, Moon,
-  ShieldCheck, MessageCircle, MessagesSquare
+  Megaphone, Wrench, Loader,
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles
 } from 'lucide-react'
 import {
   loginUser,
-  logoutUser,
-  setLanguage,
   RootState,
   AppDispatch,
-  markAllNotificationsRead
+  markAllNotificationsRead,
+  GUEST_USER_ID,
+  isGuestUser
 } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
 import { t } from '../../utils/i18n'
-import { hasHouseholdPlus } from '../../utils/subscriptions'
-import UpgradeButton from './components/UpgradeButton'
 import Link from 'next/link'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const dispatch = useDispatch()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [theme, setTheme] = useState<'day' | 'night'>('day')
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
+  // Guests previously got the "you should sign up" pitch as five separate
+  // small nudges scattered across Housing, Services and Profile, each only
+  // seen if that specific screen happened to render it. One banner, said
+  // once, dismissible — rather than the same pitch repeating on every tab.
+  const [guestBannerDismissed, setGuestBannerDismissed] = useState(true)
+  /* eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount */
+  useEffect(() => {
+    setGuestBannerDismissed(typeof window !== 'undefined' && sessionStorage.getItem('guestBannerDismissed') === '1')
+  }, [])
+  const dismissGuestBanner = () => {
+    sessionStorage.setItem('guestBannerDismissed', '1')
+    setGuestBannerDismissed(true)
+  }
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const notifications = useSelector((state: RootState) => state.notifications)
@@ -41,13 +50,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const dataStatus = useSelector((state: RootState) => state.ui.dataStatus)
   const failedTables = useSelector((state: RootState) => state.ui.failedTables)
   const pendingWrites = useSelector((state: RootState) => state.ui.offlineQueue.length)
-  const [showPlusUpsell, setShowPlusUpsell] = useState(false)
 
+  // A real light mode left active by the auth/landing pages' own toggle
+  // used to leak in here and render a half-styled mess, because the
+  // dashboard is built from hardcoded dark Tailwind utilities rather than
+  // the CSS variables those pages read. globals.css now carries a scoped
+  // [data-theme='light'] .dashboard-wrapper override layer for the common
+  // utility classes, so a real (if not 100% exhaustive) light dashboard is
+  // possible — this reads the same localStorage key Profile's toggle
+  // writes to, defaulting to dark for anyone who hasn't chosen yet.
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', theme)
+      const stored = localStorage.getItem('dashboardTheme')
+      document.documentElement.setAttribute('data-theme', stored === 'light' ? 'light' : 'night')
     }
-  }, [theme])
+  }, [])
 
   useEffect(() => {
     if (currentUser) return
@@ -72,7 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const isGuest = document.cookie.split(';').some(c => c.trim().startsWith('guest-mode=1'))
       if (isGuest) {
         dispatch(loginUser({
-          id: 'visitor-guest',
+          id: GUEST_USER_ID,
           name: 'Guest Visitor',
           email: 'visitor@theresidentcrew.com',
           role: 'visitor' as const
@@ -85,19 +102,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [currentUser, router, dispatch])
 
   useEffect(() => {
-    if (!currentUser || currentUser.id === 'visitor-guest') return
+    if (!currentUser || isGuestUser(currentUser)) return
     const appDispatch = dispatch as AppDispatch
     loadNotifications(appDispatch)
     const unsubscribe = subscribeToRealtime(appDispatch, currentUser.id)
     return unsubscribe
   }, [currentUser, dispatch])
-
-  useEffect(() => {
-    if (!currentUser || currentUser.id === 'visitor-guest') return
-    let cancelled = false
-    hasHouseholdPlus().then(has => { if (!cancelled) setShowPlusUpsell(!has) })
-    return () => { cancelled = true }
-  }, [currentUser])
 
   // Close the notifications dropdown on an outside click — previously the
   // only way to close it was clicking the bell a second time.
@@ -111,12 +121,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showNotifMenu])
-
-  const handleLogout = () => {
-    document.cookie = 'guest-mode=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
-    dispatch(logoutUser())
-    router.push('/auth')
-  }
 
   if (!currentUser) {
     return (
@@ -136,139 +140,89 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: t('navMaintenance', lang), href: '/dashboard/services', icon: Wrench },
     { name: t('navCommunity', lang), href: '/dashboard/community', icon: Users },
   ]
+  // Next of Kin lives inside Profile now (it's your safety/trust info, the
+  // same category as everything else there) rather than being its own
+  // primary destination — freeing a bottom-bar slot for Profile itself,
+  // which used to be buried in the hamburger panel despite being a page
+  // people actually need to reach often (edit info, check verification).
+  // Net: still six items, just a more coherent set of six.
   const socialItems = [
-    { name: 'Next of Kin', href: '/dashboard/trust-circle', icon: ShieldCheck },
+    { name: 'Profile', href: '/dashboard/profile', icon: UserRound },
     { name: 'Feed', href: '/dashboard/gossip', icon: MessagesSquare },
     { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   ]
   const navItems = [...coreItems, ...socialItems]
 
-  // So the top bar can orient the user to which section they're in.
-  const pageTitle = navItems.find(item => item.href === pathname) || navItems[0]
+  // Next of Kin and Business aren't in the bottom bar but are still real
+  // routes — without this, visiting either would show the wrong tab (or
+  // none) highlighted as "current" in the top bar title.
+  const pageTitle =
+    pathname === '/dashboard/trust-circle' ? { name: 'Next of Kin', href: pathname, icon: ShieldCheck } :
+    pathname === '/dashboard/business' ? { name: 'My Business', href: pathname, icon: Briefcase } :
+    navItems.find(item => item.href === pathname) || navItems[0]
 
   return (
     <div className="dashboard-wrapper">
+      {/* These four could previously all be true at once — a loading spinner,
+          a failed-table warning, an offline-queue count, and a one-off toast
+          stacked three-deep above every page. Only one is ever the MOST
+          urgent thing to tell someone, so show just that one, worst-first:
+          a failed fetch beats "still loading", which beats routine offline
+          queuing, which beats a transient success toast. */}
       <div className="top-alert-banner-stack">
-        {alertNotification && (
-          <div className="top-alert-banner">
-            <CheckCircle2 size={18} color="#22c55e" />
-            <span>{alertNotification}</span>
-          </div>
-        )}
-
-        {/* Live-data status: these are real signals from the sync layer, not
-            decoration — this banner went silent when the dashboard was split
-            into routed pages, so failed fetches and queued offline writes were
-            happening invisibly. */}
-        {dataStatus === 'loading' && (
-          <div className="top-alert-banner">
-            <Loader size={18} color="#D4AF37" className="animate-spin" />
-            <span>Loading your community data…</span>
-          </div>
-        )}
-        {dataStatus === 'error' && failedTables.length > 0 && (
+        {dataStatus === 'error' && failedTables.length > 0 ? (
           <div className="top-alert-banner">
             <AlertTriangle size={18} color="#ef4444" />
             <span>Some data couldn&apos;t load ({failedTables.join(', ')}). Retrying automatically.</span>
           </div>
-        )}
-        {pendingWrites > 0 && (
+        ) : dataStatus === 'loading' ? (
+          <div className="top-alert-banner">
+            <Loader size={18} color="#D4AF37" className="animate-spin" />
+            <span>Loading your community data…</span>
+          </div>
+        ) : pendingWrites > 0 ? (
           <div className="top-alert-banner">
             <Wifi size={18} color="#D4AF37" />
             <span>{pendingWrites} change{pendingWrites === 1 ? '' : 's'} waiting to sync — you&apos;re offline.</span>
           </div>
-        )}
+        ) : alertNotification ? (
+          <div className="top-alert-banner">
+            <CheckCircle2 size={18} color="#22c55e" />
+            <span>{alertNotification}</span>
+          </div>
+        ) : null}
       </div>
 
-      {/* Mobile Drawer Sidebar Backdrop */}
-      {isSidebarOpen && (
-        <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />
+      {currentUser && isGuestUser(currentUser) && !guestBannerDismissed && (
+        <div className="guest-summary-banner">
+          <Sparkles size={16} className="shrink-0" style={{ color: '#D4AF37' }} />
+          <span>
+            <strong>You&apos;re browsing as a guest.</strong> Sign up free to save listings, message neighbours, post to the feed, and build the trust circle other residents can see.
+          </span>
+          <Link href="/auth" className="guest-summary-banner-cta">Sign up</Link>
+          <button onClick={dismissGuestBanner} aria-label="Dismiss" className="guest-summary-banner-dismiss">
+            <X size={14} />
+          </button>
+        </div>
       )}
 
-      <aside className={`sidebar-container ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-logo">
-          <Shield size={24} color="#D4AF37" />
-          <span className="sidebar-logo-text">THE RESIDENT</span>
-          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(false)} aria-label="Close menu">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="sidebar-profile">
-          <div className="sidebar-profile-info">
-            <div className="sidebar-profile-avatar">{currentUser.name.charAt(0)}</div>
-            <div className="sidebar-profile-details">
-              <span className="sidebar-profile-name">{currentUser.name}</span>
-              <span className="sidebar-profile-role">{currentUser.role}</span>
-            </div>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <span className="sidebar-nav-section-label">{t('menuLabel', lang)}</span>
-          {coreItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar-nav-item ${pathname === item.href ? 'active' : ''}`}
-              onClick={() => setIsSidebarOpen(false)}
-            >
-              <item.icon size={16} /> {item.name}
-            </Link>
-          ))}
-          <span className="sidebar-nav-section-label" style={{ marginTop: '0.75rem' }}>Social &amp; Safety</span>
-          {socialItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar-nav-item ${pathname === item.href ? 'active' : ''}`}
-              onClick={() => setIsSidebarOpen(false)}
-            >
-              <item.icon size={16} /> {item.name}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          {showPlusUpsell && currentUser.id !== 'visitor-guest' && (
-            <div className="bg-gold-primary/5 border border-gold-primary/15 rounded-xl p-3 mb-1">
-              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-2">Household Plus</p>
-              <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">Priority mediation, extra feed storage, an ad-free view.</p>
-              <UpgradeButton item="plus" className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-2 rounded-lg text-[9px] uppercase tracking-widest transition-all active:scale-95" />
-            </div>
-          )}
-          <div className="lang-switcher">
-            {['en', 'zu', 'xh', 'af'].map(l => (
-              <button
-                key={l}
-                onClick={() => dispatch(setLanguage(l as 'en' | 'zu' | 'xh' | 'af'))}
-                className={`lang-switcher-btn ${lang === l ? 'active' : ''}`}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          <button className="sidebar-nav-item" onClick={() => setTheme(theme === 'day' ? 'night' : 'day')}>
-            {theme === 'day' ? <Moon size={16} /> : <Sun size={16} />}
-            <span>{theme === 'day' ? t('nightTheme', lang) : t('dayTheme', lang)}</span>
-          </button>
-          <button className="sidebar-nav-item" onClick={handleLogout}>
-            <LogOut size={16} /> {t('logOut', lang)}
-          </button>
-        </div>
-      </aside>
+      {/* No hamburger / "More" panel anymore — Profile, Next of Kin, Business,
+          language and Log Out all live on the Profile page now (see
+          ProfilePage), reached via the bottom-bar Profile tab. A menu button
+          that only ever opened a settings panel had nothing left to hold. */}
 
       <div className="dashboard-main-content">
         <header className="dashboard-top-bar">
-          <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)} aria-label="Open menu">
-            <Menu size={22} />
-          </button>
-
           <div className="dashboard-page-title">
             <pageTitle.icon size={18} />
             <span>{pageTitle.name}</span>
           </div>
 
+          {/* The "Map" shortcut used to live here on every single page — dead
+              weight on the 5 of 6 tabs that have nothing to do with the map.
+              VibeMap is one tap away from Community's own tab bar (and its
+              fullscreen entry), so this bar now only carries what's actually
+              page-agnostic: notifications. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto' }}>
              <div ref={notifMenuRef} style={{ position: 'relative' }}>
                 <button onClick={() => setShowNotifMenu(!showNotifMenu)} style={{ background: 'transparent', border: 'none', color: '#D4AF37', position: 'relative', cursor: 'pointer' }}>
@@ -313,6 +267,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+
+      <nav className="bottom-nav-bar">
+        {navItems.map(item => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`bottom-nav-item ${pathname === item.href ? 'active' : ''}`}
+          >
+            <item.icon size={20} />
+            <span>{item.name}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   )
 }
