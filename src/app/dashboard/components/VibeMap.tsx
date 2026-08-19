@@ -713,7 +713,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         {/* Search — floating top-left */}
         <div className="absolute top-3 left-3 right-3 md:right-auto md:w-[340px] z-[500]">
           <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl">
-            <MapSearchBox onSelect={handleSearchSelect} />
+            <MapSearchBox onSelect={handleSearchSelect} localPlaces={places} />
           </div>
         </div>
 

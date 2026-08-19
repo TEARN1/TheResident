@@ -199,3 +199,50 @@ export function clusterCellFor(zoom: number): number {
   if (zoom >= 11) return 1200
   return 5000
 }
+
+// ── Searching the neighbourhood's own places ───────────────────────────────
+
+export interface PlaceMatch {
+  place: Place
+  /** Lower is better. Exposed so callers can merge with other result sources. */
+  rank: number
+}
+
+/**
+ * Matches loaded places against a typed query.
+ *
+ * The map's search box only ever asked Nominatim, so a resident could find
+ * "Ivory Park" but not "plumber" — the app's own directory was unsearchable
+ * from the one screen showing where everything is.
+ *
+ * Ranking is deliberately simple and explainable: a title that starts with the
+ * query beats one that merely contains it, which beats a match on the subtitle
+ * or the kind. People type the first few letters of what they want, and a
+ * fuzzy scorer that occasionally ranks a distant guess first is worse than a
+ * plain rule they can predict.
+ */
+export function searchLocalPlaces(places: Place[], query: string, limit = 6): PlaceMatch[] {
+  const q = query.trim().toLowerCase()
+  if (q.length < 2) return []
+
+  const matches: PlaceMatch[] = []
+
+  for (const place of places) {
+    const title = place.title.toLowerCase()
+    const subtitle = (place.subtitle ?? '').toLowerCase()
+    const kind = PLACE_LABEL[place.kind].toLowerCase()
+
+    let rank: number
+    if (title.startsWith(q)) rank = 0
+    else if (title.includes(q)) rank = 1
+    else if (subtitle.includes(q)) rank = 2
+    else if (kind.includes(q)) rank = 3
+    else continue
+
+    matches.push({ place, rank })
+  }
+
+  return matches
+    .sort((a, b) => a.rank - b.rank || a.place.title.localeCompare(b.place.title))
+    .slice(0, limit)
+}

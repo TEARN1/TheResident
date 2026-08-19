@@ -6,6 +6,7 @@ import {
   nearest,
   clusterPlaces,
   clusterCellFor,
+  searchLocalPlaces,
   PLACE_ORDER,
   PLACE_LABEL,
   PLACE_COLOR,
@@ -162,4 +163,61 @@ test('clustering is stable — the same input always groups the same way', () =>
 
 test('an empty map clusters to nothing without throwing', () => {
   assert.deepStrictEqual(clusterPlaces([], 100), [])
+})
+
+// ── Local search ───────────────────────────────────────────────────────────
+// The map's search box only ever asked Nominatim, so a resident could find
+// "Ivory Park" but not "plumber" — the app's own directory was unsearchable
+// from the one screen that shows where everything is.
+
+test('a resident can find a trade by name, not just an address', () => {
+  const places = [
+    place({ id: 'plumb', kind: 'service', title: 'Sipho Plumbing', subtitle: 'plumbing' }),
+    place({ id: 'shop', kind: 'vendor', title: 'Mama Rose Spaza', subtitle: 'airtime' }),
+  ]
+  assert.deepStrictEqual(
+    searchLocalPlaces(places, 'plumb').map(m => m.place.id), ['plumb'])
+})
+
+test('a title that starts with the query outranks one that merely contains it', () => {
+  // People type the first few letters of what they want.
+  const places = [
+    place({ id: 'contains', title: 'Best Water Supplies' }),
+    place({ id: 'starts', title: 'Water Point North' }),
+  ]
+  assert.deepStrictEqual(
+    searchLocalPlaces(places, 'water').map(m => m.place.id), ['starts', 'contains'])
+})
+
+test('subtitle and kind are searchable, but rank below the title', () => {
+  const places = [
+    place({ id: 'by-kind', kind: 'water_point', title: 'Corner tap', subtitle: null }),
+    place({ id: 'by-title', kind: 'vendor', title: 'Water shop', subtitle: null }),
+  ]
+  const found = searchLocalPlaces(places, 'water')
+  assert.deepStrictEqual(found.map(m => m.place.id), ['by-title', 'by-kind'])
+})
+
+test('a one-character query returns nothing rather than the whole suburb', () => {
+  const places = [place({ title: 'Sipho Plumbing' })]
+  assert.deepStrictEqual(searchLocalPlaces(places, 's'), [])
+  assert.deepStrictEqual(searchLocalPlaces(places, '  '), [])
+})
+
+test('search is case-insensitive and ignores surrounding spaces', () => {
+  const places = [place({ id: 'x', title: 'Sipho Plumbing' })]
+  for (const q of ['SIPHO', '  sipho  ', 'SiPhO']) {
+    assert.strictEqual(searchLocalPlaces(places, q).length, 1, `failed for ${JSON.stringify(q)}`)
+  }
+})
+
+test('results are capped so the dropdown stays readable', () => {
+  const places = Array.from({ length: 30 }, (_, i) =>
+    place({ id: `p-${i}`, title: `Water point ${i}` }))
+  assert.strictEqual(searchLocalPlaces(places, 'water').length, 6)
+  assert.strictEqual(searchLocalPlaces(places, 'water', 3).length, 3)
+})
+
+test('no match returns empty rather than a nearest guess', () => {
+  assert.deepStrictEqual(searchLocalPlaces([place({ title: 'Spaza' })], 'zzzz'), [])
 })
