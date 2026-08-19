@@ -681,6 +681,13 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       mapRef.current?.setView([livePosition.lat, livePosition.lon], STREET_LEVEL_ZOOM)
       return
     }
+    // Guarded like the initial locate above: navigator.geolocation is absent in
+    // some embedded webviews and when a policy blocks it, and an unguarded
+    // property call there is a TypeError rather than a permission prompt.
+    if (!('geolocation' in navigator)) {
+      setLocationDenied(true)
+      return
+    }
     setLocationSharing(true)
     setLocating(true)
     navigator.geolocation.getCurrentPosition(

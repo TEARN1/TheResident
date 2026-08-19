@@ -1,22 +1,37 @@
 {
+  "id": "/dashboard",
   "name": "The Resident Co-Living Hub",
   "short_name": "Resident",
-  "description": "Informal co-living and community mapping platform",
+  "description": "Report outages and faults with your neighbours, find water, wifi and local services, and see what is happening on your street.",
   "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0a0a",
   "theme_color": "#D4AF37",
+  "lang": "en-ZA",
+  "dir": "ltr",
+  "categories": ["utilities", "social", "navigation"],
   "icons": [
     {
       "src": "/logo.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "sizes": "768x768",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Map",
+      "short_name": "Map",
+      "description": "Water, wifi, shops and live hazards near you",
+      "url": "/dashboard/community?tab=vibemap"
     },
     {
-      "src": "/logo.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "name": "Report a fault",
+      "short_name": "Report",
+      "description": "Tell your neighbours something is broken",
+      "url": "/dashboard/community?tab=faults"
     }
   ]
 }

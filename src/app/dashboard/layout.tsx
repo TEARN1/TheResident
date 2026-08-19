@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useSyncExternalStore } from 'react'
+import { safeLocal, safeSession, readEnum } from '../../utils/safeStorage'
 import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -58,11 +59,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // and the real value takes over immediately after hydration.
   const guestBannerDismissed = useSyncExternalStore(
     subscribeGuestBanner,
-    () => sessionStorage.getItem('guestBannerDismissed') === '1',
+    () => safeSession.getItem('guestBannerDismissed') === '1',
     () => true
   )
   const dismissGuestBanner = () => {
-    sessionStorage.setItem('guestBannerDismissed', '1')
+    safeSession.setItem('guestBannerDismissed', '1')
     emitGuestBannerChange()
   }
 
@@ -83,8 +84,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // writes to, defaulting to dark for anyone who hasn't chosen yet.
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      const stored = localStorage.getItem('dashboardTheme')
-      document.documentElement.setAttribute('data-theme', stored === 'light' ? 'light' : 'night')
+      // Validated on read: storage survives deploys and is user-editable, so a
+      // value written by an older version can be anything at all.
+      const theme = readEnum(safeLocal, 'dashboardTheme', ['light', 'night'] as const, 'night')
+      document.documentElement.setAttribute('data-theme', theme)
     }
   }, [])
 

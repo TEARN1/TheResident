@@ -18,6 +18,7 @@
 //   2. Nothing sensitive. Snapshots hold what is already public to the
 //      neighbourhood — faults and outages — never messages, never profiles.
 
+import { safeLocal, storageAvailable } from './safeStorage'
 export interface Snapshot<T> {
   data: T
   savedAt: string
@@ -33,14 +34,15 @@ export interface SnapshotStore {
 }
 
 function browserStore(): SnapshotStore | null {
-  if (typeof window === 'undefined' || !window.localStorage) return null
-  const ls = window.localStorage
-  return {
-    getItem: k => ls.getItem(k),
-    setItem: (k, v) => ls.setItem(k, v),
-    removeItem: k => ls.removeItem(k),
-    keys: () => Object.keys(ls),
-  }
+  // Routed through safeLocal rather than touching window.localStorage here.
+  // This function is used as a DEFAULT PARAMETER, so it evaluates before the
+  // callers' try blocks — and reading window.localStorage is itself what
+  // throws when a browser is set to block site data. The old guard
+  // (`!window.localStorage`) could never catch that: the exception happens on
+  // the property access, not on the value being falsy.
+  if (typeof window === 'undefined') return null
+  if (!storageAvailable('local')) return null
+  return safeLocal
 }
 
 const PREFIX = 'res:snapshot:'

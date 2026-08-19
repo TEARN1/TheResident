@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { safeLocal, readEnum } from '../../../utils/safeStorage'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
@@ -47,11 +48,11 @@ export default function ProfilePage() {
   // this page doesn't own the <html data-theme> attribute the layout does.
   const [dashboardTheme, setDashboardThemeState] = useState<'night' | 'light'>('night')
   useEffect(() => {
-    const stored = localStorage.getItem('dashboardTheme')
+    const stored = readEnum(safeLocal, 'dashboardTheme', ['light', 'night'] as const, 'night')
     setDashboardThemeState(stored === 'light' ? 'light' : 'night')
   }, [])
   const setDashboardTheme = (theme: 'night' | 'light') => {
-    localStorage.setItem('dashboardTheme', theme)
+    safeLocal.setItem('dashboardTheme', theme)
     document.documentElement.setAttribute('data-theme', theme)
     setDashboardThemeState(theme)
   }
