@@ -9,6 +9,12 @@ import { RootState, isGuestUser } from '../../../store'
 import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../utils/mapZones'
 import { fetchSavedPins, saveNewPin, deleteSavedPin, type SavedPin } from '../../../utils/savedPins'
 import { distanceMetres } from '../../../utils/logic'
+import {
+  fetchPlacesNear, visiblePlaces, countByKind, clusterPlaces, clusterCellFor,
+  PLACE_ORDER, PLACE_LABEL, PLACE_COLOR, DEFAULT_VISIBLE,
+  type Place
+} from '../../../utils/mapPlaces'
+import { formatDistance } from '../../../utils/measure'
 import { searchPlaces, type GeocodeResult } from '../../../utils/geocode'
 import MapSearchBox from './MapSearchBox'
 import SavedPinsPanel from './SavedPinsPanel'
@@ -59,6 +65,13 @@ const DURATION_OPTIONS: Array<{ hours: number; label: string }> = [
 
 type Drawer = 'none' | 'pins' | 'matrix' | 'geofence'
 
+// Place titles are user-supplied and go into a Leaflet popup as raw HTML,
+// so they are escaped here rather than trusted. src/utils/security.ts covers
+// the app's own inputs; this is the map's own last step before innerHTML.
+const escapeHtml = (v: string): string =>
+  v.replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string))
+
 export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }) {
   const searchParams = useSearchParams()
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
@@ -68,6 +81,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const searchMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const pinsLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const liveMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const placesLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const leafletRef = useRef<typeof import('leaflet') | null>(null)
   const tileLayerRef = useRef<import('leaflet').TileLayer | null>(null)
 
@@ -105,6 +119,14 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   // "what's on screen right now" instead of the whole 15km fetch radius —
   // a count that never changes as you zoom in isn't telling you anything.
   const [boundsTick, setBoundsTick] = useState(0)
+
+  // The places layer: the permanent half of the map. map_zones answers
+  // "what is wrong here right now"; this answers "what is here at all" —
+  // rooms, spaza shops, water points, wifi, generators. Sixteen tables in
+  // this app carry coordinates and until now the map showed one of them.
+  const [places, setPlaces] = useState<Place[]>([])
+  const [activePlaceKinds, setActivePlaceKinds] = useState<Set<string>>(
+    new Set(DEFAULT_VISIBLE))
 
   const [pendingPoint, setPendingPoint] = useState<{ label: string; lat: number; lon: number } | null>(null)
   const [savedPins, setSavedPins] = useState<SavedPin[]>([])
@@ -203,10 +225,25 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     return () => { cancelled = true }
   }, [focusPlace])
 
+  const togglePlaceKind = (kind: string) => {
+    setActivePlaceKinds(prev => {
+      const next = new Set(prev)
+      if (next.has(kind)) next.delete(kind)
+      else next.add(kind)
+      return next
+    })
+  }
+
   const loadZones = async (lat: number, lon: number) => {
     setLoading(true)
-    const data = await fetchSharedZones(lat, lon, 15000)
-    setZones(data)
+    // Both layers in one round trip. A places outage degrades the map rather
+    // than breaking it — fetchPlacesNear returns [] on error, same as zones.
+    const [zoneData, placeData] = await Promise.all([
+      fetchSharedZones(lat, lon, 15000),
+      fetchPlacesNear(lat, lon, 15000)
+    ])
+    setZones(zoneData)
+    setPlaces(placeData)
     setLoading(false)
   }
 
@@ -244,6 +281,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       searchMarkerRef.current = L.layerGroup().addTo(map)
       pinsLayerRef.current = L.layerGroup().addTo(map)
       liveMarkerRef.current = L.layerGroup().addTo(map)
+      placesLayerRef.current = L.layerGroup().addTo(map)
       mapRef.current = map
 
       // Minimum zoom for a report pin to be trustworthy: at zoom 15 the scale
@@ -285,6 +323,67 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     mapRef.current.setView([center.lat, center.lon], 14)
     loadZones(center.lat, center.lon)
   }, [center])
+
+  // Places render underneath the hazard layer, deliberately: a burst pipe must
+  // never be hidden behind a spaza shop pin.
+  useEffect(() => {
+    const L = leafletRef.current
+    const layer = placesLayerRef.current
+    const map = mapRef.current
+    if (!L || !layer || !map) return
+    layer.clearLayers()
+
+    const zoom = map.getZoom()
+    const shown = visiblePlaces(places, activePlaceKinds)
+    const clusters = clusterPlaces(shown, clusterCellFor(zoom))
+
+    clusters.forEach(cluster => {
+      const head = cluster.places[0]
+      const extra = cluster.places.length - 1
+      const color = PLACE_COLOR[head.kind] ?? '#94a3b8'
+
+      // A community is an area, not a point. radius_m has been sitting in the
+      // schema since day one waiting for something to draw it.
+      if (head.kind === 'community' && head.radiusM && extra === 0) {
+        L.circle([head.lat, head.lon], {
+          radius: head.radiusM, color, weight: 1,
+          opacity: 0.5, fillColor: color, fillOpacity: 0.05
+        }).addTo(layer)
+      }
+
+      const marker = extra > 0
+        ? L.circleMarker([cluster.lat, cluster.lon], {
+            radius: Math.min(9 + cluster.places.length, 18),
+            color: '#0f172a', weight: 2, fillColor: color, fillOpacity: 0.85
+          })
+        : L.circleMarker([cluster.lat, cluster.lon], {
+            radius: 6, color: '#0f172a', weight: 1.5,
+            fillColor: color, fillOpacity: 0.9
+          })
+
+      const distance = livePosition
+        ? formatDistance(distanceMetres(
+            { lat: livePosition.lat, lon: livePosition.lon },
+            { lat: head.lat, lon: head.lon }))
+        : null
+
+      const rows = cluster.places.slice(0, 6).map(pl => {
+        const label = PLACE_LABEL[pl.kind] ?? pl.kind
+        const sub = pl.subtitle ? ` — ${pl.subtitle}` : ''
+        return `<div style="margin:2px 0"><b>${escapeHtml(pl.title)}</b><br/>` +
+               `<span style="opacity:.7;font-size:11px">${label}${escapeHtml(sub)}</span></div>`
+      }).join('')
+
+      marker.bindPopup(
+        rows +
+        (cluster.places.length > 6
+          ? `<div style="opacity:.7;font-size:11px">+${cluster.places.length - 6} more — zoom in</div>`
+          : '') +
+        (distance ? `<div style="opacity:.7;font-size:11px">${distance} away</div>` : '')
+      )
+      marker.addTo(layer)
+    })
+  }, [places, activePlaceKinds, boundsTick, livePosition])
 
   useEffect(() => {
     const L = leafletRef.current
@@ -662,6 +761,43 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                   </button>
                 )
               })}
+              {/* Places — the permanent half of the map, kept in its own
+                  section. "What is wrong here" and "what is here" are
+                  different questions, and one merged list makes both harder
+                  to read. Assets (water, wifi, power) sort first because on a
+                  load-shedding evening they are the most useful rows here. */}
+              <p className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2 mt-3 pt-3 border-t border-white/5">Places</p>
+              <div className="sm:hidden border-t border-white/5 mt-2 pt-2" />
+              {PLACE_ORDER.map(kind => {
+                const bounds = mapRef.current?.getBounds()
+                const inView = places.filter(pl =>
+                  pl.kind === kind && (!bounds || bounds.contains([pl.lat, pl.lon])))
+                const count = inView.length
+                const active = activePlaceKinds.has(kind)
+                void boundsTick
+                // A layer with nothing in it is noise in the legend — but only
+                // hide it when it is also switched off, so a resident who
+                // turned something on never sees their choice vanish.
+                if (count === 0 && !active) return null
+                return (
+                  <button
+                    key={kind}
+                    onClick={() => togglePlaceKind(kind)}
+                    aria-pressed={active}
+                    aria-label={`${active ? 'Hide' : 'Show'} ${PLACE_LABEL[kind]}${count > 0 ? ` (${count} in view)` : ''}`}
+                    title={PLACE_LABEL[kind]}
+                    className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${active ? 'text-gray-200' : 'text-gray-600 opacity-50'} hover:opacity-100`}
+                  >
+                    <div
+                      className="w-3 h-3 rounded-sm shrink-0"
+                      style={{ background: PLACE_COLOR[kind], boxShadow: active ? `0 0 8px ${PLACE_COLOR[kind]}` : 'none' }}
+                    />
+                    <span className="hidden sm:inline flex-1 text-left">{PLACE_LABEL[kind]}</span>
+                    {count > 0 && <span className="hidden sm:inline text-gray-500 font-bold">{count}</span>}
+                  </button>
+                )
+              })}
+
               <label className="flex items-center gap-2 text-[10px] text-gray-400 pt-2 mt-1 border-t border-white/5 cursor-pointer py-1">
                 <input
                   type="checkbox"
@@ -675,6 +811,10 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
               <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-500 pt-1">
                 <div className="w-3 h-3 rounded-full shrink-0 bg-white/80 border border-white" />
                 Confirmed / official
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-500 pt-1">
+                <div className="w-3 h-3 rounded-sm shrink-0 bg-white/40 border border-white/60" />
+                Square = a place, round = a report
               </div>
             </div>
           )}
