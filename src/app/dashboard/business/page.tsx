@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useSyncExternalStore } from 'react'
 import { useSelector } from 'react-redux'
 import Link from 'next/link'
 import {
@@ -25,6 +25,23 @@ import ReviewsList from '../components/ReviewsList'
  * something a resident can act on today (boost a listing, get verified,
  * finish a profile) rather than a dashboard that just reports at you.
  */
+// A minute-resolution clock, exposed the way React expects external state to
+// be read. Rounding to the minute keeps the snapshot stable between ticks —
+// useSyncExternalStore compares snapshots by identity, and an unrounded
+// Date.now() would report a change on every single read.
+const CLOCK_TICK_MS = 60_000
+
+function subscribeClock(onChange: () => void): () => void {
+  const id = setInterval(onChange, CLOCK_TICK_MS)
+  return () => { clearInterval(id) }
+}
+
+const clockSnapshot = () => Math.floor(Date.now() / CLOCK_TICK_MS) * CLOCK_TICK_MS
+
+// 0 on the server, so SSR and the first client paint agree. It means "no boost
+// looks active yet", which resolves a tick later.
+const clockServerSnapshot = () => 0
+
 export default function BusinessPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const listings = useSelector((state: RootState) => state.listings.items)
@@ -33,8 +50,9 @@ export default function BusinessPage() {
   const dispatches = useSelector((state: RootState) => state.networking.dispatches)
 
   const [tier, setTier] = useState<ProviderTier>(null)
-  const [tierLoading, setTierLoading] = useState(true)
+  const [tierLoaded, setTierLoaded] = useState(false)
   const [trust, setTrust] = useState<TrustInfo | null>(null)
+  const nowMs = useSyncExternalStore(subscribeClock, clockSnapshot, clockServerSnapshot)
 
   const guest = isGuestUser(currentUser)
   const myListings = currentUser ? listings.filter(l => l.landlordId === currentUser.id) : []
@@ -42,9 +60,14 @@ export default function BusinessPage() {
   const isLandlord = currentUser?.role === 'landlord'
   const isProvider = !!myService
 
+  // Derived rather than stored: a guest has nothing to load, so saying so in
+  // state meant a synchronous setState on mount and a second render for every
+  // guest who opened this page.
+  const tierLoading = !guest && !tierLoaded
+
   useEffect(() => {
-    if (guest) { setTierLoading(false); return }
-    getMyProviderTier().then(t => { setTier(t); setTierLoading(false) })
+    if (guest) return
+    getMyProviderTier().then(t => { setTier(t); setTierLoaded(true) })
     if (currentUser) getTrustInfo(currentUser.id).then(setTrust)
   }, [guest, currentUser])
 
@@ -78,7 +101,12 @@ export default function BusinessPage() {
 
   // Landlord performance
   const activeListings = myListings.length
-  const boostedListings = myListings.filter(l => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > Date.now()).length
+  // Date.now() in the render body makes this component impure: the same props
+  // can produce different output, which is what react-hooks/purity objects to.
+  // The clock is sampled after mount instead — a boost counter has no need to
+  // tick, and being one paint behind is invisible.
+  const boostedListings = myListings.filter(
+    l => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > nowMs).length
   const pendingRequests = requests.filter(r => r.landlordId === currentUser.id && r.status === 'pending').length
   const approvedRequests = requests.filter(r => r.landlordId === currentUser.id && r.status === 'approved').length
 

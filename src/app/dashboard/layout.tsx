@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -23,6 +23,19 @@ import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } fro
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
 
+// A one-value external store over sessionStorage, so the guest banner can be
+// read with useSyncExternalStore instead of an effect that sets state.
+const guestBannerListeners = new Set<() => void>()
+
+function subscribeGuestBanner(onChange: () => void): () => void {
+  guestBannerListeners.add(onChange)
+  return () => { guestBannerListeners.delete(onChange) }
+}
+
+function emitGuestBannerChange(): void {
+  guestBannerListeners.forEach(fn => { fn() })
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -34,14 +47,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // small nudges scattered across Housing, Services and Profile, each only
   // seen if that specific screen happened to render it. One banner, said
   // once, dismissible — rather than the same pitch repeating on every tab.
-  const [guestBannerDismissed, setGuestBannerDismissed] = useState(true)
-  /* eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount */
-  useEffect(() => {
-    setGuestBannerDismissed(typeof window !== 'undefined' && sessionStorage.getItem('guestBannerDismissed') === '1')
-  }, [])
+  // Reading sessionStorage is subscribing to an external store, and syncing it
+  // into state inside an effect schedules a second render on every mount —
+  // which is what react-hooks/set-state-in-effect objects to. (The previous
+  // disable comment sat on the useEffect line while the violation is inside
+  // the callback a line below, so it silenced nothing and lint failed anyway.)
+  //
+  // useSyncExternalStore is the tool built for this. The server snapshot
+  // returns true — banner hidden — so SSR and the first client paint agree,
+  // and the real value takes over immediately after hydration.
+  const guestBannerDismissed = useSyncExternalStore(
+    subscribeGuestBanner,
+    () => sessionStorage.getItem('guestBannerDismissed') === '1',
+    () => true
+  )
   const dismissGuestBanner = () => {
     sessionStorage.setItem('guestBannerDismissed', '1')
-    setGuestBannerDismissed(true)
+    emitGuestBannerChange()
   }
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
