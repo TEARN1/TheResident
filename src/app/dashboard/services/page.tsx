@@ -28,6 +28,7 @@ import EmptyState from '../components/EmptyState'
 import { directionsUrlForAddress } from '../../../utils/navigation'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
+import { fetchUpcomingGruvsEvents } from '../../../utils/gruvsEvents'
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
 const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
@@ -137,16 +138,10 @@ export default function ServicesPage() {
   // Fetch upcoming events the moment the lift-creation form is opened.
   useEffect(() => {
     let cancelled = false
-    if (!showLiftModal || !supabase) return
-    supabase
-      .from('events')
-      .select('id, title, starts_at')
-      .gte('starts_at', new Date().toISOString())
-      .order('starts_at', { ascending: true })
-      .limit(20)
-      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
-        if (!cancelled && data) setUpcomingEvents(data.map(e => ({ id: e.id, title: e.title })))
-      })
+    if (!showLiftModal) return
+    fetchUpcomingGruvsEvents().then(events => {
+      if (!cancelled) setUpcomingEvents(events.map(e => ({ id: e.id, title: e.title })))
+    })
     return () => { cancelled = true }
   }, [showLiftModal])
 

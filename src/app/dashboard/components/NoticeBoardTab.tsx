@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { Megaphone, Calendar, Info, Heart, Share2, Check, Plus, X, EyeOff, Eye, Users, Sparkles, MapPin, Clock, UserX } from 'lucide-react'
 import UpgradeButton from './UpgradeButton'
+import { formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
 const NOTICE_FREE_WINDOW_MS = 8 * 60 * 60 * 1000
 
@@ -180,7 +181,7 @@ export default function NoticeBoardTab({
                           <option value="">Select an event…</option>
                           {upcomingGruvsEvents.map(ev => (
                              <option key={ev.id} value={ev.id}>
-                                {ev.title} — {new Date(ev.startsAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                {ev.title} — {formatGruvsEventWhen(ev.startsAt, { long: true })}
                              </option>
                           ))}
                        </select>
@@ -325,7 +326,7 @@ export default function NoticeBoardTab({
                   <div className="flex items-center gap-3 text-[10px] font-black text-gold-primary bg-gold-primary/5 p-3 rounded-xl border border-gold-primary/10 uppercase tracking-widest shadow-inner">
                     <Calendar size={14} className="opacity-60" />
                     {notice.eventId && gruvsEventInfo[notice.eventId] ? (
-                      <span>On The Gruvs: <span className="text-white ml-1">{new Date(gruvsEventInfo[notice.eventId].startsAt).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></span>
+                      <span>On The Gruvs: <span className="text-white ml-1">{formatGruvsEventWhen(gruvsEventInfo[notice.eventId].startsAt, { long: true })}</span></span>
                     ) : notice.eventDate ? (
                       <span>Scheduled: <span className="text-white ml-1">{notice.eventDate}</span></span>
                     ) : (

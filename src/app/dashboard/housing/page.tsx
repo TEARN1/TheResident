@@ -33,6 +33,7 @@ import Link from 'next/link'
 import UpgradeButton from '../components/UpgradeButton'
 import PropertiesPanel, { type ResProperty } from '../components/PropertiesPanel'
 import EmptyState from '../components/EmptyState'
+import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
 // Top of the budget slider. Well above the real ceiling for a single room so
 // the control can express any listing on the platform; the max position means
@@ -182,29 +183,19 @@ export default function HousingPage() {
 
   useEffect(() => {
     let cancelled = false
-    if (!supabase) return
-    supabase
-      .from('events')
-      .select('id, title, starts_at')
-      .gte('starts_at', new Date().toISOString())
-      .order('starts_at', { ascending: true })
-      .limit(20)
-      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
-        if (!cancelled && data) setUpcomingGruvsEvents(data.map(e => ({ id: e.id, title: e.title, startsAt: e.starts_at })))
-      })
+    fetchUpcomingGruvsEvents().then(events => {
+      if (!cancelled) setUpcomingGruvsEvents(events)
+    })
     return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
     let cancelled = false
-    if (!supabase) return
     const ids = [...new Set(allListings.map(l => l.eventId).filter((id): id is string => !!id))]
     if (ids.length === 0) return
-    supabase.from('events').select('id, title, starts_at').in('id', ids)
-      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
-        if (cancelled || !data) return
-        setGruvsEventInfo(prev => ({ ...prev, ...Object.fromEntries(data.map(e => [e.id, { title: e.title, startsAt: e.starts_at }])) }))
-      })
+    fetchGruvsEventsByIds(ids).then(info => {
+      if (!cancelled) setGruvsEventInfo(prev => ({ ...prev, ...info }))
+    })
     return () => { cancelled = true }
   }, [allListings])
 
@@ -911,7 +902,7 @@ export default function HousingPage() {
                                  <select value={newEventId} onChange={e => setNewEventId(e.target.value)} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40 cursor-pointer">
                                     <option value="">No specific event</option>
                                     {upcomingGruvsEvents.map(ev => (
-                                       <option key={ev.id} value={ev.id}>{ev.title} — {new Date(ev.startsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</option>
+                                       <option key={ev.id} value={ev.id}>{ev.title} — {formatGruvsEventWhen(ev.startsAt)}</option>
                                     ))}
                                  </select>
                               )}

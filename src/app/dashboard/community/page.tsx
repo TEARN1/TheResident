@@ -42,6 +42,7 @@ import {
   confirmToolReturn
 } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
+import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds } from '../../../utils/gruvsEvents'
 import NoticeBoardTab from '../components/NoticeBoardTab'
 import ToolLibraryTab from '../components/ToolLibraryTab'
 import ChoreSchedulerTab from '../components/ChoreSchedulerTab'
@@ -124,29 +125,20 @@ export default function CommunityPage() {
 
   useEffect(() => {
     let cancelled = false
-    if (subTab !== 'notices' || !supabase) return
-    supabase
-      .from('events')
-      .select('id, title, starts_at')
-      .gte('starts_at', new Date().toISOString())
-      .order('starts_at', { ascending: true })
-      .limit(20)
-      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
-        if (!cancelled && data) setUpcomingGruvsEvents(data.map(e => ({ id: e.id, title: e.title, startsAt: e.starts_at })))
-      })
+    if (subTab !== 'notices') return
+    fetchUpcomingGruvsEvents().then(events => {
+      if (!cancelled) setUpcomingGruvsEvents(events)
+    })
     return () => { cancelled = true }
   }, [subTab])
 
   useEffect(() => {
     let cancelled = false
-    if (!supabase) return
     const ids = [...new Set(communityNotices.map(n => n.eventId).filter((id): id is string => !!id))]
     if (ids.length === 0) return
-    supabase.from('events').select('id, title, starts_at').in('id', ids)
-      .then(({ data }: { data: { id: string; title: string; starts_at: string }[] | null }) => {
-        if (cancelled || !data) return
-        setGruvsEventInfo(prev => ({ ...prev, ...Object.fromEntries(data.map(e => [e.id, { title: e.title, startsAt: e.starts_at }])) }))
-      })
+    fetchGruvsEventsByIds(ids).then(info => {
+      if (!cancelled) setGruvsEventInfo(prev => ({ ...prev, ...info }))
+    })
     return () => { cancelled = true }
   }, [communityNotices])
 
