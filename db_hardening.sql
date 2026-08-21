@@ -30,25 +30,33 @@ alter table public.res_listings
 create index if not exists res_listings_listing_type_idx on public.res_listings (listing_type);
 create index if not exists res_listings_visible_until_idx on public.res_listings (visible_until);
 
--- ─────────────────────────────────────────────────────────────────────────────
--- 2. public.spatial_ref_sys — the one genuinely open table on the project.
---    It's PostGIS's coordinate-system reference data with RLS disabled, so the
---    anon key can currently write to it.
---
---    `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` is the textbook fix but it
---    normally fails here with "must be owner of table" (the table belongs to the
---    PostGIS extension, not to you), and enabling RLS with no policy would break
---    every coordinate transform anyway. Revoking the writes closes the actual
---    hole while leaving the SELECT that PostGIS genuinely needs.
--- ─────────────────────────────────────────────────────────────────────────────
-revoke insert, update, delete, truncate on public.spatial_ref_sys from anon, authenticated;
-
 commit;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2. public.spatial_ref_sys — NOT fixable from here. Documented, not scripted.
+--
+--    It's PostGIS's coordinate-system reference data, and it's the one table on
+--    the project with RLS disabled (Supabase's weekly security-advisor email
+--    flags it every time). It looks fixable — `ALTER TABLE ... ENABLE ROW LEVEL
+--    SECURITY` and `REVOKE ... FROM anon, authenticated` are both the textbook
+--    remediation — but both were tried directly against this project and both
+--    fail: the table and its grants are owned by `supabase_admin`, a role project
+--    owners (`postgres`, which is what the SQL Editor runs as) cannot assume.
+--    REVOKE against a grant you don't own silently no-ops instead of erroring,
+--    which is why this looked fixable before it was actually tested end-to-end.
+--
+--    The only way to close this is a Supabase support ticket asking them to
+--    enable RLS on spatial_ref_sys for this project — that needs their elevated
+--    access, not anything runnable from the SQL Editor. Real-world risk is low:
+--    this table holds public EPSG coordinate-system definitions, not user data;
+--    worst case is someone vandalizing it and breaking map coordinate transforms
+--    until it's restored, not a data leak.
+-- ─────────────────────────────────────────────────────────────────────────────
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 3. Verification — run this after the commit above and read the output.
 --    Expect: three res_listings columns present, listing_type check listing all
---    three values, and zero rows from the spatial_ref_sys write-grant check.
+--    three values.
 -- ─────────────────────────────────────────────────────────────────────────────
 select 'columns' as check, string_agg(column_name, ', ' order by column_name) as result
 from information_schema.columns
@@ -57,12 +65,4 @@ where table_schema = 'public' and table_name = 'res_listings'
 
 union all
 select 'listing_type constraint', pg_get_constraintdef(oid)
-from pg_constraint where conname = 'res_listings_listing_type_check'
-
-union all
-select 'spatial_ref_sys writes still granted',
-       coalesce(string_agg(distinct grantee || ':' || privilege_type, ', '), 'none — good')
-from information_schema.role_table_grants
-where table_schema = 'public' and table_name = 'spatial_ref_sys'
-  and grantee in ('anon', 'authenticated')
-  and privilege_type in ('INSERT', 'UPDATE', 'DELETE', 'TRUNCATE');
+from pg_constraint where conname = 'res_listings_listing_type_check';
