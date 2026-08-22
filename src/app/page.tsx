@@ -193,6 +193,16 @@ export default function Home() {
         ))}
       </div>
 
+      {/* No login wall, and not nested inside the app — Play/App Store
+          account-deletion policy requires the request link work for someone
+          who hasn't installed the app at all, not only a signed-in user two
+          screens deep in settings. */}
+      <footer style={{ textAlign: 'center', padding: '32px 16px', opacity: 0.6 }}>
+        <Link href="/delete-account" style={{ fontSize: '0.8rem', color: '#9ca3af', textDecoration: 'underline' }}>
+          Delete your account
+        </Link>
+      </footer>
+
       {showIosModal && (
         <div style={{
           position: 'fixed',

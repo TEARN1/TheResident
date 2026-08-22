@@ -417,6 +417,18 @@ export default function ProfilePage() {
       >
         <LogOut size={14} /> Log Out
       </button>
+
+      {!isGuestUser(currentUser) && (
+        // A separate page rather than a modal here on purpose: Play/App Store
+        // account-deletion policy requires this be reachable as its own link,
+        // not only surfaced two clicks deep inside a settings screen.
+        <Link
+          href="/delete-account"
+          className="w-full flex items-center justify-center gap-2 py-3 text-[11px] text-gray-600 hover:text-red-400 transition-colors"
+        >
+          Delete my account
+        </Link>
+      )}
     </div>
   )
 }
