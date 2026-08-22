@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Shield, Lock, Crown, Download, Smartphone, X, LogIn, Loader } from 'lucide-react'
+import { ArrowRight, Shield, Lock, Crown, Smartphone, X, LogIn, Loader } from 'lucide-react'
 import Link from 'next/link'
 import styles from './page.module.css'
 import { AppDispatch, RootState } from '../store'
@@ -147,9 +147,6 @@ export default function Home() {
           <Link href="/auth" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             Enter Portal <ArrowRight size={16} />
           </Link>
-          <a href="/theresident.apk" download className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.08)', padding: '12px 24px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer' }}>
-            <Download size={16} /> Download Android APK
-          </a>
           <button
             onClick={() => setShowIosModal(true)}
             className="btn-secondary"

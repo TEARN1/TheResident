@@ -91,6 +91,7 @@ export default function AuthPage() {
   // Message states
   const [securityMessage, setSecurityMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   // "Sign in with The Gruvs" mode — shows the one-account helper on the login form.
   const [gruvsMode, setGruvsMode] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState<{strong: boolean; score: number; feedback: string[]} | null>(null)
@@ -126,12 +127,21 @@ export default function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) return
+    // Guards against a double-tap submitting twice — with no loading state at
+    // all, a slow connection made a second click feel like the first one did
+    // nothing, and each click was a real signInWithPassword call plus a real
+    // failed-attempt count.
+    if (!email || !password || isSubmitting) return
 
     setErrorMessage(null)
+    setIsSubmitting(true)
     const result = await performLogin({ email, password, dispatch, failedAttempts, lockedUntil, fallbackRole: role })
     if (!result.ok) {
       setErrorMessage(result.error)
+      // Only reset on failure — the page is navigating away on success, and
+      // re-enabling the button for the instant before that redirect lands
+      // would let a second submit slip through it.
+      setIsSubmitting(false)
       return
     }
     router.push('/dashboard')
@@ -139,7 +149,7 @@ export default function AuthPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password || !name) return
+    if (!email || !password || !name || isSubmitting) return
 
     setErrorMessage(null)
 
@@ -148,6 +158,28 @@ export default function AuthPage() {
       return
     }
 
+    if (!supabase) {
+      setErrorMessage('Database offline / not configured.')
+      return
+    }
+
+    // This function has several early-return error paths below (extracted
+    // into runSignup), so the guard is a try/finally rather than the single
+    // if/return login uses — every exit re-enables the button, including
+    // success, since router.push here is not synchronous enough to rule out
+    // a second click landing first.
+    setIsSubmitting(true)
+    try {
+      await runSignup()
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const runSignup = async () => {
+    // Re-checked here rather than relying on the caller's guard: TypeScript's
+    // null narrowing does not cross this function boundary, and the caller
+    // already returned early above if supabase was null anyway.
     if (!supabase) {
       setErrorMessage('Database offline / not configured.')
       return
@@ -338,24 +370,32 @@ export default function AuthPage() {
 
         {activeTab === 'login' ? (
           <form onSubmit={handleLogin} style={formStyle}>
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Access Role</label>
-              <select 
-                value={role} 
-                onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
-                style={selectStyle}
-              >
-                <option value="tenant">I am a Tenant looking for a Room</option>
-                <option value="landlord">I am a Landlord renting out Rooms</option>
-              </select>
-            </div>
+            {/* An existing account's role already lives in res_profiles — this
+                select only matters as a fallback for a Gruvs account signing
+                in here for the first time, before that row exists. Showing it
+                unconditionally asked every returning user to answer a
+                question the database had already answered, on every login. */}
+            {gruvsMode && (
+              <div style={inputGroupStyle}>
+                <label style={labelStyle}>Access Role</label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
+                  style={selectStyle}
+                >
+                  <option value="tenant">I am a Tenant looking for a Room</option>
+                  <option value="landlord">I am a Landlord renting out Rooms</option>
+                </select>
+              </div>
+            )}
 
             <div style={inputGroupStyle}>
               <label style={labelStyle}>Email Address</label>
-              <input 
-                type="email" 
-                required 
-                placeholder="enter your email..." 
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="enter your email..."
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 style={inputStyle}
@@ -367,6 +407,7 @@ export default function AuthPage() {
               <input
                 type="password"
                 required
+                autoComplete="current-password"
                 placeholder="enter your password..."
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -374,8 +415,14 @@ export default function AuthPage() {
               />
             </div>
 
-            <button type="submit" className="btn-primary" style={submitButtonStyle}>
-              Grant Access <Lock size={14} style={{ marginLeft: 8 }} />
+            <button
+              type="submit"
+              className="btn-primary"
+              style={submitButtonStyle}
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? 'Checking…' : <>Grant Access <Lock size={14} style={{ marginLeft: 8 }} /></>}
             </button>
 
             <button
@@ -383,6 +430,7 @@ export default function AuthPage() {
               onClick={handleVisitorLogin}
               className="btn-outline"
               style={submitButtonStyle}
+              disabled={isSubmitting}
             >
               <UserIcon size={15} style={{ marginRight: 6 }} /> Continue as Visitor (Guest)
             </button>
@@ -398,6 +446,7 @@ export default function AuthPage() {
               type="button"
               onClick={handleGruvsSSO}
               style={gruvsBtnStyle}
+              disabled={isSubmitting}
             >
               <GruvsMark />
               Sign in with The Gruvs
@@ -408,10 +457,11 @@ export default function AuthPage() {
             <div style={rowStyle}>
               <div style={inputGroupStyle}>
                 <label style={labelStyle}>Full Name</label>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="e.g. Sarah Connor" 
+                <input
+                  type="text"
+                  required
+                  autoComplete="name"
+                  placeholder="e.g. Sarah Connor"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   style={inputStyle}
@@ -433,10 +483,11 @@ export default function AuthPage() {
             <div style={rowStyle}>
               <div style={inputGroupStyle}>
                 <label style={labelStyle}>Email</label>
-                <input 
-                  type="email" 
-                  required 
-                  placeholder="name@domain.com" 
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  placeholder="name@domain.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={inputStyle}
@@ -444,10 +495,11 @@ export default function AuthPage() {
               </div>
               <div style={inputGroupStyle}>
                 <label style={labelStyle}>Password</label>
-                <input 
-                  type="password" 
-                  required 
-                  placeholder="secure key..." 
+                <input
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  placeholder="secure key..."
                   value={password}
                   onChange={(e) => handlePasswordChange(e.target.value)}
                   style={inputStyle}
@@ -611,8 +663,14 @@ export default function AuthPage() {
               </div>
             )}
 
-            <button type="submit" className="btn-gold" style={submitButtonStyle}>
-              Confirm Profile & Enter <CheckCircle size={14} style={{ marginLeft: 8 }} />
+            <button
+              type="submit"
+              className="btn-gold"
+              style={submitButtonStyle}
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? 'Creating…' : <>Confirm Profile & Enter <CheckCircle size={14} style={{ marginLeft: 8 }} /></>}
             </button>
 
             <button
@@ -620,6 +678,7 @@ export default function AuthPage() {
               onClick={handleVisitorLogin}
               className="btn-outline"
               style={submitButtonStyle}
+              disabled={isSubmitting}
             >
               <UserIcon size={15} style={{ marginRight: 6 }} /> Continue as Visitor (Guest)
             </button>
@@ -635,6 +694,7 @@ export default function AuthPage() {
               type="button"
               onClick={handleGruvsSSO}
               style={gruvsBtnStyle}
+              disabled={isSubmitting}
             >
               <GruvsMark />
               Sign up with The Gruvs
