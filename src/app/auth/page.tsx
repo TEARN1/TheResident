@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { performLogin } from '../../utils/authLogin'
+import { signInWithProvider, type OAuthProvider } from '../../utils/oauth'
 import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 
@@ -30,8 +31,39 @@ function GruvsMark() {
   )
 }
 
-export default function AuthPage() {
+// Standard multi-colour Google "G" — inline so there's no extra asset request
+// on a page people load over 2G/3G, and no dependency on an icon pack that
+// ships brand marks.
+function GoogleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.91c1.7-1.57 2.69-3.87 2.69-6.62z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.81.54-1.85.86-3.05.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.33A9 9 0 0 0 9 18z" />
+      <path fill="#FBBC05" d="M3.97 10.71A5.4 5.4 0 0 1 3.69 9c0-.6.1-1.18.28-1.71V4.96H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.04l3.01-2.33z" />
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.96l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
+    </svg>
+  )
+}
+
+function FacebookMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path
+        fill="#1877F2"
+        d="M18 9a9 9 0 1 0-10.4 8.89v-6.29H5.31V9h2.29V7.02c0-2.26 1.35-3.51 3.41-3.51.99 0 2.02.18 2.02.18v2.22h-1.14c-1.12 0-1.47.7-1.47 1.41V9h2.5l-.4 2.6h-2.1v6.29A9 9 0 0 0 18 9z"
+      />
+    </svg>
+  )
+}
+
+// useSearchParams() reads the ?error= that /auth/callback redirects failures
+// back with, and Next.js requires anything using it during static export to
+// sit under a Suspense boundary — otherwise the whole route bails out of
+// prerendering. AuthPage below is the actual default export; this is just the
+// content that needs the boundary.
+function AuthPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const dispatch = useDispatch<AppDispatch>()
 
   // 'light' is a real, separate theme (see globals.css) — not the old 'day'
@@ -95,6 +127,16 @@ export default function AuthPage() {
   // "Sign in with The Gruvs" mode — shows the one-account helper on the login form.
   const [gruvsMode, setGruvsMode] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState<{strong: boolean; score: number; feedback: string[]} | null>(null)
+  const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null)
+
+  // /auth/callback redirects failures back here as ?error=..., rather than
+  // rendering its own page — a route handler runs before anything can render,
+  // so it has no error UI of its own to show. This is what surfaces that
+  // message in the banner every other failure already uses.
+  useEffect(() => {
+    const fromCallback = searchParams.get('error')
+    if (fromCallback) setErrorMessage(fromCallback)
+  }, [searchParams])
 
   const handlePasswordChange = (val: string) => {
     setPassword(val)
@@ -248,6 +290,19 @@ export default function AuthPage() {
       }))
 
       router.push('/dashboard')
+    }
+  }
+
+  const handleOAuth = async (provider: OAuthProvider) => {
+    if (oauthLoading) return
+    setErrorMessage(null)
+    setOauthLoading(provider)
+    const result = await signInWithProvider(provider)
+    // Only reached when the redirect failed to start at all — a successful
+    // call navigates the whole page away before this line would run.
+    if (!result.ok) {
+      setErrorMessage(result.error)
+      setOauthLoading(null)
     }
   }
 
@@ -419,7 +474,7 @@ export default function AuthPage() {
               type="submit"
               className="btn-primary"
               style={submitButtonStyle}
-              disabled={isSubmitting}
+              disabled={isSubmitting || oauthLoading !== null}
               aria-busy={isSubmitting}
             >
               {isSubmitting ? 'Checking…' : <>Grant Access <Lock size={14} style={{ marginLeft: 8 }} /></>}
@@ -430,9 +485,37 @@ export default function AuthPage() {
               onClick={handleVisitorLogin}
               className="btn-outline"
               style={submitButtonStyle}
-              disabled={isSubmitting}
+              disabled={isSubmitting || oauthLoading !== null}
             >
               <UserIcon size={15} style={{ marginRight: 6 }} /> Continue as Visitor (Guest)
+            </button>
+
+            <div style={socialDividerStyle}>
+              <span style={socialDividerLineStyle} />
+              <span style={socialDividerTextStyle}>or continue with</span>
+              <span style={socialDividerLineStyle} />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleOAuth('google')}
+              style={oauthBtnStyle}
+              disabled={isSubmitting || oauthLoading !== null}
+              aria-busy={oauthLoading === 'google'}
+            >
+              <GoogleMark />
+              {oauthLoading === 'google' ? 'Redirecting…' : 'Continue with Google'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOAuth('facebook')}
+              style={oauthBtnStyle}
+              disabled={isSubmitting || oauthLoading !== null}
+              aria-busy={oauthLoading === 'facebook'}
+            >
+              <FacebookMark />
+              {oauthLoading === 'facebook' ? 'Redirecting…' : 'Continue with Facebook'}
             </button>
 
             {/* Cross-App Sign-In (one account works on both The Resident and The Gruvs) */}
@@ -446,7 +529,7 @@ export default function AuthPage() {
               type="button"
               onClick={handleGruvsSSO}
               style={gruvsBtnStyle}
-              disabled={isSubmitting}
+              disabled={isSubmitting || oauthLoading !== null}
             >
               <GruvsMark />
               Sign in with The Gruvs
@@ -667,7 +750,7 @@ export default function AuthPage() {
               type="submit"
               className="btn-gold"
               style={submitButtonStyle}
-              disabled={isSubmitting}
+              disabled={isSubmitting || oauthLoading !== null}
               aria-busy={isSubmitting}
             >
               {isSubmitting ? 'Creating…' : <>Confirm Profile & Enter <CheckCircle size={14} style={{ marginLeft: 8 }} /></>}
@@ -678,9 +761,37 @@ export default function AuthPage() {
               onClick={handleVisitorLogin}
               className="btn-outline"
               style={submitButtonStyle}
-              disabled={isSubmitting}
+              disabled={isSubmitting || oauthLoading !== null}
             >
               <UserIcon size={15} style={{ marginRight: 6 }} /> Continue as Visitor (Guest)
+            </button>
+
+            <div style={socialDividerStyle}>
+              <span style={socialDividerLineStyle} />
+              <span style={socialDividerTextStyle}>or continue with</span>
+              <span style={socialDividerLineStyle} />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleOAuth('google')}
+              style={oauthBtnStyle}
+              disabled={isSubmitting || oauthLoading !== null}
+              aria-busy={oauthLoading === 'google'}
+            >
+              <GoogleMark />
+              {oauthLoading === 'google' ? 'Redirecting…' : 'Continue with Google'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOAuth('facebook')}
+              style={oauthBtnStyle}
+              disabled={isSubmitting || oauthLoading !== null}
+              aria-busy={oauthLoading === 'facebook'}
+            >
+              <FacebookMark />
+              {oauthLoading === 'facebook' ? 'Redirecting…' : 'Continue with Facebook'}
             </button>
 
             {/* Cross-App Sign-In (one account works on both The Resident and The Gruvs) */}
@@ -694,7 +805,7 @@ export default function AuthPage() {
               type="button"
               onClick={handleGruvsSSO}
               style={gruvsBtnStyle}
-              disabled={isSubmitting}
+              disabled={isSubmitting || oauthLoading !== null}
             >
               <GruvsMark />
               Sign up with The Gruvs
@@ -703,6 +814,18 @@ export default function AuthPage() {
         )}
       </motion.div>
     </div>
+  )
+}
+
+export default function AuthPage() {
+  return (
+    // No visible fallback: the fallback only shows during the brief window
+    // where the ?error= param hasn't been read yet, which on a client
+    // navigation is imperceptible. A spinner here would flash for people
+    // arriving from a normal link and never seeing an error at all.
+    <Suspense fallback={null}>
+      <AuthPageContent />
+    </Suspense>
   )
 }
 
@@ -1031,6 +1154,29 @@ const socialDividerTextStyle: React.CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '1.5px',
   whiteSpace: 'nowrap'
+}
+
+// Neutral rather than brand-coloured: this one style serves both Google and
+// Facebook (their own icons carry the brand colour), so it doesn't have to
+// pick a side, and it stays legible in both the light and night themes this
+// page supports.
+const oauthBtnStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '0.6rem',
+  width: '100%',
+  padding: '0.75rem 1rem',
+  marginBottom: '0.75rem',
+  background: 'rgba(255, 255, 255, 0.06)',
+  border: '1.5px solid rgba(255, 255, 255, 0.18)',
+  borderRadius: '10px',
+  color: '#fff',
+  fontSize: '0.9rem',
+  fontWeight: 700,
+  letterSpacing: '0.3px',
+  cursor: 'pointer',
+  transition: 'all 0.25s ease'
 }
 
 const gruvsBtnStyle: React.CSSProperties = {
