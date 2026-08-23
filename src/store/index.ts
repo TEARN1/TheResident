@@ -672,6 +672,11 @@ const authSlice = createSlice({
       if (state.currentUser && state.currentUser.role === 'landlord') {
         state.currentUser.preferences = action.payload.preferences
       }
+    },
+    updateUserRole: (state, action: PayloadAction<'tenant' | 'landlord'>) => {
+      if (state.currentUser) {
+        state.currentUser.role = action.payload
+      }
     }
   }
 })
@@ -1589,7 +1594,8 @@ export const {
   registerFailedAttempt,
   resetFailedAttempts,
   updateProfile,
-  updatePreferences
+  updatePreferences,
+  updateUserRole
 } = authSlice.actions
 
 export const { setListings, addListing, deleteListing, updateListingVerification } = listingsSlice.actions

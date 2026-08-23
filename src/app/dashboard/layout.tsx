@@ -22,6 +22,7 @@ import { supabase } from '../../utils/supabase'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
+import AutomationControlPanel from './components/AutomationControlPanel'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -72,6 +73,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (supabase) {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
+          // A session can land here straight off an OAuth redirect (Google/
+          // Facebook), which never goes through performLogin — so this is the
+          // only place that call happens for those users. Idempotent and
+          // caller-only; a returning email/password user already has both
+          // rows, so this is a no-op for them.
+          await supabase.rpc('ensure_res_profile').then(() => {}, () => {})
           const { data: dbProfile } = await supabase
             .from('res_profiles')
             .select('role')
@@ -280,6 +287,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
         ))}
       </nav>
+
+      <AutomationControlPanel />
     </div>
   )
 }

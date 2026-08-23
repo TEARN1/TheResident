@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon } from 'lucide-react'
-import { RootState, AppDispatch, updateProfile, updatePreferences, setLanguage, logoutUser, isGuestUser } from '../../../store'
+import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLanguage, logoutUser, isGuestUser } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/UpgradeButton'
 import TrustBadge from '../components/TrustBadge'
@@ -122,6 +122,22 @@ export default function ProfilePage() {
 
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [roleSwitching, setRoleSwitching] = useState(false)
+
+  const handleSwitchRole = async (newRole: 'tenant' | 'landlord') => {
+    if (!currentUser || guest || currentUser.role === newRole) return
+    setRoleSwitching(true)
+    try {
+      if (supabase) {
+        await supabase.from('res_profiles').update({ role: newRole }).eq('id', currentUser.id)
+      }
+      dispatch(updateUserRole(newRole))
+    } catch (err) {
+      console.error('Failed to switch role', err)
+    } finally {
+      setRoleSwitching(false)
+    }
+  }
 
   // Seeds the editable form fields once the server's copy of the profile
   // arrives (it loads asynchronously after auth resolves) — a one-time sync
@@ -244,6 +260,44 @@ export default function ProfilePage() {
           <h1 className="text-xl font-black text-white truncate">{currentUser.name}</h1>
           <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">{currentUser.role}</p>
           <div className="mt-1"><TrustBadge userId={currentUser.id} /></div>
+        </div>
+      </div>
+
+      {/* Account Mode / Role Switcher */}
+      <div className="glass-panel p-6 space-y-3">
+        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+          <UserIcon size={16} /> Account Mode / Role
+        </h2>
+        <p className="text-[11px] text-gray-500">
+          Switching to <strong>Landlord</strong> enables adding properties, listing empty rooms, and managing tenant applications. Switch to <strong>Tenant</strong> to set your room requirements.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => handleSwitchRole('tenant')}
+            disabled={roleSwitching || currentUser.role === 'tenant'}
+            className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+              currentUser.role === 'tenant'
+                ? 'bg-gold-primary text-black border-gold-primary font-black shadow-lg shadow-gold-primary/20'
+                : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'
+            }`}
+          >
+            <span>Tenant Mode</span>
+            <span className="text-[9px] opacity-70 font-normal">Look for rooms & roommates</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchRole('landlord')}
+            disabled={roleSwitching || currentUser.role === 'landlord'}
+            className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+              currentUser.role === 'landlord'
+                ? 'bg-gold-primary text-black border-gold-primary font-black shadow-lg shadow-gold-primary/20'
+                : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'
+            }`}
+          >
+            <span>Landlord Mode</span>
+            <span className="text-[9px] opacity-70 font-normal">List empty rooms & manage units</span>
+          </button>
         </div>
       </div>
 

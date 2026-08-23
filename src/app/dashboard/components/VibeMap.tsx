@@ -9,7 +9,8 @@ import { RootState, isGuestUser } from '../../../store'
 import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../utils/mapZones'
 import { fetchSavedPins, saveNewPin, deleteSavedPin, type SavedPin } from '../../../utils/savedPins'
 import { distanceMetres } from '../../../utils/logic'
-import { searchPlaces, type GeocodeResult } from '../../../utils/geocode'
+import { searchPlaces, reverseGeocode, type GeocodeResult } from '../../../utils/geocode'
+import { supabase } from '../../../utils/supabase'
 import MapSearchBox from './MapSearchBox'
 import SavedPinsPanel from './SavedPinsPanel'
 import DistanceMatrixPanel, { type MatrixPoint } from './DistanceMatrixPanel'
@@ -35,6 +36,16 @@ const KIND_LABEL: Record<string, string> = {
   alert: 'Safety alert',
   route: 'Route',
   zone: 'Zone'
+}
+
+const KIND_ICON_SYMBOL: Record<string, string> = {
+  road_closed: '⛔',
+  heavy_traffic: '🚦',
+  detour: '↪️',
+  no_parking: '🅿️',
+  alert: '🚨',
+  route: '🛣️',
+  zone: '📍'
 }
 
 // What a resident is allowed to report directly, and how long each option's
@@ -274,12 +285,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       // out further re-centres and zooms in on the clicked point instead of
       // dropping the pin at an unreliable location.
       const MIN_REPORT_ZOOM = 15
-      map.on('click', (e: import('leaflet').LeafletMouseEvent) => {
+      map.on('click', async (e: import('leaflet').LeafletMouseEvent) => {
         setShowReportForm(false)
         setReportError(null)
-        setPendingPoint({ label: `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`, lat: e.latlng.lat, lon: e.latlng.lng })
+        const initialLabel = `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`
+        setPendingPoint({ label: initialLabel, lat: e.latlng.lat, lon: e.latlng.lng })
         if (map.getZoom() < MIN_REPORT_ZOOM) {
           map.setView(e.latlng, MIN_REPORT_ZOOM)
+        }
+        const realAddress = await reverseGeocode(e.latlng.lat, e.latlng.lng)
+        if (realAddress) {
+          setPendingPoint(prev => (prev && prev.lat === e.latlng.lat && prev.lon === e.latlng.lng ? { ...prev, label: realAddress } : prev))
         }
       })
 
@@ -292,6 +308,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     })
 
     return () => { cancelled = true }
+  }, [center])
+
+  // Live Supabase Realtime updates on map_zones table
+  useEffect(() => {
+    if (!supabase || !center) return
+    const channel = supabase.channel('map_zones_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_zones' }, () => {
+        loadZones(center.lat, center.lon)
+      })
+      .subscribe()
+    return () => { supabase?.removeChannel(channel) }
   }, [center])
 
   // Swaps tiles in place via setUrl rather than tearing down/recreating the
@@ -670,10 +697,40 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             : ' No alerts near your saved places.'}
         </div>
 
-        {/* Search — floating top-left */}
-        <div className="absolute top-3 left-3 right-3 md:right-auto md:w-[340px] z-[500]">
+        {/* Search & Quick Filter Bar — floating top-left */}
+        <div className="absolute top-3 left-3 right-3 md:right-auto md:w-[380px] z-[500] space-y-2">
           <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl">
             <MapSearchBox onSelect={handleSearchSelect} />
+          </div>
+          {/* Quick Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+            <button
+              onClick={() => setActiveKinds(new Set(Object.keys(KIND_LABEL)))}
+              className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap ${
+                activeKinds.size === Object.keys(KIND_LABEL).length
+                  ? 'bg-gold-primary text-black border-gold-primary shadow-md'
+                  : 'bg-black/80 text-gray-300 border-white/10 hover:text-white'
+              }`}
+            >
+              All
+            </button>
+            {Object.entries(KIND_LABEL).map(([kind, label]) => {
+              const active = activeKinds.has(kind)
+              return (
+                <button
+                  key={kind}
+                  onClick={() => toggleKind(kind)}
+                  className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    active
+                      ? 'bg-gold-primary text-black border-gold-primary shadow-md'
+                      : 'bg-black/80 text-gray-300 border-white/10 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: KIND_COLOR[kind] }} />
+                  {label}
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -787,8 +844,8 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           </button>
         </div>
 
-        {/* Tools drawer toggle — floating left, below search */}
-        <div className="absolute top-20 left-3 z-[500] flex flex-col gap-1.5">
+        {/* Tools drawer toggle — floating left, below search & quick filters */}
+        <div className="absolute top-28 left-3 z-[500] flex flex-col gap-1.5">
           {(['pins', 'matrix', 'geofence'] as const).map(d => (
             <button
               key={d}
