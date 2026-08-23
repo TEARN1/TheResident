@@ -1,7 +1,10 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
-import { Home, Users, Award, RotateCcw, CheckCircle2, Star, Shield, Info, DoorOpen } from 'lucide-react'
+import {
+  Home, Users, Award, RotateCcw, CheckCircle2, Star, Shield, Info, DoorOpen,
+  ShoppingCart, Calendar, Moon, Scale, Package, Plus, Trash2, Camera, Check
+} from 'lucide-react'
 import { supabase } from '../../../utils/supabase'
 
 interface Member {
@@ -95,6 +98,71 @@ export default function HouseholdTab({
     if (error) { setEndError(error.message); return }
     loadActiveTenancies()
   }
+
+  // Batch A: Grocery Checklist State
+  const [groceryItems, setGroceryItems] = useState<Array<{ id: string; name: string; estPrice: number; bought: boolean; addedBy: string }>>([
+    { id: 'g1', name: 'Dish Soap (750ml)', estPrice: 35, bought: false, addedBy: 'Housemate' },
+    { id: 'g2', name: 'Trash Bags (20 pack)', estPrice: 45, bought: true, addedBy: 'You' },
+    { id: 'g3', name: 'Toilet Paper (18 roll)', estPrice: 120, bought: false, addedBy: 'Housemate' }
+  ])
+  const [newGroceryName, setNewGroceryName] = useState('')
+  const [newGroceryPrice, setNewGroceryPrice] = useState<number>(30)
+
+  const handleAddGrocery = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newGroceryName.trim()) return
+    setGroceryItems(prev => [
+      ...prev,
+      { id: `g-${Date.now()}`, name: newGroceryName.trim(), estPrice: Math.max(1, newGroceryPrice), bought: false, addedBy: 'You' }
+    ])
+    setNewGroceryName('')
+    setNewGroceryPrice(30)
+  }
+
+  const toggleGroceryBought = (id: string) => {
+    setGroceryItems(prev => prev.map(item => item.id === id ? { ...item, bought: !item.bought } : item))
+  }
+
+  const deleteGroceryItem = (id: string) => {
+    setGroceryItems(prev => prev.filter(item => item.id !== id))
+  }
+
+  // Batch A: Supplies Low-Stock Counter State
+  const [supplies, setSupplies] = useState<Record<string, 'ok' | 'low'>>({
+    'Dish Soap': 'ok',
+    'Toilet Paper': 'low',
+    'Trash Bags': 'ok',
+    'All-Purpose Cleaner': 'ok'
+  })
+
+  const toggleSupplyStatus = (item: string) => {
+    setSupplies(prev => ({ ...prev, [item]: prev[item] === 'ok' ? 'low' : 'ok' }))
+  }
+
+  // Batch A: Guest Overnight Stay Tracker State
+  const [guestLogs, setGuestLogs] = useState<Array<{ id: string; guestName: string; nights: number; month: string }>>([
+    { id: 'gst-1', guestName: 'Sizwe (Brother)', nights: 2, month: 'Current Month' }
+  ])
+  const [newGuestName, setNewGuestName] = useState('')
+  const [newGuestNights, setNewGuestNights] = useState<number>(1)
+
+  const handleAddGuestLog = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newGuestName.trim()) return
+    setGuestLogs(prev => [
+      ...prev,
+      { id: `gst-${Date.now()}`, guestName: newGuestName.trim(), nights: Math.max(1, newGuestNights), month: 'Current Month' }
+    ])
+    setNewGuestName('')
+    setNewGuestNights(1)
+  }
+
+  // Batch A: Quiet Hours Toggle State
+  const [quietHoursActive, setQuietHoursActive] = useState(true)
+
+  // Batch A: Expense Fairness Tally
+  const totalBoughtCost = groceryItems.filter(g => g.bought).reduce((acc, g) => acc + g.estPrice, 0)
+  const totalUnboughtCost = groceryItems.filter(g => !g.bought).reduce((acc, g) => acc + g.estPrice, 0)
 
   if (!householdListingId) {
     return (
@@ -228,6 +296,131 @@ export default function HouseholdTab({
                  ))}
               </div>
             )}
+
+            {/* Batch A #103 & #108: Shared Grocery List & Expense Fairness Tally */}
+            <div className="glass-panel p-6 space-y-4">
+               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-white/10 pb-3">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                     <ShoppingCart size={18} className="text-gold-primary" /> Shared Grocery & Supplies Checklist
+                  </h3>
+                  <div className="flex items-center gap-3 text-xs">
+                     <span className="text-gray-400">Bought: <strong className="text-green-400">R{totalBoughtCost}</strong></span>
+                     <span className="text-gray-600">·</span>
+                     <span className="text-gray-400">Pending: <strong className="text-gold-primary">R{totalUnboughtCost}</strong></span>
+                  </div>
+               </div>
+
+               <form onSubmit={handleAddGrocery} className="flex gap-2">
+                  <input
+                     value={newGroceryName}
+                     onChange={e => setNewGroceryName(e.target.value)}
+                     placeholder="Add item (e.g. Dish soap, foil...)"
+                     className="flex-1 bg-black border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-primary/50"
+                  />
+                  <input
+                     type="number"
+                     min={1}
+                     value={newGroceryPrice}
+                     onChange={e => setNewGroceryPrice(Number(e.target.value))}
+                     className="w-20 bg-black border border-white/10 rounded-xl px-2 py-2 text-xs text-gold-primary font-bold outline-none text-right"
+                  />
+                  <button type="submit" className="bg-gold-primary text-black font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1">
+                     <Plus size={14} /> Add
+                  </button>
+               </form>
+
+               <div className="space-y-2">
+                  {groceryItems.map(item => (
+                     <div key={item.id} className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5 text-xs">
+                        <label className="flex items-center gap-3 cursor-pointer flex-1">
+                           <input type="checkbox" checked={item.bought} onChange={() => toggleGroceryBought(item.id)} className="accent-gold-primary w-4 h-4" />
+                           <span className={item.bought ? 'line-through text-gray-500 font-bold' : 'text-gray-200 font-medium'}>{item.name}</span>
+                        </label>
+                        <div className="flex items-center gap-3">
+                           <span className="font-mono text-gold-primary font-bold">R{item.estPrice}</span>
+                           <button onClick={() => deleteGroceryItem(item.id)} className="text-gray-600 hover:text-red-400 p-1"><Trash2 size={13} /></button>
+                        </div>
+                     </div>
+                  ))}
+               </div>
+            </div>
+
+            {/* Batch A #109: Cleaning Supplies Low-Stock Counter */}
+            <div className="glass-panel p-6 space-y-3">
+               <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Package size={18} className="text-gold-primary" /> Communal Cleaning Supplies Counter
+               </h3>
+               <p className="text-[11px] text-gray-500">Tap a supply to toggle between OK and Low Stock so roommates know what to buy next.</p>
+               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {Object.entries(supplies).map(([name, status]) => (
+                     <button
+                        key={name}
+                        onClick={() => toggleSupplyStatus(name)}
+                        className={`p-3 rounded-xl border text-xs font-bold transition-all text-left flex flex-col gap-1 ${
+                           status === 'low'
+                              ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                              : 'bg-black/40 border-white/10 text-gray-300 hover:border-gold-primary/30'
+                        }`}
+                     >
+                        <span className="truncate">{name}</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${status === 'low' ? 'text-red-400' : 'text-green-400'}`}>
+                           {status === 'low' ? '⚠️ Low Stock' : '✓ Stock OK'}
+                        </span>
+                     </button>
+                  ))}
+               </div>
+            </div>
+
+            {/* Batch A #104: Guest Overnight Stay Tracker & #105 Quiet Hours */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="glass-panel p-5 space-y-3">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                     <Calendar size={16} className="text-gold-primary" /> Guest Stay Tracker
+                  </h4>
+                  <p className="text-[10px] text-gray-500">Log guest nights to maintain house rule compliance (Max 5 nights/month per guest).</p>
+                  <form onSubmit={handleAddGuestLog} className="flex gap-2">
+                     <input
+                        value={newGuestName}
+                        onChange={e => setNewGuestName(e.target.value)}
+                        placeholder="Guest name..."
+                        className="flex-1 bg-black border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none"
+                     />
+                     <input
+                        type="number" min={1} max={30}
+                        value={newGuestNights}
+                        onChange={e => setNewGuestNights(Number(e.target.value))}
+                        className="w-14 bg-black border border-white/10 rounded-lg px-2 py-1.5 text-xs text-gold-primary text-center font-bold"
+                     />
+                     <button type="submit" className="bg-gold-primary text-black font-bold px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider">Log</button>
+                  </form>
+                  <div className="space-y-1.5">
+                     {guestLogs.map(g => (
+                        <div key={g.id} className="flex items-center justify-between text-xs p-2 bg-black/40 rounded-lg border border-white/5">
+                           <span className="text-gray-300 font-medium">{g.guestName}</span>
+                           <span className="text-gold-primary font-bold">{g.nights} night(s)</span>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+
+               <div className="glass-panel p-5 space-y-3">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                     <Moon size={16} className="text-gold-primary" /> House Quiet Hours
+                  </h4>
+                  <p className="text-[10px] text-gray-500">Standard quiet window is active between 22:00 – 07:00 daily.</p>
+                  <button
+                     onClick={() => setQuietHoursActive(!quietHoursActive)}
+                     className={`w-full p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
+                        quietHoursActive
+                           ? 'bg-gold-primary/10 border-gold-primary/30 text-gold-primary'
+                           : 'bg-black/40 border-white/10 text-gray-500'
+                     }`}
+                  >
+                     <span>Quiet Hours Auto-Mute</span>
+                     <span className="text-[10px] uppercase font-black tracking-widest">{quietHoursActive ? 'Active (22:00-07:00)' : 'Disabled'}</span>
+                  </button>
+               </div>
+            </div>
          </div>
       </div>
     </div>
