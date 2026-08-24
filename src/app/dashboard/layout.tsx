@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // writes to, defaulting to dark for anyone who hasn't chosen yet.
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      const stored = localStorage.getItem('dashboardTheme')
+      const stored = localStorage.getItem('residentTheme')
       document.documentElement.setAttribute('data-theme', stored === 'light' ? 'light' : 'night')
     }
   }, [])

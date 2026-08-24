@@ -34,25 +34,25 @@ export default function AuthPage() {
   const router = useRouter()
   const dispatch = useDispatch<AppDispatch>()
 
-  // 'light' is a real, separate theme (see globals.css) — not the old 'day'
-  // value, which the rest of the app still sets and which was never actually
-  // distinct from dark (a 5/255 background difference). This toggle is the
-  // one place in the app where switching genuinely changes the palette.
+  // Shared across the WHOLE app now — 'residentTheme' in localStorage, the
+  // same key the dashboard reads/writes (see dashboard/layout.tsx,
+  // dashboard/profile/page.tsx). This used to be DOM-only here (never
+  // persisted), so a theme choice made on this page silently reverted the
+  // next time any page reloaded, and never touched the dashboard's own
+  // separate 'dashboardTheme' key at all.
   const [theme, setTheme] = useState<'light' | 'night'>('night')
 
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      const currentTheme = document.documentElement.getAttribute('data-theme')
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTheme(currentTheme === 'light' ? 'light' : 'night')
-      document.documentElement.setAttribute('data-theme', currentTheme === 'light' ? 'light' : 'night')
-    }
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('residentTheme') : null
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage/DOM on mount
+    setTheme(stored === 'light' ? 'light' : 'night')
   }, [])
 
   const toggleTheme = () => {
     const nextTheme = theme === 'night' ? 'light' : 'night'
     setTheme(nextTheme)
-    if (typeof document !== 'undefined') {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('residentTheme', nextTheme)
       document.documentElement.setAttribute('data-theme', nextTheme)
     }
   }

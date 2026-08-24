@@ -22,7 +22,28 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" data-theme="day">
+    // No hardcoded data-theme here anymore — it used to be a permanent
+    // "day" that CSS never even styled (globals.css only has 'night'/
+    // 'light' blocks), and every page that DID toggle a theme (auth,
+    // dashboard) wrote to its own separate localStorage key, so a choice
+    // made on one never showed up on the other. This inline script runs
+    // before React hydrates and sets data-theme from the one shared key
+    // every page now reads/writes, avoiding a flash of the wrong theme.
+    <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var t = localStorage.getItem('residentTheme');
+                document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'night');
+              } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'night');
+              }
+            `
+          }}
+        />
+      </head>
       <body>
         <ReduxProvider>
           {children}

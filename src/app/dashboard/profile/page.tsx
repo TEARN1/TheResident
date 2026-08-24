@@ -43,17 +43,18 @@ export default function ProfilePage() {
     router.push('/auth')
   }
 
-  // Dashboard theme — separate from the auth/landing pages' own toggle
-  // (which uses 'day'/'night'), and separate from `lang`. Persisted directly
-  // to the same localStorage key dashboard/layout.tsx reads on mount, since
-  // this page doesn't own the <html data-theme> attribute the layout does.
+  // Shared app-wide theme — 'residentTheme' in localStorage, the same key
+  // the root layout's pre-hydration script and the auth page now read/write
+  // too, so a choice made anywhere in the app applies everywhere. Persisted
+  // directly here since this page doesn't own the <html data-theme>
+  // attribute the layout does.
   const [dashboardTheme, setDashboardThemeState] = useState<'night' | 'light'>('night')
   useEffect(() => {
-    const stored = localStorage.getItem('dashboardTheme')
+    const stored = localStorage.getItem('residentTheme')
     setDashboardThemeState(stored === 'light' ? 'light' : 'night')
   }, [])
   const setDashboardTheme = (theme: 'night' | 'light') => {
-    localStorage.setItem('dashboardTheme', theme)
+    localStorage.setItem('residentTheme', theme)
     document.documentElement.setAttribute('data-theme', theme)
     setDashboardThemeState(theme)
   }
