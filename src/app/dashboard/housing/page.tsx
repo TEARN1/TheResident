@@ -33,6 +33,7 @@ import Link from 'next/link'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import PropertiesPanel, { type ResProperty } from '../components/housing/PropertiesPanel'
 import EmptyState from '../components/shared/EmptyState'
+import { goldButtonClass } from '../../../components/ui/GoldButton'
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
 // Top of the budget slider. Well above the real ceiling for a single room so
@@ -775,7 +776,7 @@ export default function HousingPage() {
                      ) : isGuest ? (
                         <Link
                            href="/auth"
-                           className="w-full flex items-center justify-center gap-2 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                           className={goldButtonClass({ fullWidth: true })}
                         >
                            Sign up to request
                         </Link>

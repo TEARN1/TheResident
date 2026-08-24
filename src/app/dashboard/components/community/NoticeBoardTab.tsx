@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { Megaphone, Calendar, Info, Heart, Share2, Check, Plus, X, EyeOff, Eye, Users, Sparkles, MapPin, Clock, UserX } from 'lucide-react'
 import UpgradeButton from '../shared/UpgradeButton'
 import { formatGruvsEventWhen } from '../../../../utils/gruvsEvents'
+import { goldButtonClass } from '../../../../components/ui/GoldButton'
 
 const NOTICE_FREE_WINDOW_MS = 8 * 60 * 60 * 1000
 
@@ -370,7 +371,7 @@ export default function NoticeBoardTab({
                       <UpgradeButton
                         item="notice_boost"
                         targetId={notice.id}
-                        className="w-full flex items-center justify-center gap-2 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95"
+                        className={goldButtonClass({ size: 'sm', fullWidth: true })}
                       />
                     )}
                   </div>

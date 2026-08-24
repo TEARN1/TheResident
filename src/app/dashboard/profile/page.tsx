@@ -9,6 +9,8 @@ import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRol
 import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
+import { goldButtonClass } from '../../../components/ui/GoldButton'
+import Card from '../../../components/ui/Card'
 
 const LANGUAGES: { code: 'en' | 'zu' | 'xh' | 'af'; label: string }[] = [
   { code: 'en', label: 'English' },
@@ -264,7 +266,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Account Mode / Role Switcher */}
-      <div className="glass-panel p-6 space-y-3">
+      <Card className="space-y-3">
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
           <UserIcon size={16} /> Account Mode / Role
         </h2>
@@ -299,9 +301,9 @@ export default function ProfilePage() {
             <span className="text-[9px] opacity-70 font-normal">List empty rooms & manage units</span>
           </button>
         </div>
-      </div>
+      </Card>
 
-      <div className="glass-panel p-6 space-y-3">
+      <Card className="space-y-3">
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
           <Camera size={16} /> Your Photo
         </h2>
@@ -327,7 +329,7 @@ export default function ProfilePage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={photoUploading}
-              className="flex items-center gap-2 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+              className={goldButtonClass()}
             >
               {photoUploading ? <Loader size={14} className="animate-spin" /> : photoUrl ? <Check size={14} /> : <Camera size={14} />}
               {photoUploading ? 'Uploading…' : photoUrl ? 'Replace photo' : 'Upload a photo'}
@@ -335,7 +337,7 @@ export default function ProfilePage() {
             {photoError && <p className="text-[11px] text-red-400">{photoError}</p>}
           </div>
         </div>
-      </div>
+      </Card>
 
       {hasPlus === false && (
         <div className="glass-panel p-4 flex items-center justify-between gap-4 border-gold-primary/20">
@@ -343,7 +345,7 @@ export default function ProfilePage() {
             <p className="text-sm font-bold text-white">Household Plus</p>
             <p className="text-[11px] text-gray-500">Boosted listings, priority verification, and more for your household.</p>
           </div>
-          <UpgradeButton item="plus" className="shrink-0 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+          <UpgradeButton item="plus" className={`shrink-0 ${goldButtonClass()}`} />
         </div>
       )}
 
@@ -456,7 +458,7 @@ export default function ProfilePage() {
             <p className="text-sm font-bold text-white">Verification</p>
             <p className="text-[11px] text-gray-500">Verified residents get priority on requests and dispatches.</p>
           </div>
-          <UpgradeButton item="verification_speedup" className="shrink-0 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+          <UpgradeButton item="verification_speedup" className={`shrink-0 ${goldButtonClass()}`} />
         </div>
       )}
 
