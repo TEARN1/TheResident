@@ -213,7 +213,8 @@ export default function AuthPage() {
         id: user.id,
         name: sanitizedName,
         email: email,
-        role: role
+        role: role,
+        createdAt: new Date().toISOString()
       }))
 
       dispatch(addLog({

@@ -23,6 +23,7 @@ import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } fro
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
 import AutomationControlPanel from './components/shared/AutomationControlPanel'
+import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -43,6 +44,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const dismissGuestBanner = () => {
     sessionStorage.setItem('guestBannerDismissed', '1')
     setGuestBannerDismissed(true)
+  }
+
+  // Next of Kin onboarding requirement — every tenant gets 6 months from
+  // signup to add at least one confirmed trust connection (see
+  // src/utils/trust.ts). Dismissible per session like the guest banner
+  // above, but reappears next session until it's actually done — this is a
+  // requirement, not a one-time tip.
+  const [nokStatus, setNokStatus] = useState<NextOfKinStatus | null>(null)
+  const [nokBannerDismissed, setNokBannerDismissed] = useState(true)
+  /* eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount */
+  useEffect(() => {
+    setNokBannerDismissed(typeof window !== 'undefined' && sessionStorage.getItem('nokBannerDismissed') === '1')
+  }, [])
+  const dismissNokBanner = () => {
+    sessionStorage.setItem('nokBannerDismissed', '1')
+    setNokBannerDismissed(true)
   }
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
@@ -81,14 +98,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           await supabase.rpc('ensure_res_profile').then(() => {}, () => {})
           const { data: dbProfile } = await supabase
             .from('res_profiles')
-            .select('role')
+            .select('role, created_at')
             .eq('id', user.id)
             .single()
           dispatch(loginUser({
             id: user.id,
             name: user.user_metadata?.name || 'Resident User',
             email: user.email || '',
-            role: (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor'
+            role: (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor',
+            createdAt: dbProfile?.created_at || undefined
           }))
           return
         }
@@ -115,6 +133,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const unsubscribe = subscribeToRealtime(appDispatch, currentUser.id)
     return unsubscribe
   }, [currentUser, dispatch])
+
+  useEffect(() => {
+    if (!currentUser || isGuestUser(currentUser) || currentUser.role !== 'tenant') { setNokStatus(null); return }
+    let cancelled = false
+    getNextOfKinStatus(currentUser.id, currentUser.createdAt).then(status => {
+      if (!cancelled) setNokStatus(status)
+    })
+    return () => { cancelled = true }
+  }, [currentUser])
 
   // Close the notifications dropdown on an outside click — previously the
   // only way to close it was clicking the bell a second time.
@@ -208,6 +235,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </span>
           <Link href="/auth" className="guest-summary-banner-cta">Sign up</Link>
           <button onClick={dismissGuestBanner} aria-label="Dismiss" className="guest-summary-banner-dismiss">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {nokStatus && !nokStatus.hasNextOfKin && !nokBannerDismissed && (
+        <div className="guest-summary-banner">
+          <ShieldCheck size={16} className="shrink-0" style={{ color: nokStatus.overdue ? '#ef4444' : '#D4AF37' }} />
+          <span>
+            {nokStatus.overdue ? (
+              <><strong>Your trust profile is incomplete.</strong> You haven&apos;t added a Next of Kin yet — your landlord can see this.</>
+            ) : nokStatus.daysRemaining !== null ? (
+              <><strong>Add a Next of Kin.</strong> You have {nokStatus.daysRemaining} day{nokStatus.daysRemaining === 1 ? '' : 's'} left to complete your trust profile.</>
+            ) : (
+              <><strong>Add a Next of Kin.</strong> People to notify if something happens to you — required to build full trust on The Resident.</>
+            )}
+          </span>
+          <Link href="/dashboard/trust-circle" className="guest-summary-banner-cta">Add now</Link>
+          <button onClick={dismissNokBanner} aria-label="Dismiss" className="guest-summary-banner-dismiss">
             <X size={14} />
           </button>
         </div>

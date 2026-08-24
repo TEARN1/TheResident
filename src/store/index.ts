@@ -53,6 +53,8 @@ export interface User {
   passwordHash?: string // cryptographically secured
   profile?: UserProfile
   preferences?: LandlordPreferences
+  /** res_profiles.created_at — drives the Next of Kin 6-month grace window. */
+  createdAt?: string
 }
 
 export interface Listing {

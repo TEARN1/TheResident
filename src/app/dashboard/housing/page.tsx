@@ -25,6 +25,7 @@ import { formatCurrency, suburbPriceStats, isSuspiciousPrice, type SearchFilters
 import { supabase } from '../../../utils/supabase'
 import FollowButton from '../components/social/FollowButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
+import NextOfKinFlag from '../components/trust-safety/NextOfKinFlag'
 import ReviewForm from '../components/social/ReviewForm'
 import ReviewsList from '../components/social/ReviewsList'
 import SavedSearches from '../components/housing/SavedSearches'
@@ -1037,8 +1038,9 @@ export default function HousingPage() {
                         <div className="space-y-1.5">
                            <h4 className="text-2xl font-black text-white">{activeAuditRequest.tenantName}</h4>
                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Applicant for: {activeAuditRequest.listingTitle}</p>
-                           <div className="flex items-center gap-2 pt-1">
+                           <div className="flex items-center gap-2 pt-1 flex-wrap">
                               <TrustBadge userId={activeAuditRequest.tenantId} />
+                              <NextOfKinFlag userId={activeAuditRequest.tenantId} />
                               {activeAuditRequest.status !== 'pending' && requestStatusBadge(activeAuditRequest.status)}
                            </div>
                         </div>

@@ -75,7 +75,7 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
 
   const { data: dbProfile } = await supabase
     .from('res_profiles')
-    .select('role')
+    .select('role, created_at')
     .eq('id', user.id)
     .single()
 
@@ -86,7 +86,8 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
     id: user.id,
     name: user.user_metadata?.name || 'Resident User',
     email: user.email!,
-    role: userRole as 'tenant' | 'landlord' | 'visitor'
+    role: userRole as 'tenant' | 'landlord' | 'visitor',
+    createdAt: dbProfile?.created_at || undefined
   }))
 
   dispatch(addLog({

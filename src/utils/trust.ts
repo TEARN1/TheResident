@@ -46,6 +46,56 @@ export async function getTrustInfo(userId: string): Promise<TrustInfo> {
   }
 }
 
+// Next of Kin onboarding requirement — every tenant gets a 6-month grace
+// period from signup to add at least one confirmed trust connection (see
+// TrustCirclePage / res_trust_connections). Deliberately does NOT auto-
+// restrict anyone once the window lapses — it only flags the account so a
+// landlord/admin can decide next steps, since silently locking someone out
+// over a missed vouch could be worse than the risk it's meant to catch.
+const NEXT_OF_KIN_GRACE_MONTHS = 6
+
+export interface NextOfKinStatus {
+  hasNextOfKin: boolean
+  deadline: Date | null
+  daysRemaining: number | null
+  overdue: boolean
+}
+
+function addMonths(date: Date, months: number): Date {
+  const result = new Date(date)
+  result.setMonth(result.getMonth() + months)
+  return result
+}
+
+export async function getNextOfKinStatus(userId: string, accountCreatedAt: string | null | undefined): Promise<NextOfKinStatus> {
+  if (!supabase || !userId) {
+    return { hasNextOfKin: false, deadline: null, daysRemaining: null, overdue: false }
+  }
+
+  const { count } = await supabase
+    .from('res_trust_connections')
+    .select('id', { count: 'exact', head: true })
+    .or(`requester_id.eq.${userId},connection_id.eq.${userId}`)
+    .eq('status', 'confirmed')
+
+  const hasNextOfKin = (count ?? 0) > 0
+
+  if (!accountCreatedAt) {
+    return { hasNextOfKin, deadline: null, daysRemaining: null, overdue: false }
+  }
+
+  const deadline = addMonths(new Date(accountCreatedAt), NEXT_OF_KIN_GRACE_MONTHS)
+  const msRemaining = deadline.getTime() - Date.now()
+  const daysRemaining = Math.ceil(msRemaining / (24 * 60 * 60 * 1000))
+
+  return {
+    hasNextOfKin,
+    deadline,
+    daysRemaining,
+    overdue: !hasNextOfKin && msRemaining <= 0
+  }
+}
+
 export async function getTrustInfoBulk(userIds: string[]): Promise<Record<string, TrustInfo>> {
   if (!supabase || userIds.length === 0) return {}
   const ids = [...new Set(userIds)]
