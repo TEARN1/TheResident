@@ -1599,6 +1599,14 @@ const notificationsSlice = createSlice({
       state.items.forEach(item => {
         item.read = true
       })
+    },
+    // Bumps just the badge count, O(1) memory — `items` is deliberately left
+    // untouched (still capped at 50 by addNotification above) rather than
+    // ever trying to hold one Redux array entry per real notification. A
+    // flood of unread counts (e.g. catching up after being offline) needs an
+    // accurate number on the bell icon, not 500,000 array elements behind it.
+    floodNotifications: (state, action: PayloadAction<number>) => {
+      state.virtualCount = action.payload
     }
   }
 })
@@ -1691,7 +1699,8 @@ export const {
 export const {
   setNotifications,
   addNotification,
-  markAllNotificationsRead
+  markAllNotificationsRead,
+  floodNotifications
 } = notificationsSlice.actions
 
 // Async Thunk to fetch live data from Supabase.

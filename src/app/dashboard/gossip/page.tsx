@@ -346,7 +346,7 @@ export default function GossipPage() {
             <MessageSquare size={18} className="text-gold-primary" />
           </div>
           <h2 className="text-xl font-bold text-white">Gossip Feed</h2>
-          <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-auto hidden sm:inline">What's the word, neighbour?</span>
+          <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-auto hidden sm:inline">What&apos;s the word, neighbour?</span>
         </div>
         <textarea
           value={composerBody}

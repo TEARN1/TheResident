@@ -37,8 +37,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // seen if that specific screen happened to render it. One banner, said
   // once, dismissible — rather than the same pitch repeating on every tab.
   const [guestBannerDismissed, setGuestBannerDismissed] = useState(true)
-  /* eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount */
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount
     setGuestBannerDismissed(typeof window !== 'undefined' && sessionStorage.getItem('guestBannerDismissed') === '1')
   }, [])
   const dismissGuestBanner = () => {
@@ -53,8 +53,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // requirement, not a one-time tip.
   const [nokStatus, setNokStatus] = useState<NextOfKinStatus | null>(null)
   const [nokBannerDismissed, setNokBannerDismissed] = useState(true)
-  /* eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount */
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount
     setNokBannerDismissed(typeof window !== 'undefined' && sessionStorage.getItem('nokBannerDismissed') === '1')
   }, [])
   const dismissNokBanner = () => {
@@ -135,8 +135,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [currentUser, dispatch])
 
   useEffect(() => {
-    if (!currentUser || isGuestUser(currentUser) || currentUser.role !== 'tenant') { setNokStatus(null); return }
     let cancelled = false
+    if (!currentUser || isGuestUser(currentUser) || currentUser.role !== 'tenant') {
+      // Resolves on a microtask rather than synchronously in the effect body
+      // (flagged by the React Compiler's set-state-in-effect check) — still
+      // clears stale status from a previous tenant session right away, just
+      // not mid-render.
+      Promise.resolve().then(() => { if (!cancelled) setNokStatus(null) })
+      return () => { cancelled = true }
+    }
     getNextOfKinStatus(currentUser.id, currentUser.createdAt).then(status => {
       if (!cancelled) setNokStatus(status)
     })

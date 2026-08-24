@@ -24,14 +24,14 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Layer 2: TypeScript Type Check
+      - name: "Layer 2: TypeScript Type Check"
         run: npx tsc --noEmit
 
-      - name: Layer 2: Unit Test Suite
+      - name: "Layer 2: Unit Test Suite"
         run: npm test
 
-      - name: Layer 13: Security Fuzzer
+      - name: "Layer 13: Security Fuzzer"
         run: npm run fuzzer
 
-      - name: Layer 2: High-Concurrency Scale Benchmark
+      - name: "Layer 2: High-Concurrency Scale Benchmark"
         run: npm run scale-test

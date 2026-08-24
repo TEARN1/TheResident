@@ -144,7 +144,6 @@ export default function ProfilePage() {
   // Seeds the editable form fields once the server's copy of the profile
   // arrives (it loads asynchronously after auth resolves) — a one-time sync
   // from external state into local form state, not a render-loop risk.
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!currentUser) return
     if (currentUser.role === 'tenant' && currentUser.profile) {
@@ -164,7 +163,6 @@ export default function ProfilePage() {
       setPetsAllowed(!!p.petsAllowed)
     }
   }, [currentUser])
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!currentUser) return null
 
@@ -307,7 +305,7 @@ export default function ProfilePage() {
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
           <Camera size={16} /> Your Photo
         </h2>
-        <p className="text-[11px] text-gray-500">A real photo of yourself helps neighbours and landlords trust who they're dealing with. It's kept with your verification info.</p>
+        <p className="text-[11px] text-gray-500">A real photo of yourself helps neighbours and landlords trust who they&apos;re dealing with. It&apos;s kept with your verification info.</p>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-black border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
             {photoUrl ? (

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
 import Link from 'next/link'
 import {
@@ -36,6 +36,13 @@ export default function BusinessPage() {
   const [tierLoading, setTierLoading] = useState(true)
   const [trust, setTrust] = useState<TrustInfo | null>(null)
 
+  // Still technically impure at render time even memoized (the memo callback
+  // itself runs during the first render) — deferring this to an effect would
+  // mean the "boosted listings" count is wrong/0 for a frame on every mount,
+  // which is worse than a snapshot that's stale by however long the tab's
+  // been open. Accepted tradeoff, not a fixable purity violation here.
+  // eslint-disable-next-line react-hooks/purity
+  const now = useMemo(() => Date.now(), [])
   const guest = isGuestUser(currentUser)
   const myListings = currentUser ? listings.filter(l => l.landlordId === currentUser.id) : []
   const myService = currentUser ? services.find(s => s.ownerId === currentUser.id) : undefined
@@ -78,7 +85,10 @@ export default function BusinessPage() {
 
   // Landlord performance
   const activeListings = myListings.length
-  const boostedListings = myListings.filter(l => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > Date.now()).length
+  // Date.now() is impure to call directly during render (flagged by the
+  // React Compiler's purity check) — memoized once per mount instead, which
+  // is plenty precise for a "currently boosted" dashboard count.
+  const boostedListings = myListings.filter(l => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > now).length
   const pendingRequests = requests.filter(r => r.landlordId === currentUser.id && r.status === 'pending').length
   const approvedRequests = requests.filter(r => r.landlordId === currentUser.id && r.status === 'approved').length
 
