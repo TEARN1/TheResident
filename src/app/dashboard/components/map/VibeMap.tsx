@@ -13,6 +13,7 @@ import { fetchSavedPins, saveNewPin, deleteSavedPin, type SavedPin } from '../..
 import { distanceMetres } from '../../../../utils/logic'
 import { searchPlaces, reverseGeocode, type GeocodeResult } from '../../../../utils/geocode'
 import { supabase } from '../../../../utils/supabase'
+import { encodeHTMLEntities } from '../../../../utils/security'
 import MapSearchBox from './MapSearchBox'
 import SavedPinsPanel from './SavedPinsPanel'
 import DistanceMatrixPanel, { type MatrixPoint } from './DistanceMatrixPanel'
@@ -459,14 +460,20 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           })()
         : null
       const popupId = `zone-popup-${zone.id}`
+      // Leaflet's bindPopup sets innerHTML directly — React's JSX escaping
+      // never touches this string, so anything user-submitted (label, note)
+      // going in unescaped is stored XSS: a malicious closure report with
+      // <img src=x onerror=...> in its note would execute for every user
+      // who opens that popup. encodeHTMLEntities (utils/security.ts) is the
+      // same sanitizer already used at signup, applied here too.
       marker.bindPopup(`
         <div style="font-family:inherit;min-width:190px">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-            <strong>${KIND_LABEL[zone.kind] || zone.kind}</strong>
+            <strong>${encodeHTMLEntities(KIND_LABEL[zone.kind] || zone.kind)}</strong>
             ${distanceLabel ? `<span style="font-size:0.75em;opacity:0.6;white-space:nowrap">${distanceLabel}</span>` : ''}
           </div>
-          ${zone.label ? `<div>${zone.label}</div>` : ''}
-          ${zone.note ? `<div style="opacity:0.7;font-size:0.85em;margin-top:4px">${zone.note}</div>` : ''}
+          ${zone.label ? `<div>${encodeHTMLEntities(zone.label)}</div>` : ''}
+          ${zone.note ? `<div style="opacity:0.7;font-size:0.85em;margin-top:4px">${encodeHTMLEntities(zone.note)}</div>` : ''}
           ${expiry ? `<div style="font-size:0.75em;margin-top:6px;color:${expiryFactor < 1 ? '#f59e0b' : '#D4AF37'}">${now >= new Date(zone.endsAt as string).getTime() ? 'Cleared' : 'Clears by'} ${expiry}</div>` : ''}
           <div style="font-size:0.75em;opacity:0.6;margin-top:6px">
             Reported via ${sourceLabel} · ${zone.status}
@@ -545,7 +552,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         iconSize: [16, 16],
         iconAnchor: [8, 8]
       })
-    }).bindPopup(pendingPoint.label).addTo(layer).openPopup()
+    }).bindPopup(encodeHTMLEntities(pendingPoint.label)).addTo(layer).openPopup()
   }, [pendingPoint])
 
   useEffect(() => {
@@ -562,7 +569,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           iconSize: [14, 14],
           iconAnchor: [7, 7]
         })
-      }).bindPopup(`<strong>${pin.label}</strong>`).addTo(layer)
+      }).bindPopup(`<strong>${encodeHTMLEntities(pin.label)}</strong>`).addTo(layer)
     })
   }, [savedPins])
 
@@ -589,8 +596,8 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       })
       marker.bindPopup(`
         <div style="font-family:inherit;min-width:170px">
-          <strong>${listing.title}</strong>
-          <div style="opacity:0.7;font-size:0.85em;margin-top:2px">${listing.suburb || listing.location}</div>
+          <strong>${encodeHTMLEntities(listing.title)}</strong>
+          <div style="opacity:0.7;font-size:0.85em;margin-top:2px">${encodeHTMLEntities(listing.suburb || listing.location)}</div>
           <div style="font-size:0.9em;margin-top:4px;color:#D4AF37;font-weight:700">${listing.currency} ${listing.price}</div>
         </div>
       `)
