@@ -227,6 +227,29 @@ export default function AuthPage() {
     }
   }
 
+  // Google/Facebook — same Supabase Auth project as The Gruvs, so this is an
+  // alternate front door onto the one shared account, not a separate signup
+  // path. ensure_res_profile() (called from performLogin's login path today)
+  // isn't in this flow since Supabase's own onAuthStateChange redirect lands
+  // straight on /dashboard; res_profiles is created lazily there if missing.
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null)
+
+  const handleOAuth = async (provider: 'google' | 'facebook') => {
+    if (!supabase) {
+      setErrorMessage('Database offline / not configured.')
+      return
+    }
+    setErrorMessage(null)
+    setOauthLoading(provider)
+    const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } })
+    if (error) {
+      setErrorMessage(error.message)
+      setOauthLoading(null)
+    }
+    // On success the browser navigates away to the provider — nothing else to do.
+  }
+
   const handleGruvsSSO = () => {
     // One account across The Gruvs & The Resident — they share the SAME Supabase
     // Auth project, so there is no separate "Gruvs password": your Gruvs email +
@@ -343,6 +366,23 @@ export default function AuthPage() {
             </span>
           </div>
         )}
+
+        {/* Google temporarily pulled — Supabase provider isn't configured yet. */}
+        <div style={oauthRowStyle}>
+          <button
+            type="button"
+            onClick={() => handleOAuth('facebook')}
+            disabled={oauthLoading !== null}
+            style={oauthBtnStyle}
+          >
+            {oauthLoading === 'facebook' ? 'Connecting…' : 'Continue with Facebook'}
+          </button>
+        </div>
+        <div style={socialDividerStyle}>
+          <span style={socialDividerLineStyle} />
+          <span style={socialDividerTextStyle}>or</span>
+          <span style={socialDividerLineStyle} />
+        </div>
 
         {activeTab === 'login' ? (
           <form onSubmit={handleLogin} style={formStyle}>
@@ -987,6 +1027,28 @@ const socialDividerTextStyle: React.CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '1.5px',
   whiteSpace: 'nowrap'
+}
+
+const oauthRowStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: '0.75rem',
+  marginTop: '0.25rem'
+}
+
+const oauthBtnStyle: React.CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '0.7rem 0.5rem',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--glass-border)',
+  borderRadius: '10px',
+  color: 'var(--foreground)',
+  fontSize: '0.8rem',
+  fontWeight: 600,
+  cursor: 'pointer',
+  transition: 'all 0.25s ease'
 }
 
 const gruvsBtnStyle: React.CSSProperties = {

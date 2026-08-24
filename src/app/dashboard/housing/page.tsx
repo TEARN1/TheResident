@@ -516,13 +516,21 @@ export default function HousingPage() {
                 <SavedSearches currentFilters={currentSearchFilters} onApply={applySavedSearch} />
              </div>
 
-             {currentUser?.role === 'landlord' && (
+             {currentUser?.role === 'landlord' ? (
                 <button
                    onClick={() => setShowCreateModal(true)}
                    className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-8 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-gold-primary/10 uppercase tracking-widest text-xs"
                 >
                    <Plus size={20} /> List Your Property
                 </button>
+             ) : (
+                <Link
+                   href="/dashboard/profile"
+                   className="bg-white/5 hover:bg-gold-primary/10 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary font-bold px-4 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all text-xs shrink-0"
+                   title="Want to list a room? Switch to Landlord mode in your profile."
+                >
+                   <Building2 size={16} /> Have a room to rent? Switch to Landlord Mode
+                </Link>
              )}
           </div>
 

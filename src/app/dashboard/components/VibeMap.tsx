@@ -9,7 +9,8 @@ import { RootState, isGuestUser } from '../../../store'
 import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../utils/mapZones'
 import { fetchSavedPins, saveNewPin, deleteSavedPin, type SavedPin } from '../../../utils/savedPins'
 import { distanceMetres } from '../../../utils/logic'
-import { searchPlaces, type GeocodeResult } from '../../../utils/geocode'
+import { searchPlaces, reverseGeocode, type GeocodeResult } from '../../../utils/geocode'
+import { supabase } from '../../../utils/supabase'
 import MapSearchBox from './MapSearchBox'
 import SavedPinsPanel from './SavedPinsPanel'
 import DistanceMatrixPanel, { type MatrixPoint } from './DistanceMatrixPanel'
@@ -35,6 +36,16 @@ const KIND_LABEL: Record<string, string> = {
   alert: 'Safety alert',
   route: 'Route',
   zone: 'Zone'
+}
+
+const KIND_ICON_SYMBOL: Record<string, string> = {
+  road_closed: '⛔',
+  heavy_traffic: '🚦',
+  detour: '↪️',
+  no_parking: '🅿️',
+  alert: '🚨',
+  route: '🛣️',
+  zone: '📍'
 }
 
 // What a resident is allowed to report directly, and how long each option's
@@ -139,10 +150,25 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId])
 
-  const geofenceHits = savedPins.flatMap(pin =>
-    zones
-      .filter(z => distanceMetres(pin, z) <= alertRadiusM)
-      .map(z => ({ pin, zone: z }))
+  // O(pins × zones) distance scan. Computed inline it re-ran on EVERY render —
+  // including every keystroke in the report form and every drawer toggle — and
+  // handed back a new array identity each time, which then invalidated the
+  // marker effect below and forced a full map rebuild. Memoised on the only
+  // three inputs that can actually change the answer.
+  const geofenceHits = useMemo(
+    () => savedPins.flatMap(pin =>
+      zones
+        .filter(z => distanceMetres(pin, z) <= alertRadiusM)
+        .map(z => ({ pin, zone: z }))
+    ),
+    [savedPins, zones, alertRadiusM]
+  )
+
+  // Set of zone ids that trip a geofence — lets the marker loop do an O(1)
+  // lookup instead of a linear .some() scan per zone (it was O(zones × hits)).
+  const geofenceZoneIds = useMemo(
+    () => new Set(geofenceHits.map(h => h.zone.id)),
+    [geofenceHits]
   )
 
   // What the legend/filter row and the marker layer both agree is "on the
@@ -222,7 +248,14 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       if (cancelled || !mapContainerRef.current || mapRef.current) return
       leafletRef.current = L
 
-      const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([startLat, startLon], startZoom)
+      // preferCanvas: every zone/pin is a circleMarker. Leaflet's default
+      // renderer gives each one its own SVG DOM node, so a busy city becomes
+      // hundreds of nodes that the browser lays out and repaints on every pan.
+      // Canvas draws them all into ONE element — same visuals, a fraction of
+      // the cost, and it degrades gracefully on a cheap Android handset, which
+      // is the actual launch device here.
+      const map = L.map(mapContainerRef.current, { zoomControl: false, preferCanvas: true })
+        .setView([startLat, startLon], startZoom)
       // CARTO's basemaps, not tile.openstreetmap.org directly: same underlying
       // OSM street data, but CARTO's own render pipeline refreshes far more
       // often — tile.openstreetmap.org is OSM's lightweight demo server, it
@@ -252,12 +285,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       // out further re-centres and zooms in on the clicked point instead of
       // dropping the pin at an unreliable location.
       const MIN_REPORT_ZOOM = 15
-      map.on('click', (e: import('leaflet').LeafletMouseEvent) => {
+      map.on('click', async (e: import('leaflet').LeafletMouseEvent) => {
         setShowReportForm(false)
         setReportError(null)
-        setPendingPoint({ label: `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`, lat: e.latlng.lat, lon: e.latlng.lng })
+        const initialLabel = `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`
+        setPendingPoint({ label: initialLabel, lat: e.latlng.lat, lon: e.latlng.lng })
         if (map.getZoom() < MIN_REPORT_ZOOM) {
           map.setView(e.latlng, MIN_REPORT_ZOOM)
+        }
+        const realAddress = await reverseGeocode(e.latlng.lat, e.latlng.lng)
+        if (realAddress) {
+          setPendingPoint(prev => (prev && prev.lat === e.latlng.lat && prev.lon === e.latlng.lng ? { ...prev, label: realAddress } : prev))
         }
       })
 
@@ -270,6 +308,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     })
 
     return () => { cancelled = true }
+  }, [center])
+
+  // Live Supabase Realtime updates on map_zones table
+  useEffect(() => {
+    if (!supabase || !center) return
+    const channel = supabase.channel('map_zones_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_zones' }, () => {
+        loadZones(center.lat, center.lon)
+      })
+      .subscribe()
+    return () => { supabase?.removeChannel(channel) }
   }, [center])
 
   // Swaps tiles in place via setUrl rather than tearing down/recreating the
@@ -296,7 +345,9 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
     filteredZones.forEach(zone => {
       const color = KIND_COLOR[zone.kind] || '#D4AF37'
-      const isGeofenceHit = geofenceHits.some(h => h.zone.id === zone.id)
+      // O(1) Set lookup rather than a linear .some() per zone — the scan was
+      // O(zones x hits) inside a loop that already runs once per zone.
+      const isGeofenceHit = geofenceZoneIds.has(zone.id)
       // A report with more disputes than confirmations shouldn't read as
       // trustworthy as one the community has backed up — flagged the same
       // way a geofence hit is (a pulsing outer ring), so "this is contested"
@@ -427,8 +478,20 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
       marker.addTo(group)
     })
+    // Depends on geofenceZoneIds, NOT savedPins/alertRadiusM directly: dragging
+    // the alert-radius slider used to tear down and rebuild every zone marker on
+    // each tick, even when the set of tripped zones never changed. The memo
+    // above keeps its identity stable, so the map only rebuilds when the picture
+    // actually differs. (The disable below is pre-existing — it suppresses the
+    // deliberate omission of `center`, which must NOT retrigger a rebuild on
+    // every pan. Keep it on the line directly above the dep array.)
+    // savedPins/alertRadiusM are deliberately absent: they feed geofenceZoneIds,
+    // and depending on them directly rebuilt every marker on each drag of the
+    // alert-radius slider even when the tripped set never changed. Verified the
+    // body references neither (the only matches are in comments), so there is no
+    // stale closure.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredZones, currentUser, savedPins, alertRadiusM, distanceOrigin])
+  }, [filteredZones, currentUser, geofenceZoneIds, distanceOrigin])
 
   useEffect(() => {
     const L = leafletRef.current
@@ -609,12 +672,65 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
       {/* Full-bleed map with floating controls, like Google Maps rather than a boxed embed */}
       <div className={fullscreen ? 'relative overflow-hidden h-full w-full' : 'relative rounded-2xl overflow-hidden border border-white/5 h-[70vh] min-h-[420px]'}>
-        <div ref={mapContainerRef} className="absolute inset-0" style={{ background: '#111' }} />
+        {/* A Leaflet canvas is invisible to assistive tech: this component had
+            ZERO aria/role/tabIndex, so a screen-reader or keyboard-only user got
+            an unlabelled black rectangle and no way to learn what was on it.
+            Labelling the region and exposing a text summary below is the minimum
+            that makes the map's information available without sight — and the
+            geofence count is safety information, so it must not be visual-only. */}
+        <div
+          ref={mapContainerRef}
+          className="absolute inset-0"
+          style={{ background: '#111' }}
+          role="region"
+          aria-label="Neighbourhood map showing reported zones near you"
+        />
 
-        {/* Search — floating top-left */}
-        <div className="absolute top-3 left-3 right-3 md:right-auto md:w-[340px] z-[500]">
+        {/* Screen-reader equivalent of the map + a polite live region so a new
+            alert near a saved place is ANNOUNCED, not just drawn in red.
+            Counts filteredZones, not zones: the legend filters are real, so the
+            announcement must describe what is actually on the map right now. */}
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {filteredZones.length} zones shown nearby.
+          {geofenceHits.length > 0
+            ? ` ${geofenceHits.length} ${geofenceHits.length === 1 ? 'alert is' : 'alerts are'} near a place you saved.`
+            : ' No alerts near your saved places.'}
+        </div>
+
+        {/* Search & Quick Filter Bar — floating top-left */}
+        <div className="absolute top-3 left-3 right-3 md:right-auto md:w-[380px] z-[500] space-y-2">
           <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl">
             <MapSearchBox onSelect={handleSearchSelect} />
+          </div>
+          {/* Quick Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+            <button
+              onClick={() => setActiveKinds(new Set(Object.keys(KIND_LABEL)))}
+              className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap ${
+                activeKinds.size === Object.keys(KIND_LABEL).length
+                  ? 'bg-gold-primary text-black border-gold-primary shadow-md'
+                  : 'bg-black/80 text-gray-300 border-white/10 hover:text-white'
+              }`}
+            >
+              All
+            </button>
+            {Object.entries(KIND_LABEL).map(([kind, label]) => {
+              const active = activeKinds.has(kind)
+              return (
+                <button
+                  key={kind}
+                  onClick={() => toggleKind(kind)}
+                  className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    active
+                      ? 'bg-gold-primary text-black border-gold-primary shadow-md'
+                      : 'bg-black/80 text-gray-300 border-white/10 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: KIND_COLOR[kind] }} />
+                  {label}
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -728,8 +844,8 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           </button>
         </div>
 
-        {/* Tools drawer toggle — floating left, below search */}
-        <div className="absolute top-20 left-3 z-[500] flex flex-col gap-1.5">
+        {/* Tools drawer toggle — floating left, below search & quick filters */}
+        <div className="absolute top-28 left-3 z-[500] flex flex-col gap-1.5">
           {(['pins', 'matrix', 'geofence'] as const).map(d => (
             <button
               key={d}
