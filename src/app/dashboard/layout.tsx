@@ -225,6 +225,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span>{pageTitle.name}</span>
           </div>
 
+          {/* Persistent role indicator — a landlord who got mis-assigned as a
+              tenant (or vice versa) previously had no way to even notice
+              their current mode short of digging into Profile. Visible on
+              every dashboard page now, and doubles as a shortcut to the
+              role switcher there. */}
+          {!isGuestUser(currentUser) && (
+            <Link
+              href="/dashboard/profile"
+              className="dashboard-role-chip"
+              title={`Account mode: ${currentUser.role}. Tap to switch.`}
+            >
+              {currentUser.role === 'landlord' ? <Briefcase size={12} /> : <Home size={12} />}
+              <span>{currentUser.role}</span>
+            </Link>
+          )}
+
           {/* The "Map" shortcut used to live here on every single page — dead
               weight on the 5 of 6 tabs that have nothing to do with the map.
               VibeMap is one tap away from Community's own tab bar (and its
