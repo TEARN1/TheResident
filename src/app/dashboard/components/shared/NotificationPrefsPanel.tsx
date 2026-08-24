@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Bell, Moon, Save, Check } from 'lucide-react'
-import { RootState } from '../../../store'
-import { supabase } from '../../../utils/supabase'
-import { PANIC_TYPE } from '../../../utils/logic'
+import { RootState } from '../../../../store'
+import { supabase } from '../../../../utils/supabase'
+import { PANIC_TYPE } from '../../../../utils/logic'
 
 // Curated list of mutable notification types — pulled from the RPC/type
 // strings actually in use (CONTRACT.md §4 + res_alert_panic in logic.ts).

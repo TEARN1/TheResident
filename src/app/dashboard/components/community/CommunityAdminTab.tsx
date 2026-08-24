@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { ShieldCheck, KeyRound, Copy, Check, Users, ArrowUp, ArrowDown, UserMinus, ScrollText } from 'lucide-react'
-import { supabase } from '../../../utils/supabase'
-import { humanizeDbError } from '../../../store/actions'
+import { supabase } from '../../../../utils/supabase'
+import { humanizeDbError } from '../../../../store/actions'
 
 interface AdminCommunity {
   id: string

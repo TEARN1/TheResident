@@ -22,7 +22,7 @@ import { supabase } from '../../utils/supabase'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
-import AutomationControlPanel from './components/AutomationControlPanel'
+import AutomationControlPanel from './components/shared/AutomationControlPanel'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()

@@ -8,7 +8,7 @@
  */
 import React from 'react'
 import { Ruler, X } from 'lucide-react'
-import { distanceMetres, distanceBand } from '../../../utils/logic'
+import { distanceMetres, distanceBand } from '../../../../utils/logic'
 
 export interface MatrixPoint {
   id: string

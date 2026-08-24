@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Send, MessageCircle, ArrowLeft, Loader, Clock } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
-import EmptyState from '../components/EmptyState'
+import EmptyState from '../components/shared/EmptyState'
 
 // DMs route through Gruvs' EXISTING shared `messages` table (CONTRACT.md §4):
 // sender_id, recipient_id, body, message_type, is_request, created_at.

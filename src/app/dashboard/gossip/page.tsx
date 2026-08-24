@@ -6,8 +6,8 @@ import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as Im
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
-import BlockUserButton from '../components/BlockUserButton'
-import EmptyState from '../components/EmptyState'
+import BlockUserButton from '../components/trust-safety/BlockUserButton'
+import EmptyState from '../components/shared/EmptyState'
 
 interface GossipPost {
   id: string

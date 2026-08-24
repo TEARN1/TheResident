@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react'
 import { Bookmark, Trash2, Plus, X, Loader } from 'lucide-react'
-import { supabase } from '../../../utils/supabase'
-import type { SearchFilters } from '../../../utils/logic'
+import { supabase } from '../../../../utils/supabase'
+import type { SearchFilters } from '../../../../utils/logic'
 
 interface SavedSearchRow {
   id: string

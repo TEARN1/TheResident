@@ -3,8 +3,8 @@
 import React, { useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { Star, Send, Loader } from 'lucide-react'
-import { submitReview } from '../../../store/actions'
-import type { AppDispatch } from '../../../store'
+import { submitReview } from '../../../../store/actions'
+import type { AppDispatch } from '../../../../store'
 
 interface ReviewFormProps {
   /** The other party's user id — landlord reviewing tenant, or vice versa. */

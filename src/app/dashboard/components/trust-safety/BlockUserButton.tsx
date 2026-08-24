@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { ShieldOff, Check } from 'lucide-react'
-import { supabase } from '../../../utils/supabase'
+import { supabase } from '../../../../utils/supabase'
 
 interface BlockUserButtonProps {
   targetUserId: string

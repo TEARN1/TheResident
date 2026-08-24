@@ -3,8 +3,8 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin, EyeOff, Eye } from 'lucide-react'
-import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../store'
-import UpgradeButton from './UpgradeButton'
+import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../../store'
+import UpgradeButton from '../shared/UpgradeButton'
 
 interface MarketTabProps {
   marketItems: MarketItem[]

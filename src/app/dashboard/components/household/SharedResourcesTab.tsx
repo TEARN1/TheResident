@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { Droplets, Wifi, MapPin, Plus, X, Gift, Tag } from 'lucide-react'
-import { supabase } from '../../../utils/supabase'
+import { supabase } from '../../../../utils/supabase'
 
 interface SharedResourceRow {
   id: string

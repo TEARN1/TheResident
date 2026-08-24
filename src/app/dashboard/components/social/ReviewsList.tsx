@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Star } from 'lucide-react'
-import { supabase } from '../../../utils/supabase'
+import { supabase } from '../../../../utils/supabase'
 
 interface ReviewRow {
   id: string

@@ -20,7 +20,7 @@
  */
 import React, { useEffect, useRef } from 'react'
 import { Radio } from 'lucide-react'
-import { supabase } from '../../../utils/supabase'
+import { supabase } from '../../../../utils/supabase'
 
 interface Props {
   userId: string | null

@@ -7,7 +7,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react'
 import { Search, Loader2 } from 'lucide-react'
-import { searchPlaces, type GeocodeResult } from '../../../utils/geocode'
+import { searchPlaces, type GeocodeResult } from '../../../../utils/geocode'
 
 interface Props {
   onSelect: (result: GeocodeResult) => void

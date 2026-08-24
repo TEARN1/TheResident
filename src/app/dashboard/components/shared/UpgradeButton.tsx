@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react'
 import { Loader, Sparkles } from 'lucide-react'
-import { startCheckout } from '../../../utils/subscriptions'
-import { PRICING, formatPrice } from '../../../utils/pricing'
+import { startCheckout } from '../../../../utils/subscriptions'
+import { PRICING, formatPrice } from '../../../../utils/pricing'
 
 type SelfServeItem = 'priority' | 'premium' | 'plus' | 'verification_speedup' | 'market_boost' | 'room_boost' | 'notice_boost' | 'notice_extend_visibility'
 

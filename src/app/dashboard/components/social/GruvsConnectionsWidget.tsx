@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Users, ShieldCheck, ChevronRight, ChevronLeft } from 'lucide-react'
-import { getMutualConnections, type Connection } from '../../../utils/social'
+import { getMutualConnections, type Connection } from '../../../../utils/social'
 
 /**
  * Surfaces people the user already mutually follows on The Gruvs — not a

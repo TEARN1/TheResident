@@ -7,8 +7,8 @@ import Link from 'next/link'
 import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon } from 'lucide-react'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLanguage, logoutUser, isGuestUser } from '../../../store'
 import { supabase } from '../../../utils/supabase'
-import UpgradeButton from '../components/UpgradeButton'
-import TrustBadge from '../components/TrustBadge'
+import UpgradeButton from '../components/shared/UpgradeButton'
+import TrustBadge from '../components/trust-safety/TrustBadge'
 
 const LANGUAGES: { code: 'en' | 'zu' | 'xh' | 'af'; label: string }[] = [
   { code: 'en', label: 'English' },

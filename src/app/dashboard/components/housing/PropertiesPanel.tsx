@@ -9,10 +9,10 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X, MapPin, ShieldCheck, ShieldAlert, ShieldQuestion, Upload, AlertTriangle, Home } from 'lucide-react'
-import { supabase } from '../../../utils/supabase'
-import type { GeocodeResult } from '../../../utils/geocode'
-import MapSearchBox from './MapSearchBox'
-import type { Listing } from '../../../store'
+import { supabase } from '../../../../utils/supabase'
+import type { GeocodeResult } from '../../../../utils/geocode'
+import MapSearchBox from '../map/MapSearchBox'
+import type { Listing } from '../../../../store'
 
 export interface ResProperty {
   id: string

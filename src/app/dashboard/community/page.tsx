@@ -43,21 +43,21 @@ import {
 } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds } from '../../../utils/gruvsEvents'
-import NoticeBoardTab from '../components/NoticeBoardTab'
-import ToolLibraryTab from '../components/ToolLibraryTab'
-import ChoreSchedulerTab from '../components/ChoreSchedulerTab'
-import DisputesTab from '../components/DisputesTab'
-import SafetyTab from '../components/SafetyTab'
-import MarketTab from '../components/MarketTab'
-import HouseholdTab from '../components/HouseholdTab'
-import CommunitiesTab from '../components/CommunitiesTab'
-import SharedResourcesTab from '../components/SharedResourcesTab'
-import CommunityAdminTab from '../components/CommunityAdminTab'
-import GruvsConnectionsWidget from '../components/GruvsConnectionsWidget'
+import NoticeBoardTab from '../components/community/NoticeBoardTab'
+import ToolLibraryTab from '../components/household/ToolLibraryTab'
+import ChoreSchedulerTab from '../components/household/ChoreSchedulerTab'
+import DisputesTab from '../components/trust-safety/DisputesTab'
+import SafetyTab from '../components/trust-safety/SafetyTab'
+import MarketTab from '../components/community/MarketTab'
+import HouseholdTab from '../components/household/HouseholdTab'
+import CommunitiesTab from '../components/community/CommunitiesTab'
+import SharedResourcesTab from '../components/household/SharedResourcesTab'
+import CommunityAdminTab from '../components/community/CommunityAdminTab'
+import GruvsConnectionsWidget from '../components/social/GruvsConnectionsWidget'
 import dynamic from 'next/dynamic'
 import { formatCurrency, type StatusReport } from '../../../utils/logic'
 
-const VibeMap = dynamic(() => import('../components/VibeMap'), {
+const VibeMap = dynamic(() => import('../components/map/VibeMap'), {
   ssr: false,
   loading: () => <div className="p-12 text-slate-400 font-bold text-center">Loading VibeMap client engine...</div>
 })

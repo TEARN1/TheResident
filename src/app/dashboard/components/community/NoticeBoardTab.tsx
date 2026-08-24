@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react'
 import { Megaphone, Calendar, Info, Heart, Share2, Check, Plus, X, EyeOff, Eye, Users, Sparkles, MapPin, Clock, UserX } from 'lucide-react'
-import UpgradeButton from './UpgradeButton'
-import { formatGruvsEventWhen } from '../../../utils/gruvsEvents'
+import UpgradeButton from '../shared/UpgradeButton'
+import { formatGruvsEventWhen } from '../../../../utils/gruvsEvents'
 
 const NOTICE_FREE_WINDOW_MS = 8 * 60 * 60 * 1000
 

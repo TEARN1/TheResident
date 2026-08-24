@@ -8,7 +8,7 @@
  */
 import React, { useState } from 'react'
 import { Bookmark, MapPin, Trash2, Navigation2, Ruler } from 'lucide-react'
-import type { SavedPin } from '../../../utils/savedPins'
+import type { SavedPin } from '../../../../utils/savedPins'
 
 interface PendingPoint {
   label: string

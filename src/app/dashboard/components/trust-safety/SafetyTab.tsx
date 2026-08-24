@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction } from 'lucide-react'
-import { outageConsensus, type StatusReport } from '../../../utils/logic'
-import type { Alert, NeighbourhoodStatus } from '../../../store'
-import { supabase } from '../../../utils/supabase'
-import UpgradeButton from './UpgradeButton'
+import { outageConsensus, type StatusReport } from '../../../../utils/logic'
+import type { Alert, NeighbourhoodStatus } from '../../../../store'
+import { supabase } from '../../../../utils/supabase'
+import UpgradeButton from '../shared/UpgradeButton'
 
 interface CareProfile {
   id: string

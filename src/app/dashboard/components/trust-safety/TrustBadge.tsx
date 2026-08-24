@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { ShieldCheck, Star, Sparkles, Award } from 'lucide-react'
-import { getTrustInfo, type TrustInfo } from '../../../utils/trust'
+import { getTrustInfo, type TrustInfo } from '../../../../utils/trust'
 
 /**
  * Trust signal for stranger-facing surfaces (rent tool, apply to room, book

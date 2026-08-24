@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Cpu, ShieldCheck, Zap, Activity, CheckCircle2, AlertTriangle, MessageSquare, CreditCard, RefreshCw, X, Play
 } from 'lucide-react'
-import { RootState } from '../../../store'
-import { automationEngine, type AutomationLog } from '../../../utils/automationEngine'
+import { RootState } from '../../../../store'
+import { automationEngine, type AutomationLog } from '../../../../utils/automationEngine'
 
 export default function AutomationControlPanel() {
   const [open, setOpen] = useState(false)

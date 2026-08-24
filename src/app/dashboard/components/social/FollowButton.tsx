@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { UserPlus, UserCheck } from 'lucide-react'
-import { followUser, unfollowUser, isFollowing as checkIsFollowing } from '../../../utils/social'
+import { followUser, unfollowUser, isFollowing as checkIsFollowing } from '../../../../utils/social'
 
 interface FollowButtonProps {
   targetUserId: string

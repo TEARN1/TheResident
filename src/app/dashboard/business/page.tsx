@@ -11,8 +11,8 @@ import { RootState, isGuestUser } from '../../../store'
 import { getMyProviderTier, type ProviderTier } from '../../../utils/subscriptions'
 import { getTrustInfo, type TrustInfo } from '../../../utils/trust'
 import { PRICING, formatPrice } from '../../../utils/pricing'
-import UpgradeButton from '../components/UpgradeButton'
-import ReviewsList from '../components/ReviewsList'
+import UpgradeButton from '../components/shared/UpgradeButton'
+import ReviewsList from '../components/social/ReviewsList'
 
 /**
  * "My Business" — one screen for anyone earning through the app (a landlord
