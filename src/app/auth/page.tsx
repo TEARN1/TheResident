@@ -72,7 +72,15 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
-  const [role, setRole] = useState<'tenant' | 'landlord'>('tenant')
+  // '' (not a real role) is the deliberate default on the LOGIN form: this
+  // dropdown is only ever consulted as a fallback for a first-ever sign-in
+  // (e.g. via Gruvs SSO) when no res_profiles row exists yet — silently
+  // pre-selecting 'tenant' meant a landlord's very first login could create
+  // them as a tenant without them ever having made a choice. The signup form
+  // reuses the same state but always has the user actively pick one of the
+  // two real options before submitting, so defaulting it to '' there too is
+  // harmless.
+  const [role, setRole] = useState<'tenant' | 'landlord' | ''>('')
   
   // Tenant Profile Fields
   const [bio, setBio] = useState('')
@@ -126,7 +134,7 @@ export default function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) return
+    if (!email || !password || !role) return
 
     setErrorMessage(null)
     const result = await performLogin({ email, password, dispatch, failedAttempts, lockedUntil, fallbackRole: role })
@@ -139,7 +147,7 @@ export default function AuthPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password || !name) return
+    if (!email || !password || !name || !role) return
 
     setErrorMessage(null)
 
@@ -340,14 +348,20 @@ export default function AuthPage() {
           <form onSubmit={handleLogin} style={formStyle}>
             <div style={inputGroupStyle}>
               <label style={labelStyle}>Access Role</label>
-              <select 
-                value={role} 
+              <select
+                required
+                value={role}
                 onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
                 style={selectStyle}
               >
+                <option value="" disabled>Select your role…</option>
                 <option value="tenant">I am a Tenant looking for a Room</option>
                 <option value="landlord">I am a Landlord renting out Rooms</option>
               </select>
+              <p style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+                Only used to set up your account the very first time you sign in — ignored after that.
+                Got the wrong one? Fix it any time from Profile → Switch role.
+              </p>
             </div>
 
             <div style={inputGroupStyle}>
@@ -419,11 +433,13 @@ export default function AuthPage() {
               </div>
               <div style={inputGroupStyle}>
                 <label style={labelStyle}>Account Role</label>
-                <select 
-                  value={role} 
+                <select
+                  required
+                  value={role}
                   onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
                   style={selectStyle}
                 >
+                  <option value="" disabled>Select your role…</option>
                   <option value="tenant">Tenant</option>
                   <option value="landlord">Landlord</option>
                 </select>

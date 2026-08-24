@@ -682,6 +682,15 @@ const authSlice = createSlice({
       if (state.currentUser && state.currentUser.role === 'landlord') {
         state.currentUser.preferences = action.payload.preferences
       }
+    },
+    // Self-service fix for accounts that were silently defaulted to the
+    // wrong role (e.g. a landlord's first-ever login left them as 'tenant'
+    // because that's the login form's fallback option) — until this action
+    // existed there was no way for a user to correct their own role at all.
+    switchUserRole: (state, action: PayloadAction<{ role: 'tenant' | 'landlord' }>) => {
+      if (state.currentUser && state.currentUser.role !== 'visitor') {
+        state.currentUser.role = action.payload.role
+      }
     }
   }
 })
@@ -1599,7 +1608,8 @@ export const {
   registerFailedAttempt,
   resetFailedAttempts,
   updateProfile,
-  updatePreferences
+  updatePreferences,
+  switchUserRole
 } = authSlice.actions
 
 export const { setListings, addListing, deleteListing, updateListingVerification } = listingsSlice.actions
@@ -2387,6 +2397,11 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (updatePreferences.match(action) && currentUser) {
       syncLabel = 'your preferences'
       await dbUpdate('res_profiles', db.preferencesToRow(action.payload.preferences), 'id', toUUID(currentUser.id))
+    }
+
+    if (switchUserRole.match(action) && currentUser) {
+      syncLabel = 'your account role'
+      await dbUpdate('res_profiles', { role: action.payload.role }, 'id', toUUID(currentUser.id))
     }
 
     // 2. Sync Room Listings

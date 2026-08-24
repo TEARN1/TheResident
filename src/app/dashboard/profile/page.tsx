@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon } from 'lucide-react'
-import { RootState, AppDispatch, updateProfile, updatePreferences, setLanguage, logoutUser, isGuestUser } from '../../../store'
+import { RootState, AppDispatch, updateProfile, updatePreferences, switchUserRole, setLanguage, logoutUser, isGuestUser } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/UpgradeButton'
 import TrustBadge from '../components/TrustBadge'
@@ -234,6 +234,17 @@ export default function ProfilePage() {
     setTimeout(() => setSaved(false), 2500)
   }
 
+  // No-cost, self-service fix for accounts that got the wrong role on their
+  // first sign-in (e.g. a landlord left as 'tenant' because that was the
+  // login form's default) — until switchUserRole existed there was no way
+  // for a user to correct this themselves at all.
+  const [switchingRole, setSwitchingRole] = useState(false)
+  const handleSwitchRole = (role: 'tenant' | 'landlord') => {
+    if (role === currentUser?.role) { setSwitchingRole(false); return }
+    dispatch(switchUserRole({ role }))
+    setSwitchingRole(false)
+  }
+
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6 pb-24">
       <div className="glass-panel p-6 flex items-center gap-4">
@@ -242,7 +253,32 @@ export default function ProfilePage() {
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-black text-white truncate">{currentUser.name}</h1>
-          <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">{currentUser.role}</p>
+          {!guest && switchingRole ? (
+            <div className="flex items-center gap-2 mt-1">
+              <select
+                defaultValue={currentUser.role}
+                onChange={e => handleSwitchRole(e.target.value as 'tenant' | 'landlord')}
+                className="bg-black border border-gold-primary/40 rounded-lg px-2 py-1 text-xs text-white outline-none"
+                autoFocus
+              >
+                <option value="tenant">Tenant</option>
+                <option value="landlord">Landlord</option>
+              </select>
+              <button onClick={() => setSwitchingRole(false)} className="text-[10px] text-gray-500 hover:text-white font-bold uppercase">Cancel</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">{currentUser.role}</p>
+              {!guest && (
+                <button
+                  onClick={() => setSwitchingRole(true)}
+                  className="text-[10px] text-gold-primary hover:underline font-bold uppercase tracking-widest"
+                >
+                  Switch role
+                </button>
+              )}
+            </div>
+          )}
           <div className="mt-1"><TrustBadge userId={currentUser.id} /></div>
         </div>
       </div>
