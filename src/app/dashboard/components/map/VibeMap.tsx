@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import { Navigation, LocateFixed, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon, Wrench } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState, isGuestUser } from '../../../../store'
@@ -73,12 +75,20 @@ type Drawer = 'none' | 'pins' | 'matrix' | 'geofence'
 export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }) {
   const searchParams = useSearchParams()
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
+  const listings = useSelector((state: RootState) => state.listings.items)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<import('leaflet').Map | null>(null)
   const markersRef = useRef<import('leaflet').LayerGroup | null>(null)
   const searchMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const pinsLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const liveMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  // Separate from `markersRef` (shared-zone reports) on purpose: each zone
+  // there is 2-3 stacked circleMarkers (a halo + an optional contested/
+  // geofence ring + the real marker), so clustering that group would badly
+  // miscount — a "12" badge could mean 4 zones × 3 circles. Listing pins are
+  // one simple marker each, so they're the layer that's actually safe to
+  // cluster.
+  const listingsClusterRef = useRef<import('leaflet').MarkerClusterGroup | null>(null)
   const leafletRef = useRef<typeof import('leaflet') | null>(null)
   const tileLayerRef = useRef<import('leaflet').TileLayer | null>(null)
 
@@ -249,7 +259,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     const startZoom = center ? 14 : 2
 
     let cancelled = false
-    import('leaflet').then(L => {
+    Promise.all([import('leaflet'), import('leaflet.markercluster')]).then(([L]) => {
       if (cancelled || !mapContainerRef.current || mapRef.current) return
       leafletRef.current = L
 
@@ -279,6 +289,15 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       }).addTo(map)
 
       markersRef.current = L.layerGroup().addTo(map)
+      // disableClusteringAtZoom: once you're zoomed in enough to tell streets
+      // apart (16 ≈ block-level), individual pins are more useful than a
+      // cluster badge — matches the same "which street" threshold used
+      // elsewhere on this map (MIN_REPORT_ZOOM).
+      listingsClusterRef.current = L.markerClusterGroup({
+        disableClusteringAtZoom: 16,
+        maxClusterRadius: 60,
+        spiderfyOnMaxZoom: true
+      }).addTo(map)
       searchMarkerRef.current = L.layerGroup().addTo(map)
       pinsLayerRef.current = L.layerGroup().addTo(map)
       liveMarkerRef.current = L.layerGroup().addTo(map)
@@ -546,6 +565,38 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       }).bindPopup(`<strong>${pin.label}</strong>`).addTo(layer)
     })
   }, [savedPins])
+
+  // Room/property listings as a clustered pin layer — the map previously had
+  // zero awareness of listings at all, even though "Shared Living Map" is
+  // the header text right above it. Only listings with coordinates render;
+  // most existing listings predate lat/lon capture, so this fills in as
+  // landlords verify addresses rather than needing a backfill migration.
+  useEffect(() => {
+    const L = leafletRef.current
+    const cluster = listingsClusterRef.current
+    if (!L || !cluster) return
+    cluster.clearLayers()
+
+    listings.forEach(listing => {
+      if (typeof listing.lat !== 'number' || typeof listing.lon !== 'number') return
+      const marker = L.marker([listing.lat, listing.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#D4AF37;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);color:#000;font-size:11px;font-weight:900">R</div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        })
+      })
+      marker.bindPopup(`
+        <div style="font-family:inherit;min-width:170px">
+          <strong>${listing.title}</strong>
+          <div style="opacity:0.7;font-size:0.85em;margin-top:2px">${listing.suburb || listing.location}</div>
+          <div style="font-size:0.9em;margin-top:4px;color:#D4AF37;font-weight:700">${listing.currency} ${listing.price}</div>
+        </div>
+      `)
+      marker.addTo(cluster)
+    })
+  }, [listings])
 
   useEffect(() => {
     const L = leafletRef.current
