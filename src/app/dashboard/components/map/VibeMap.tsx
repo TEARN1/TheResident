@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import 'leaflet/dist/leaflet.css'
-import { Navigation, LocateFixed, Maximize, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon } from 'lucide-react'
+import { Navigation, LocateFixed, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon, Wrench } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState, isGuestUser } from '../../../../store'
 import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../../utils/mapZones'
@@ -104,6 +104,11 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   // what actually makes the color-by-kind strategy legible.
   const [showLegend, setShowLegend] = useState(true)
   const [drawer, setDrawer] = useState<Drawer>('none')
+  // The three drawer-toggle pills (Saved places / Distances / Alerts) used
+  // to be their own floating stack on the left, competing with search for
+  // the same corner. One "Tools" button + a small popover here consolidates
+  // them onto the right side alongside Layers instead.
+  const [showToolsMenu, setShowToolsMenu] = useState(false)
 
   // The legend used to be pure decoration — a static color key with no way
   // to act on it. Now each row is a real filter: unchecking "Heavy traffic"
@@ -309,6 +314,20 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
     return () => { cancelled = true }
   }, [center])
+
+  // Replaces the old manual "Fix map size" button — Leaflet only recomputes
+  // its internal tile grid on window resize, so any layout change that
+  // resizes THIS container (a drawer opening, a parent flex reflow, rotating
+  // the device) used to leave the map visibly cut off until someone found
+  // and tapped that button. ResizeObserver catches all of those automatically.
+  useEffect(() => {
+    if (!mapContainerRef.current) return
+    const observer = new ResizeObserver(() => {
+      mapRef.current?.invalidateSize()
+    })
+    observer.observe(mapContainerRef.current)
+    return () => observer.disconnect()
+  }, [])
 
   // Live Supabase Realtime updates on map_zones table
   useEffect(() => {
@@ -794,67 +813,76 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
               </div>
             </div>
           )}
+
+          <button
+            onClick={() => setShowToolsMenu(v => !v)}
+            className={`bg-black/80 backdrop-blur-xl border rounded-xl p-2.5 shadow-2xl ${drawer !== 'none' ? 'text-gold-primary border-gold-primary/40' : 'text-gray-300 border-white/10 hover:text-white'}`}
+            title="Tools: saved places, distances, alerts"
+            aria-label={showToolsMenu ? 'Hide map tools menu' : 'Show map tools menu'}
+            aria-pressed={showToolsMenu}
+          >
+            <Wrench size={18} />
+          </button>
+          {showToolsMenu && (
+            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-2 shadow-2xl w-[160px] flex flex-col gap-1">
+              {(['pins', 'matrix', 'geofence'] as const).map(d => (
+                <button
+                  key={d}
+                  onClick={() => { setDrawer(v => v === d ? 'none' : d); setShowToolsMenu(false) }}
+                  className={`text-left px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${drawer === d ? 'bg-gold-primary text-black' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
+                >
+                  {d === 'pins' ? 'Saved places' : d === 'matrix' ? 'Distances' : 'Alerts'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Zoom + refresh — floating bottom-right, Google-Maps-style stacked
-            controls. p-2.5 rather than p-2: Leaflet's own zoom buttons are
-            sized for a mouse, these are meant for a thumb. */}
-        <div className="absolute bottom-3 right-3 z-[500] flex flex-col gap-1.5">
-          <button onClick={() => zoom(1)} aria-label="Zoom in" className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl" title="Zoom in"><Plus size={16} /></button>
-          <button onClick={() => zoom(-1)} aria-label="Zoom out" className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl" title="Zoom out"><Minus size={16} /></button>
-          <button
-            onClick={() => center && loadZones(center.lat, center.lon)}
-            disabled={!center || loading}
-            aria-label={loading ? 'Refreshing reports' : 'Refresh reports'}
-            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl disabled:opacity-40"
-            title="Refresh reports"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          </button>
-          <button
-            onClick={() => mapRef.current?.invalidateSize()}
-            aria-label="Fix map size"
-            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl"
-            title="Fix map size"
-          >
-            <Maximize size={16} />
-          </button>
-          {/* Live location was previously reachable only by opening the
-              Alerts drawer — a setting almost nobody would stumble into —
-              and even found, it just flipped a switch with no visible
-              result. One tap now: turn on AND jump to street level, the way
-              every map app's locate-me button actually behaves. */}
-          <button
-            onClick={handleLocateMe}
-            disabled={locating}
-            aria-label={locationSharing ? 'Recenter on my location' : 'Show my live location'}
-            aria-pressed={locationSharing}
-            title={locationSharing ? 'Back to my location' : 'Show my live location'}
-            className={`bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 shadow-2xl transition-all disabled:opacity-60 ${locationSharing ? 'text-gold-primary' : 'text-gray-300 hover:text-white'}`}
-          >
-            {locating ? <Loader size={16} className="animate-spin" /> : <LocateFixed size={16} className={locationSharing ? 'animate-pulse' : ''} />}
-          </button>
-          <button
-            onClick={() => setMapTheme(t => t === 'dark' ? 'light' : 'dark')}
-            aria-label={mapTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
-            title={mapTheme === 'dark' ? 'Light map' : 'Dark map'}
-            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 text-gray-300 hover:text-white shadow-2xl"
-          >
-            {mapTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-        </div>
-
-        {/* Tools drawer toggle — floating left, below search & quick filters */}
-        <div className="absolute top-28 left-3 z-[500] flex flex-col gap-1.5">
-          {(['pins', 'matrix', 'geofence'] as const).map(d => (
+        {/* Bottom-right controls — grouped into two clusters rather than one
+            continuous stack of loose buttons: "map controls" (zoom/refresh)
+            and "location controls" (locate-me/theme) each get their own
+            rounded container, Google-Maps-style, so it's clear at a glance
+            which buttons act on the view vs. on you. */}
+        <div className="absolute bottom-3 right-3 z-[500] flex flex-col gap-2.5">
+          <div className="bg-black/85 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl overflow-hidden flex flex-col divide-y divide-white/10">
+            <button onClick={() => zoom(1)} aria-label="Zoom in" className="p-2.5 text-gray-300 hover:text-white" title="Zoom in"><Plus size={16} /></button>
+            <button onClick={() => zoom(-1)} aria-label="Zoom out" className="p-2.5 text-gray-300 hover:text-white" title="Zoom out"><Minus size={16} /></button>
             <button
-              key={d}
-              onClick={() => setDrawer(v => v === d ? 'none' : d)}
-              className={`px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-2xl border backdrop-blur-xl transition-all ${drawer === d ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black/80 text-gray-300 border-white/10 hover:text-white'}`}
+              onClick={() => center && loadZones(center.lat, center.lon)}
+              disabled={!center || loading}
+              aria-label={loading ? 'Refreshing reports' : 'Refresh reports'}
+              className="p-2.5 text-gray-300 hover:text-white disabled:opacity-40"
+              title="Refresh reports"
             >
-              {d === 'pins' ? 'Saved places' : d === 'matrix' ? 'Distances' : 'Alerts'}
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             </button>
-          ))}
+          </div>
+
+          <div className="bg-black/85 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl overflow-hidden flex flex-col divide-y divide-white/10">
+            {/* Live location was previously reachable only by opening the
+                Alerts drawer — a setting almost nobody would stumble into —
+                and even found, it just flipped a switch with no visible
+                result. One tap now: turn on AND jump to street level, the way
+                every map app's locate-me button actually behaves. */}
+            <button
+              onClick={handleLocateMe}
+              disabled={locating}
+              aria-label={locationSharing ? 'Recenter on my location' : 'Show my live location'}
+              aria-pressed={locationSharing}
+              title={locationSharing ? 'Back to my location' : 'Show my live location'}
+              className={`p-2.5 transition-all disabled:opacity-60 ${locationSharing ? 'text-gold-primary' : 'text-gray-300 hover:text-white'}`}
+            >
+              {locating ? <Loader size={16} className="animate-spin" /> : <LocateFixed size={16} className={locationSharing ? 'animate-pulse' : ''} />}
+            </button>
+            <button
+              onClick={() => setMapTheme(t => t === 'dark' ? 'light' : 'dark')}
+              aria-label={mapTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
+              title={mapTheme === 'dark' ? 'Light map' : 'Dark map'}
+              className="p-2.5 text-gray-300 hover:text-white"
+            >
+              {mapTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
         </div>
 
         {/* Stats chip — floating bottom-left. Counts the FILTERED set, not
@@ -882,7 +910,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         {/* Pending-point action card — floating bottom-center, appears after a click or search */}
         {pendingPoint && (
           <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[500] w-[92%] max-w-sm">
-            <div className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-3.5 shadow-2xl space-y-2.5">
+            <div className="bg-black/85 backdrop-blur-xl border border-white/10 rounded-2xl p-3.5 shadow-2xl space-y-2.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-gray-300 truncate flex items-center gap-1.5"><MapPin size={13} className="text-green-500 shrink-0" /> {pendingPoint.label}</span>
                 <button onClick={() => { setPendingPoint(null); setShowReportForm(false) }} className="text-gray-500 hover:text-white shrink-0"><X size={14} /></button>
