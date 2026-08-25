@@ -88,7 +88,7 @@ export default function MessagesPage() {
   }, [myId])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadThreads()
   }, [loadThreads])
 
@@ -124,7 +124,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (!activeThread) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadThread(activeThread)
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }, [activeThread, loadThread])

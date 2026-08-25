@@ -10,7 +10,6 @@
  * 6. Realtime Geofence Safety Sync (monitoring proximity hazard thresholds)
  */
 
-import { supabase } from './supabase'
 import { isSuspiciousPrice, suburbPriceStats } from './logic'
 import type { Listing, Alert, CommunityDispute } from '../store'
 

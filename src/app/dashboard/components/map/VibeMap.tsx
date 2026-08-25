@@ -42,16 +42,6 @@ const KIND_LABEL: Record<string, string> = {
   zone: 'Zone'
 }
 
-const KIND_ICON_SYMBOL: Record<string, string> = {
-  road_closed: '⛔',
-  heavy_traffic: '🚦',
-  detour: '↪️',
-  no_parking: '🅿️',
-  alert: '🚨',
-  route: '🛣️',
-  zone: '📍'
-}
-
 // What a resident is allowed to report directly, and how long each option's
 // window lasts. Kept small and predictable rather than a free-text duration
 // field — "8 hours" and "3 days" cover almost every real closure; a rare
@@ -73,6 +63,14 @@ const DURATION_OPTIONS: Array<{ hours: number; label: string }> = [
 ]
 
 type Drawer = 'none' | 'pins' | 'matrix' | 'geofence'
+
+// Module-level so the reference is stable across renders. Declared inside the
+// component it was a fresh object every render, which made it a churning
+// dependency of the map-init effect below.
+const TILE_SOURCES: Record<'dark' | 'light', string> = {
+  dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
+  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+}
 
 export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }) {
   const searchParams = useSearchParams()
@@ -101,10 +99,6 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   // of the UI; Voyager stays available for anyone who finds streets/labels
   // easier to read on light.
   const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark')
-  const TILE_SOURCES: Record<'dark' | 'light', string> = {
-    dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
-    light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-  }
 
   const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null)
   const [locationDenied, setLocationDenied] = useState(false)
@@ -334,6 +328,12 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     })
 
     return () => { cancelled = true }
+    // `mapTheme` is read here only to pick the INITIAL tile URL. It is
+    // deliberately not a dependency: including it would tear down and rebuild
+    // the entire map on every theme toggle, throwing away the user's pan,
+    // zoom, pins and open popups. The dedicated [mapTheme] effect below swaps
+    // the tile layer's URL in place instead, which is the whole point of
+    // holding tileLayerRef.
   }, [center])
 
   // Replaces the old manual "Fix map size" button — Leaflet only recomputes

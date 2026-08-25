@@ -2,35 +2,51 @@ import { NextResponse, NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { scanInput } from './utils/security'
 
-// In-memory rate limiting simulator (for edge runtime)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
-const RATE_LIMIT_MAX = 60 // max requests per minute
-const WINDOW_MS = 60 * 1000 // 1 minute
+// Opportunistic per-instance throttle — NOT a rate limit you can rely on.
+//
+// This Map lives in one serverless instance's memory. Requests are spread
+// across instances that are created and discarded at the platform's
+// discretion, so an attacker distributing requests (or simply arriving on a
+// cold start) is not counted against any shared total. It blunts a naive
+// single-connection flood on a warm instance and nothing more.
+//
+// The controls that actually hold are server-side and stateful: the
+// DB-backed login brute-force lockout (registerFailedAttempt/lockedUntil),
+// the per-table Postgres triggers (res_check_broadcast_rate_limit,
+// res_check_security_log_rate_limit), and Supabase's own platform limits.
+// Named and commented this way deliberately — the previous "rate limiting
+// simulator" wording read as a real control in SECURITY.md.
+const instanceThrottleMap = new Map<string, { count: number; resetTime: number }>()
+const INSTANCE_THROTTLE_MAX = 60 // per instance, per minute — best effort only
+const WINDOW_MS = 60 * 1000
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const ip = (request as NextRequest & { ip?: string }).ip || request.headers.get('x-forwarded-for') || 'local-ip'
   const url = request.nextUrl.clone()
 
-  // 1. Rate Limiting Check
+  // 1. Best-effort per-instance throttle (see the note on the Map above —
+  //    this is not a control to depend on)
   const now = Date.now()
-  const limitInfo = rateLimitMap.get(ip)
+  const limitInfo = instanceThrottleMap.get(ip)
 
   if (!limitInfo) {
-    rateLimitMap.set(ip, { count: 1, resetTime: now + WINDOW_MS })
+    instanceThrottleMap.set(ip, { count: 1, resetTime: now + WINDOW_MS })
   } else {
     if (now > limitInfo.resetTime) {
-      rateLimitMap.set(ip, { count: 1, resetTime: now + WINDOW_MS })
+      instanceThrottleMap.set(ip, { count: 1, resetTime: now + WINDOW_MS })
     } else {
       limitInfo.count += 1
-      if (limitInfo.count > RATE_LIMIT_MAX) {
+      if (limitInfo.count > INSTANCE_THROTTLE_MAX) {
+        // Deliberately does not echo `ip` back: it is derived from the
+        // client-supplied x-forwarded-for header, so reflecting it turns
+        // this response into a small reflection primitive for no benefit.
         return new NextResponse(
           JSON.stringify({
             error: 'Too Many Requests',
-            message: 'Rate limit exceeded. Security warning triggered.',
-            ip
+            message: 'Too many requests. Please slow down and try again shortly.'
           }),
           {
             status: 429,
@@ -103,8 +119,10 @@ export async function middleware(request: NextRequest) {
   // Prevent mime-sniffing
   response.headers.set('X-Content-Type-Options', 'nosniff')
 
-  // Force XSS protection in legacy browsers
-  response.headers.set('X-XSS-Protection', '1; mode=block')
+  // X-XSS-Protection is deliberately NOT set. The header is deprecated and
+  // removed from modern browsers, and its legacy auditor could itself be
+  // abused to introduce vulnerabilities in pages that were otherwise safe.
+  // The Content-Security-Policy below is the real control.
 
   // Prevent referrer leakage
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')

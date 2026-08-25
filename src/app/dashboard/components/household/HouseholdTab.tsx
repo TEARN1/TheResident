@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import {
   Home, Users, Award, RotateCcw, CheckCircle2, Star, Shield, Info, DoorOpen,
-  ShoppingCart, Calendar, Moon, Scale, Package, Plus, Trash2, Camera, Check
+  ShoppingCart, Calendar, Moon, Package, Plus, Trash2
 } from 'lucide-react'
 import { supabase } from '../../../../utils/supabase'
 

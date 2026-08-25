@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Cpu, ShieldCheck, Zap, Activity, CheckCircle2, AlertTriangle, MessageSquare, CreditCard, RefreshCw, X, Play
+  Cpu, ShieldCheck, Zap, Activity, CheckCircle2, AlertTriangle, MessageSquare, CreditCard, X
 } from 'lucide-react'
 import { RootState } from '../../../../store'
 import { automationEngine, type AutomationLog } from '../../../../utils/automationEngine'
