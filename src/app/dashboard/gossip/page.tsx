@@ -72,6 +72,13 @@ export default function GossipPage() {
 
   const [composerBody, setComposerBody] = useState('')
   const [posting, setPosting] = useState(false)
+  // Collapsed by default — the composer used to always show the full
+  // textarea, media picker, and all 6 background swatches before you'd
+  // typed anything, which is a lot of visual commitment for what should be
+  // the lowest-friction post type in the app. Expands on focus/tap, same
+  // idea as X/Twitter's collapsed-then-expanding composer.
+  const [composerExpanded, setComposerExpanded] = useState(false)
+  const composerTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [mediaPreview, setMediaPreview] = useState<string | null>(null)
@@ -83,6 +90,11 @@ export default function GossipPage() {
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [comments, setComments] = useState<Record<string, GossipComment[]>>({})
+  // Up to the 2 most recent comments per post, shown inline on the collapsed
+  // card so social proof is visible without a tap — comments used to require
+  // an explicit "expand" before you could even see whether any existed,
+  // which raises the bar to engage on a feed that already has no reactions.
+  const [commentPreviews, setCommentPreviews] = useState<Record<string, GossipComment[]>>({})
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({})
   const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({})
 
@@ -100,6 +112,33 @@ export default function GossipPage() {
     for (const p of people || []) map[String(p.id)] = p as ProfileHit
     setProfileMap(prev => ({ ...prev, ...map }))
   }, [])
+
+  // One batched query per page of posts rather than one query per post
+  // (which N+1s at 18 posts/page) — fetches recent comments across every
+  // post in the batch in a single request, then groups client-side into the
+  // 2 most recent per post. The 400-row cap is a safety bound, not a
+  // per-post guarantee; on a batch where a couple of posts are unusually
+  // chatty this can under-count for the rest, which is an acceptable
+  // trade-off for staying at one request instead of eighteen.
+  const fetchCommentPreviewsFor = useCallback(async (postIds: string[]) => {
+    if (!supabase || postIds.length === 0) return
+    const { data } = await supabase
+      .from('res_gossip_comments')
+      .select('id, post_id, author_id, body, created_at')
+      .in('post_id', postIds)
+      .order('created_at', { ascending: false })
+      .limit(400)
+    const rows = (data || []) as GossipComment[]
+    const grouped: Record<string, GossipComment[]> = {}
+    for (const c of rows) {
+      const bucket = grouped[c.post_id] ?? (grouped[c.post_id] = [])
+      if (bucket.length < 2) bucket.push(c)
+    }
+    // Oldest-first within each post's preview, matching how the full expanded view orders comments.
+    for (const id of Object.keys(grouped)) grouped[id].reverse()
+    setCommentPreviews(prev => ({ ...prev, ...grouped }))
+    await fetchProfilesFor([...new Set(rows.map(c => c.author_id))].filter(id => !profileMap[id]))
+  }, [fetchProfilesFor, profileMap])
 
   const loadPosts = useCallback(async () => {
     if (!supabase) { setLoading(false); return }
@@ -121,8 +160,9 @@ export default function GossipPage() {
     setHasMore(rows.length === PAGE_SIZE)
     hasMoreRef.current = rows.length === PAGE_SIZE
     await fetchProfilesFor([...new Set(rows.map(p => p.author_id))])
+    await fetchCommentPreviewsFor(rows.map(p => p.id))
     setLoading(false)
-  }, [fetchProfilesFor])
+  }, [fetchProfilesFor, fetchCommentPreviewsFor])
 
   const loadMore = useCallback(async () => {
     if (!supabase || loadingMoreRef.current || !hasMoreRef.current || posts.length === 0) return
@@ -148,9 +188,10 @@ export default function GossipPage() {
     setHasMore(more)
     hasMoreRef.current = more
     await fetchProfilesFor([...new Set(rows.map(p => p.author_id))])
+    await fetchCommentPreviewsFor(rows.map(p => p.id))
     loadingMoreRef.current = false
     setLoadingMore(false)
-  }, [posts, fetchProfilesFor])
+  }, [posts, fetchProfilesFor, fetchCommentPreviewsFor])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -281,6 +322,7 @@ export default function GossipPage() {
     setComposerBody('')
     clearMedia()
     setSelectedBackground(null)
+    setComposerExpanded(false)
     loadPosts()
   }
 
@@ -327,7 +369,11 @@ export default function GossipPage() {
       .select('id, post_id, author_id, body, created_at')
       .eq('post_id', postId)
       .order('created_at', { ascending: true })
-    setComments(prev => ({ ...prev, [postId]: (data || []) as GossipComment[] }))
+    const rows = (data || []) as GossipComment[]
+    setComments(prev => ({ ...prev, [postId]: rows }))
+    // Keeps the collapsed-card preview in sync for if/when this post is
+    // collapsed again — otherwise it'd still show the stale pre-comment state.
+    setCommentPreviews(prev => ({ ...prev, [postId]: rows.slice(-2) }))
     setCommentLoading(prev => ({ ...prev, [postId]: false }))
   }
 
@@ -348,18 +394,30 @@ export default function GossipPage() {
           <h2 className="text-xl font-bold text-white">Gossip Feed</h2>
           <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-auto hidden sm:inline">What&apos;s the word, neighbour?</span>
         </div>
-        <textarea
-          value={composerBody}
-          onChange={e => setComposerBody(e.target.value)}
-          maxLength={2000}
-          placeholder="Spotted something? Heard something? Say it here…"
-          className="w-full bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all relative"
-        />
-        {composerBody.length > 0 && (
+        {!composerExpanded ? (
+          <button
+            type="button"
+            onClick={() => { setComposerExpanded(true); setTimeout(() => composerTextareaRef.current?.focus(), 0) }}
+            className="w-full text-left bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-gray-500 hover:border-white/20 hover:text-gray-400 transition-all relative"
+          >
+            Spotted something? Heard something? Say it here…
+          </button>
+        ) : (
+          <textarea
+            ref={composerTextareaRef}
+            value={composerBody}
+            onChange={e => setComposerBody(e.target.value)}
+            onFocus={() => setComposerExpanded(true)}
+            maxLength={2000}
+            placeholder="Spotted something? Heard something? Say it here…"
+            className="w-full bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all relative"
+          />
+        )}
+        {composerExpanded && composerBody.length > 0 && (
           <p className="text-[10px] text-gray-600 text-right mt-1">{composerBody.length}/2000</p>
         )}
 
-        {mediaPreview && (
+        {composerExpanded && mediaPreview && (
           <div className="relative mt-3 rounded-lg overflow-hidden border border-white/10 bg-black">
             <button
               onClick={clearMedia}
@@ -377,7 +435,7 @@ export default function GossipPage() {
           </div>
         )}
 
-        {!mediaFile && (
+        {composerExpanded && !mediaFile && (
           <div className="mt-3">
             <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">
               <Palette size={12} /> Or style your text post
@@ -410,8 +468,9 @@ export default function GossipPage() {
           </div>
         )}
 
-        {mediaError && <p className="text-[11px] text-red-400 mt-2">{mediaError}</p>}
+        {composerExpanded && mediaError && <p className="text-[11px] text-red-400 mt-2">{mediaError}</p>}
 
+        {composerExpanded && (
         <div className="flex items-center justify-between mt-3">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
@@ -443,6 +502,7 @@ export default function GossipPage() {
             {uploading ? 'Uploading…' : posting ? 'Posting…' : 'Post'}
           </button>
         </div>
+        )}
         {error && <p className="text-[11px] text-red-400 mt-2">{error}</p>}
       </div>
 
@@ -485,6 +545,22 @@ export default function GossipPage() {
                       {expanded[post.id] ? 'Hide' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
                     </button>
                   </div>
+
+                  {!expanded[post.id] && (commentPreviews[post.id]?.length ?? 0) > 0 && (
+                    <div className="px-5 pb-4 pt-1 space-y-1.5 border-t border-white/5">
+                      {commentPreviews[post.id].map(c => (
+                        <div key={c.id} className="flex gap-2 text-xs">
+                          <span className="font-bold text-white">{nameOf(c.author_id)}</span>
+                          <span className="text-gray-400">{c.body}</span>
+                        </div>
+                      ))}
+                      {commentPreviews[post.id].length >= 2 && (
+                        <button onClick={() => toggleExpand(post.id)} className="text-[11px] text-gold-primary font-bold hover:underline">
+                          View all comments
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {expanded[post.id] && (
                     <div className="p-5 space-y-3 border-t border-white/5">
@@ -558,6 +634,22 @@ export default function GossipPage() {
                   {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                   {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
                 </button>
+
+                {!expanded[post.id] && (commentPreviews[post.id]?.length ?? 0) > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    {commentPreviews[post.id].map(c => (
+                      <div key={c.id} className="flex gap-2 text-xs">
+                        <span className="font-bold text-white">{nameOf(c.author_id)}</span>
+                        <span className="text-gray-400">{c.body}</span>
+                      </div>
+                    ))}
+                    {commentPreviews[post.id].length >= 2 && (
+                      <button onClick={() => toggleExpand(post.id)} className="text-[11px] text-gold-primary font-bold hover:underline">
+                        View all comments
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {expanded[post.id] && (
                   <div className="mt-3 space-y-3 border-t border-white/5 pt-3">
