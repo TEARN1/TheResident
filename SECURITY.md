@@ -26,7 +26,12 @@ reasonable window to fix it first.
   60 seconds (`registerFailedAttempt`/`lockedUntil` in `store/index.ts`),
   logged as `auth_failed` / `brute_force_blocked`.
 - **RLS coverage**: `resident_schema.sql` (26 tables) — every table has
-  `ENABLE ROW LEVEL SECURITY` and at least one `CREATE POLICY`. The one
+  `ENABLE ROW LEVEL SECURITY` and at least one `CREATE POLICY`. A further 12
+  Resident-owned tables existed only in the live project with no schema in
+  this repo at all (see Known gaps); they are now documented in
+  `theresident_undocumented_tables_schema.sql`, and
+  `src/store/schemaCoverage.test.ts` fails the build if any future table is
+  queried by the client without a versioned `create table`. The one
   known gap is `public.spatial_ref_sys` (a PostGIS system table owned by
   `supabase_admin`, not this project's role — `ALTER TABLE` silently
   no-ops on it from the SQL Editor); it holds only public EPSG coordinate
@@ -85,6 +90,20 @@ reasonable window to fix it first.
   closure-report pattern. See `theresident_org_broadcast_schema.sql`.
 
 ## Known gaps
+- **12 tables' live RLS is still unverified.** `res_gossip_posts`,
+  `res_gossip_comments`, `res_trust_connections`, `res_saved_pins`,
+  `res_saved_searches`, `res_reviews`, `res_reputation`,
+  `res_subscriptions`, `res_notification_prefs`, `res_properties`,
+  `res_moderation_actions`, `res_infra_providers` were created ad-hoc in the
+  Supabase dashboard and never versioned. Their table definitions are now
+  reconstructed in `theresident_undocumented_tables_schema.sql`, but that
+  file's RLS section is **commented out on purpose**: it was inferred from
+  what client code assumes, and `drop policy`/`create policy` is the only
+  idempotent idiom Postgres offers, so running it blind would replace
+  working policies on tables already serving traffic. Run that file's STEP 1
+  (read-only), compare, then enable what you've confirmed. Until then,
+  treat these 12 as unaudited — in particular check whether any has RLS
+  **disabled**, which would make it readable by any authenticated user.
 - **RPC privilege review**: whether Supabase RPCs called from the client
   (`ensure_res_profile`, `res_trust_gate`, `res_broadcast_alert`, etc.) run
   as `SECURITY DEFINER` or `SECURITY INVOKER` isn't versioned in this repo
