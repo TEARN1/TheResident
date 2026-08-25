@@ -24,7 +24,7 @@ export interface LoginArgs {
 }
 
 export type LoginResult =
-  | { ok: true }
+  | { ok: true; needsOnboarding: boolean }
   | { ok: false; error: string }
 
 /** Performs the real Supabase login, brute-force bookkeeping, and Redux session setup. */
@@ -75,7 +75,7 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
 
   const { data: dbProfile } = await supabase
     .from('res_profiles')
-    .select('role, created_at')
+    .select('role, bio, created_at')
     .eq('id', user.id)
     .single()
 
@@ -97,5 +97,11 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
     details: `Email: ${email}`
   }))
 
-  return { ok: true }
+  // A bare ensure_res_profile() default (role never chosen, bio never set)
+  // means this is a Gruvs cross-signup user's first-ever Resident login — a
+  // direct signup always sets both. Let the caller route them to the
+  // one-time completion form instead of the dashboard.
+  const needsOnboarding = (dbProfile?.role || 'visitor') === 'visitor' && !dbProfile?.bio
+
+  return { ok: true, needsOnboarding }
 }

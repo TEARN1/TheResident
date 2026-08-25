@@ -142,7 +142,7 @@ export default function AuthPage() {
       setErrorMessage(result.error)
       return
     }
-    router.push('/dashboard')
+    router.push(result.needsOnboarding ? '/auth/onboarding' : '/dashboard')
   }
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -704,7 +704,7 @@ export default function AuthPage() {
 }
 
 // Styles
-const containerStyle: React.CSSProperties = {
+export const containerStyle: React.CSSProperties = {
   position: 'relative',
   width: '100vw',
   minHeight: '100vh',
@@ -717,7 +717,7 @@ const containerStyle: React.CSSProperties = {
   overflowX: 'hidden'
 }
 
-const overlayStyle: React.CSSProperties = {
+export const overlayStyle: React.CSSProperties = {
   position: 'absolute',
   top: 0,
   left: 0,
@@ -747,7 +747,7 @@ const themeToggleStyle: React.CSSProperties = {
   boxShadow: '0 4px 6px -1px var(--shadow-color)'
 }
 
-const glassPanelStyle: React.CSSProperties = {
+export const glassPanelStyle: React.CSSProperties = {
   position: 'relative',
   zIndex: 1,
   width: '100%',
@@ -763,12 +763,12 @@ const glassPanelStyle: React.CSSProperties = {
   boxSizing: 'border-box'
 }
 
-const headerStyle: React.CSSProperties = {
+export const headerStyle: React.CSSProperties = {
   textAlign: 'center',
   marginBottom: '1.5rem'
 }
 
-const logoStyle: React.CSSProperties = {
+export const logoStyle: React.CSSProperties = {
   fontSize: '2rem',
   fontFamily: 'var(--font-heading), serif',
   color: 'var(--gold-primary)',
@@ -776,7 +776,7 @@ const logoStyle: React.CSSProperties = {
   margin: '0 0 0.5rem 0'
 }
 
-const taglineStyle: React.CSSProperties = {
+export const taglineStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   color: 'var(--foreground)',
   opacity: 0.6,
@@ -835,7 +835,7 @@ const inactiveTabStyle: React.CSSProperties = {
   transition: 'all 0.3s ease'
 }
 
-const errorContainerStyle: React.CSSProperties = {
+export const errorContainerStyle: React.CSSProperties = {
   background: 'rgba(239, 68, 68, 0.15)',
   border: '1px solid #ef4444',
   borderRadius: '6px',
@@ -847,20 +847,20 @@ const errorContainerStyle: React.CSSProperties = {
   alignItems: 'center'
 }
 
-const formStyle: React.CSSProperties = {
+export const formStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: '1.2rem'
 }
 
-const inputGroupStyle: React.CSSProperties = {
+export const inputGroupStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: '0.4rem',
   flex: 1
 }
 
-const labelStyle: React.CSSProperties = {
+export const labelStyle: React.CSSProperties = {
   fontSize: '0.75rem',
   color: 'var(--foreground)',
   opacity: 0.8,
@@ -868,7 +868,7 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: '1px'
 }
 
-const inputStyle: React.CSSProperties = {
+export const inputStyle: React.CSSProperties = {
   background: 'var(--input-bg)',
   border: '1px solid var(--glass-border)',
   borderRadius: '6px',
@@ -882,7 +882,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%'
 }
 
-const selectStyle: React.CSSProperties = {
+export const selectStyle: React.CSSProperties = {
   background: 'var(--input-bg)',
   border: '1px solid var(--glass-border)',
   borderRadius: '6px',
@@ -896,7 +896,7 @@ const selectStyle: React.CSSProperties = {
   width: '100%'
 }
 
-const textareaStyle: React.CSSProperties = {
+export const textareaStyle: React.CSSProperties = {
   background: 'var(--input-bg)',
   border: '1px solid var(--glass-border)',
   borderRadius: '6px',
@@ -910,13 +910,13 @@ const textareaStyle: React.CSSProperties = {
   width: '100%'
 }
 
-const rowStyle: React.CSSProperties = {
+export const rowStyle: React.CSSProperties = {
   display: 'flex',
   gap: '1rem',
   width: '100%'
 }
 
-const profileSectionStyle: React.CSSProperties = {
+export const profileSectionStyle: React.CSSProperties = {
   borderTop: '1px dashed var(--glass-border)',
   paddingTop: '1.2rem',
   marginTop: '0.5rem',
@@ -925,7 +925,7 @@ const profileSectionStyle: React.CSSProperties = {
   gap: '1rem'
 }
 
-const sectionHeaderStyle: React.CSSProperties = {
+export const sectionHeaderStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   color: 'var(--gold-primary)',
   margin: '0 0 0.5rem 0',
@@ -933,7 +933,7 @@ const sectionHeaderStyle: React.CSSProperties = {
   alignItems: 'center'
 }
 
-const checkboxWrapperStyle: React.CSSProperties = {
+export const checkboxWrapperStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '0.6rem',
@@ -941,27 +941,27 @@ const checkboxWrapperStyle: React.CSSProperties = {
   paddingTop: '1.5rem'
 }
 
-const checkboxStyle: React.CSSProperties = {
+export const checkboxStyle: React.CSSProperties = {
   cursor: 'pointer',
   width: '18px',
   height: '18px',
   accentColor: 'var(--gold-primary)'
 }
 
-const checkboxLabelStyle: React.CSSProperties = {
+export const checkboxLabelStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   color: 'var(--foreground)',
   cursor: 'pointer'
 }
 
-const preferenceGridStyle: React.CSSProperties = {
+export const preferenceGridStyle: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(3, 1fr)',
   gap: '0.5rem',
   marginTop: '0.5rem'
 }
 
-const submitButtonStyle: React.CSSProperties = {
+export const submitButtonStyle: React.CSSProperties = {
   marginTop: '1rem',
   display: 'flex',
   justifyContent: 'center',

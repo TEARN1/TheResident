@@ -98,7 +98,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           await supabase.rpc('ensure_res_profile').then(() => {}, () => {})
           const { data: dbProfile } = await supabase
             .from('res_profiles')
-            .select('role, created_at')
+            .select('role, bio, created_at')
             .eq('id', user.id)
             .single()
           dispatch(loginUser({
@@ -108,6 +108,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             role: (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor',
             createdAt: dbProfile?.created_at || undefined
           }))
+          // A bare ensure_res_profile() default (role never chosen, bio never
+          // set) means this is this user's first-ever landing here via a
+          // Gruvs/Google/Facebook session — a direct signup always sets both.
+          // Route them to the one-time completion form instead of leaving
+          // them in the dashboard with silent defaults.
+          if ((dbProfile?.role || 'visitor') === 'visitor' && !dbProfile?.bio) {
+            router.push('/auth/onboarding')
+          }
           return
         }
       }

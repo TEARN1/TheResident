@@ -456,6 +456,7 @@ export default function ProfilePage() {
           <div>
             <p className="text-sm font-bold text-white">Verification</p>
             <p className="text-[11px] text-gray-500">Verified residents get priority on requests and dispatches.</p>
+            <p className="text-[10px] text-gray-600 mt-1">Free verification always works and arrives regardless — paying only skips the queue, it&apos;s never required to be taken seriously.</p>
           </div>
           <UpgradeButton item="verification_speedup" className={`shrink-0 ${goldButtonClass()}`} />
         </div>

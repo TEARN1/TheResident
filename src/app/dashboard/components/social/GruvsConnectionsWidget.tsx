@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { Users, ShieldCheck, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Users, ShieldCheck, ChevronRight, ChevronLeft, EyeOff } from 'lucide-react'
 import { getMutualConnections, type Connection } from '../../../../utils/social'
+
+const HIDE_KEY = 'residentHideGruvsConnections'
 
 /**
  * Surfaces people the user already mutually follows on The Gruvs — not a
@@ -11,10 +13,18 @@ import { getMutualConnections, type Connection } from '../../../../utils/social'
  * relationship visible and useful here. Deliberately has nothing to do with
  * the next-of-kin / trust-circle feature — see the app plan for why those
  * two must stay separate.
+ *
+ * Privacy: getMutualConnections() only ever reads the CALLER's own session
+ * (utils/social.ts) — there is no code path where one user can see another
+ * user's connections. This widget is still user-dismissible (persisted per
+ * browser) since even a self-only cross-app link can feel exposing to see,
+ * given Gruvs' nightlife/party framing — copy below is deliberately neutral
+ * rather than party-specific.
  */
 export default function GruvsConnectionsWidget() {
   const [connections, setConnections] = useState<Connection[] | null>(null)
   const [scrollIndex, setScrollIndex] = useState(0)
+  const [hidden, setHidden] = useState(() => typeof window !== 'undefined' && localStorage.getItem(HIDE_KEY) === '1')
 
   useEffect(() => {
     let cancelled = false
@@ -24,9 +34,14 @@ export default function GruvsConnectionsWidget() {
     return () => { cancelled = true }
   }, [])
 
-  // Loading, or nothing to show — stay out of the way rather than take up
-  // space with an empty state on every single page load.
-  if (connections === null || connections.length === 0) return null
+  const hide = () => {
+    localStorage.setItem(HIDE_KEY, '1')
+    setHidden(true)
+  }
+
+  // Loading, hidden by choice, or nothing to show — stay out of the way
+  // rather than take up space with an empty state on every single page load.
+  if (hidden || connections === null || connections.length === 0) return null
 
   const visible = connections.slice(scrollIndex, scrollIndex + 4)
 
@@ -38,9 +53,9 @@ export default function GruvsConnectionsWidget() {
         </div>
         <div>
           <p className="text-xs font-black text-white uppercase tracking-widest">
-            {connections.length} connection{connections.length === 1 ? '' : 's'} from The Gruvs
+            {connections.length} cross-app connection{connections.length === 1 ? '' : 's'}
           </p>
-          <p className="text-[10px] text-gray-500">People you already know are here too</p>
+          <p className="text-[10px] text-gray-500">People you already know are here too — visible only to you</p>
         </div>
       </div>
 
@@ -71,6 +86,10 @@ export default function GruvsConnectionsWidget() {
           </button>
         )}
       </div>
+
+      <button onClick={hide} className="text-gray-500 hover:text-white shrink-0" title="Hide this — you can always follow people directly instead" aria-label="Hide cross-app connections">
+        <EyeOff size={16} />
+      </button>
     </div>
   )
 }

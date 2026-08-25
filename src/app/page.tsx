@@ -36,7 +36,7 @@ export default function Home() {
       setLoginError(result.error)
       return
     }
-    router.push('/dashboard')
+    router.push(result.needsOnboarding ? '/auth/onboarding' : '/dashboard')
   }
 
   const handleOAuth = async (provider: 'google' | 'facebook') => {
