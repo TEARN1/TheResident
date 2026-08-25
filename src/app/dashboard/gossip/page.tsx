@@ -102,6 +102,16 @@ export default function GossipPage() {
   const loadingMoreRef = useRef(false)
   const hasMoreRef = useRef(true)
 
+  // Mirrors profileMap for reads inside callbacks that must NOT be
+  // re-created when it changes. fetchCommentPreviewsFor is a dependency of
+  // loadPosts, which is itself a useEffect dependency — so taking
+  // profileMap as a real dependency created a refetch loop: loadPosts →
+  // fetchProfilesFor → setProfileMap (a spread, so always a fresh object
+  // identity) → fetchCommentPreviewsFor re-created → loadPosts re-created →
+  // effect re-fires → loadPosts again, forever.
+  const profileMapRef = useRef<Record<string, ProfileHit>>({})
+  useEffect(() => { profileMapRef.current = profileMap }, [profileMap])
+
   const fetchProfilesFor = useCallback(async (authorIds: string[]) => {
     if (!supabase || authorIds.length === 0) return
     const { data: people } = await supabase
@@ -137,8 +147,10 @@ export default function GossipPage() {
     // Oldest-first within each post's preview, matching how the full expanded view orders comments.
     for (const id of Object.keys(grouped)) grouped[id].reverse()
     setCommentPreviews(prev => ({ ...prev, ...grouped }))
-    await fetchProfilesFor([...new Set(rows.map(c => c.author_id))].filter(id => !profileMap[id]))
-  }, [fetchProfilesFor, profileMap])
+    // Reads the ref, not profileMap directly — see the profileMapRef comment
+    // above for why depending on profileMap here caused a refetch loop.
+    await fetchProfilesFor([...new Set(rows.map(c => c.author_id))].filter(id => !profileMapRef.current[id]))
+  }, [fetchProfilesFor])
 
   const loadPosts = useCallback(async () => {
     if (!supabase) { setLoading(false); return }
