@@ -25,13 +25,19 @@ reasonable window to fix it first.
 - **Brute-force login protection**: 5 failed attempts locks an account for
   60 seconds (`registerFailedAttempt`/`lockedUntil` in `store/index.ts`),
   logged as `auth_failed` / `brute_force_blocked`.
-- **RLS coverage**: `resident_schema.sql` (26 tables) and
-  `deploy_production_schema.sql` (7 tables) — every table has
+- **RLS coverage**: `resident_schema.sql` (26 tables) — every table has
   `ENABLE ROW LEVEL SECURITY` and at least one `CREATE POLICY`. The one
   known gap is `public.spatial_ref_sys` (a PostGIS system table owned by
   `supabase_admin`, not this project's role — `ALTER TABLE` silently
   no-ops on it from the SQL Editor); it holds only public EPSG coordinate
   data, not user data, and the only real fix is a Supabase support ticket.
+- **`deploy_production_schema.sql` was deleted** — an audit found it was a
+  superseded first draft that conflicted with the live schema on 4 tables
+  (different, incompatible column names the app code doesn't use) and
+  wrongly tried to `CREATE TABLE public.profiles`, which `CONTRACT.md`
+  reserves to The Gruvs. `resident_schema.sql` already covers everything
+  in it that was actually correct (including `res_traffic_reports`, its
+  one seemingly-unique table).
 - **Service-role key**: confirmed server-only (`SUPABASE_SERVICE_ROLE_KEY`,
   no `NEXT_PUBLIC_` prefix), gitignored, never committed, no client-side
   usage anywhere in `src/`.
@@ -78,7 +84,7 @@ reasonable window to fix it first.
   every schema file here (including this one) must be run manually in the
   Supabase SQL editor before Batch 10's UI has anything to read/write.
 - **RLS policies live in Supabase, not fully mirrored in this repo** — the
-  schema files here (`resident_schema.sql`, `deploy_production_schema.sql`,
-  `db_hardening.sql`) are the source of truth for what was *deployed*, but
+  schema files here (`resident_schema.sql`, `db_hardening.sql`,
+  `org_broadcast_schema.sql`) are the source of truth for what was *deployed*, but
   the live policy set should be exported and diffed against them quarterly
   (see `MAINTENANCE.md`) in case of an out-of-band dashboard change.
