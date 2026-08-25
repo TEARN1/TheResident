@@ -1,18 +1,24 @@
 'use client'
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { useSearchParams } from 'next/navigation'
-import { Send, MessageCircle, ArrowLeft, Loader, Clock } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { MessageCircle, Loader, Clock } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
-import EmptyState from '../components/EmptyState'
+import EmptyState from '../components/shared/EmptyState'
 
 // DMs route through Gruvs' EXISTING shared `messages` table (CONTRACT.md §4):
 // sender_id, recipient_id, body, message_type, is_request, created_at.
 // This is deliberately NOT a Resident-owned table — a message sent here is
 // the same message on The Gruvs. Realtime channel convention: dm_fast_<idA_idB>
 // (ids sorted), per CONTRACT.md.
+//
+// The thread view itself lives at its own route (./[threadId]/page.tsx) —
+// it used to be pure component state here (conditionally rendering the
+// thread in place of the list, no URL change), which meant browser back/
+// forward, refresh, and deep-linking into a specific conversation didn't
+// work the way they do everywhere else in the app.
 
 interface DbMessage {
   id: string
@@ -38,18 +44,13 @@ interface Thread {
 export default function MessagesPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const myId = currentUser?.id
+  const router = useRouter()
   const searchParams = useSearchParams()
 
   const [threads, setThreads] = useState<Thread[]>([])
   const [profileMap, setProfileMap] = useState<Record<string, ProfileHit>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const [activeThread, setActiveThread] = useState<string | null>(null)
-  const [threadMessages, setThreadMessages] = useState<DbMessage[]>([])
-  const [draft, setDraft] = useState('')
-  const [sending, setSending] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
 
   const loadThreads = useCallback(async () => {
     if (!supabase || !myId) { setLoading(false); return }
@@ -88,7 +89,7 @@ export default function MessagesPage() {
   }, [myId])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount, not a render-loop risk
     loadThreads()
   }, [loadThreads])
 
@@ -98,128 +99,43 @@ export default function MessagesPage() {
   }
 
   // Deep-link support (/dashboard/messages?to=<userId>) — used by "Chat
-  // Seller"-style buttons elsewhere in the app that previously had nowhere
-  // to send someone, since there was no way to open a specific person's
-  // thread without it already existing in the list.
+  // Seller"-style buttons elsewhere in the app. Redirects straight into the
+  // thread's own route rather than opening it as local state, so the
+  // deep-link lands on a real, shareable/refreshable URL.
   useEffect(() => {
     const to = searchParams.get('to')
-    if (!to || !supabase || !myId || to === myId) return
-    setActiveThread(to)
-    if (!profileMap[to]) {
-      supabase.from('profiles').select('id, username, display_name, avatar_url').eq('id', to).maybeSingle()
-        .then(({ data }) => { if (data) setProfileMap(prev => ({ ...prev, [to]: data as ProfileHit })) })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, myId])
+    if (!to || !myId || to === myId) return
+    router.replace(`/dashboard/messages/${to}`)
+  }, [searchParams, myId, router])
 
-  const loadThread = useCallback(async (otherId: string) => {
-    if (!supabase || !myId) return
-    const { data } = await supabase
-      .from('messages')
-      .select('id, sender_id, recipient_id, body, is_request, created_at')
-      .or(`and(sender_id.eq.${myId},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${myId})`)
-      .order('created_at', { ascending: true })
-    setThreadMessages((data || []) as DbMessage[])
-  }, [myId])
+  // A thread counts as a pending request when the OTHER person messaged
+  // first and I haven't replied yet — the last message is addressed to me
+  // and is still flagged is_request. Once I reply, my own message becomes
+  // the last one and the thread moves to Chats on its own, no separate
+  // "mark as replied" state needed.
+  const isPendingRequest = (t: Thread) => t.lastMessage.recipient_id === myId && !!t.lastMessage.is_request
 
-  useEffect(() => {
-    if (!activeThread) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadThread(activeThread)
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
-  }, [activeThread, loadThread])
+  const sorted = [...threads].sort((a, b) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime())
+  const requests = sorted.filter(isPendingRequest)
+  const chats = sorted.filter(t => !isPendingRequest(t))
 
-  // Realtime, per the dm_fast_<idA_idB> convention (ids sorted).
-  useEffect(() => {
-    if (!supabase || !myId || !activeThread) return
-    const sorted = [myId, activeThread].sort()
-    const channelName = `dm_fast_${sorted[0]}_${sorted[1]}`
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${activeThread}` },
-        () => { loadThread(activeThread); loadThreads() }
-      )
-      .subscribe()
-    return () => { supabase!.removeChannel(channel) }
-  }, [myId, activeThread, loadThread, loadThreads])
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [threadMessages])
-
-  const sendMessage = async () => {
-    if (!supabase || !myId || !activeThread || !draft.trim()) return
-    setSending(true)
-    setError(null)
-    const alreadyTalked = threadMessages.length > 0
-    const { error: sendError } = await supabase
-      .from('messages')
-      .insert({
-        sender_id: myId,
-        recipient_id: activeThread,
-        body: draft.trim(),
-        is_request: !alreadyTalked
-      })
-    setSending(false)
-    if (sendError) {
-      setError(sendError.message)
-      return
-    }
-    setDraft('')
-    loadThread(activeThread)
-    loadThreads()
-  }
-
-  if (activeThread) {
-    return (
-      <div className="glass-panel p-0 flex flex-col h-[70vh]">
-        <div className="flex items-center gap-3 p-4 border-b border-white/5">
-          <button onClick={() => setActiveThread(null)} className="text-gray-400 hover:text-white">
-            <ArrowLeft size={18} />
-          </button>
-          <div className="w-8 h-8 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black">
-            {nameOf(activeThread).charAt(0).toUpperCase()}
-          </div>
-          <span className="text-sm font-bold text-white">{nameOf(activeThread)}</span>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {threadMessages.map(m => (
-            <div key={m.id} className={`flex ${m.sender_id === myId ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[70%] rounded-xl px-3.5 py-2.5 text-xs ${m.sender_id === myId ? 'bg-gold-primary text-black font-medium' : 'bg-black/40 border border-white/5 text-gray-300'}`}>
-                {m.is_request && m.sender_id === myId && (
-                  <span className="flex items-center gap-1 text-[9px] opacity-70 mb-1 uppercase font-bold tracking-widest"><Clock size={9} /> Request</span>
-                )}
-                <p className="whitespace-pre-wrap">{m.body}</p>
-              </div>
-            </div>
-          ))}
-          <div ref={bottomRef} />
-        </div>
-
-        {error && <p className="text-[11px] text-red-400 px-4">{error}</p>}
-
-        <div className="flex gap-2 p-4 border-t border-white/5">
-          <input
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') sendMessage() }}
-            placeholder="Type a message…"
-            className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40"
-          />
-          <button
-            onClick={sendMessage}
-            disabled={sending || !draft.trim()}
-            className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-4 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50"
-          >
-            <Send size={14} />
-          </button>
-        </div>
+  const ThreadRow = ({ t }: { t: Thread }) => (
+    <button
+      onClick={() => router.push(`/dashboard/messages/${t.otherId}`)}
+      className="w-full flex items-center gap-3 p-3 bg-black/40 border border-white/5 rounded-xl hover:border-gold-primary/20 transition-all text-left"
+    >
+      <div className="w-9 h-9 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden flex-shrink-0">
+        {profileMap[t.otherId]?.avatar_url
+          ? <img src={profileMap[t.otherId].avatar_url as string} alt="" className="w-full h-full object-cover" />
+          : nameOf(t.otherId).charAt(0).toUpperCase()}
       </div>
-    )
-  }
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-white">{nameOf(t.otherId)}</p>
+        <p className="text-xs text-gray-500 truncate">{t.lastMessage.body}</p>
+      </div>
+      <span className="text-[10px] text-gray-600 flex-shrink-0">{new Date(t.lastMessage.created_at).toLocaleDateString()}</span>
+    </button>
+  )
 
   return (
     <div className="glass-panel p-6">
@@ -237,27 +153,28 @@ export default function MessagesPage() {
       ) : threads.length === 0 ? (
         <EmptyState icon={MessageCircle} title="No conversations yet" subtitle="Message a landlord, driver or neighbour to start one." />
       ) : (
-        <div className="space-y-2">
-          {threads
-            .sort((a, b) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime())
-            .map(t => (
-              <button
-                key={t.otherId}
-                onClick={() => setActiveThread(t.otherId)}
-                className="w-full flex items-center gap-3 p-3 bg-black/40 border border-white/5 rounded-xl hover:border-gold-primary/20 transition-all text-left"
-              >
-                <div className="w-9 h-9 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden flex-shrink-0">
-                  {profileMap[t.otherId]?.avatar_url
-                    ? <img src={profileMap[t.otherId].avatar_url as string} alt="" className="w-full h-full object-cover" />
-                    : nameOf(t.otherId).charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white">{nameOf(t.otherId)}</p>
-                  <p className="text-xs text-gray-500 truncate">{t.lastMessage.body}</p>
-                </div>
-                <span className="text-[10px] text-gray-600 flex-shrink-0">{new Date(t.lastMessage.created_at).toLocaleDateString()}</span>
-              </button>
-            ))}
+        <div className="space-y-6">
+          {/* A first DM is very often a stranger about a room or money —
+              splitting requests from established chats makes deciding
+              whether to engage a distinct step instead of something you'd
+              only notice mid-scroll in one flat list. */}
+          {requests.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gold-primary">
+                <Clock size={11} /> Requests ({requests.length})
+              </h3>
+              {requests.map(t => <ThreadRow key={t.otherId} t={t} />)}
+            </div>
+          )}
+
+          {chats.length > 0 && (
+            <div className="space-y-2">
+              {requests.length > 0 && (
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Chats</h3>
+              )}
+              {chats.map(t => <ThreadRow key={t.otherId} t={t} />)}
+            </div>
+          )}
         </div>
       )}
     </div>

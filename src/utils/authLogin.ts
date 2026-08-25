@@ -24,7 +24,7 @@ export interface LoginArgs {
 }
 
 export type LoginResult =
-  | { ok: true }
+  | { ok: true; needsOnboarding: boolean }
   | { ok: false; error: string }
 
 /** Performs the real Supabase login, brute-force bookkeeping, and Redux session setup. */
@@ -32,7 +32,6 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
   const secondsLeft = secondsLockedOut(lockedUntil, email)
   if (secondsLeft > 0) {
     dispatch(addLog({
-      ip: '127.0.0.1',
       action: 'Attempted login to locked account blocked',
       type: 'brute_force_blocked',
       details: `Failed authorization request for locked account ${email}. Lock expires in ${secondsLeft}s.`
@@ -51,7 +50,6 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
     const attempts = (failedAttempts[email] || 0) + 1
 
     dispatch(addLog({
-      ip: '127.0.0.1',
       action: 'Failed login attempt recorded',
       type: 'auth_failed',
       details: `Incorrect credentials entered for ${email}. Failed attempts: ${attempts}/5`
@@ -75,7 +73,7 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
 
   const { data: dbProfile } = await supabase
     .from('res_profiles')
-    .select('role')
+    .select('role, bio, created_at')
     .eq('id', user.id)
     .single()
 
@@ -86,15 +84,21 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
     id: user.id,
     name: user.user_metadata?.name || 'Resident User',
     email: user.email!,
-    role: userRole as 'tenant' | 'landlord' | 'visitor'
+    role: userRole as 'tenant' | 'landlord' | 'visitor',
+    createdAt: dbProfile?.created_at || undefined
   }))
 
   dispatch(addLog({
-    ip: '127.0.0.1',
     action: 'Logged in safely: Supabase session authenticated',
     type: 'auth_success',
     details: `Email: ${email}`
   }))
 
-  return { ok: true }
+  // A bare ensure_res_profile() default (role never chosen, bio never set)
+  // means this is a Gruvs cross-signup user's first-ever Resident login — a
+  // direct signup always sets both. Let the caller route them to the
+  // one-time completion form instead of the dashboard.
+  const needsOnboarding = (dbProfile?.role || 'visitor') === 'visitor' && !dbProfile?.bio
+
+  return { ok: true, needsOnboarding }
 }

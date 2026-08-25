@@ -23,16 +23,18 @@ import { approveRequest, rejectRequest, waitlistRequest, saveRequest } from '../
 import { useGeolocation } from '../../../hooks/useGeolocation'
 import { formatCurrency, suburbPriceStats, isSuspiciousPrice, type SearchFilters } from '../../../utils/logic'
 import { supabase } from '../../../utils/supabase'
-import FollowButton from '../components/FollowButton'
-import TrustBadge from '../components/TrustBadge'
-import ReviewForm from '../components/ReviewForm'
-import ReviewsList from '../components/ReviewsList'
-import SavedSearches from '../components/SavedSearches'
-import OpenInMapsButton from '../components/OpenInMapsButton'
+import FollowButton from '../components/social/FollowButton'
+import TrustBadge from '../components/trust-safety/TrustBadge'
+import NextOfKinFlag from '../components/trust-safety/NextOfKinFlag'
+import ReviewForm from '../components/social/ReviewForm'
+import ReviewsList from '../components/social/ReviewsList'
+import SavedSearches from '../components/housing/SavedSearches'
+import OpenInMapsButton from '../components/map/OpenInMapsButton'
 import Link from 'next/link'
-import UpgradeButton from '../components/UpgradeButton'
-import PropertiesPanel, { type ResProperty } from '../components/PropertiesPanel'
-import EmptyState from '../components/EmptyState'
+import UpgradeButton from '../components/shared/UpgradeButton'
+import PropertiesPanel, { type ResProperty } from '../components/housing/PropertiesPanel'
+import EmptyState from '../components/shared/EmptyState'
+import { goldButtonClass } from '../../../components/ui/GoldButton'
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
 // Top of the budget slider. Well above the real ceiling for a single room so
@@ -296,7 +298,10 @@ export default function HousingPage() {
     const request: RoomRequest = {
       id: `req-${Date.now()}`,
       tenantId: currentUser?.id || '',
-      tenantName: currentUser?.name || '',
+      // A room request is exactly the "landlord's view of an applicant"
+      // formal context — prefer the Resident-only legal name over the
+      // Gruvs display name when the applicant has set one.
+      tenantName: currentUser?.legalName || currentUser?.name || '',
       listingId: activeListing.id,
       listingTitle: activeListing.title,
       landlordId: activeListing.landlordId,
@@ -516,13 +521,21 @@ export default function HousingPage() {
                 <SavedSearches currentFilters={currentSearchFilters} onApply={applySavedSearch} />
              </div>
 
-             {currentUser?.role === 'landlord' && (
+             {currentUser?.role === 'landlord' ? (
                 <button
                    onClick={() => setShowCreateModal(true)}
                    className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-8 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-gold-primary/10 uppercase tracking-widest text-xs"
                 >
                    <Plus size={20} /> List Your Property
                 </button>
+             ) : (
+                <Link
+                   href="/dashboard/profile"
+                   className="bg-white/5 hover:bg-gold-primary/10 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary font-bold px-4 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all text-xs shrink-0"
+                   title="Want to list a room? Switch to Landlord mode in your profile."
+                >
+                   <Building2 size={16} /> Have a room to rent? Switch to Landlord Mode
+                </Link>
              )}
           </div>
 
@@ -767,7 +780,7 @@ export default function HousingPage() {
                      ) : isGuest ? (
                         <Link
                            href="/auth"
-                           className="w-full flex items-center justify-center gap-2 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                           className={goldButtonClass({ fullWidth: true })}
                         >
                            Sign up to request
                         </Link>
@@ -1028,8 +1041,9 @@ export default function HousingPage() {
                         <div className="space-y-1.5">
                            <h4 className="text-2xl font-black text-white">{activeAuditRequest.tenantName}</h4>
                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Applicant for: {activeAuditRequest.listingTitle}</p>
-                           <div className="flex items-center gap-2 pt-1">
+                           <div className="flex items-center gap-2 pt-1 flex-wrap">
                               <TrustBadge userId={activeAuditRequest.tenantId} />
+                              <NextOfKinFlag userId={activeAuditRequest.tenantId} />
                               {activeAuditRequest.status !== 'pending' && requestStatusBadge(activeAuditRequest.status)}
                            </div>
                         </div>

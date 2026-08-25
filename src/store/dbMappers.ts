@@ -432,7 +432,7 @@ export const neighbourhoodStatusToRow = (ns: NeighbourhoodStatus, reporterId: st
 // ── Schema column allowlist (from resident_schema.sql) — used by tests ────────
 
 export const SCHEMA_COLUMNS: Record<string, string[]> = {
-  res_profiles: ['id', 'role', 'bio', 'gender', 'children_count', 'employment_status', 'has_pets', 'verification_doc_url', 'landlord_gender_pref', 'landlord_children_allowed', 'landlord_max_children', 'landlord_smoking_allowed', 'landlord_pets_allowed', 'created_at', 'updated_at'],
+  res_profiles: ['id', 'role', 'bio', 'gender', 'children_count', 'employment_status', 'has_pets', 'verification_doc_url', 'legal_name', 'landlord_gender_pref', 'landlord_children_allowed', 'landlord_max_children', 'landlord_smoking_allowed', 'landlord_pets_allowed', 'created_at', 'updated_at'],
   res_listings: ['id', 'landlord_id', 'title', 'description', 'price', 'currency', 'location', 'suburb', 'city', 'lat', 'lon', 'safety_rating', 'safety_notes', 'landlord_lives_here', 'images', 'wifi', 'parking', 'bathroom', 'req_gender_pref', 'req_children_allowed', 'req_max_children', 'req_smoking_allowed', 'req_pets_allowed', 'status', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id', 'property_id', 'quick_post', 'listing_type', 'event_id', 'visible_until'],
   res_room_requests: ['id', 'tenant_id', 'listing_id', 'landlord_id', 'status', 'message', 'created_at'],
   res_lift_clubs: ['id', 'driver_id', 'origin', 'destination', 'origin_lat', 'origin_lon', 'dest_lat', 'dest_lon', 'departure_time', 'days', 'price_per_seat', 'currency', 'available_seats', 'total_seats', 'event_id', 'purpose', 'carries_parcels', 'created_at', 'updated_at'],

@@ -5,9 +5,11 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Shield, Lock, Crown, Download, Smartphone, X, LogIn, Loader } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import styles from './page.module.css'
 import { AppDispatch, RootState } from '../store'
 import { performLogin } from '../utils/authLogin'
+import { supabase } from '../utils/supabase'
 
 export default function Home() {
   const [showIosModal, setShowIosModal] = useState(false)
@@ -16,6 +18,7 @@ export default function Home() {
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginLoading, setLoginLoading] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null)
 
   const dispatch = useDispatch<AppDispatch>()
   const router = useRouter()
@@ -33,7 +36,22 @@ export default function Home() {
       setLoginError(result.error)
       return
     }
-    router.push('/dashboard')
+    router.push(result.needsOnboarding ? '/auth/onboarding' : '/dashboard')
+  }
+
+  const handleOAuth = async (provider: 'google' | 'facebook') => {
+    if (!supabase) {
+      setLoginError('Database offline / not configured.')
+      return
+    }
+    setLoginError(null)
+    setOauthLoading(provider)
+    const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } })
+    if (error) {
+      setLoginError(error.message)
+      setOauthLoading(null)
+    }
   }
 
   return (
@@ -48,7 +66,7 @@ export default function Home() {
       {/* Navbar */}
       <nav className={styles.navbar}>
         <div className={styles.logo} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/logo.png" alt="The Resident Logo" style={{ height: '32px', width: '32px', borderRadius: '4px' }} />
+          <Image src="/logo.png" alt="The Resident Logo" width={32} height={32} style={{ borderRadius: '4px' }} />
           THE RESIDENT
         </div>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
@@ -107,6 +125,22 @@ export default function Home() {
                 {loginLoading ? <Loader size={14} className="animate-spin" /> : <LogIn size={14} />}
                 {loginLoading ? 'Logging in…' : 'Log In'}
               </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0.7rem 0' }}>
+                <span style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }} />
+                <span style={{ fontSize: '0.65rem', color: '#666', letterSpacing: '1px' }}>OR</span>
+                <span style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }} />
+              </div>
+              {/* Google temporarily pulled — Supabase provider isn't configured yet. */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleOAuth('facebook')}
+                  disabled={oauthLoading !== null}
+                  style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.55rem', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {oauthLoading === 'facebook' ? '…' : 'Continue with Facebook'}
+                </button>
+              </div>
               <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.8rem', textAlign: 'center' }}>
                 New here? <Link href="/auth" style={{ color: 'var(--gold-primary)' }}>Create an account</Link>
               </p>

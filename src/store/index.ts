@@ -1,5 +1,8 @@
-import { configureStore, createSlice, PayloadAction, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
+import { configureStore, combineReducers, createSlice, PayloadAction, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import { supabase } from '../utils/supabase'
+import { resilientCall } from '../utils/resilientCall'
+import { getErrorMessage } from '../utils/errors'
+import { safeGetJSON, safeSetJSON, safeRemove } from '../utils/safeStorage'
 
 // Mappers between app models and the deployed schema live in dbMappers.ts;
 // toUUID is re-exported from there so existing imports keep working.
@@ -53,6 +56,19 @@ export interface User {
   passwordHash?: string // cryptographically secured
   profile?: UserProfile
   preferences?: LandlordPreferences
+  /** res_profiles.created_at — drives the Next of Kin 6-month grace window. */
+  createdAt?: string
+  /**
+   * res_profiles.legal_name — a Resident-only "formal name" field, separate
+   * from the Gruvs-owned profiles.name (`name` above) shown elsewhere in the
+   * app. This app never writes that shared column outside initial signup
+   * (CONTRACT.md §2). Top-level rather than nested in UserProfile/
+   * LandlordPreferences because it applies regardless of tenant/landlord
+   * role, unlike either of those. Used wherever formality matters
+   * (verification status, a landlord's view of an applicant); falls back to
+   * the Gruvs display name (`name`) when unset.
+   */
+  legalName?: string
 }
 
 export interface Listing {
@@ -125,9 +141,16 @@ export interface RoomRequest {
 export interface SecurityLog {
   id: string
   timestamp: string
-  ip: string
+  /**
+   * Server-observed IP, when a route actually has one. Every call site used
+   * to hardcode '127.0.0.1', which is worse than an empty field in an audit
+   * log — it reads like real evidence. The browser cannot know its own
+   * public IP, so this is left unset client-side and populated only where
+   * the server genuinely sees it.
+   */
+  ip?: string
   action: string
-  type: 'xss_blocked' | 'rate_limit_triggered' | 'idor_prevented' | 'auth_success' | 'auth_failed' | 'brute_force_blocked' | 'upload_malware_blocked' | 'sqli_blocked'
+  type: 'xss_blocked' | 'rate_limit_triggered' | 'idor_prevented' | 'auth_success' | 'auth_failed' | 'brute_force_blocked' | 'upload_malware_blocked' | 'sqli_blocked' | 'role_switched' | 'org_broadcast_sent'
   details: string
 }
 
@@ -681,6 +704,22 @@ const authSlice = createSlice({
     updatePreferences: (state, action: PayloadAction<{ preferences: LandlordPreferences }>) => {
       if (state.currentUser && state.currentUser.role === 'landlord') {
         state.currentUser.preferences = action.payload.preferences
+      }
+    },
+    // Top-level, not nested in profile/preferences — legal_name applies
+    // regardless of tenant/landlord role, unlike either of those.
+    setLegalName: (state, action: PayloadAction<string | undefined>) => {
+      if (state.currentUser) {
+        state.currentUser.legalName = action.payload
+      }
+    },
+    // Self-service fix for accounts that were silently defaulted to the
+    // wrong role (e.g. a landlord's first-ever login left them as 'tenant'
+    // because that's the login form's fallback option) — until this action
+    // existed there was no way for a user to correct their own role at all.
+    updateUserRole: (state, action: PayloadAction<'tenant' | 'landlord'>) => {
+      if (state.currentUser) {
+        state.currentUser.role = action.payload
       }
     }
   }
@@ -1558,6 +1597,14 @@ export interface AppNotification {
   message: string
   read: boolean
   timestamp: string
+  /**
+   * The res_* notification type (see NotificationPrefsPanel's MUTABLE_TYPES
+   * for the real taxonomy, plus PANIC_TYPE), used to pick which sound tone
+   * plays (utils/notificationSounds.ts). Undefined for locally-generated,
+   * synthetic notifications (offline-queue/sync-status messages) that never
+   * came from the shared `notifications` table and have no real type.
+   */
+  type?: string
 }
 
 const notificationsSlice = createSlice({
@@ -1588,6 +1635,14 @@ const notificationsSlice = createSlice({
       state.items.forEach(item => {
         item.read = true
       })
+    },
+    // Bumps just the badge count, O(1) memory — `items` is deliberately left
+    // untouched (still capped at 50 by addNotification above) rather than
+    // ever trying to hold one Redux array entry per real notification. A
+    // flood of unread counts (e.g. catching up after being offline) needs an
+    // accurate number on the bell icon, not 500,000 array elements behind it.
+    floodNotifications: (state, action: PayloadAction<number>) => {
+      state.virtualCount = action.payload
     }
   }
 })
@@ -1599,7 +1654,9 @@ export const {
   registerFailedAttempt,
   resetFailedAttempts,
   updateProfile,
-  updatePreferences
+  updatePreferences,
+  updateUserRole,
+  setLegalName
 } = authSlice.actions
 
 export const { setListings, addListing, deleteListing, updateListingVerification } = listingsSlice.actions
@@ -1679,7 +1736,8 @@ export const {
 export const {
   setNotifications,
   addNotification,
-  markAllNotificationsRead
+  markAllNotificationsRead,
+  floodNotifications
 } = notificationsSlice.actions
 
 // Async Thunk to fetch live data from Supabase.
@@ -1711,6 +1769,7 @@ export const fetchSupabaseData = createAsyncThunk(
     const { data: profileRows, error: profilesError } = await supabase
       .from('profiles')
       .select('id, display_name, username')
+      .limit(2000)
     if (profilesError) {
       markFailed('profiles', profilesError.message)
     } else {
@@ -1724,9 +1783,19 @@ export const fetchSupabaseData = createAsyncThunk(
     const listingTitleById: Record<string, string> = {}
     const serviceNameById: Record<string, string> = {}
 
+    // Every full-table select() below is capped at .limit(200) — this
+    // function was doing unconditional, unbounded `select('*')` on ~22
+    // tables on every login/reconcile, which only gets slower as each table
+    // grows. 200 rows keeps this app's actual working set (recent listings,
+    // open requests, live disputes, etc.) intact while putting a hard,
+    // predictable ceiling on the worst case instead of an open-ended scan.
+    // A follow-up (per-tab fetching, Batch 9 in the plan) is the deeper fix;
+    // this is the safe, mechanical stopgap that ships today without risking
+    // the cross-references between fetches (e.g. listingTitleById above).
+
     // 1. Listings
     const fetchListings = async () => {
-      const { data, error } = await supabase!.from('res_listings').select('*')
+      const { data, error } = await supabase!.from('res_listings').select('*').limit(200)
       if (error) return markFailed('res_listings', error.message)
       if (!data) return
       data.forEach(item => { listingTitleById[String(item.id)] = item.title })
@@ -1774,7 +1843,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 5. Services (fetched early: dispatches resolve their names from it)
     const fetchServices = async () => {
-      const { data, error } = await supabase!.from('res_handyman_services').select('*')
+      const { data, error } = await supabase!.from('res_handyman_services').select('*').limit(200)
       if (error) return markFailed('res_handyman_services', error.message)
       if (!data) return
       data.forEach(item => { serviceNameById[String(item.id)] = item.business_name })
@@ -1797,7 +1866,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 2. Requests
     const fetchRequests = async () => {
-      const { data, error } = await supabase!.from('res_room_requests').select('*')
+      const { data, error } = await supabase!.from('res_room_requests').select('*').limit(200)
       if (error) return markFailed('res_room_requests', error.message)
       if (!data) return
       dispatch(setRequests(data.map(item => ({
@@ -1815,7 +1884,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 3. Lifts
     const fetchLifts = async () => {
-      const { data, error } = await supabase!.from('res_lift_clubs').select('*')
+      const { data, error } = await supabase!.from('res_lift_clubs').select('*').limit(200)
       if (error) return markFailed('res_lift_clubs', error.message)
       if (!data) return
       dispatch(setLifts(data.map(item => ({
@@ -1836,7 +1905,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 4. Roommates
     const fetchRoommates = async () => {
-      const { data, error } = await supabase!.from('res_roommate_seekers').select('*')
+      const { data, error } = await supabase!.from('res_roommate_seekers').select('*').limit(200)
       if (error) return markFailed('res_roommate_seekers', error.message)
       if (!data) return
       dispatch(setRoommates(data.map(item => ({
@@ -1854,7 +1923,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 6. Dispatches
     const fetchDispatches = async () => {
-      const { data, error } = await supabase!.from('res_service_dispatches').select('*')
+      const { data, error } = await supabase!.from('res_service_dispatches').select('*').limit(200)
       if (error) return markFailed('res_service_dispatches', error.message)
       if (!data) return
       dispatch(setDispatches(data.map(item => ({
@@ -1875,7 +1944,7 @@ export const fetchSupabaseData = createAsyncThunk(
     // 7. Utility Vouchers (schema: meter_label / claimed_by / status 'claimed';
     // voucher codes are never stored — broker posture, CONTRACT.md §6)
     const fetchTokens = async () => {
-      const { data, error } = await supabase!.from('res_utility_tokens').select('*')
+      const { data, error } = await supabase!.from('res_utility_tokens').select('*').limit(200)
       if (error) return markFailed('res_utility_tokens', error.message)
       if (!data) return
       dispatch(setTokens(data.map(item => ({
@@ -1894,7 +1963,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 8. Tools
     const fetchTools = async () => {
-      const { data, error } = await supabase!.from('res_tool_library').select('*')
+      const { data, error } = await supabase!.from('res_tool_library').select('*').limit(200)
       if (error) return markFailed('res_tool_library', error.message)
       if (!data) return
       dispatch(setTools(data.map(item => ({
@@ -1916,7 +1985,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 9. Chores
     const fetchChores = async () => {
-      const { data, error } = await supabase!.from('res_chore_schedule').select('*')
+      const { data, error } = await supabase!.from('res_chore_schedule').select('*').limit(200)
       if (error) return markFailed('res_chore_schedule', error.message)
       if (!data) return
       dispatch(setChores(data.map(item => ({
@@ -1933,7 +2002,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 10. Disputes
     const fetchDisputes = async () => {
-      const { data, error } = await supabase!.from('res_community_disputes').select('*')
+      const { data, error } = await supabase!.from('res_community_disputes').select('*').limit(200)
       if (error) return markFailed('res_community_disputes', error.message)
       if (!data) return
       dispatch(setDisputes(data.map(item => ({
@@ -1955,7 +2024,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 11. Notices (rsvps/vibes/echos are uuid[] in the DB; the UI tracks names)
     const fetchNotices = async () => {
-      const { data, error } = await supabase!.from('res_notice_events').select('*')
+      const { data, error } = await supabase!.from('res_notice_events').select('*').limit(200)
       if (error) return markFailed('res_notice_events', error.message)
       if (!data) return
       dispatch(setNotices(data.map(item => ({
@@ -1975,7 +2044,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 12. Communities
     const fetchCommunities = async () => {
-      const { data, error } = await supabase!.from('res_communities').select('*')
+      const { data, error } = await supabase!.from('res_communities').select('*').limit(200)
       if (error) return markFailed('res_communities', error.message)
       if (!data) return
       dispatch(setCommunities(data.map(item => ({
@@ -2012,7 +2081,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 13. Alerts
     const fetchAlerts = async () => {
-      const { data, error } = await supabase!.from('res_alerts').select('*')
+      const { data, error } = await supabase!.from('res_alerts').select('*').limit(200)
       if (error) return markFailed('res_alerts', error.message)
       if (!data) return
       dispatch(setAlerts(data.map(item => ({
@@ -2033,7 +2102,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 14. Market Items
     const fetchMarketItems = async () => {
-      const { data, error } = await supabase!.from('res_market_items').select('*')
+      const { data, error } = await supabase!.from('res_market_items').select('*').limit(200)
       if (error) return markFailed('res_market_items', error.message)
       if (!data) return
       dispatch(setMarketItems(data.map(item => ({
@@ -2054,7 +2123,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 15. Vendors
     const fetchVendors = async () => {
-      const { data, error } = await supabase!.from('res_vendors').select('*')
+      const { data, error } = await supabase!.from('res_vendors').select('*').limit(200)
       if (error) return markFailed('res_vendors', error.message)
       if (!data) return
       dispatch(setVendors(data.map(item => ({
@@ -2077,7 +2146,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 16. Group Buys
     const fetchGroupBuys = async () => {
-      const { data, error } = await supabase!.from('res_group_buys').select('*')
+      const { data, error } = await supabase!.from('res_group_buys').select('*').limit(200)
       if (error) return markFailed('res_group_buys', error.message)
       if (!data) return
       dispatch(setGroupBuys(data.map(item => ({
@@ -2094,7 +2163,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 17. Skills
     const fetchSkills = async () => {
-      const { data, error } = await supabase!.from('res_skills').select('*')
+      const { data, error } = await supabase!.from('res_skills').select('*').limit(200)
       if (error) return markFailed('res_skills', error.message)
       if (!data) return
       dispatch(setSkills(data.map(item => ({
@@ -2110,7 +2179,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 18. Lost & Found
     const fetchLostFound = async () => {
-      const { data, error } = await supabase!.from('res_lost_found').select('*')
+      const { data, error } = await supabase!.from('res_lost_found').select('*').limit(200)
       if (error) return markFailed('res_lost_found', error.message)
       if (!data) return
       dispatch(setLostFound(data.map(item => ({
@@ -2127,7 +2196,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 19. Care Circle
     const fetchCareCircle = async () => {
-      const { data, error } = await supabase!.from('res_care_circle').select('*')
+      const { data, error } = await supabase!.from('res_care_circle').select('*').limit(200)
       if (error) return markFailed('res_care_circle', error.message)
       if (!data) return
       dispatch(setCareCircle(data.map(item => ({
@@ -2141,7 +2210,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 20. Shared Resources
     const fetchSharedResources = async () => {
-      const { data, error } = await supabase!.from('res_shared_resources').select('*')
+      const { data, error } = await supabase!.from('res_shared_resources').select('*').limit(200)
       if (error) return markFailed('res_shared_resources', error.message)
       if (!data) return
       dispatch(setSharedResources(data.map(item => ({
@@ -2162,7 +2231,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 21. Neighbourhood Statuses
     const fetchNeighbourhoodStatus = async () => {
-      const { data, error } = await supabase!.from('res_neighbourhood_status').select('*')
+      const { data, error } = await supabase!.from('res_neighbourhood_status').select('*').limit(200)
       if (error) return markFailed('res_neighbourhood_status', error.message)
       if (!data) return
       dispatch(setNeighbourhoodStatus(data.map(item => ({
@@ -2180,7 +2249,7 @@ export const fetchSupabaseData = createAsyncThunk(
 
     // 22. Traffic Reports
     const fetchTrafficReports = async () => {
-      const { data, error } = await supabase!.from('res_traffic_reports').select('*')
+      const { data, error } = await supabase!.from('res_traffic_reports').select('*').limit(200)
       if (error) return markFailed('res_traffic_reports', error.message)
       if (!data) return
       dispatch(setTrafficReports(data.map(item => ({
@@ -2263,23 +2332,32 @@ const ROLLED_BACK_ACTIONS: string[] = [
 
 const isReplayable = (actionType: string) => !ROLLED_BACK_ACTIONS.includes(actionType)
 
+// Every write below this function funnels through it, which makes it the
+// one place to apply the retry-with-backoff layer generally instead of
+// re-solving it per call site — a transient failure gets one automatic
+// retry; a permission failure (resilientCall's isRetryableError) does not,
+// since retrying can't fix "you're not allowed." The 3rd tier — the offline
+// queue — is the caller's (syncActionToSupabase's catch block).
 const dbUpdate = async (table: string, payload: Record<string, unknown> | null, eqCol?: string, eqVal?: unknown) => {
   assertNetworkAlive();
   if (supabase) {
-    if (eqCol && eqVal !== undefined) {
-      if (payload === null) {
-        const { error } = await supabase.from(table).delete().eq(eqCol, eqVal);
-        if (error) throw error;
+    const client = supabase;
+    await resilientCall(async () => {
+      if (eqCol && eqVal !== undefined) {
+        if (payload === null) {
+          const { error } = await client.from(table).delete().eq(eqCol, eqVal);
+          if (error) throw error;
+        } else {
+          const { error } = await client.from(table).update(payload).eq(eqCol, eqVal);
+          if (error) throw error;
+        }
       } else {
-        const { error } = await supabase.from(table).update(payload).eq(eqCol, eqVal);
-        if (error) throw error;
+        if (payload) {
+          const { error } = await client.from(table).insert(payload);
+          if (error) throw error;
+        }
       }
-    } else {
-      if (payload) {
-        const { error } = await supabase.from(table).insert(payload);
-        if (error) throw error;
-      }
-    }
+    })
   } else {
     // Simulated DB latency
     await new Promise(resolve => setTimeout(resolve, 20));
@@ -2306,6 +2384,32 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
 
   const state = store.getState()
   const currentUser = state.auth.currentUser
+
+  // Security log entries are handled before everything else and returned
+  // early, deliberately OUTSIDE the shared try/catch below: they are
+  // best-effort telemetry, so a failure to record one must never surface a
+  // "Sync failed" notification, trigger a reconcile refetch, or land in the
+  // offline queue for replay. This handler is what makes the audit trail
+  // real — for its entire history addLog wrote only to in-memory Redux,
+  // while SECURITY.md and MAINTENANCE.md both described it as something a
+  // maintainer could review after the fact.
+  if (addLog.match(action)) {
+    if (!supabase) return
+    // Never awaited by the caller: logging must not add latency to, or be
+    // able to fail, the user action that produced it.
+    void supabase.from('res_security_logs').insert({
+      user_id: currentUser && !isGuestUser(currentUser) ? toUUID(currentUser.id) : null,
+      event_type: action.payload.type,
+      action: action.payload.action,
+      details: action.payload.details ?? null,
+      ip_address: action.payload.ip ?? null,
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 500) : null
+    }).then(
+      () => {},
+      () => {}
+    )
+    return
+  }
 
   // Human-readable label of what was being saved, for the failure notification
   let syncLabel = ''
@@ -2349,6 +2453,7 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
               }
             }))
           }
+          store.dispatch(setLegalName(dbProfile.legal_name || undefined))
         } else {
           await supabase.from('res_profiles').insert({
             id: uuid,
@@ -2387,6 +2492,11 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (updatePreferences.match(action) && currentUser) {
       syncLabel = 'your preferences'
       await dbUpdate('res_profiles', db.preferencesToRow(action.payload.preferences), 'id', toUUID(currentUser.id))
+    }
+
+    if (setLegalName.match(action) && currentUser) {
+      syncLabel = 'your legal name'
+      await dbUpdate('res_profiles', { legal_name: action.payload || null }, 'id', toUUID(currentUser.id))
     }
 
     // 2. Sync Room Listings
@@ -2721,7 +2831,10 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     }
 
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
+    // A Supabase PostgrestError is a plain object, not an Error instance —
+    // `String(err)` on one used to produce the useless literal "[object
+    // Object]" here instead of the real message.
+    const message = getErrorMessage(err)
     console.error(`Error syncing with Supabase${syncLabel ? ` (${syncLabel})` : ''}:`, message)
 
     // Undo optimistic updates where a dedicated rollback reducer exists
@@ -2847,11 +2960,23 @@ const uiSlice = createSlice({
     },
     clearOfflineQueue: (state) => {
       state.offlineQueue = []
+    },
+    /**
+     * Restores writes held over from a PREVIOUS browser session. Without
+     * this the queue was memory-only: the app promised "queued and will
+     * sync when you reconnect", then lost the write on any refresh, tab
+     * close, or background tab-kill — the last being routine on the
+     * low-end Android devices this app targets. Replacing rather than
+     * merging is safe because rehydration happens once at boot, before
+     * anything can have queued into this session.
+     */
+    rehydrateOfflineQueue: (state, action: PayloadAction<Array<{ action: string; payload: unknown }>>) => {
+      state.offlineQueue = action.payload.slice(-MAX_OFFLINE_QUEUE)
     }
   }
 })
 
-export const { setLanguage, setDataStatus, queueOfflineAction, clearOfflineQueue } = uiSlice.actions
+export const { setLanguage, setDataStatus, queueOfflineAction, clearOfflineQueue, rehydrateOfflineQueue } = uiSlice.actions
 
 export const selectFilteredListings = createSelector(
   [
@@ -2970,23 +3095,90 @@ export const selectVisibleNotices = createSelector(
   }
 )
 
+const appReducer = combineReducers({
+  auth: authSlice.reducer,
+  listings: listingsSlice.reducer,
+  requests: requestsSlice.reducer,
+  security: securitySlice.reducer,
+  networking: networkingSlice.reducer,
+  utilities: utilitiesSlice.reducer,
+  community: communitySlice.reducer,
+  notifications: notificationsSlice.reducer,
+  ui: uiSlice.reducer
+})
+
+// logoutUser's own reducer only clears auth.currentUser — every other slice
+// (verification doc URLs, dispute details, chat messages, listings) stayed
+// resident in memory, since logout is a client-side route push, not a full
+// page reload. On a shared/public device a second person signing in right
+// after would briefly see the first person's already-fetched data before
+// fetchSupabaseData() overwrites it. Wiping the whole tree on logout (except
+// the language preference, which isn't sensitive) closes that window.
+// ── Offline queue durability ────────────────────────────────────────────────
+// The queue is the one piece of Redux state representing work the user was
+// PROMISED would happen ("queued and will sync when you reconnect").
+// Everything else in the tree is re-fetchable from Supabase, so the queue is
+// deliberately the ONLY thing persisted — this is not general Redux
+// persistence, and nothing sensitive-but-refetchable is written to disk.
+export const OFFLINE_QUEUE_STORAGE_KEY = 'residentOfflineQueue'
+
+// The offline queue is deliberately NOT carried across a logout, and its
+// persisted copy is dropped too: a queued write belongs to the session that
+// made it, so replaying user A's pending writes after user B signs in on the
+// same device would either attribute data to the wrong person or be rejected
+// by RLS. Losing them is the correct trade against that.
+const rootReducer = (state: ReturnType<typeof appReducer> | undefined, action: Parameters<typeof appReducer>[1]) => {
+  if (logoutUser.match(action)) {
+    const language = state?.ui.language
+    safeRemove(OFFLINE_QUEUE_STORAGE_KEY)
+    const next = appReducer(undefined, action)
+    return { ...next, ui: { ...next.ui, language: language ?? next.ui.language } }
+  }
+  return appReducer(state, action)
+}
+
 export const store = configureStore({
-  reducer: {
-    auth: authSlice.reducer,
-    listings: listingsSlice.reducer,
-    requests: requestsSlice.reducer,
-    security: securitySlice.reducer,
-    networking: networkingSlice.reducer,
-    utilities: utilitiesSlice.reducer,
-    community: communitySlice.reducer,
-    notifications: notificationsSlice.reducer,
-    ui: uiSlice.reducer
-  },
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false
     }).concat(supabaseSyncMiddleware)
 })
+
+const isQueueShape = (parsed: unknown): boolean =>
+  Array.isArray(parsed) && parsed.every(item =>
+    !!item && typeof item === 'object' && typeof (item as { action?: unknown }).action === 'string'
+  )
+
+/** Reads any queue left over from a previous session. Exported for tests. */
+export function loadPersistedQueue(): Array<{ action: string; payload: unknown }> {
+  return safeGetJSON<Array<{ action: string; payload: unknown }>>(OFFLINE_QUEUE_STORAGE_KEY, [], isQueueShape)
+}
+
+export function persistQueue(queue: Array<{ action: string; payload: unknown }>): void {
+  if (queue.length === 0) {
+    safeRemove(OFFLINE_QUEUE_STORAGE_KEY)
+    return
+  }
+  safeSetJSON(OFFLINE_QUEUE_STORAGE_KEY, queue)
+}
+
+if (typeof window !== 'undefined') {
+  const persisted = loadPersistedQueue()
+  if (persisted.length > 0) {
+    store.dispatch(rehydrateOfflineQueue(persisted))
+  }
+
+  // Mirror the queue to storage on every change. Cheap: the comparison is a
+  // reference check, and a write only happens when the queue actually moved.
+  let lastQueue = store.getState().ui.offlineQueue
+  store.subscribe(() => {
+    const current = store.getState().ui.offlineQueue
+    if (current === lastQueue) return
+    lastQueue = current
+    persistQueue(current)
+  })
+}
 
 export interface RootState {
   auth: ReturnType<typeof authSlice.reducer>

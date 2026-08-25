@@ -37,6 +37,12 @@ create table if not exists public.res_profiles (
   id uuid references public.profiles(id) on delete cascade primary key,
   role text not null check (role in ('tenant', 'landlord', 'visitor')),
   bio text,
+  -- Deliberately Resident-owned, separate from the Gruvs-owned profiles.name
+  -- shown elsewhere in the app (CONTRACT.md §2) — this app never writes that
+  -- column outside initial signup. Set once a resident wants a formal name
+  -- on record for verification/landlord-facing contexts distinct from
+  -- whatever display name they use on The Gruvs.
+  legal_name text,
   gender text check (gender in ('men', 'women', 'any')),
   children_count integer default 0,
   employment_status text,

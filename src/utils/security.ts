@@ -693,14 +693,80 @@ export const scanInput = (input: string): SecurityScanResult => {
  */
 export const containsHeuristicAnomaly = (input: string): boolean => {
   if (input.length < 15) return false
-  
+
   const specialChars = input.replace(/[a-zA-Z0-9\s]/g, '').length
   const ratio = specialChars / input.length
-  
+
   if (ratio > 0.45) return true
-  if (/(.)\1{6,}/.test(input)) return true
+
+  // Repeated-run detection, split by character class. A single rule at 7+ of
+  // ANY character used to cover both, which false-positived hard: the proxy
+  // scans every /dashboard and /api query string, so GUEST_USER_ID
+  // ('00000000-0000-4000-8000-000000000001') returned a 400 Security
+  // Exception on its eight consecutive zeros, and so would any ordinary
+  // input with a run — a price like 10000000, or someone typing "yoooooooo".
+  //
+  // Punctuation runs are what fuzzer padding actually looks like ('''''''',
+  // %%%%%%%%, ////////) and stay on a tight threshold. Alphanumeric runs are
+  // usually legitimate, so they need a much higher bar before they resemble
+  // buffer-overflow padding (AAAA…) rather than ordinary text or an id.
+  if (/([^a-zA-Z0-9\s])\1{5,}/.test(input)) return true
+  if (/([a-zA-Z0-9])\1{19,}/.test(input)) return true
+
   if (/['"`;()|&]{4,}/.test(input)) return true
 
   return false
+}
+
+// ---------------------------------------------------------------------------
+// 21. Prepaid Utility Voucher Tamper-Evident Signing
+// ---------------------------------------------------------------------------
+
+/**
+ * Deterministic keyed hash, deliberately NOT Node's `crypto` module: this
+ * file is bundled into client components (auth page's XSS scanner etc.), and
+ * `node:crypto` either fails to resolve in the browser bundle or silently
+ * diverges from the server's output — neither is acceptable for something
+ * that has to verify identically wherever it runs. This is a FNV-1a-style
+ * rolling hash with the secret mixed into every step, good enough to catch
+ * tampering on a voucher code; it is NOT cryptographically strong HMAC-SHA256
+ * and must never be used to protect anything higher-stakes than "does this
+ * voucher match what we issued."
+ */
+function keyedHash(message: string, secretKey: string): string {
+  let hash = 0x811c9dc5 // FNV-1a 32-bit offset basis
+  const keyed = secretKey + ' ' + message
+  for (let i = 0; i < keyed.length; i++) {
+    hash ^= keyed.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193) // FNV-1a 32-bit prime
+  }
+  // Unsigned, fixed-width hex — stable length regardless of sign.
+  return (hash >>> 0).toString(16).padStart(8, '0')
+}
+
+/**
+ * Signs a prepaid meter voucher (meter number + value) with a keyed
+ * checksum appended, so a tampered code — wrong meter, wrong amount, or a
+ * flipped digit — fails verification instead of silently applying.
+ */
+export function signVoucher(meterNumber: string, value: number, secretKey: string): string {
+  const payload = `${meterNumber}:${value}`
+  const checksum = keyedHash(payload, secretKey)
+  return `${payload}:${checksum}`
+}
+
+/**
+ * Re-derives the checksum for the claimed meter/value and compares against
+ * the one embedded in the voucher — any mismatch (including the voucher
+ * being edited to claim a different meter or value) fails closed.
+ */
+export function verifyVoucherSignature(voucherCode: string, meterNumber: string, value: number, secretKey: string): boolean {
+  const parts = voucherCode.split(':')
+  if (parts.length !== 3) return false
+  const [voucherMeter, voucherValueStr, voucherChecksum] = parts
+  if (voucherMeter !== meterNumber || voucherValueStr !== String(value)) return false
+
+  const expected = signVoucher(meterNumber, value, secretKey)
+  return expected === voucherCode && voucherChecksum === keyedHash(`${meterNumber}:${value}`, secretKey)
 }
 

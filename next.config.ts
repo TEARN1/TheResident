@@ -1,7 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
+  },
+  // Pinned because an empty, orphaned package-lock.json sits in the user's
+  // home directory (no package.json, no node_modules beside it — junk from a
+  // stray `npm install` run there once). Next walked up, found it, and
+  // inferred the wrong workspace root on every single build. Pinning here
+  // rather than deleting a file outside the repo: this fix is version
+  // controlled and survives on any machine.
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     remotePatterns: [
       {
@@ -31,9 +42,16 @@ const nextConfig: NextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=63072000; includeSubDomains; preload'
           },
+          // These two used to disagree with src/proxy.ts, which sets DENY and
+          // strict-origin-when-cross-origin on /dashboard and /api. Two
+          // sources of truth for security headers that contradict each other
+          // is how a policy silently ends up weaker than anyone intended, so
+          // both now state the stricter value. DENY is consistent with the
+          // CSP's `frame-ancestors 'none'`, and nothing in this app is meant
+          // to be embedded anywhere.
           {
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN'
+            value: 'DENY'
           },
           {
             key: 'X-Content-Type-Options',
@@ -41,7 +59,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin'
+            value: 'strict-origin-when-cross-origin'
           }
         ]
       }

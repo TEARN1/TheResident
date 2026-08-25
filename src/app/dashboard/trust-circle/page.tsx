@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux'
 import { ShieldCheck, Search, UserPlus, Check, Users, Info, Loader } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
-import BlockUserButton from '../components/BlockUserButton'
+import BlockUserButton from '../components/trust-safety/BlockUserButton'
 
 // Next of Kin — a SEPARATE, safety-oriented graph from "Follow"
 // (src/utils/social.ts). Built entirely on res_trust_connections via explicit

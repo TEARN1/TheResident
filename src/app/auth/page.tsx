@@ -9,19 +9,19 @@ import { supabase } from '../../utils/supabase'
 import { performLogin } from '../../utils/authLogin'
 import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
+import Image from 'next/image'
 
 // Cross-app SSO mark for The Gruvs — their real logo (public/gruvs-logo.png),
 // not a placeholder monogram.
 function GruvsMark() {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <Image
       src="/gruvs-logo.png"
       alt="The Gruvs"
       aria-hidden="true"
+      width={22}
+      height={22}
       style={{
-        width: '22px',
-        height: '22px',
         borderRadius: '50%',
         objectFit: 'cover',
         flexShrink: 0
@@ -34,25 +34,25 @@ export default function AuthPage() {
   const router = useRouter()
   const dispatch = useDispatch<AppDispatch>()
 
-  // 'light' is a real, separate theme (see globals.css) — not the old 'day'
-  // value, which the rest of the app still sets and which was never actually
-  // distinct from dark (a 5/255 background difference). This toggle is the
-  // one place in the app where switching genuinely changes the palette.
+  // Shared across the WHOLE app now — 'residentTheme' in localStorage, the
+  // same key the dashboard reads/writes (see dashboard/layout.tsx,
+  // dashboard/profile/page.tsx). This used to be DOM-only here (never
+  // persisted), so a theme choice made on this page silently reverted the
+  // next time any page reloaded, and never touched the dashboard's own
+  // separate 'dashboardTheme' key at all.
   const [theme, setTheme] = useState<'light' | 'night'>('night')
 
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      const currentTheme = document.documentElement.getAttribute('data-theme')
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTheme(currentTheme === 'light' ? 'light' : 'night')
-      document.documentElement.setAttribute('data-theme', currentTheme === 'light' ? 'light' : 'night')
-    }
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('residentTheme') : null
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage/DOM on mount
+    setTheme(stored === 'light' ? 'light' : 'night')
   }, [])
 
   const toggleTheme = () => {
     const nextTheme = theme === 'night' ? 'light' : 'night'
     setTheme(nextTheme)
-    if (typeof document !== 'undefined') {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('residentTheme', nextTheme)
       document.documentElement.setAttribute('data-theme', nextTheme)
     }
   }
@@ -72,7 +72,15 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
-  const [role, setRole] = useState<'tenant' | 'landlord'>('tenant')
+  // '' (not a real role) is the deliberate default on the LOGIN form: this
+  // dropdown is only ever consulted as a fallback for a first-ever sign-in
+  // (e.g. via Gruvs SSO) when no res_profiles row exists yet — silently
+  // pre-selecting 'tenant' meant a landlord's very first login could create
+  // them as a tenant without them ever having made a choice. The signup form
+  // reuses the same state but always has the user actively pick one of the
+  // two real options before submitting, so defaulting it to '' there too is
+  // harmless.
+  const [role, setRole] = useState<'tenant' | 'landlord' | ''>('')
   
   // Tenant Profile Fields
   const [bio, setBio] = useState('')
@@ -113,7 +121,6 @@ export default function AuthPage() {
     
     if (!scan.safe) {
       dispatch(addLog({
-        ip: '127.0.0.1',
         action: `Threats detected and neutralized: ${scan.threats.join(', ')}`,
         type: 'xss_blocked',
         details: `Sanitized input: ${original.substring(0, 100)} => ${sanitized.substring(0, 100)}`
@@ -126,7 +133,7 @@ export default function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) return
+    if (!email || !password || !role) return
 
     setErrorMessage(null)
     const result = await performLogin({ email, password, dispatch, failedAttempts, lockedUntil, fallbackRole: role })
@@ -134,12 +141,12 @@ export default function AuthPage() {
       setErrorMessage(result.error)
       return
     }
-    router.push('/dashboard')
+    router.push(result.needsOnboarding ? '/auth/onboarding' : '/dashboard')
   }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password || !name) return
+    if (!email || !password || !name || !role) return
 
     setErrorMessage(null)
 
@@ -205,11 +212,11 @@ export default function AuthPage() {
         id: user.id,
         name: sanitizedName,
         email: email,
-        role: role
+        role: role,
+        createdAt: new Date().toISOString()
       }))
 
       dispatch(addLog({
-        ip: '127.0.0.1',
         action: `New account onboarded: Supabase auth created`,
         type: 'auth_success',
         details: `Created account for ${sanitizedName}.`
@@ -217,6 +224,29 @@ export default function AuthPage() {
 
       router.push('/dashboard')
     }
+  }
+
+  // Google/Facebook — same Supabase Auth project as The Gruvs, so this is an
+  // alternate front door onto the one shared account, not a separate signup
+  // path. ensure_res_profile() (called from performLogin's login path today)
+  // isn't in this flow since Supabase's own onAuthStateChange redirect lands
+  // straight on /dashboard; res_profiles is created lazily there if missing.
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null)
+
+  const handleOAuth = async (provider: 'google' | 'facebook') => {
+    if (!supabase) {
+      setErrorMessage('Database offline / not configured.')
+      return
+    }
+    setErrorMessage(null)
+    setOauthLoading(provider)
+    const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } })
+    if (error) {
+      setErrorMessage(error.message)
+      setOauthLoading(null)
+    }
+    // On success the browser navigates away to the provider — nothing else to do.
   }
 
   const handleGruvsSSO = () => {
@@ -260,7 +290,6 @@ export default function AuthPage() {
     dispatch(resetFailedAttempts(email))
     dispatch(loginUser(visitorUser))
     dispatch(addLog({
-      ip: '127.0.0.1',
       action: 'Entered application in Guest / Visitor mode',
       type: 'auth_success',
       details: 'Browsing limits applied'
@@ -336,18 +365,41 @@ export default function AuthPage() {
           </div>
         )}
 
+        {/* Google temporarily pulled — Supabase provider isn't configured yet. */}
+        <div style={oauthRowStyle}>
+          <button
+            type="button"
+            onClick={() => handleOAuth('facebook')}
+            disabled={oauthLoading !== null}
+            style={oauthBtnStyle}
+          >
+            {oauthLoading === 'facebook' ? 'Connecting…' : 'Continue with Facebook'}
+          </button>
+        </div>
+        <div style={socialDividerStyle}>
+          <span style={socialDividerLineStyle} />
+          <span style={socialDividerTextStyle}>or</span>
+          <span style={socialDividerLineStyle} />
+        </div>
+
         {activeTab === 'login' ? (
           <form onSubmit={handleLogin} style={formStyle}>
             <div style={inputGroupStyle}>
               <label style={labelStyle}>Access Role</label>
-              <select 
-                value={role} 
+              <select
+                required
+                value={role}
                 onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
                 style={selectStyle}
               >
+                <option value="" disabled>Select your role…</option>
                 <option value="tenant">I am a Tenant looking for a Room</option>
                 <option value="landlord">I am a Landlord renting out Rooms</option>
               </select>
+              <p style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+                Only used to set up your account the very first time you sign in — ignored after that.
+                Got the wrong one? Fix it any time from Profile → Switch role.
+              </p>
             </div>
 
             <div style={inputGroupStyle}>
@@ -419,11 +471,13 @@ export default function AuthPage() {
               </div>
               <div style={inputGroupStyle}>
                 <label style={labelStyle}>Account Role</label>
-                <select 
-                  value={role} 
+                <select
+                  required
+                  value={role}
                   onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
                   style={selectStyle}
                 >
+                  <option value="" disabled>Select your role…</option>
                   <option value="tenant">Tenant</option>
                   <option value="landlord">Landlord</option>
                 </select>
@@ -647,7 +701,7 @@ export default function AuthPage() {
 }
 
 // Styles
-const containerStyle: React.CSSProperties = {
+export const containerStyle: React.CSSProperties = {
   position: 'relative',
   width: '100vw',
   minHeight: '100vh',
@@ -660,7 +714,7 @@ const containerStyle: React.CSSProperties = {
   overflowX: 'hidden'
 }
 
-const overlayStyle: React.CSSProperties = {
+export const overlayStyle: React.CSSProperties = {
   position: 'absolute',
   top: 0,
   left: 0,
@@ -690,7 +744,7 @@ const themeToggleStyle: React.CSSProperties = {
   boxShadow: '0 4px 6px -1px var(--shadow-color)'
 }
 
-const glassPanelStyle: React.CSSProperties = {
+export const glassPanelStyle: React.CSSProperties = {
   position: 'relative',
   zIndex: 1,
   width: '100%',
@@ -706,12 +760,12 @@ const glassPanelStyle: React.CSSProperties = {
   boxSizing: 'border-box'
 }
 
-const headerStyle: React.CSSProperties = {
+export const headerStyle: React.CSSProperties = {
   textAlign: 'center',
   marginBottom: '1.5rem'
 }
 
-const logoStyle: React.CSSProperties = {
+export const logoStyle: React.CSSProperties = {
   fontSize: '2rem',
   fontFamily: 'var(--font-heading), serif',
   color: 'var(--gold-primary)',
@@ -719,7 +773,7 @@ const logoStyle: React.CSSProperties = {
   margin: '0 0 0.5rem 0'
 }
 
-const taglineStyle: React.CSSProperties = {
+export const taglineStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   color: 'var(--foreground)',
   opacity: 0.6,
@@ -778,7 +832,7 @@ const inactiveTabStyle: React.CSSProperties = {
   transition: 'all 0.3s ease'
 }
 
-const errorContainerStyle: React.CSSProperties = {
+export const errorContainerStyle: React.CSSProperties = {
   background: 'rgba(239, 68, 68, 0.15)',
   border: '1px solid #ef4444',
   borderRadius: '6px',
@@ -790,20 +844,20 @@ const errorContainerStyle: React.CSSProperties = {
   alignItems: 'center'
 }
 
-const formStyle: React.CSSProperties = {
+export const formStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: '1.2rem'
 }
 
-const inputGroupStyle: React.CSSProperties = {
+export const inputGroupStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: '0.4rem',
   flex: 1
 }
 
-const labelStyle: React.CSSProperties = {
+export const labelStyle: React.CSSProperties = {
   fontSize: '0.75rem',
   color: 'var(--foreground)',
   opacity: 0.8,
@@ -811,7 +865,7 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: '1px'
 }
 
-const inputStyle: React.CSSProperties = {
+export const inputStyle: React.CSSProperties = {
   background: 'var(--input-bg)',
   border: '1px solid var(--glass-border)',
   borderRadius: '6px',
@@ -825,7 +879,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%'
 }
 
-const selectStyle: React.CSSProperties = {
+export const selectStyle: React.CSSProperties = {
   background: 'var(--input-bg)',
   border: '1px solid var(--glass-border)',
   borderRadius: '6px',
@@ -839,7 +893,7 @@ const selectStyle: React.CSSProperties = {
   width: '100%'
 }
 
-const textareaStyle: React.CSSProperties = {
+export const textareaStyle: React.CSSProperties = {
   background: 'var(--input-bg)',
   border: '1px solid var(--glass-border)',
   borderRadius: '6px',
@@ -853,13 +907,13 @@ const textareaStyle: React.CSSProperties = {
   width: '100%'
 }
 
-const rowStyle: React.CSSProperties = {
+export const rowStyle: React.CSSProperties = {
   display: 'flex',
   gap: '1rem',
   width: '100%'
 }
 
-const profileSectionStyle: React.CSSProperties = {
+export const profileSectionStyle: React.CSSProperties = {
   borderTop: '1px dashed var(--glass-border)',
   paddingTop: '1.2rem',
   marginTop: '0.5rem',
@@ -868,7 +922,7 @@ const profileSectionStyle: React.CSSProperties = {
   gap: '1rem'
 }
 
-const sectionHeaderStyle: React.CSSProperties = {
+export const sectionHeaderStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   color: 'var(--gold-primary)',
   margin: '0 0 0.5rem 0',
@@ -876,7 +930,7 @@ const sectionHeaderStyle: React.CSSProperties = {
   alignItems: 'center'
 }
 
-const checkboxWrapperStyle: React.CSSProperties = {
+export const checkboxWrapperStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '0.6rem',
@@ -884,27 +938,27 @@ const checkboxWrapperStyle: React.CSSProperties = {
   paddingTop: '1.5rem'
 }
 
-const checkboxStyle: React.CSSProperties = {
+export const checkboxStyle: React.CSSProperties = {
   cursor: 'pointer',
   width: '18px',
   height: '18px',
   accentColor: 'var(--gold-primary)'
 }
 
-const checkboxLabelStyle: React.CSSProperties = {
+export const checkboxLabelStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   color: 'var(--foreground)',
   cursor: 'pointer'
 }
 
-const preferenceGridStyle: React.CSSProperties = {
+export const preferenceGridStyle: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(3, 1fr)',
   gap: '0.5rem',
   marginTop: '0.5rem'
 }
 
-const submitButtonStyle: React.CSSProperties = {
+export const submitButtonStyle: React.CSSProperties = {
   marginTop: '1rem',
   display: 'flex',
   justifyContent: 'center',
@@ -971,6 +1025,28 @@ const socialDividerTextStyle: React.CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '1.5px',
   whiteSpace: 'nowrap'
+}
+
+const oauthRowStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: '0.75rem',
+  marginTop: '0.25rem'
+}
+
+const oauthBtnStyle: React.CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '0.7rem 0.5rem',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--glass-border)',
+  borderRadius: '10px',
+  color: 'var(--foreground)',
+  fontSize: '0.8rem',
+  fontWeight: 600,
+  cursor: 'pointer',
+  transition: 'all 0.25s ease'
 }
 
 const gruvsBtnStyle: React.CSSProperties = {

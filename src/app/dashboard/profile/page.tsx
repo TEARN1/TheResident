@@ -5,10 +5,13 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon } from 'lucide-react'
-import { RootState, AppDispatch, updateProfile, updatePreferences, setLanguage, logoutUser, isGuestUser } from '../../../store'
+import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
+import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
-import UpgradeButton from '../components/UpgradeButton'
-import TrustBadge from '../components/TrustBadge'
+import UpgradeButton from '../components/shared/UpgradeButton'
+import TrustBadge from '../components/trust-safety/TrustBadge'
+import { goldButtonClass } from '../../../components/ui/GoldButton'
+import Card from '../../../components/ui/Card'
 
 const LANGUAGES: { code: 'en' | 'zu' | 'xh' | 'af'; label: string }[] = [
   { code: 'en', label: 'English' },
@@ -41,17 +44,18 @@ export default function ProfilePage() {
     router.push('/auth')
   }
 
-  // Dashboard theme — separate from the auth/landing pages' own toggle
-  // (which uses 'day'/'night'), and separate from `lang`. Persisted directly
-  // to the same localStorage key dashboard/layout.tsx reads on mount, since
-  // this page doesn't own the <html data-theme> attribute the layout does.
+  // Shared app-wide theme — 'residentTheme' in localStorage, the same key
+  // the root layout's pre-hydration script and the auth page now read/write
+  // too, so a choice made anywhere in the app applies everywhere. Persisted
+  // directly here since this page doesn't own the <html data-theme>
+  // attribute the layout does.
   const [dashboardTheme, setDashboardThemeState] = useState<'night' | 'light'>('night')
   useEffect(() => {
-    const stored = localStorage.getItem('dashboardTheme')
+    const stored = localStorage.getItem('residentTheme')
     setDashboardThemeState(stored === 'light' ? 'light' : 'night')
   }, [])
   const setDashboardTheme = (theme: 'night' | 'light') => {
-    localStorage.setItem('dashboardTheme', theme)
+    localStorage.setItem('residentTheme', theme)
     document.documentElement.setAttribute('data-theme', theme)
     setDashboardThemeState(theme)
   }
@@ -108,6 +112,8 @@ export default function ProfilePage() {
     }
   }
 
+  const [legalName, setLegalNameInput] = useState('')
+  const [legalNameSaved, setLegalNameSaved] = useState(false)
   const [bio, setBio] = useState('')
   const [gender, setGender] = useState<'men' | 'women' | 'any'>('any')
   const [childrenCount, setChildrenCount] = useState(0)
@@ -122,13 +128,44 @@ export default function ProfilePage() {
 
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [roleSwitching, setRoleSwitching] = useState(false)
+
+  const handleSwitchRole = async (newRole: 'tenant' | 'landlord') => {
+    if (!currentUser || guest || currentUser.role === newRole) return
+    const previousRole = currentUser.role
+    setRoleSwitching(true)
+    try {
+      if (supabase) {
+        await supabase.from('res_profiles').update({ role: newRole }).eq('id', currentUser.id)
+      }
+      dispatch(updateUserRole(newRole))
+      // A role switch changes what someone else's requirement filters and
+      // landlord preferences mean for this account — auditable the same way
+      // any other account-state change is (addLog), and visible to the
+      // account owner (addNotification) in case it wasn't them.
+      dispatch(addLog({
+        action: `Account role switched: ${previousRole} → ${newRole}`,
+        type: 'role_switched',
+        details: `User ${currentUser.id} switched from ${previousRole} to ${newRole}.`
+      }))
+      dispatch(addNotification({
+        title: 'Role switched',
+        message: `Your account is now set up as a ${newRole}. If this wasn't you, review your account security.`,
+        read: false
+      }))
+    } catch (err) {
+      console.error('Failed to switch role', getErrorMessage(err))
+    } finally {
+      setRoleSwitching(false)
+    }
+  }
 
   // Seeds the editable form fields once the server's copy of the profile
   // arrives (it loads asynchronously after auth resolves) — a one-time sync
   // from external state into local form state, not a render-loop risk.
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!currentUser) return
+    setLegalNameInput(currentUser.legalName || '')
     if (currentUser.role === 'tenant' && currentUser.profile) {
       const p = currentUser.profile
       setBio(p.bio || '')
@@ -146,7 +183,6 @@ export default function ProfilePage() {
       setPetsAllowed(!!p.petsAllowed)
     }
   }, [currentUser])
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!currentUser) return null
 
@@ -247,11 +283,49 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="glass-panel p-6 space-y-3">
+      {/* Account Mode / Role Switcher */}
+      <Card className="space-y-3">
+        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+          <UserIcon size={16} /> Account Mode / Role
+        </h2>
+        <p className="text-[11px] text-gray-500">
+          Switching to <strong>Landlord</strong> enables adding properties, listing empty rooms, and managing tenant applications. Switch to <strong>Tenant</strong> to set your room requirements.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => handleSwitchRole('tenant')}
+            disabled={roleSwitching || currentUser.role === 'tenant'}
+            className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+              currentUser.role === 'tenant'
+                ? 'bg-gold-primary text-black border-gold-primary font-black shadow-lg shadow-gold-primary/20'
+                : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'
+            }`}
+          >
+            <span>Tenant Mode</span>
+            <span className="text-[9px] opacity-70 font-normal">Look for rooms & roommates</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchRole('landlord')}
+            disabled={roleSwitching || currentUser.role === 'landlord'}
+            className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+              currentUser.role === 'landlord'
+                ? 'bg-gold-primary text-black border-gold-primary font-black shadow-lg shadow-gold-primary/20'
+                : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'
+            }`}
+          >
+            <span>Landlord Mode</span>
+            <span className="text-[9px] opacity-70 font-normal">List empty rooms & manage units</span>
+          </button>
+        </div>
+      </Card>
+
+      <Card className="space-y-3">
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
           <Camera size={16} /> Your Photo
         </h2>
-        <p className="text-[11px] text-gray-500">A real photo of yourself helps neighbours and landlords trust who they're dealing with. It's kept with your verification info.</p>
+        <p className="text-[11px] text-gray-500">A real photo of yourself helps neighbours and landlords trust who they&apos;re dealing with. It&apos;s kept with your verification info.</p>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-black border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
             {photoUrl ? (
@@ -273,7 +347,7 @@ export default function ProfilePage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={photoUploading}
-              className="flex items-center gap-2 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+              className={goldButtonClass()}
             >
               {photoUploading ? <Loader size={14} className="animate-spin" /> : photoUrl ? <Check size={14} /> : <Camera size={14} />}
               {photoUploading ? 'Uploading…' : photoUrl ? 'Replace photo' : 'Upload a photo'}
@@ -281,7 +355,36 @@ export default function ProfilePage() {
             {photoError && <p className="text-[11px] text-red-400">{photoError}</p>}
           </div>
         </div>
-      </div>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+          <UserIcon size={16} /> Legal Name
+        </h2>
+        <p className="text-[11px] text-gray-500">
+          Separate from your Gruvs display name — used where formality matters, like verification and a landlord&apos;s view of your application. Leave blank to keep using your display name everywhere.
+        </p>
+        <form
+          onSubmit={e => {
+            e.preventDefault()
+            dispatch(setLegalName(legalName.trim() || undefined))
+            setLegalNameSaved(true)
+            setTimeout(() => setLegalNameSaved(false), 2500)
+          }}
+          className="flex items-center gap-2"
+        >
+          <input
+            value={legalName}
+            onChange={e => setLegalNameInput(e.target.value)}
+            placeholder="e.g. Thandiwe Nkosi"
+            className="flex-1 bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50"
+          />
+          <button type="submit" className={goldButtonClass()}>
+            {legalNameSaved ? <Check size={14} /> : null}
+            {legalNameSaved ? 'Saved' : 'Save'}
+          </button>
+        </form>
+      </Card>
 
       {hasPlus === false && (
         <div className="glass-panel p-4 flex items-center justify-between gap-4 border-gold-primary/20">
@@ -289,7 +392,7 @@ export default function ProfilePage() {
             <p className="text-sm font-bold text-white">Household Plus</p>
             <p className="text-[11px] text-gray-500">Boosted listings, priority verification, and more for your household.</p>
           </div>
-          <UpgradeButton item="plus" className="shrink-0 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+          <UpgradeButton item="plus" className={`shrink-0 ${goldButtonClass()}`} />
         </div>
       )}
 
@@ -401,8 +504,9 @@ export default function ProfilePage() {
           <div>
             <p className="text-sm font-bold text-white">Verification</p>
             <p className="text-[11px] text-gray-500">Verified residents get priority on requests and dispatches.</p>
+            <p className="text-[10px] text-gray-600 mt-1">Free verification always works and arrives regardless — paying only skips the queue, it&apos;s never required to be taken seriously.</p>
           </div>
-          <UpgradeButton item="verification_speedup" className="shrink-0 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-4 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+          <UpgradeButton item="verification_speedup" className={`shrink-0 ${goldButtonClass()}`} />
         </div>
       )}
 

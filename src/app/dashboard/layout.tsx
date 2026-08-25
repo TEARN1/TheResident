@@ -20,8 +20,11 @@ import {
 } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
+import { unlockNotificationAudio } from '../../utils/notificationSounds'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
+import AutomationControlPanel from './components/shared/AutomationControlPanel'
+import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -30,18 +33,52 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
+  // Browser autoplay policy blocks audio until a real user gesture — this
+  // creates/resumes the shared AudioContext on the FIRST click or keypress
+  // anywhere in the dashboard, so it's already running by the time a
+  // realtime notification arrives and tries to play a tone.
+  useEffect(() => {
+    const unlock = () => {
+      unlockNotificationAudio()
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
+
   // Guests previously got the "you should sign up" pitch as five separate
   // small nudges scattered across Housing, Services and Profile, each only
   // seen if that specific screen happened to render it. One banner, said
   // once, dismissible — rather than the same pitch repeating on every tab.
   const [guestBannerDismissed, setGuestBannerDismissed] = useState(true)
-  /* eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount */
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount
     setGuestBannerDismissed(typeof window !== 'undefined' && sessionStorage.getItem('guestBannerDismissed') === '1')
   }, [])
   const dismissGuestBanner = () => {
     sessionStorage.setItem('guestBannerDismissed', '1')
     setGuestBannerDismissed(true)
+  }
+
+  // Next of Kin onboarding requirement — every tenant gets 6 months from
+  // signup to add at least one confirmed trust connection (see
+  // src/utils/trust.ts). Dismissible per session like the guest banner
+  // above, but reappears next session until it's actually done — this is a
+  // requirement, not a one-time tip.
+  const [nokStatus, setNokStatus] = useState<NextOfKinStatus | null>(null)
+  const [nokBannerDismissed, setNokBannerDismissed] = useState(true)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount
+    setNokBannerDismissed(typeof window !== 'undefined' && sessionStorage.getItem('nokBannerDismissed') === '1')
+  }, [])
+  const dismissNokBanner = () => {
+    sessionStorage.setItem('nokBannerDismissed', '1')
+    setNokBannerDismissed(true)
   }
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
@@ -61,7 +98,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // writes to, defaulting to dark for anyone who hasn't chosen yet.
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      const stored = localStorage.getItem('dashboardTheme')
+      const stored = localStorage.getItem('residentTheme')
       document.documentElement.setAttribute('data-theme', stored === 'light' ? 'light' : 'night')
     }
   }, [])
@@ -72,17 +109,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (supabase) {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
+          // A session can land here straight off an OAuth redirect (Google/
+          // Facebook), which never goes through performLogin — so this is the
+          // only place that call happens for those users. Idempotent and
+          // caller-only; a returning email/password user already has both
+          // rows, so this is a no-op for them.
+          await supabase.rpc('ensure_res_profile').then(() => {}, () => {})
           const { data: dbProfile } = await supabase
             .from('res_profiles')
-            .select('role')
+            .select('role, bio, created_at')
             .eq('id', user.id)
             .single()
           dispatch(loginUser({
             id: user.id,
             name: user.user_metadata?.name || 'Resident User',
             email: user.email || '',
-            role: (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor'
+            role: (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor',
+            createdAt: dbProfile?.created_at || undefined
           }))
+          // A bare ensure_res_profile() default (role never chosen, bio never
+          // set) means this is this user's first-ever landing here via a
+          // Gruvs/Google/Facebook session — a direct signup always sets both.
+          // Route them to the one-time completion form instead of leaving
+          // them in the dashboard with silent defaults.
+          if ((dbProfile?.role || 'visitor') === 'visitor' && !dbProfile?.bio) {
+            router.push('/auth/onboarding')
+          }
           return
         }
       }
@@ -108,6 +160,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const unsubscribe = subscribeToRealtime(appDispatch, currentUser.id)
     return unsubscribe
   }, [currentUser, dispatch])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!currentUser || isGuestUser(currentUser) || currentUser.role !== 'tenant') {
+      // Resolves on a microtask rather than synchronously in the effect body
+      // (flagged by the React Compiler's set-state-in-effect check) — still
+      // clears stale status from a previous tenant session right away, just
+      // not mid-render.
+      Promise.resolve().then(() => { if (!cancelled) setNokStatus(null) })
+      return () => { cancelled = true }
+    }
+    getNextOfKinStatus(currentUser.id, currentUser.createdAt).then(status => {
+      if (!cancelled) setNokStatus(status)
+    })
+    return () => { cancelled = true }
+  }, [currentUser])
 
   // Close the notifications dropdown on an outside click — previously the
   // only way to close it was clicking the bell a second time.
@@ -193,7 +261,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ) : null}
       </div>
 
-      {currentUser && isGuestUser(currentUser) && !guestBannerDismissed && (
+      {/* One onboarding slot, not two independently-rendered banners — same
+          "only one at a time" principle as the alert-banner stack above.
+          In practice these were already mutually exclusive (nokStatus is
+          explicitly nulled for guest users, see the effect above), but
+          expressing that as a single slot keeps it that way structurally
+          rather than by coincidence, and matches the established pattern
+          instead of being a third, ad hoc way of stacking banners. */}
+      {currentUser && isGuestUser(currentUser) && !guestBannerDismissed ? (
         <div className="guest-summary-banner">
           <Sparkles size={16} className="shrink-0" style={{ color: '#D4AF37' }} />
           <span>
@@ -204,7 +279,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <X size={14} />
           </button>
         </div>
-      )}
+      ) : nokStatus && !nokStatus.hasNextOfKin && !nokBannerDismissed ? (
+        <div className="guest-summary-banner">
+          <ShieldCheck size={16} className="shrink-0" style={{ color: nokStatus.overdue ? '#ef4444' : '#D4AF37' }} />
+          <span>
+            {nokStatus.overdue ? (
+              <><strong>Your trust profile is incomplete.</strong> You haven&apos;t added a Next of Kin yet — your landlord can see this.</>
+            ) : nokStatus.daysRemaining !== null ? (
+              <><strong>Add a Next of Kin.</strong> You have {nokStatus.daysRemaining} day{nokStatus.daysRemaining === 1 ? '' : 's'} left to complete your trust profile.</>
+            ) : (
+              <><strong>Add a Next of Kin.</strong> People to notify if something happens to you — required to build full trust on The Resident.</>
+            )}
+          </span>
+          <Link href="/dashboard/trust-circle" className="guest-summary-banner-cta">Add now</Link>
+          <button onClick={dismissNokBanner} aria-label="Dismiss" className="guest-summary-banner-dismiss">
+            <X size={14} />
+          </button>
+        </div>
+      ) : null}
 
       {/* No hamburger / "More" panel anymore — Profile, Next of Kin, Business,
           language and Log Out all live on the Profile page now (see
@@ -217,6 +309,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <pageTitle.icon size={18} />
             <span>{pageTitle.name}</span>
           </div>
+
+          {/* Persistent role indicator — a landlord who got mis-assigned as a
+              tenant (or vice versa) previously had no way to even notice
+              their current mode short of digging into Profile. Visible on
+              every dashboard page now, and doubles as a shortcut to the
+              role switcher there. */}
+          {!isGuestUser(currentUser) && (
+            <Link
+              href="/dashboard/profile"
+              className="dashboard-role-chip"
+              title={`Account mode: ${currentUser.role}. Tap to switch.`}
+            >
+              {currentUser.role === 'landlord' ? <Briefcase size={12} /> : <Home size={12} />}
+              <span>{currentUser.role}</span>
+            </Link>
+          )}
 
           {/* The "Map" shortcut used to live here on every single page — dead
               weight on the 5 of 6 tabs that have nothing to do with the map.
@@ -280,6 +388,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
         ))}
       </nav>
+
+      <AutomationControlPanel />
     </div>
   )
 }

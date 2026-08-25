@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -43,21 +43,22 @@ import {
 } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds } from '../../../utils/gruvsEvents'
-import NoticeBoardTab from '../components/NoticeBoardTab'
-import ToolLibraryTab from '../components/ToolLibraryTab'
-import ChoreSchedulerTab from '../components/ChoreSchedulerTab'
-import DisputesTab from '../components/DisputesTab'
-import SafetyTab from '../components/SafetyTab'
-import MarketTab from '../components/MarketTab'
-import HouseholdTab from '../components/HouseholdTab'
-import CommunitiesTab from '../components/CommunitiesTab'
-import SharedResourcesTab from '../components/SharedResourcesTab'
-import CommunityAdminTab from '../components/CommunityAdminTab'
-import GruvsConnectionsWidget from '../components/GruvsConnectionsWidget'
+import NoticeBoardTab from '../components/community/NoticeBoardTab'
+import ToolLibraryTab from '../components/household/ToolLibraryTab'
+import ChoreSchedulerTab from '../components/household/ChoreSchedulerTab'
+import DisputesTab from '../components/trust-safety/DisputesTab'
+import SafetyTab from '../components/trust-safety/SafetyTab'
+import MarketTab from '../components/community/MarketTab'
+import HouseholdTab from '../components/household/HouseholdTab'
+import CommunitiesTab from '../components/community/CommunitiesTab'
+import SharedResourcesTab from '../components/household/SharedResourcesTab'
+import CommunityAdminTab from '../components/community/CommunityAdminTab'
+import GruvsConnectionsWidget from '../components/social/GruvsConnectionsWidget'
+import OrgBroadcastsPanel from '../components/community/OrgBroadcastsPanel'
 import dynamic from 'next/dynamic'
 import { formatCurrency, type StatusReport } from '../../../utils/logic'
 
-const VibeMap = dynamic(() => import('../components/VibeMap'), {
+const VibeMap = dynamic(() => import('../components/map/VibeMap'), {
   ssr: false,
   loading: () => <div className="p-12 text-slate-400 font-bold text-center">Loading VibeMap client engine...</div>
 })
@@ -81,7 +82,6 @@ export default function CommunityPage() {
   // first mount, so a repeat visit needs this effect to still catch the param.
   useEffect(() => {
     if (searchParams.get('tab') === 'vibemap') { setSubTab('vibemap'); setMapFullscreen(true) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
@@ -188,7 +188,6 @@ export default function CommunityPage() {
 
   useEffect(() => {
     if (!currentUser || isGuestUser(currentUser) || !supabase || myCommunityIds.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAdminCommunities([])
       return
     }
@@ -332,17 +331,21 @@ export default function CommunityPage() {
 
   // ── Adapters: the redesigned tab components use their own simplified local
   // types (a visual mock layer) rather than the store's real shapes. These map
-  // one to the other so real data reaches real UI.
-  const adaptedChores = communityChores.map(c => ({
+  // one to the other so real data reaches real UI. Memoized — these ran on
+  // every render regardless of whether their source data changed, producing
+  // a brand-new array of brand-new objects each time (this page has 15+
+  // useSelector calls, any one of which re-renders the component), which
+  // defeats reference-equality checks in any child that receives them.
+  const adaptedChores = useMemo(() => communityChores.map(c => ({
     id: c.id,
     title: c.taskName,
     assignedTo: c.roommateId,
     status: c.status,
     dueDate: c.dayOfWeek,
     points: 10
-  }))
+  })), [communityChores])
 
-  const adaptedDisputes = communityDisputes.map(d => ({
+  const adaptedDisputes = useMemo(() => communityDisputes.map(d => ({
     id: d.id,
     title: d.title,
     description: d.description,
@@ -354,15 +357,15 @@ export default function CommunityPage() {
     status: (d.status === 'mediating' ? 'investigating' : d.status) as 'pending' | 'resolved' | 'investigating',
     timestamp: d.timestamp,
     resolutionDetails: d.resolutionDetails
-  }))
+  })), [communityDisputes])
 
-  const adaptedCommunities = communities.map(c => ({
+  const adaptedCommunities = useMemo(() => communities.map(c => ({
     id: c.id,
     name: c.name,
     kind: c.kind,
     suburb: c.suburb,
     memberCount: communityMemberCounts[toUUID(c.id)] || 0
-  }))
+  })), [communities, communityMemberCounts])
 
   // Four clusters, each carrying one secondary accent layered on top of the
   // base gold palette (used only as a subtle icon-badge tint, never replacing
@@ -408,6 +411,12 @@ export default function CommunityPage() {
       ],
     }] : []),
   ] as const
+
+  // Which cluster (if any) the current tab lives in — derived from subTab
+  // rather than tracked as its own state, so there's no separate value that
+  // can drift out of sync when a tab is reached some other way (e.g. an
+  // Overview stat card jumping straight to Disputes).
+  const activeCluster = clusters.find(c => c.tabs.some(t => t.id === subTab)) ?? null
 
   // ── Overview stat cards ────────────────────────────────────────────────
   const activeAlertsCount = alerts.filter(a => a.status === 'active').length
@@ -463,7 +472,15 @@ export default function CommunityPage() {
         </button>
       </header>
 
-      {/* CLUSTERED TAB BAR */}
+      {/* TWO-STEP DRILL-DOWN NAVIGATION
+          Community carries roughly a third of the app's total functionality
+          (~10 sub-tabs) behind one bottom-nav item — the clusters below used
+          to only color-code that many tabs in one long always-visible
+          horizontal strip, which didn't actually reduce what was on screen.
+          Cluster is now the primary navigation level: pick a cluster, then
+          its tabs (and only its tabs) appear below for a second tap to
+          switch within it — turning one 10-item scroll into a two-step
+          drill-down. */}
       <div className="bg-black/40 p-3 md:p-4 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl space-y-3">
         <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
           <button
@@ -472,6 +489,24 @@ export default function CommunityPage() {
           >
             <LayoutGrid size={12} /> Overview
           </button>
+          {clusters.map(cluster => {
+            const ClusterIcon = cluster.tabs[0].icon
+            const active = activeCluster?.id === cluster.id
+            return (
+              <button
+                key={cluster.id}
+                onClick={() => goToTab(cluster.tabs[0].id as typeof subTab)}
+                className={`px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${
+                  active ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white bg-white/5'
+                }`}
+              >
+                <span className={`p-0.5 rounded ${active ? '' : cluster.accent}`}>
+                  <ClusterIcon size={12} />
+                </span>
+                {cluster.label}
+              </button>
+            )
+          })}
           <button
             onClick={toggleVibeMap}
             className={`md:hidden px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'vibemap' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white bg-white/5'}`}
@@ -480,32 +515,29 @@ export default function CommunityPage() {
           </button>
         </div>
 
-        {/* One scrollable row instead of stacked per-category groups — the
-            stacked version could run to 3+ rows tall on narrow screens
-            before you'd even reached the page content below it. */}
-        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-1">
-          {clusters.map(cluster => (
-            <div key={cluster.id} className="flex items-center gap-1.5 shrink-0 pr-4 border-r border-white/5 last:border-r-0 last:pr-0">
-              {cluster.tabs.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => goToTab(t.id as typeof subTab)}
-                  title={cluster.label}
-                  className={`px-3 py-1.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap border ${
-                    subTab === t.id
-                      ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20'
-                      : 'text-gray-400 border-white/5 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-black/10' : cluster.accent}`}>
-                    <t.icon size={11} />
-                  </span>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
+        {/* Only the active cluster's tabs render here — everything else
+            this page can do stays a tap away behind its cluster header
+            above, instead of permanently on screen. */}
+        {activeCluster && (
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+            {activeCluster.tabs.map(t => (
+              <button
+                key={t.id}
+                onClick={() => goToTab(t.id as typeof subTab)}
+                className={`px-3 py-1.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap border ${
+                  subTab === t.id
+                    ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20'
+                    : 'text-gray-400 border-white/5 hover:text-white hover:border-white/20'
+                }`}
+              >
+                <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-black/10' : activeCluster.accent}`}>
+                  <t.icon size={11} />
+                </span>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-4">
@@ -555,18 +587,21 @@ export default function CommunityPage() {
               </div>
             )}
             {subTab === 'notices' && (
-               <NoticeBoardTab
-                  communityNotices={communityNotices}
-                  currentUser={currentUser}
-                  upcomingGruvsEvents={upcomingGruvsEvents}
-                  gruvsEventInfo={gruvsEventInfo}
-                  handleVibeNotice={(id) => dispatch(vibeNotice({ noticeId: id, userName: currentUser?.name || '' }))}
-                  handleEchoNotice={(id) => dispatch(echoNotice({ noticeId: id, userName: currentUser?.name || '' }))}
-                  handleRSVPToEvent={(id) => dispatch(rsvpToEvent({ noticeId: id, userName: currentUser?.name || '' }))}
-                  handlePostNotice={handlePostNotice}
-                  isModerator={isModerator}
-                  onModerate={handleModerate}
-               />
+              <div className="space-y-6">
+                <NoticeBoardTab
+                    communityNotices={communityNotices}
+                    currentUser={currentUser}
+                    upcomingGruvsEvents={upcomingGruvsEvents}
+                    gruvsEventInfo={gruvsEventInfo}
+                    handleVibeNotice={(id) => dispatch(vibeNotice({ noticeId: id, userName: currentUser?.name || '' }))}
+                    handleEchoNotice={(id) => dispatch(echoNotice({ noticeId: id, userName: currentUser?.name || '' }))}
+                    handleRSVPToEvent={(id) => dispatch(rsvpToEvent({ noticeId: id, userName: currentUser?.name || '' }))}
+                    handlePostNotice={handlePostNotice}
+                    isModerator={isModerator}
+                    onModerate={handleModerate}
+                 />
+                <OrgBroadcastsPanel />
+              </div>
             )}
             {subTab === 'market' && (
               <MarketTab
@@ -587,6 +622,7 @@ export default function CommunityPage() {
                     currency: defaultCurrency || '',
                     category: item.category,
                     suburb,
+                    imageUrl: item.imageUrl || undefined,
                     status: 'available',
                     createdBy: currentUser.id,
                     createdAt: new Date().toISOString()

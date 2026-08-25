@@ -188,9 +188,43 @@ body {
   color: var(--gold-primary);
 }
 
+.dashboard-role-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: rgba(212, 175, 55, 0.08);
+  color: var(--gold-primary);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.dashboard-role-chip:hover {
+  background: rgba(212, 175, 55, 0.16);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
 .dashboard-page-body {
   flex: 1;
   overflow-y: auto;
+}
+
+/* Used on horizontal-scroll rows (map quick-filters, Gruvs connections,
+   Services/Community tab bars) where the scroll affordance itself is the
+   point but a visible scrollbar reads as clutter. Was applied in 5 places
+   with no rule behind it, so every one of them showed a normal scrollbar. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Sidebar Elements */
