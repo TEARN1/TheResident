@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
+import Image from 'next/image'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -26,14 +27,29 @@ import { supabase } from '../../../utils/supabase'
 import FollowButton from '../components/social/FollowButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
 import NextOfKinFlag from '../components/trust-safety/NextOfKinFlag'
-import ReviewForm from '../components/social/ReviewForm'
-import ReviewsList from '../components/social/ReviewsList'
-import SavedSearches from '../components/housing/SavedSearches'
 import OpenInMapsButton from '../components/map/OpenInMapsButton'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import UpgradeButton from '../components/shared/UpgradeButton'
-import PropertiesPanel, { type ResProperty } from '../components/housing/PropertiesPanel'
+import { type ResProperty } from '../components/housing/PropertiesPanel'
 import EmptyState from '../components/shared/EmptyState'
+
+// Split out because none of these render on arrival: PropertiesPanel sits
+// behind the landlord-only "properties" tab, the review components only
+// appear inside an opened listing/audit modal, and SavedSearches keeps its
+// contents behind its own toggle. Housing is the app's largest page source
+// (72 KB), so this is the chunk of it a browsing tenant never needs.
+//
+// Deliberately NOT split: FollowButton, TrustBadge, NextOfKinFlag,
+// OpenInMapsButton, UpgradeButton, EmptyState. Those render inline many
+// times per listing row, so lazy-loading them would trade one upfront cost
+// for a burst of chunk requests during the first paint of a list.
+const PropertiesPanel = dynamic(() => import('../components/housing/PropertiesPanel'), {
+  loading: () => <div className="glass-panel p-12 text-center text-gray-500 text-sm">Loading…</div>
+})
+const ReviewForm = dynamic(() => import('../components/social/ReviewForm'))
+const ReviewsList = dynamic(() => import('../components/social/ReviewsList'))
+const SavedSearches = dynamic(() => import('../components/housing/SavedSearches'))
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
@@ -645,7 +661,13 @@ export default function HousingPage() {
               >
                 <div className="relative h-56 bg-gray-900 overflow-hidden">
                   {item.images[0] ? (
-                    <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                    <Image
+                      src={item.images[0]}
+                      alt={item.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                      className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
                       <Home size={40} className="text-gold-primary/20" />

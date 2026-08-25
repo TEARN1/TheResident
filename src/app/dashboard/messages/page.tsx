@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useSelector } from 'react-redux'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MessageCircle, Loader, Clock } from 'lucide-react'
@@ -126,7 +127,7 @@ export default function MessagesPage() {
     >
       <div className="w-9 h-9 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden flex-shrink-0">
         {profileMap[t.otherId]?.avatar_url
-          ? <img src={profileMap[t.otherId].avatar_url as string} alt="" className="w-full h-full object-cover" />
+          ? <Image src={profileMap[t.otherId].avatar_url as string} alt="" width={36} height={36} className="w-full h-full object-cover" />
           : nameOf(t.otherId).charAt(0).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">

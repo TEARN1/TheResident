@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import { useSelector } from 'react-redux'
 import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2 } from 'lucide-react'
 import { RootState } from '../../../store'
@@ -617,7 +618,7 @@ export default function GossipPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-gold-primary/10 ring-1 ring-gold-primary/20 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
                       {profileMap[post.author_id]?.avatar_url
-                        ? <img src={profileMap[post.author_id].avatar_url as string} alt="" className="w-full h-full object-cover" />
+                        ? <Image src={profileMap[post.author_id].avatar_url as string} alt="" width={36} height={36} className="w-full h-full object-cover" />
                         : nameOf(post.author_id).charAt(0).toUpperCase()}
                     </div>
                     <div>

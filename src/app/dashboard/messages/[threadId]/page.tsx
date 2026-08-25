@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
 import { Send, ArrowLeft, Clock } from 'lucide-react'
@@ -114,8 +115,7 @@ export default function ThreadPage() {
         </button>
         <div className="w-8 h-8 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
           {otherProfile?.avatar_url
-            ? // eslint-disable-next-line @next/next/no-img-element
-              <img src={otherProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+            ? <Image src={otherProfile.avatar_url} alt="" width={32} height={32} className="w-full h-full object-cover" />
             : name.charAt(0).toUpperCase()}
         </div>
         <span className="text-sm font-bold text-white">{name}</span>

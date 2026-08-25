@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
@@ -329,8 +330,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-black border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
             {photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoUrl} alt="Your uploaded photo" className="w-full h-full object-cover" />
+              <Image src={photoUrl} alt="Your uploaded photo" width={64} height={64} className="w-full h-full object-cover" />
             ) : (
               <UserIcon size={24} className="text-gray-600" />
             )}

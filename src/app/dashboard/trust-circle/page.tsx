@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useSelector } from 'react-redux'
 import { ShieldCheck, Search, UserPlus, Check, Users, Info, Loader } from 'lucide-react'
 import { RootState } from '../../../store'
@@ -245,7 +246,7 @@ export default function TrustCirclePage() {
               <div key={p.id} className="flex items-center justify-between p-3 bg-black/40 border border-white/5 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
-                    {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : (p.display_name || p.username || '?').charAt(0).toUpperCase()}
+                    {p.avatar_url ? <Image src={p.avatar_url} alt="" width={32} height={32} className="w-full h-full object-cover" /> : (p.display_name || p.username || '?').charAt(0).toUpperCase()}
                   </div>
                   <span className="text-sm text-white font-medium">{p.display_name || p.username}</span>
                   {p.is_verified && <ShieldCheck size={12} className="text-gold-primary" />}
