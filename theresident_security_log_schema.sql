@@ -23,7 +23,8 @@ create table if not exists public.res_security_logs (
     'xss_blocked', 'rate_limit_triggered', 'idor_prevented',
     'auth_success', 'auth_failed', 'brute_force_blocked',
     'upload_malware_blocked', 'sqli_blocked',
-    'role_switched', 'org_broadcast_sent'
+    'role_switched', 'org_broadcast_sent',
+    'auth_password_reset_requested', 'auth_password_changed'
   )),
   action text not null,
   details text,
@@ -35,6 +36,23 @@ create table if not exists public.res_security_logs (
   user_agent text,
   created_at timestamptz default now()
 );
+
+-- `create table if not exists` above does nothing when the table already
+-- exists, so it can never widen the event_type CHECK on a project where an
+-- earlier version of this file was already run. Recreating the constraint
+-- by name is the only idempotent idiom Postgres offers, and is what keeps
+-- this file safe to re-run as new event types are added (the two password
+-- ones below arrived after the first version shipped).
+alter table public.res_security_logs drop constraint if exists res_security_logs_event_type_check;
+alter table public.res_security_logs
+  add constraint res_security_logs_event_type_check
+  check (event_type in (
+    'xss_blocked', 'rate_limit_triggered', 'idor_prevented',
+    'auth_success', 'auth_failed', 'brute_force_blocked',
+    'upload_malware_blocked', 'sqli_blocked',
+    'role_switched', 'org_broadcast_sent',
+    'auth_password_reset_requested', 'auth_password_changed'
+  ));
 
 create index if not exists res_security_logs_created_idx on public.res_security_logs (created_at desc);
 create index if not exists res_security_logs_type_idx on public.res_security_logs (event_type, created_at desc);

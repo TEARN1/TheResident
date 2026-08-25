@@ -5,7 +5,8 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, Lock } from 'lucide-react'
+import { checkPasswordStrength } from '../../../utils/security'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
@@ -115,6 +116,42 @@ export default function ProfilePage() {
 
   const [legalName, setLegalNameInput] = useState('')
   const [legalNameSaved, setLegalNameSaved] = useState(false)
+
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [pwStrength, setPwStrength] = useState<{ strong: boolean; score: number; feedback: string[] } | null>(null)
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwSaved, setPwSaved] = useState(false)
+  const [pwError, setPwError] = useState<string | null>(null)
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!supabase) { setPwError('Database offline / not configured.'); return }
+    if (newPassword !== confirmPassword) { setPwError('The two passwords don’t match.'); return }
+    // Same strength bar the signup and recovery forms enforce — a password
+    // changed from here should not be able to be weaker than one set anywhere else.
+    if (pwStrength && !pwStrength.strong) {
+      setPwError('Please choose a stronger password. ' + (pwStrength.feedback[0] || ''))
+      return
+    }
+    setPwSaving(true)
+    setPwError(null)
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setPwSaving(false)
+    if (error) {
+      setPwError(error.message)
+      dispatch(addLog({ action: 'Password change failed', type: 'auth_failed', details: error.message }))
+      return
+    }
+    dispatch(addLog({
+      action: 'Password changed from Profile',
+      type: 'auth_password_changed',
+      details: 'User changed their password while signed in.'
+    }))
+    setNewPassword(''); setConfirmPassword(''); setPwStrength(null)
+    setPwSaved(true)
+    setTimeout(() => setPwSaved(false), 2500)
+  }
   const [bio, setBio] = useState('')
   const [gender, setGender] = useState<'men' | 'women' | 'any'>('any')
   const [childrenCount, setChildrenCount] = useState(0)
@@ -385,6 +422,51 @@ export default function ProfilePage() {
           </button>
         </form>
       </Card>
+
+      {/* Changing your password while signed in — the counterpart to the
+          emailed recovery flow at /auth/reset-password. Without both, the
+          only way to change a password was to forget it first. */}
+      {!isGuestUser(currentUser) && (
+        <Card className="space-y-3">
+          <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+            <Lock size={16} /> Password
+          </h2>
+          <p className="text-[11px] text-gray-500">
+            Changing this signs you out of nothing else — it just updates the password you sign in with.
+          </p>
+          <form onSubmit={handleChangePassword} className="space-y-2">
+            <input
+              type="password"
+              value={newPassword}
+              onChange={e => { setNewPassword(e.target.value); setPwStrength(e.target.value ? checkPasswordStrength(e.target.value) : null) }}
+              placeholder="New password"
+              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50"
+            />
+            {pwStrength && (
+              <div className="flex gap-1">
+                {[...Array(6)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1 flex-1 rounded ${i < pwStrength.score ? (pwStrength.score >= 4 ? 'bg-green-500' : pwStrength.score >= 2 ? 'bg-yellow-500' : 'bg-red-500') : 'bg-white/10'}`}
+                  />
+                ))}
+              </div>
+            )}
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              placeholder="Confirm new password"
+              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50"
+            />
+            {pwError && <p className="text-[11px] text-red-400">{pwError}</p>}
+            <button type="submit" disabled={pwSaving || !newPassword} className={`${goldButtonClass()} w-full justify-center disabled:opacity-50`}>
+              {pwSaved ? <Check size={14} /> : <Lock size={14} />}
+              {pwSaving ? 'Updating…' : pwSaved ? 'Password updated' : 'Change password'}
+            </button>
+          </form>
+        </Card>
+      )}
 
       {hasPlus === false && (
         <div className="glass-panel p-4 flex items-center justify-between gap-4 border-gold-primary/20">

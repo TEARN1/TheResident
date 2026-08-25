@@ -131,6 +131,56 @@ export default function AuthPage() {
     return sanitized
   }
 
+  // Password recovery. Until this existed, forgetting your password meant
+  // being permanently locked out with no route back into the account —
+  // particularly harsh next to the 5-attempt brute-force lockout, since
+  // repeatedly guessing is exactly what someone does before they admit
+  // they've forgotten it.
+  const [resetMode, setResetMode] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+  const [resetSending, setResetSending] = useState(false)
+
+  const handleRequestReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email) return
+    if (!supabase) {
+      setErrorMessage('Database offline / not configured.')
+      return
+    }
+    setResetSending(true)
+    setErrorMessage(null)
+
+    // Routed through the existing /auth/callback exchange, which then
+    // forwards to the reset form — so recovery reuses the same session
+    // establishment path as OAuth rather than inventing a second one.
+    const redirectTo = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback?next=/auth/reset-password`
+      : undefined
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+    setResetSending(false)
+
+    dispatch(addLog({
+      action: 'Password reset requested',
+      type: 'auth_password_reset_requested',
+      details: `Reset email requested for ${email}.`
+    }))
+
+    // Deliberately shows the same confirmation whether or not the address
+    // has an account. Saying "no account with that email" would turn this
+    // form into an account-existence oracle — a way to enumerate who is
+    // registered — which matters more on an app dealing with people's
+    // housing and safety than the small UX cost of the vaguer message.
+    if (error && !/rate|limit/i.test(error.message)) {
+      setResetSent(true)
+      return
+    }
+    if (error) {
+      setErrorMessage('Too many reset requests — please wait a few minutes and try again.')
+      return
+    }
+    setResetSent(true)
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !password || !role) return
@@ -382,7 +432,48 @@ export default function AuthPage() {
           <span style={socialDividerLineStyle} />
         </div>
 
-        {activeTab === 'login' ? (
+        {activeTab === 'login' && resetMode ? (
+          <form onSubmit={handleRequestReset} style={formStyle}>
+            {resetSent ? (
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <CheckCircle size={32} color="#4CAF50" style={{ marginBottom: 12 }} />
+                <p style={{ fontSize: '0.9rem', color: 'var(--foreground)', marginBottom: 8 }}>
+                  If an account exists for <strong>{email}</strong>, a reset link is on its way.
+                </p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--foreground)', opacity: 0.6 }}>
+                  The link expires after a short while. Check your spam folder if it doesn&apos;t arrive.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div style={inputGroupStyle}>
+                  <label style={labelStyle}>Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="the email you signed up with..."
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={inputStyle}
+                  />
+                  <p style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+                    We&apos;ll email you a link to set a new password.
+                  </p>
+                </div>
+                <button type="submit" className="btn-primary" style={submitButtonStyle} disabled={resetSending}>
+                  {resetSending ? 'Sending…' : 'Send reset link'}
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => { setResetMode(false); setResetSent(false); setErrorMessage(null) }}
+              style={{ ...submitButtonStyle, background: 'transparent', border: '1px solid var(--glass-border)', color: 'var(--foreground)' }}
+            >
+              Back to sign in
+            </button>
+          </form>
+        ) : activeTab === 'login' ? (
           <form onSubmit={handleLogin} style={formStyle}>
             <div style={inputGroupStyle}>
               <label style={labelStyle}>Access Role</label>
@@ -428,6 +519,23 @@ export default function AuthPage() {
 
             <button type="submit" className="btn-primary" style={submitButtonStyle}>
               Grant Access <Lock size={14} style={{ marginLeft: 8 }} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setResetMode(true); setErrorMessage(null) }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--gold-primary)',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                textAlign: 'center',
+                padding: '0.25rem',
+                fontFamily: 'var(--font-body)'
+              }}
+            >
+              Forgot your password?
             </button>
 
             <button
