@@ -64,7 +64,7 @@ reasonable window to fix it first.
   ancestor of it (`res_user_is_sender_of_or_above`), enforced by RLS, not
   just client code; rate-limited server-side to 5 broadcasts per unit per
   hour via a trigger (`res_check_broadcast_rate_limit`), mirroring the map
-  closure-report pattern. See `org_broadcast_schema.sql`.
+  closure-report pattern. See `theresident_org_broadcast_schema.sql`.
 
 ## Known gaps
 - **RPC privilege review**: whether Supabase RPCs called from the client
@@ -79,12 +79,13 @@ reasonable window to fix it first.
   trust-connection requests, and dispute filings still have no rate limit —
   needs a server-side RPC/trigger + policy, matching those patterns, not
   something addable from client code alone.
-- **`org_broadcast_schema.sql` has not been applied to the live database**
-  by this session — this repo has no Supabase CLI/credentials access, so
-  every schema file here (including this one) must be run manually in the
-  Supabase SQL editor before Batch 10's UI has anything to read/write.
+- **`theresident_org_broadcast_schema.sql` has not been applied to the live
+  database** by this session — this repo has no Supabase CLI/credentials
+  access, so every schema file here (including this one) must be run
+  manually in the Supabase SQL editor before Batch 10's UI has anything to
+  read/write.
 - **RLS policies live in Supabase, not fully mirrored in this repo** — the
-  schema files here (`resident_schema.sql`, `db_hardening.sql`,
-  `org_broadcast_schema.sql`) are the source of truth for what was *deployed*, but
+  schema files here (`resident_schema.sql`, `theresident_db_hardening.sql`,
+  `theresident_org_broadcast_schema.sql`) are the source of truth for what was *deployed*, but
   the live policy set should be exported and diffed against them quarterly
   (see `MAINTENANCE.md`) in case of an out-of-band dashboard change.

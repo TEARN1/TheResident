@@ -26,7 +26,7 @@ const sanitize = (text: string) => encodeHTMLEntities(cleanScriptTags(text))
  * Teacher or Business/Branch tree where a post at any level cascades down
  * to everyone who follows that unit or a unit beneath it. Audience is
  * strictly opt-in (res_org_follows) — never scraped or auto-subscribed.
- * See org_broadcast_schema.sql for the real access control; this component
+ * See theresident_org_broadcast_schema.sql for the real access control; this component
  * only ever shows what the DB's RLS already allowed it to fetch.
  */
 export default function OrgBroadcastsPanel() {

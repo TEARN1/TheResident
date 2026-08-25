@@ -1,5 +1,5 @@
 // Batch 10: org/business broadcast messaging. Free, in-app + email only —
-// no SMS/push gateway. See org_broadcast_schema.sql for the real access
+// no SMS/push gateway. See theresident_org_broadcast_schema.sql for the real access
 // control (RLS + res_user_is_sender_of_or_above / res_is_unit_ancestor_or_self)
 // — the pure functions here mirror that SQL logic for client-side UX
 // (audience-size preview, "can I post as this unit" pre-check) and are unit

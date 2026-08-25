@@ -1,6 +1,6 @@
 -- Batch 10: Org/Business Broadcast Messaging — schema, RLS, and RPCs.
 -- Apply this in the Supabase SQL editor the same way resident_schema.sql
--- and db_hardening.sql were applied (this repo has no Supabase CLI/
+-- and theresident_db_hardening.sql were applied (this repo has no Supabase CLI/
 -- credentials access, so it cannot be applied automatically).
 --
 -- Free, in-app + email only (no SMS/push gateway — those need a paid
