@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon } from 'lucide-react'
-import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLanguage, logoutUser, isGuestUser } from '../../../store'
+import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
+import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
@@ -129,14 +130,30 @@ export default function ProfilePage() {
 
   const handleSwitchRole = async (newRole: 'tenant' | 'landlord') => {
     if (!currentUser || guest || currentUser.role === newRole) return
+    const previousRole = currentUser.role
     setRoleSwitching(true)
     try {
       if (supabase) {
         await supabase.from('res_profiles').update({ role: newRole }).eq('id', currentUser.id)
       }
       dispatch(updateUserRole(newRole))
+      // A role switch changes what someone else's requirement filters and
+      // landlord preferences mean for this account — auditable the same way
+      // any other account-state change is (addLog), and visible to the
+      // account owner (addNotification) in case it wasn't them.
+      dispatch(addLog({
+        ip: '127.0.0.1',
+        action: `Account role switched: ${previousRole} → ${newRole}`,
+        type: 'role_switched',
+        details: `User ${currentUser.id} switched from ${previousRole} to ${newRole}.`
+      }))
+      dispatch(addNotification({
+        title: 'Role switched',
+        message: `Your account is now set up as a ${newRole}. If this wasn't you, review your account security.`,
+        read: false
+      }))
     } catch (err) {
-      console.error('Failed to switch role', err)
+      console.error('Failed to switch role', getErrorMessage(err))
     } finally {
       setRoleSwitching(false)
     }

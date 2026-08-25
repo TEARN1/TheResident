@@ -1,4 +1,4 @@
-import { configureStore, createSlice, PayloadAction, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
+import { configureStore, combineReducers, createSlice, PayloadAction, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import { supabase } from '../utils/supabase'
 import { resilientCall } from '../utils/resilientCall'
 import { getErrorMessage } from '../utils/errors'
@@ -131,7 +131,7 @@ export interface SecurityLog {
   timestamp: string
   ip: string
   action: string
-  type: 'xss_blocked' | 'rate_limit_triggered' | 'idor_prevented' | 'auth_success' | 'auth_failed' | 'brute_force_blocked' | 'upload_malware_blocked' | 'sqli_blocked'
+  type: 'xss_blocked' | 'rate_limit_triggered' | 'idor_prevented' | 'auth_success' | 'auth_failed' | 'brute_force_blocked' | 'upload_malware_blocked' | 'sqli_blocked' | 'role_switched'
   details: string
 }
 
@@ -3015,18 +3015,36 @@ export const selectVisibleNotices = createSelector(
   }
 )
 
+const appReducer = combineReducers({
+  auth: authSlice.reducer,
+  listings: listingsSlice.reducer,
+  requests: requestsSlice.reducer,
+  security: securitySlice.reducer,
+  networking: networkingSlice.reducer,
+  utilities: utilitiesSlice.reducer,
+  community: communitySlice.reducer,
+  notifications: notificationsSlice.reducer,
+  ui: uiSlice.reducer
+})
+
+// logoutUser's own reducer only clears auth.currentUser — every other slice
+// (verification doc URLs, dispute details, chat messages, listings) stayed
+// resident in memory, since logout is a client-side route push, not a full
+// page reload. On a shared/public device a second person signing in right
+// after would briefly see the first person's already-fetched data before
+// fetchSupabaseData() overwrites it. Wiping the whole tree on logout (except
+// the language preference, which isn't sensitive) closes that window.
+const rootReducer = (state: ReturnType<typeof appReducer> | undefined, action: Parameters<typeof appReducer>[1]) => {
+  if (logoutUser.match(action)) {
+    const language = state?.ui.language
+    const next = appReducer(undefined, action)
+    return { ...next, ui: { ...next.ui, language: language ?? next.ui.language } }
+  }
+  return appReducer(state, action)
+}
+
 export const store = configureStore({
-  reducer: {
-    auth: authSlice.reducer,
-    listings: listingsSlice.reducer,
-    requests: requestsSlice.reducer,
-    security: securitySlice.reducer,
-    networking: networkingSlice.reducer,
-    utilities: utilitiesSlice.reducer,
-    community: communitySlice.reducer,
-    notifications: notificationsSlice.reducer,
-    ui: uiSlice.reducer
-  },
+  reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false
