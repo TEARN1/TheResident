@@ -1,10 +1,15 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import Link from 'next/link'
-import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin, EyeOff, Eye } from 'lucide-react'
+import Image from 'next/image'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin, EyeOff, Eye, ImagePlus } from 'lucide-react'
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../../store'
+import { supabase } from '../../../../utils/supabase'
 import UpgradeButton from '../shared/UpgradeButton'
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
 interface MarketTabProps {
   marketItems: MarketItem[]
@@ -13,7 +18,7 @@ interface MarketTabProps {
   lostFound: LostFound[]
   currentUserId: string
   formatCurrency: (amount: number, currency?: string) => string
-  onPostItem?: (item: { title: string; description: string; price: number | null; category: string }) => void
+  onPostItem?: (item: { title: string; description: string; price: number | null; category: string; imageUrl: string | null }) => void
   onPledge?: (groupBuyId: string, quantity: number) => void
   onReunite?: (id: string) => void
   onReport?: (subjectType: string, subjectId: string) => void
@@ -49,9 +54,80 @@ export default function MarketTab({
   const [postDesc, setPostDesc] = useState('')
   const [postPrice, setPostPrice] = useState('')
   const [postCategory, setPostCategory] = useState('Household')
+  const [postImage, setPostImage] = useState<File | null>(null)
+  const [postImagePreview, setPostImagePreview] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const [posting, setPosting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const tabClass = (id: Section) =>
     `px-4 py-2 rounded-lg text-sm font-medium transition-all ${section === id ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageError(null)
+    if (!file.type.startsWith('image/')) {
+      setImageError('Only images are supported.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError('Image is too large — max 5MB.')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+    setPostImage(file)
+    setPostImagePreview(URL.createObjectURL(file))
+  }
+
+  const clearPostImage = () => {
+    if (postImagePreview) URL.revokeObjectURL(postImagePreview)
+    setPostImage(null)
+    setPostImagePreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const resetForm = () => {
+    setPostTitle(''); setPostDesc(''); setPostPrice(''); setPostCategory('Household')
+    clearPostImage()
+    setImageError(null)
+    setShowForm(false)
+  }
+
+  const handleSubmitItem = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!postTitle.trim()) return
+    setPosting(true)
+    setImageError(null)
+
+    // Same Storage-upload pattern as gossip's media upload and the profile
+    // photo field — size/type validated on select, uploaded on submit, the
+    // public URL stored on the row. Single image, matching the simplicity
+    // of the rest of this form rather than a full gallery.
+    let imageUrl: string | null = null
+    if (postImage && supabase && currentUserId) {
+      const path = `${currentUserId}/${Date.now()}-${postImage.name}`
+      const { error: uploadError } = await supabase.storage.from('gossip-media').upload(path, postImage)
+      if (uploadError) {
+        setImageError(uploadError.message)
+        setPosting(false)
+        return
+      }
+      const { data: publicUrlData } = supabase.storage.from('gossip-media').getPublicUrl(path)
+      imageUrl = publicUrlData.publicUrl
+    }
+
+    onPostItem?.({
+      title: postTitle,
+      description: postDesc,
+      price: postPrice.trim() === '' ? null : Number(postPrice),
+      category: postCategory,
+      imageUrl
+    })
+    setPosting(false)
+    resetForm()
+  }
 
   return (
     <div className="space-y-6">
@@ -71,44 +147,10 @@ export default function MarketTab({
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">Direct trading between neighbors. No platform fees.</p>
              </div>
-             <button onClick={() => setShowForm(!showForm)} className="bg-white/5 hover:bg-white/10 text-gold-primary border border-gold-primary/20 px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
-                {showForm ? <X size={14}/> : <Plus size={14}/>}
-                {showForm ? 'Cancel' : 'Post Item'}
+             <button onClick={() => setShowForm(true)} className="bg-white/5 hover:bg-white/10 text-gold-primary border border-gold-primary/20 px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                <Plus size={14}/> Post Item
              </button>
           </div>
-
-          {showForm && (
-             <form
-                onSubmit={e => {
-                   e.preventDefault()
-                   if (!postTitle.trim()) return
-                   onPostItem?.({
-                      title: postTitle,
-                      description: postDesc,
-                      price: postPrice.trim() === '' ? null : Number(postPrice),
-                      category: postCategory
-                   })
-                   setPostTitle(''); setPostDesc(''); setPostPrice(''); setShowForm(false)
-                }}
-                className="bg-black/40 border border-gold-primary/20 rounded-xl p-6 mb-8 space-y-4"
-             >
-                <p className="text-xs text-gray-500">Leave the price blank to give it away. Payment happens between you and the buyer — never through the app.</p>
-                <input value={postTitle} onChange={e => setPostTitle(e.target.value)} required placeholder="What is it?" className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
-                <textarea value={postDesc} onChange={e => setPostDesc(e.target.value)} placeholder="Condition, why you're selling" className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white h-20 resize-none outline-none focus:border-gold-primary/40" />
-                <div className="flex gap-3">
-                   <input type="number" min={0} value={postPrice} onChange={e => setPostPrice(e.target.value)} placeholder="Price (blank = free)" className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
-                   <select value={postCategory} onChange={e => setPostCategory(e.target.value)} className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40">
-                      <option>Household</option>
-                      <option>Furniture</option>
-                      <option>Electronics</option>
-                      <option>Clothing</option>
-                      <option>Food</option>
-                      <option>Other</option>
-                   </select>
-                </div>
-                <button type="submit" className="w-full bg-gold-primary text-black font-black py-2.5 rounded-lg text-xs uppercase tracking-widest">Post it</button>
-             </form>
-          )}
 
           {marketItems.length === 0 ? (
             <div className="py-12 text-center text-gray-500">
@@ -119,6 +161,11 @@ export default function MarketTab({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[...marketItems].sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a))).map(item => (
                 <div key={item.id} className={`bg-black/40 border rounded-xl p-4 flex flex-col gap-3 transition-all group ${isFeatured(item) ? 'border-gold-primary/40' : 'border-white/5 hover:border-white/10'}`}>
+                   {item.imageUrl && (
+                     <div className="relative w-full h-32 rounded-lg overflow-hidden -mt-1">
+                       <Image src={item.imageUrl} alt={item.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 25vw" />
+                     </div>
+                   )}
                    <div className="flex justify-between items-start">
                       <span className="text-xs font-black text-gold-primary group-hover:scale-110 transition-transform origin-left">{item.price ? formatCurrency(item.price, item.currency) : 'FREE'}</span>
                       <div className="flex items-center gap-1.5">
@@ -282,6 +329,62 @@ export default function MarketTab({
            )}
         </div>
       )}
+
+      {/* Previously an always-open form permanently pinned above the
+          listings, conflating browsing and posting on the same screen and
+          making every visitor scroll past a full form first. Matches
+          Housing's own create-listing modal pattern instead of being a
+          third, different approach to "create something" in this app. */}
+      <AnimatePresence>
+        {showForm && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={resetForm} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden">
+              <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
+                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Post an <span className="text-gold-primary">Item</span></h3>
+                <button onClick={resetForm} className="p-2 text-gray-500 hover:text-white transition-colors"><X /></button>
+              </div>
+              <form onSubmit={handleSubmitItem} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <p className="text-xs text-gray-500">Leave the price blank to give it away. Payment happens between you and the buyer — never through the app.</p>
+
+                <div>
+                  <input accept="image/*" ref={fileInputRef} className="hidden" id="market-image-input" type="file" onChange={handleImageSelect} />
+                  {postImagePreview ? (
+                    <div className="relative w-full h-40 rounded-lg overflow-hidden border border-white/10">
+                      {/* Local object URL preview — next/image can't optimize a blob:, a plain img is correct here. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={postImagePreview} alt="Selected item" className="w-full h-full object-cover" />
+                      <button type="button" onClick={clearPostImage} className="absolute top-2 right-2 bg-black/80 text-white p-1.5 rounded-full hover:bg-red-500/80 transition-colors"><X size={14} /></button>
+                    </div>
+                  ) : (
+                    <label htmlFor="market-image-input" className="flex items-center justify-center gap-2 w-full h-24 border border-dashed border-white/15 rounded-lg text-xs text-gray-400 hover:border-gold-primary/40 hover:text-gold-primary cursor-pointer transition-all">
+                      <ImagePlus size={16} /> Add a photo (optional)
+                    </label>
+                  )}
+                  {imageError && <p className="text-[10px] text-red-400 mt-1.5">{imageError}</p>}
+                </div>
+
+                <input value={postTitle} onChange={e => setPostTitle(e.target.value)} required placeholder="What is it?" className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
+                <textarea value={postDesc} onChange={e => setPostDesc(e.target.value)} placeholder="Condition, why you're selling" className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white h-20 resize-none outline-none focus:border-gold-primary/40" />
+                <div className="flex gap-3">
+                   <input type="number" min={0} value={postPrice} onChange={e => setPostPrice(e.target.value)} placeholder="Price (blank = free)" className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
+                   <select value={postCategory} onChange={e => setPostCategory(e.target.value)} className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                      <option>Household</option>
+                      <option>Furniture</option>
+                      <option>Electronics</option>
+                      <option>Clothing</option>
+                      <option>Food</option>
+                      <option>Other</option>
+                   </select>
+                </div>
+                <button type="submit" disabled={posting} className="w-full bg-gold-primary text-black font-black py-2.5 rounded-lg text-xs uppercase tracking-widest disabled:opacity-50">
+                  {posting ? 'Posting…' : 'Post it'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

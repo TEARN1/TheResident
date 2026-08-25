@@ -593,6 +593,7 @@ export default function CommunityPage() {
                     currency: defaultCurrency || '',
                     category: item.category,
                     suburb,
+                    imageUrl: item.imageUrl || undefined,
                     status: 'available',
                     createdBy: currentUser.id,
                     createdAt: new Date().toISOString()
