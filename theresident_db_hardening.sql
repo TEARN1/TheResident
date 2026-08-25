@@ -33,7 +33,23 @@ create index if not exists res_listings_visible_until_idx on public.res_listings
 commit;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 2. public.spatial_ref_sys — NOT fixable from here. Documented, not scripted.
+-- 2. res_profiles.legal_name — a Resident-only "formal name" field, separate
+--    from the Gruvs-owned profiles.name shown elsewhere in the app. This app
+--    never writes that column outside initial signup (CONTRACT.md §2); a
+--    resident who wants a formal identity on record for verification/
+--    landlord-facing contexts sets this instead, without touching the shared
+--    table. Already reflected in resident_schema.sql's CREATE TABLE for fresh
+--    installs — this is the equivalent delta for the live project.
+-- ─────────────────────────────────────────────────────────────────────────────
+begin;
+
+alter table public.res_profiles
+  add column if not exists legal_name text;
+
+commit;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 3. public.spatial_ref_sys — NOT fixable from here. Documented, not scripted.
 --
 --    It's PostGIS's coordinate-system reference data, and it's the one table on
 --    the project with RLS disabled (Supabase's weekly security-advisor email
@@ -54,9 +70,9 @@ commit;
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 3. Verification — run this after the commit above and read the output.
---    Expect: three res_listings columns present, listing_type check listing all
---    three values.
+-- 4. Verification — run this after the commits above and read the output.
+--    Expect: three res_listings columns present, listing_type check listing
+--    all three values, and legal_name present on res_profiles.
 -- ─────────────────────────────────────────────────────────────────────────────
 select 'columns' as check, string_agg(column_name, ', ' order by column_name) as result
 from information_schema.columns
@@ -65,4 +81,9 @@ where table_schema = 'public' and table_name = 'res_listings'
 
 union all
 select 'listing_type constraint', pg_get_constraintdef(oid)
-from pg_constraint where conname = 'res_listings_listing_type_check';
+from pg_constraint where conname = 'res_listings_listing_type_check'
+
+union all
+select 'res_profiles.legal_name', string_agg(column_name, ', ')
+from information_schema.columns
+where table_schema = 'public' and table_name = 'res_profiles' and column_name = 'legal_name';

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon } from 'lucide-react'
-import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
+import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/shared/UpgradeButton'
@@ -112,6 +112,8 @@ export default function ProfilePage() {
     }
   }
 
+  const [legalName, setLegalNameInput] = useState('')
+  const [legalNameSaved, setLegalNameSaved] = useState(false)
   const [bio, setBio] = useState('')
   const [gender, setGender] = useState<'men' | 'women' | 'any'>('any')
   const [childrenCount, setChildrenCount] = useState(0)
@@ -163,6 +165,7 @@ export default function ProfilePage() {
   // from external state into local form state, not a render-loop risk.
   useEffect(() => {
     if (!currentUser) return
+    setLegalNameInput(currentUser.legalName || '')
     if (currentUser.role === 'tenant' && currentUser.profile) {
       const p = currentUser.profile
       setBio(p.bio || '')
@@ -352,6 +355,35 @@ export default function ProfilePage() {
             {photoError && <p className="text-[11px] text-red-400">{photoError}</p>}
           </div>
         </div>
+      </Card>
+
+      <Card className="space-y-3">
+        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+          <UserIcon size={16} /> Legal Name
+        </h2>
+        <p className="text-[11px] text-gray-500">
+          Separate from your Gruvs display name — used where formality matters, like verification and a landlord&apos;s view of your application. Leave blank to keep using your display name everywhere.
+        </p>
+        <form
+          onSubmit={e => {
+            e.preventDefault()
+            dispatch(setLegalName(legalName.trim() || undefined))
+            setLegalNameSaved(true)
+            setTimeout(() => setLegalNameSaved(false), 2500)
+          }}
+          className="flex items-center gap-2"
+        >
+          <input
+            value={legalName}
+            onChange={e => setLegalNameInput(e.target.value)}
+            placeholder="e.g. Thandiwe Nkosi"
+            className="flex-1 bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50"
+          />
+          <button type="submit" className={goldButtonClass()}>
+            {legalNameSaved ? <Check size={14} /> : null}
+            {legalNameSaved ? 'Saved' : 'Save'}
+          </button>
+        </form>
       </Card>
 
       {hasPlus === false && (

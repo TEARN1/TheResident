@@ -298,7 +298,10 @@ export default function HousingPage() {
     const request: RoomRequest = {
       id: `req-${Date.now()}`,
       tenantId: currentUser?.id || '',
-      tenantName: currentUser?.name || '',
+      // A room request is exactly the "landlord's view of an applicant"
+      // formal context — prefer the Resident-only legal name over the
+      // Gruvs display name when the applicant has set one.
+      tenantName: currentUser?.legalName || currentUser?.name || '',
       listingId: activeListing.id,
       listingTitle: activeListing.title,
       landlordId: activeListing.landlordId,

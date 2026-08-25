@@ -58,6 +58,17 @@ export interface User {
   preferences?: LandlordPreferences
   /** res_profiles.created_at — drives the Next of Kin 6-month grace window. */
   createdAt?: string
+  /**
+   * res_profiles.legal_name — a Resident-only "formal name" field, separate
+   * from the Gruvs-owned profiles.name (`name` above) shown elsewhere in the
+   * app. This app never writes that shared column outside initial signup
+   * (CONTRACT.md §2). Top-level rather than nested in UserProfile/
+   * LandlordPreferences because it applies regardless of tenant/landlord
+   * role, unlike either of those. Used wherever formality matters
+   * (verification status, a landlord's view of an applicant); falls back to
+   * the Gruvs display name (`name`) when unset.
+   */
+  legalName?: string
 }
 
 export interface Listing {
@@ -693,6 +704,13 @@ const authSlice = createSlice({
     updatePreferences: (state, action: PayloadAction<{ preferences: LandlordPreferences }>) => {
       if (state.currentUser && state.currentUser.role === 'landlord') {
         state.currentUser.preferences = action.payload.preferences
+      }
+    },
+    // Top-level, not nested in profile/preferences — legal_name applies
+    // regardless of tenant/landlord role, unlike either of those.
+    setLegalName: (state, action: PayloadAction<string | undefined>) => {
+      if (state.currentUser) {
+        state.currentUser.legalName = action.payload
       }
     },
     // Self-service fix for accounts that were silently defaulted to the
@@ -1629,7 +1647,8 @@ export const {
   resetFailedAttempts,
   updateProfile,
   updatePreferences,
-  updateUserRole
+  updateUserRole,
+  setLegalName
 } = authSlice.actions
 
 export const { setListings, addListing, deleteListing, updateListingVerification } = listingsSlice.actions
@@ -2425,6 +2444,7 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
               }
             }))
           }
+          store.dispatch(setLegalName(dbProfile.legal_name || undefined))
         } else {
           await supabase.from('res_profiles').insert({
             id: uuid,
@@ -2463,6 +2483,11 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (updatePreferences.match(action) && currentUser) {
       syncLabel = 'your preferences'
       await dbUpdate('res_profiles', db.preferencesToRow(action.payload.preferences), 'id', toUUID(currentUser.id))
+    }
+
+    if (setLegalName.match(action) && currentUser) {
+      syncLabel = 'your legal name'
+      await dbUpdate('res_profiles', { legal_name: action.payload || null }, 'id', toUUID(currentUser.id))
     }
 
     // 2. Sync Room Listings
