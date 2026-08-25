@@ -1,5 +1,11 @@
 import type { NextConfig } from "next";
 
+// Bundle analysis: run `npx next experimental-analyze`.
+// NOT @next/bundle-analyzer — it is a webpack plugin, and this project
+// builds with Turbopack, against which it silently no-ops ("The Next Bundle
+// Analyzer is not compatible with Turbopack builds, no report will be
+// generated"). It was tried here and removed rather than left in as dead
+// config that looks like working instrumentation.
 const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],

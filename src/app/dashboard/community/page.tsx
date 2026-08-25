@@ -43,16 +43,6 @@ import {
 } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds } from '../../../utils/gruvsEvents'
-import NoticeBoardTab from '../components/community/NoticeBoardTab'
-import ToolLibraryTab from '../components/household/ToolLibraryTab'
-import ChoreSchedulerTab from '../components/household/ChoreSchedulerTab'
-import DisputesTab from '../components/trust-safety/DisputesTab'
-import SafetyTab from '../components/trust-safety/SafetyTab'
-import MarketTab from '../components/community/MarketTab'
-import HouseholdTab from '../components/household/HouseholdTab'
-import CommunitiesTab from '../components/community/CommunitiesTab'
-import SharedResourcesTab from '../components/household/SharedResourcesTab'
-import CommunityAdminTab from '../components/community/CommunityAdminTab'
 import GruvsConnectionsWidget from '../components/social/GruvsConnectionsWidget'
 import OrgBroadcastsPanel from '../components/community/OrgBroadcastsPanel'
 import dynamic from 'next/dynamic'
@@ -62,6 +52,31 @@ const VibeMap = dynamic(() => import('../components/map/VibeMap'), {
   ssr: false,
   loading: () => <div className="p-12 text-slate-400 font-bold text-center">Loading VibeMap client engine...</div>
 })
+
+// Every one of these renders only when its own sub-tab is active, but all
+// ten were statically imported — so opening Community downloaded the code
+// for Market, Disputes, Chores, Admin and the rest before you'd chosen any
+// of them. This page carries roughly a third of the app's functionality,
+// so that was the single largest avoidable payload in the bundle.
+//
+// ssr is left ON (unlike VibeMap, which is client-only because Leaflet
+// touches window at import time) — these are ordinary components, so
+// keeping SSR preserves the current first-paint behaviour and only changes
+// how the JS is chunked.
+const tabLoading = () => (
+  <div className="glass-panel p-12 text-center text-gray-500 text-sm">Loading…</div>
+)
+
+const NoticeBoardTab = dynamic(() => import('../components/community/NoticeBoardTab'), { loading: tabLoading })
+const ToolLibraryTab = dynamic(() => import('../components/household/ToolLibraryTab'), { loading: tabLoading })
+const ChoreSchedulerTab = dynamic(() => import('../components/household/ChoreSchedulerTab'), { loading: tabLoading })
+const DisputesTab = dynamic(() => import('../components/trust-safety/DisputesTab'), { loading: tabLoading })
+const SafetyTab = dynamic(() => import('../components/trust-safety/SafetyTab'), { loading: tabLoading })
+const MarketTab = dynamic(() => import('../components/community/MarketTab'), { loading: tabLoading })
+const HouseholdTab = dynamic(() => import('../components/household/HouseholdTab'), { loading: tabLoading })
+const CommunitiesTab = dynamic(() => import('../components/community/CommunitiesTab'), { loading: tabLoading })
+const SharedResourcesTab = dynamic(() => import('../components/household/SharedResourcesTab'), { loading: tabLoading })
+const CommunityAdminTab = dynamic(() => import('../components/community/CommunityAdminTab'), { loading: tabLoading })
 
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
