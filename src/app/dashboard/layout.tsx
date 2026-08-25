@@ -20,6 +20,7 @@ import {
 } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
+import { unlockNotificationAudio } from '../../utils/notificationSounds'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
 import AutomationControlPanel from './components/shared/AutomationControlPanel'
@@ -32,6 +33,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
+  // Browser autoplay policy blocks audio until a real user gesture — this
+  // creates/resumes the shared AudioContext on the FIRST click or keypress
+  // anywhere in the dashboard, so it's already running by the time a
+  // realtime notification arrives and tries to play a tone.
+  useEffect(() => {
+    const unlock = () => {
+      unlockNotificationAudio()
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+    window.addEventListener('pointerdown', unlock)
+    window.addEventListener('keydown', unlock)
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
+
   // Guests previously got the "you should sign up" pitch as five separate
   // small nudges scattered across Housing, Services and Profile, each only
   // seen if that specific screen happened to render it. One banner, said

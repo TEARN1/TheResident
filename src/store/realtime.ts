@@ -12,6 +12,8 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../utils/supabase'
 import type { AppDispatch } from './index'
 import { fetchSupabaseData, setNotifications } from './index'
+import { shouldDeliver } from '../utils/logic'
+import { playNotificationSound } from '../utils/notificationSounds'
 
 export interface DbNotification {
   id: string
@@ -45,7 +47,8 @@ export const loadNotifications = async (dispatch: AppDispatch) => {
     title: n.title || 'Notification',
     message: n.body || n.message || '',
     read: !!(n.read ?? n.is_read),
-    timestamp: n.created_at || new Date().toISOString()
+    timestamp: n.created_at || new Date().toISOString(),
+    type: n.type || undefined
   }))))
 }
 
@@ -66,6 +69,27 @@ export const subscribeToRealtime = (dispatch: AppDispatch, userId: string): (() 
   if (!supabase) return () => {}
 
   const channels: RealtimeChannel[] = []
+
+  // Loaded once per subscription (i.e. once per dashboard session) rather
+  // than re-fetched per notification — matches NotificationPrefsPanel's own
+  // load-once-per-mount behaviour, and a new notification arriving is rare
+  // enough that this doesn't need to be perfectly live against a prefs
+  // change made in another tab.
+  let soundPrefs = { mutedTypes: [] as string[], quietHoursStart: null as number | null, quietHoursEnd: null as number | null }
+  supabase
+    .from('res_notification_prefs')
+    .select('muted_types, quiet_hours_start, quiet_hours_end')
+    .eq('user_id', userId)
+    .maybeSingle()
+    .then(({ data }) => {
+      if (data) {
+        soundPrefs = {
+          mutedTypes: data.muted_types || [],
+          quietHoursStart: data.quiet_hours_start ?? null,
+          quietHoursEnd: data.quiet_hours_end ?? null
+        }
+      }
+    })
 
   // #44.2 — a change merges into the store via one targeted refetch rather than
   // re-pulling all 21 tables per event. Debounced so a burst is one fetch.
@@ -104,7 +128,13 @@ export const subscribeToRealtime = (dispatch: AppDispatch, userId: string): (() 
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${userId}` },
-      () => { loadNotifications(dispatch) }
+      (payload: { new?: { type?: string } }) => {
+        const type = payload.new?.type
+        if (type && shouldDeliver(type, soundPrefs)) {
+          playNotificationSound(type)
+        }
+        loadNotifications(dispatch)
+      }
     )
     .subscribe()
   channels.push(notifs)

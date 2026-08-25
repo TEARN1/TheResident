@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx src/utils/security.test.ts && tsx src/store/store.test.ts && tsx src/store/dbMappers.test.ts && tsx src/store/offlineQueue.test.ts && tsx src/store/offlinePersistence.test.ts && tsx src/store/schemaCoverage.test.ts && tsx src/utils/logic.test.ts && tsx src/utils/resilientCall.test.ts && tsx src/utils/orgBroadcasts.test.ts",
+    "test": "tsx src/utils/security.test.ts && tsx src/store/store.test.ts && tsx src/store/dbMappers.test.ts && tsx src/store/offlineQueue.test.ts && tsx src/store/offlinePersistence.test.ts && tsx src/store/schemaCoverage.test.ts && tsx src/utils/logic.test.ts && tsx src/utils/resilientCall.test.ts && tsx src/utils/notificationSounds.test.ts && tsx src/utils/orgBroadcasts.test.ts",
     "fuzzer": "tsx scripts/attack-fuzzer.ts",
     "scale-test": "tsx scripts/scale-test.ts"
   },

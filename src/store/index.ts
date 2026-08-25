@@ -1597,6 +1597,14 @@ export interface AppNotification {
   message: string
   read: boolean
   timestamp: string
+  /**
+   * The res_* notification type (see NotificationPrefsPanel's MUTABLE_TYPES
+   * for the real taxonomy, plus PANIC_TYPE), used to pick which sound tone
+   * plays (utils/notificationSounds.ts). Undefined for locally-generated,
+   * synthetic notifications (offline-queue/sync-status messages) that never
+   * came from the shared `notifications` table and have no real type.
+   */
+  type?: string
 }
 
 const notificationsSlice = createSlice({
