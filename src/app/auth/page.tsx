@@ -380,6 +380,14 @@ export default function AuthPage() {
           <h2 style={logoStyle}>THE RESIDENT</h2>
           <p style={taglineStyle}>Verified Co-Living & Rental Portal</p>
           <p style={crossAppNoteStyle}>One account — the same login works on The Gruvs</p>
+          {/* Reachable BEFORE signing up, deliberately: POPIA expects the
+              privacy notice to be available before someone hands over their
+              personal information, not gated behind the account it describes. */}
+          <p style={{ fontSize: '0.65rem', opacity: 0.55, marginTop: '0.5rem' }}>
+            <a href="/legal/privacy" style={{ color: 'var(--gold-primary)' }}>Privacy</a>
+            {' · '}
+            <a href="/legal/terms" style={{ color: 'var(--gold-primary)' }}>Terms</a>
+          </p>
         </div>
 
         {/* Tab Selection */}
