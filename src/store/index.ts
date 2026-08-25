@@ -2,6 +2,7 @@ import { configureStore, combineReducers, createSlice, PayloadAction, createAsyn
 import { supabase } from '../utils/supabase'
 import { resilientCall } from '../utils/resilientCall'
 import { getErrorMessage } from '../utils/errors'
+import { safeGetJSON, safeSetJSON, safeRemove } from '../utils/safeStorage'
 
 // Mappers between app models and the deployed schema live in dbMappers.ts;
 // toUUID is re-exported from there so existing imports keep working.
@@ -2892,11 +2893,23 @@ const uiSlice = createSlice({
     },
     clearOfflineQueue: (state) => {
       state.offlineQueue = []
+    },
+    /**
+     * Restores writes held over from a PREVIOUS browser session. Without
+     * this the queue was memory-only: the app promised "queued and will
+     * sync when you reconnect", then lost the write on any refresh, tab
+     * close, or background tab-kill — the last being routine on the
+     * low-end Android devices this app targets. Replacing rather than
+     * merging is safe because rehydration happens once at boot, before
+     * anything can have queued into this session.
+     */
+    rehydrateOfflineQueue: (state, action: PayloadAction<Array<{ action: string; payload: unknown }>>) => {
+      state.offlineQueue = action.payload.slice(-MAX_OFFLINE_QUEUE)
     }
   }
 })
 
-export const { setLanguage, setDataStatus, queueOfflineAction, clearOfflineQueue } = uiSlice.actions
+export const { setLanguage, setDataStatus, queueOfflineAction, clearOfflineQueue, rehydrateOfflineQueue } = uiSlice.actions
 
 export const selectFilteredListings = createSelector(
   [
@@ -3034,9 +3047,23 @@ const appReducer = combineReducers({
 // after would briefly see the first person's already-fetched data before
 // fetchSupabaseData() overwrites it. Wiping the whole tree on logout (except
 // the language preference, which isn't sensitive) closes that window.
+// ── Offline queue durability ────────────────────────────────────────────────
+// The queue is the one piece of Redux state representing work the user was
+// PROMISED would happen ("queued and will sync when you reconnect").
+// Everything else in the tree is re-fetchable from Supabase, so the queue is
+// deliberately the ONLY thing persisted — this is not general Redux
+// persistence, and nothing sensitive-but-refetchable is written to disk.
+export const OFFLINE_QUEUE_STORAGE_KEY = 'residentOfflineQueue'
+
+// The offline queue is deliberately NOT carried across a logout, and its
+// persisted copy is dropped too: a queued write belongs to the session that
+// made it, so replaying user A's pending writes after user B signs in on the
+// same device would either attribute data to the wrong person or be rejected
+// by RLS. Losing them is the correct trade against that.
 const rootReducer = (state: ReturnType<typeof appReducer> | undefined, action: Parameters<typeof appReducer>[1]) => {
   if (logoutUser.match(action)) {
     const language = state?.ui.language
+    safeRemove(OFFLINE_QUEUE_STORAGE_KEY)
     const next = appReducer(undefined, action)
     return { ...next, ui: { ...next.ui, language: language ?? next.ui.language } }
   }
@@ -3050,6 +3077,41 @@ export const store = configureStore({
       serializableCheck: false
     }).concat(supabaseSyncMiddleware)
 })
+
+const isQueueShape = (parsed: unknown): boolean =>
+  Array.isArray(parsed) && parsed.every(item =>
+    !!item && typeof item === 'object' && typeof (item as { action?: unknown }).action === 'string'
+  )
+
+/** Reads any queue left over from a previous session. Exported for tests. */
+export function loadPersistedQueue(): Array<{ action: string; payload: unknown }> {
+  return safeGetJSON<Array<{ action: string; payload: unknown }>>(OFFLINE_QUEUE_STORAGE_KEY, [], isQueueShape)
+}
+
+export function persistQueue(queue: Array<{ action: string; payload: unknown }>): void {
+  if (queue.length === 0) {
+    safeRemove(OFFLINE_QUEUE_STORAGE_KEY)
+    return
+  }
+  safeSetJSON(OFFLINE_QUEUE_STORAGE_KEY, queue)
+}
+
+if (typeof window !== 'undefined') {
+  const persisted = loadPersistedQueue()
+  if (persisted.length > 0) {
+    store.dispatch(rehydrateOfflineQueue(persisted))
+  }
+
+  // Mirror the queue to storage on every change. Cheap: the comparison is a
+  // reference check, and a write only happens when the queue actually moved.
+  let lastQueue = store.getState().ui.offlineQueue
+  store.subscribe(() => {
+    const current = store.getState().ui.offlineQueue
+    if (current === lastQueue) return
+    lastQueue = current
+    persistQueue(current)
+  })
+}
 
 export interface RootState {
   auth: ReturnType<typeof authSlice.reducer>
