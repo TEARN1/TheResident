@@ -54,6 +54,7 @@ import CommunitiesTab from '../components/community/CommunitiesTab'
 import SharedResourcesTab from '../components/household/SharedResourcesTab'
 import CommunityAdminTab from '../components/community/CommunityAdminTab'
 import GruvsConnectionsWidget from '../components/social/GruvsConnectionsWidget'
+import OrgBroadcastsPanel from '../components/community/OrgBroadcastsPanel'
 import dynamic from 'next/dynamic'
 import { formatCurrency, type StatusReport } from '../../../utils/logic'
 
@@ -557,18 +558,21 @@ export default function CommunityPage() {
               </div>
             )}
             {subTab === 'notices' && (
-               <NoticeBoardTab
-                  communityNotices={communityNotices}
-                  currentUser={currentUser}
-                  upcomingGruvsEvents={upcomingGruvsEvents}
-                  gruvsEventInfo={gruvsEventInfo}
-                  handleVibeNotice={(id) => dispatch(vibeNotice({ noticeId: id, userName: currentUser?.name || '' }))}
-                  handleEchoNotice={(id) => dispatch(echoNotice({ noticeId: id, userName: currentUser?.name || '' }))}
-                  handleRSVPToEvent={(id) => dispatch(rsvpToEvent({ noticeId: id, userName: currentUser?.name || '' }))}
-                  handlePostNotice={handlePostNotice}
-                  isModerator={isModerator}
-                  onModerate={handleModerate}
-               />
+              <div className="space-y-6">
+                <NoticeBoardTab
+                    communityNotices={communityNotices}
+                    currentUser={currentUser}
+                    upcomingGruvsEvents={upcomingGruvsEvents}
+                    gruvsEventInfo={gruvsEventInfo}
+                    handleVibeNotice={(id) => dispatch(vibeNotice({ noticeId: id, userName: currentUser?.name || '' }))}
+                    handleEchoNotice={(id) => dispatch(echoNotice({ noticeId: id, userName: currentUser?.name || '' }))}
+                    handleRSVPToEvent={(id) => dispatch(rsvpToEvent({ noticeId: id, userName: currentUser?.name || '' }))}
+                    handlePostNotice={handlePostNotice}
+                    isModerator={isModerator}
+                    onModerate={handleModerate}
+                 />
+                <OrgBroadcastsPanel />
+              </div>
             )}
             {subTab === 'market' && (
               <MarketTab

@@ -8,9 +8,10 @@ it should live here, not only in one person's head.
 - Check GitHub Actions CI status on the default branch.
 - Skim the `res_audit_log` / security log entries (`addLog` action in
   `src/store/index.ts`) for anything unexpected — `xss_blocked`,
-  `auth_failed`, `brute_force_blocked`, `org_broadcast_sent` (once Batch 10
-  ships), or a spike in `Sync failed` notifications, which now surface with
-  a real error message instead of `[object Object]` (see `utils/errors.ts`).
+  `auth_failed`, `brute_force_blocked`, `role_switched`,
+  `org_broadcast_sent`, or a spike in `Sync failed` notifications, which now
+  surface with a real error message instead of `[object Object]` (see
+  `utils/errors.ts`).
 
 ## Monthly (~1 hour)
 - `npm audit` and a dependency bump pass.
@@ -28,7 +29,9 @@ it should live here, not only in one person's head.
   — the actual `CREATE POLICY` statements live in Supabase, not fully
   mirrored in this repo, so this is the one check that can't be automated
   from the codebase alone.
-- Prune stale `res_org_units` rows (once Batch 10 ships).
+- Prune stale `res_org_units` rows (no owner logged in for 6+ months, or no
+  broadcasts/followers) — the org broadcast tree (Batch 10) has no
+  self-cleanup, only human review.
 
 ## What's automated vs. what needs a human
 - **Automated / self-healing:** transient network failures on writes retry

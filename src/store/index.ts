@@ -131,7 +131,7 @@ export interface SecurityLog {
   timestamp: string
   ip: string
   action: string
-  type: 'xss_blocked' | 'rate_limit_triggered' | 'idor_prevented' | 'auth_success' | 'auth_failed' | 'brute_force_blocked' | 'upload_malware_blocked' | 'sqli_blocked' | 'role_switched'
+  type: 'xss_blocked' | 'rate_limit_triggered' | 'idor_prevented' | 'auth_success' | 'auth_failed' | 'brute_force_blocked' | 'upload_malware_blocked' | 'sqli_blocked' | 'role_switched' | 'org_broadcast_sent'
   details: string
 }
 
