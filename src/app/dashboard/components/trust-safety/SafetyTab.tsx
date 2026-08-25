@@ -100,10 +100,6 @@ export default function SafetyTab({
   // reports age out of the 30-minute window). Seed via useState's lazy
   // initializer so the effect only needs to set up the recurring tick.
   const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000)
-    return () => clearInterval(id)
-  }, [])
 
   const activeAlerts = alerts.filter(a => a.status === 'active')
 
@@ -131,6 +127,23 @@ export default function SafetyTab({
   // user can only register a row where THEY are the carer (i.e. "I'll watch
   // over this person"), not one where they pick someone else to watch them.
   const [careRows, setCareRows] = useState<CareCircleRow[]>([])
+
+  // `now` drives exactly two things: whether a care-circle check-in is
+  // overdue, and the 30-minute outage-consensus window. Ticking it
+  // re-renders this whole ~620-line tab, so the interval only runs when
+  // there is actually something time-sensitive on screen to age. With no
+  // care rows and no status reports it produced a minute-by-minute
+  // re-render that could not change a single pixel.
+  //
+  // Declared here rather than beside the useState above because it reads
+  // careRows, which is declared on the line above this comment.
+  const hasTimeSensitiveContent = careRows.length > 0 || statusReports.length > 0
+  useEffect(() => {
+    if (!hasTimeSensitiveContent) return
+    const id = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [hasTimeSensitiveContent])
+
   const [careLoading, setCareLoading] = useState(false)
   const [careQuery, setCareQuery] = useState('')
   const [careResults, setCareResults] = useState<CareProfile[]>([])

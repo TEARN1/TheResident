@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ReduxProvider } from '../store/provider'
+import { Analytics } from '@vercel/analytics/next'
 
 export const metadata: Metadata = {
   title: 'The Resident Crew',
@@ -48,6 +49,12 @@ export default function RootLayout({
         <ReduxProvider>
           {children}
         </ReduxProvider>
+        {/* Core Web Vitals from real devices, which is the only measurement
+            that reflects the low-end Android handsets this app targets — a
+            local Lighthouse run on a dev machine never will. No cookies and
+            no cross-site identifiers, so it needs no consent banner, and it
+            is inert unless the deployment is on Vercel. */}
+        <Analytics />
         <script
           dangerouslySetInnerHTML={{
             __html: `
