@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, Lock } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, Lock, Trash2 } from 'lucide-react'
 import { checkPasswordStrength } from '../../../utils/security'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
@@ -116,6 +116,36 @@ export default function ProfilePage() {
 
   const [legalName, setLegalNameInput] = useState('')
   const [legalNameSaved, setLegalNameSaved] = useState(false)
+
+  // Account deletion (POPIA right to erasure). Typed confirmation rather
+  // than a plain "are you sure?" — this is irreversible and takes your
+  // listings and posts with it, so it should be harder to do by accident
+  // than tapping one button.
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const handleDeleteAccount = async () => {
+    if (!supabase || deleteConfirm !== 'DELETE') return
+    setDeleting(true)
+    setDeleteError(null)
+    const { error } = await supabase.rpc('res_delete_my_account')
+    if (error) {
+      setDeleting(false)
+      setDeleteError(
+        /not_authenticated/.test(error.message)
+          ? 'Your session expired — sign in again and retry.'
+          : /function .* does not exist/i.test(error.message)
+            ? 'Account deletion is not enabled on this database yet (theresident_account_deletion_schema.sql has not been applied).'
+            : error.message
+      )
+      return
+    }
+    await supabase.auth.signOut()
+    dispatch(logoutUser())
+    router.push('/')
+  }
 
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -602,6 +632,70 @@ export default function ProfilePage() {
       >
         <LogOut size={14} /> Log Out
       </button>
+
+      {/* POPIA right to erasure. Placed last and styled as a genuine danger
+          zone rather than sitting among ordinary settings. */}
+      {!isGuestUser(currentUser) && (
+        <Card className="space-y-3 border-red-500/20">
+          <h2 className="text-sm font-black text-red-400 uppercase tracking-widest flex items-center gap-2">
+            <Trash2 size={16} /> Delete account
+          </h2>
+          {!deleteOpen ? (
+            <>
+              <p className="text-[11px] text-gray-500">
+                Permanently removes your Resident profile, listings, posts and saved places.
+                This can&apos;t be undone.
+              </p>
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                className="text-[11px] font-black uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors"
+              >
+                I want to delete my account
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-[11px] text-gray-400">
+                This deletes your Resident profile and everything you posted here. Two things
+                deliberately remain, and you should know before continuing:
+              </p>
+              <ul className="text-[11px] text-gray-500 list-disc pl-4 space-y-1">
+                <li>Security records, until they expire on their own after 180 days — so a blocked attack can&apos;t be erased by deleting the account that made it.</li>
+                <li>Messages you already sent, in the other person&apos;s inbox.</li>
+                <li>Your shared login still works on The Gruvs — this removes The Resident side only.</li>
+              </ul>
+              <p className="text-[11px] text-gray-400">
+                Type <strong className="text-white">DELETE</strong> to confirm.
+              </p>
+              <input
+                value={deleteConfirm}
+                onChange={e => setDeleteConfirm(e.target.value)}
+                placeholder="DELETE"
+                className="w-full bg-black border border-red-500/30 rounded-xl p-3 text-sm text-white outline-none focus:border-red-500/60"
+              />
+              {deleteError && <p className="text-[11px] text-red-400">{deleteError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setDeleteOpen(false); setDeleteConfirm(''); setDeleteError(null) }}
+                  className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black py-3 rounded-xl text-[11px] uppercase tracking-widest transition-all"
+                >
+                  Keep my account
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={deleting || deleteConfirm !== 'DELETE'}
+                  className="flex-1 bg-red-500/90 hover:bg-red-500 text-white font-black py-3 rounded-xl text-[11px] uppercase tracking-widest transition-all disabled:opacity-40"
+                >
+                  {deleting ? 'Deleting…' : 'Delete permanently'}
+                </button>
+              </div>
+            </>
+          )}
+        </Card>
+      )}
     </div>
   )
 }
