@@ -4,6 +4,31 @@ TheResident is solo-maintained and free/open-source only (no paid tooling).
 This is the written answer to "how long between maintenance passes" —
 it should live here, not only in one person's head.
 
+## Before shipping any UI change
+
+`npx tsc --noEmit`, `npm run build` and `npm test` are necessary but **not
+sufficient** — none of them render a component. Always also:
+
+```bash
+npm run dev
+# then load the routes the change touches and watch the terminal + network tab
+```
+
+This is not boilerplate caution. A React `useCallback` that takes a piece of
+state as a dependency, where its own call chain writes that state, produces
+an infinite refetch loop — and `setState(prev => ({ ...prev }))` always
+creates a fresh object identity, so the loop is silent to every static
+check. Exactly that shipped once on the gossip feed (fixed in a5222e3):
+build, lint and all 87 tests passed green while the live page hammered
+Supabase in a loop and flashed its loading state forever. ESLint actively
+pushed toward it, since `react-hooks/exhaustive-deps` *requires* the
+dependency that closes the cycle.
+
+The pattern the rest of this codebase uses correctly, and the one to copy:
+a loader callback depends only on stable props/ids, and anything it needs
+to read mid-fetch is a **local variable** (see `loadCareCircle` in
+`SafetyTab.tsx`) or a ref — never a piece of state that the same chain sets.
+
 ## Weekly (~15 min)
 - Check GitHub Actions CI status on the default branch.
 - Skim the security log for anything unexpected. Supabase dashboard →
