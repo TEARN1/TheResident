@@ -28,11 +28,12 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '*.supabase.co',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cdnjs.cloudflare.com',
       }
+      // cdnjs.cloudflare.com was whitelisted here but nothing in the app,
+      // the seed data or the schema ever loaded an image from it — removed
+      // rather than self-hosted, because there was no dependency to host.
+      // Every entry in this list is a third party trusted to serve content
+      // into the app's pages, so an unused one is pure attack surface.
     ],
   },
   async headers() {
