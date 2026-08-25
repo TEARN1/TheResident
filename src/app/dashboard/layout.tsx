@@ -261,7 +261,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ) : null}
       </div>
 
-      {currentUser && isGuestUser(currentUser) && !guestBannerDismissed && (
+      {/* One onboarding slot, not two independently-rendered banners — same
+          "only one at a time" principle as the alert-banner stack above.
+          In practice these were already mutually exclusive (nokStatus is
+          explicitly nulled for guest users, see the effect above), but
+          expressing that as a single slot keeps it that way structurally
+          rather than by coincidence, and matches the established pattern
+          instead of being a third, ad hoc way of stacking banners. */}
+      {currentUser && isGuestUser(currentUser) && !guestBannerDismissed ? (
         <div className="guest-summary-banner">
           <Sparkles size={16} className="shrink-0" style={{ color: '#D4AF37' }} />
           <span>
@@ -272,9 +279,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <X size={14} />
           </button>
         </div>
-      )}
-
-      {nokStatus && !nokStatus.hasNextOfKin && !nokBannerDismissed && (
+      ) : nokStatus && !nokStatus.hasNextOfKin && !nokBannerDismissed ? (
         <div className="guest-summary-banner">
           <ShieldCheck size={16} className="shrink-0" style={{ color: nokStatus.overdue ? '#ef4444' : '#D4AF37' }} />
           <span>
@@ -291,7 +296,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <X size={14} />
           </button>
         </div>
-      )}
+      ) : null}
 
       {/* No hamburger / "More" panel anymore — Profile, Next of Kin, Business,
           language and Log Out all live on the Profile page now (see
