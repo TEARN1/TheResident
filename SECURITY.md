@@ -126,3 +126,20 @@ reasonable window to fix it first.
   `theresident_org_broadcast_schema.sql`) are the source of truth for what was *deployed*, but
   the live policy set should be exported and diffed against them quarterly
   (see `MAINTENANCE.md`) in case of an out-of-band dashboard change.
+- **22 of the 26 RPC functions the client calls are not defined in this
+  repo** — they exist only in the live Supabase project. This is the largest
+  remaining gap in the security review surface, and it is worse than the
+  table drift that preceded it: a `SECURITY DEFINER` function runs as its
+  owner, not its caller, so RLS on the tables it touches does not protect
+  anything — the function body itself has to re-check who is asking. An
+  unreviewed `SECURITY DEFINER` function is the easiest way to hand out data
+  the RLS policies were written to withhold.
+  `theresident_rpc_inventory.sql` holds a read-only query that dumps the real
+  definitions (including which are `SECURITY DEFINER` and whether they set
+  `search_path`) out of the live project, plus the review order. Run it,
+  review, and commit the output to close this.
+- **Drift is now caught by tests, not just by audit** —
+  `src/store/schemaDrift.test.ts` fails the build if the client queries a
+  `res_*` table or calls an RPC that appears in no `.sql` file. Three
+  separate audits found this class of gap by hand; it should not need a
+  fourth.
