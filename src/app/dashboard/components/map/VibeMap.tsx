@@ -102,13 +102,22 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
   const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null)
   const [locationDenied, setLocationDenied] = useState(false)
+  // Gates map creation until the geolocation attempt has actually resolved
+  // (success, failure, or "no geolocation at all") — without this, the map
+  // used to initialize immediately at a hardcoded whole-world view and only
+  // recenter afterward, so every load flashed the whole world for a moment
+  // with no explanation before either snapping to the real location or (on
+  // failure) showing the "Showing the whole world" banner. Waiting means the
+  // map now initializes directly at the right place, or the fallback and its
+  // explanation appear together instead of one after the other.
+  const [geoResolved, setGeoResolved] = useState(false)
   const [zones, setZones] = useState<SharedZone[]>([])
   const [loading, setLoading] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
-  // Visible by default — a color-coded map with the legend hidden behind a
-  // toggle just reads as a wash of same-ish dots; showing it up front is
-  // what actually makes the color-by-kind strategy legible.
-  const [showLegend, setShowLegend] = useState(true)
+  // Closed by default — a color-coded map with the legend open on every
+  // load competes with the map itself for attention before the user has
+  // asked for it. The Layers toggle is one tap away.
+  const [showLegend, setShowLegend] = useState(false)
   const [drawer, setDrawer] = useState<Drawer>('none')
   // The three drawer-toggle pills (Saved places / Distances / Alerts) used
   // to be their own floating stack on the left, competing with search for
@@ -216,14 +225,23 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     // An explicit place from the URL wins over "where am I" — otherwise the
     // geolocation callback would land and yank the view back off the address
     // the user actually asked to see.
+    // A focusPlace deep-link resolves geoResolved itself once the place
+    // lookup below finishes, rather than here — its center isn't known yet.
     if (focusPlace) return
     if (!('geolocation' in navigator)) {
       setLocationDenied(true)
+      setGeoResolved(true)
       return
     }
     navigator.geolocation.getCurrentPosition(
-      pos => setCenter({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      () => setLocationDenied(true),
+      pos => {
+        setCenter({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+        setGeoResolved(true)
+      },
+      () => {
+        setLocationDenied(true)
+        setGeoResolved(true)
+      },
       { timeout: 8000 }
     )
   }, [focusPlace])
@@ -232,10 +250,16 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     if (!focusPlace) return
     let cancelled = false
     searchPlaces(focusPlace).then(results => {
-      if (cancelled || results.length === 0) return
-      const hit = results[0]
-      setCenter({ lat: hit.lat, lon: hit.lon })
-      setPendingPoint({ label: hit.label, lat: hit.lat, lon: hit.lon })
+      if (cancelled) return
+      if (results.length > 0) {
+        const hit = results[0]
+        setCenter({ lat: hit.lat, lon: hit.lon })
+        setPendingPoint({ label: hit.label, lat: hit.lat, lon: hit.lon })
+      }
+      // Resolves geoResolved even when the lookup comes back empty — the map
+      // still needs to initialize somewhere (the world-view fallback) rather
+      // than staying on the loading state forever.
+      setGeoResolved(true)
     })
     return () => { cancelled = true }
   }, [focusPlace])
@@ -248,7 +272,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   }
 
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return
+    if (!geoResolved || !mapContainerRef.current || mapRef.current) return
 
     const startLat = center?.lat ?? 20
     const startLon = center?.lon ?? 0
@@ -334,7 +358,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     // zoom, pins and open popups. The dedicated [mapTheme] effect below swaps
     // the tile layer's URL in place instead, which is the whole point of
     // holding tileLayerRef.
-  }, [center])
+  }, [center, geoResolved])
 
   // Replaces the old manual "Fix map size" button — Leaflet only recomputes
   // its internal tile grid on window resize, so any layout change that
@@ -704,18 +728,19 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     if (map) map.setZoom(map.getZoom() + delta)
   }
 
-  // Standard "locate me" behaviour (Google/Apple Maps): one tap turns on
-  // live sharing AND jumps straight to your position at street level —
-  // not two separate actions (a toggle, then a wait, then a manual
-  // recenter). Zoom 18 puts the scale bar at roughly 40-50m, matching what
-  // you'd actually want to judge "which street is this" at.
+  // Deliberately separate from live-location sharing (LiveLocationToggle,
+  // rendered below in the same stack). This used to be one overloaded
+  // button: it silently meant either "just recenter" or "also start
+  // continuous watchPosition tracking" depending on hidden state (whether
+  // the Alerts drawer had ever been opened), so a tap on what looked like a
+  // simple recenter button could start sharing your live position without
+  // any clear signal that had happened. A one-shot position read with no
+  // state change and no continuous tracking is the honest version of
+  // "center the map on me" — sharing is now its own explicit, visibly-
+  // toggled control. Zoom 18 puts the scale bar at roughly 40-50m, matching
+  // what you'd actually want to judge "which street is this" at.
   const STREET_LEVEL_ZOOM = 18
-  const handleLocateMe = () => {
-    if (locationSharing && livePosition) {
-      mapRef.current?.setView([livePosition.lat, livePosition.lon], STREET_LEVEL_ZOOM)
-      return
-    }
-    setLocationSharing(true)
+  const handleCenterOnMe = () => {
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
       pos => {
@@ -755,6 +780,13 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           role="region"
           aria-label="Neighbourhood map showing reported zones near you"
         />
+
+        {!geoResolved && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#111] text-gray-400" role="status" aria-live="polite">
+            <Loader size={22} className="animate-spin text-gold-primary" />
+            <span className="text-xs">Finding your location…</span>
+          </div>
+        )}
 
         {/* Screen-reader equivalent of the map + a polite live region so a new
             alert near a saved place is ANNOUNCED, not just drawn in red.
@@ -910,20 +942,16 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           </div>
 
           <div className="bg-black/85 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl overflow-hidden flex flex-col divide-y divide-white/10">
-            {/* Live location was previously reachable only by opening the
-                Alerts drawer — a setting almost nobody would stumble into —
-                and even found, it just flipped a switch with no visible
-                result. One tap now: turn on AND jump to street level, the way
-                every map app's locate-me button actually behaves. */}
+            {/* One-shot only — see the comment on handleCenterOnMe for why
+                this no longer starts live tracking as a side effect. */}
             <button
-              onClick={handleLocateMe}
+              onClick={handleCenterOnMe}
               disabled={locating}
-              aria-label={locationSharing ? 'Recenter on my location' : 'Show my live location'}
-              aria-pressed={locationSharing}
-              title={locationSharing ? 'Back to my location' : 'Show my live location'}
-              className={`p-2.5 transition-all disabled:opacity-60 ${locationSharing ? 'text-gold-primary' : 'text-gray-300 hover:text-white'}`}
+              aria-label="Center map on my location"
+              title="Center map on my location"
+              className="p-2.5 text-gray-300 hover:text-white transition-all disabled:opacity-60"
             >
-              {locating ? <Loader size={16} className="animate-spin" /> : <LocateFixed size={16} className={locationSharing ? 'animate-pulse' : ''} />}
+              {locating ? <Loader size={16} className="animate-spin" /> : <LocateFixed size={16} />}
             </button>
             <button
               onClick={() => setMapTheme(t => t === 'dark' ? 'light' : 'dark')}
@@ -934,6 +962,25 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
               {mapTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
           </div>
+
+          {/* Explicit, always-visible live-sharing control — previously
+              reachable only by opening the Alerts drawer, where almost
+              nobody would find it. Same lifted sharing/livePosition state as
+              the full-description instance rendered inside that drawer
+              below, so the two never disagree; this is a second, more
+              discoverable place to flip the same switch, matching the
+              intent already written into LiveLocationToggle's own comment.
+              Deliberately its own pill rather than folded into either box
+              above — sharing your live position is a privacy-relevant
+              decision and shouldn't visually blend in with plain view
+              controls like zoom or theme. */}
+          <LiveLocationToggle
+            compact
+            userId={currentUserId}
+            sharing={locationSharing}
+            onSharingChange={setLocationSharing}
+            onPosition={setLivePosition}
+          />
         </div>
 
         {/* Stats chip — floating bottom-left. Counts the FILTERED set, not

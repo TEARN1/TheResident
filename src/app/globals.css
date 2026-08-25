@@ -215,6 +215,18 @@ body {
   overflow-y: auto;
 }
 
+/* Used on horizontal-scroll rows (map quick-filters, Gruvs connections,
+   Services/Community tab bars) where the scroll affordance itself is the
+   point but a visible scrollbar reads as clutter. Was applied in 5 places
+   with no rule behind it, so every one of them showed a normal scrollbar. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Sidebar Elements */
 .sidebar-logo {
   padding: 1.5rem;
