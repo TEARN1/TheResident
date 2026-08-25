@@ -9,19 +9,19 @@ import { supabase } from '../../utils/supabase'
 import { performLogin } from '../../utils/authLogin'
 import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
+import Image from 'next/image'
 
 // Cross-app SSO mark for The Gruvs — their real logo (public/gruvs-logo.png),
 // not a placeholder monogram.
 function GruvsMark() {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <Image
       src="/gruvs-logo.png"
       alt="The Gruvs"
       aria-hidden="true"
+      width={22}
+      height={22}
       style={{
-        width: '22px',
-        height: '22px',
         borderRadius: '50%',
         objectFit: 'cover',
         flexShrink: 0

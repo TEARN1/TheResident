@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -42,6 +42,11 @@ interface TrustGate {
   status: 'new' | 'building' | 'established'
   unlocked: boolean
 }
+
+// Pay-for-priority ordering: Premium first, then Priority, then everyone
+// else in existing order. A free provider is never excluded, only later
+// in the list — the free floor is bookable, paying just buys placement.
+const TIER_RANK: Record<'premium' | 'priority' | 'none', number> = { premium: 0, priority: 1, none: 2 }
 
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
@@ -90,14 +95,10 @@ export default function ServicesPage() {
   const rawServices = useSelector((state: RootState) => state.networking.services)
   const [providerTiers, setProviderTiers] = useState<Record<string, ProviderTier>>({})
 
-  // Pay-for-priority ordering: Premium first, then Priority, then everyone
-  // else in existing order. A free provider is never excluded, only later
-  // in the list — the free floor is bookable, paying just buys placement.
-  const TIER_RANK: Record<'premium' | 'priority' | 'none', number> = { premium: 0, priority: 1, none: 2 }
-  const services = [...rawServices].sort((a, b) =>
+  const services = useMemo(() => [...rawServices].sort((a, b) =>
     TIER_RANK[(providerTiers[a.ownerId] || 'none') as 'premium' | 'priority' | 'none'] -
     TIER_RANK[(providerTiers[b.ownerId] || 'none') as 'premium' | 'priority' | 'none']
-  )
+  ), [rawServices, providerTiers])
   const utilityTokens = useSelector((state: RootState) => state.utilities.tokens)
   const dispatches = useSelector((state: RootState) => state.networking.dispatches)
 

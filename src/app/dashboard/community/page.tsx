@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -81,7 +81,6 @@ export default function CommunityPage() {
   // first mount, so a repeat visit needs this effect to still catch the param.
   useEffect(() => {
     if (searchParams.get('tab') === 'vibemap') { setSubTab('vibemap'); setMapFullscreen(true) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
@@ -188,7 +187,6 @@ export default function CommunityPage() {
 
   useEffect(() => {
     if (!currentUser || isGuestUser(currentUser) || !supabase || myCommunityIds.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAdminCommunities([])
       return
     }
@@ -332,17 +330,21 @@ export default function CommunityPage() {
 
   // ── Adapters: the redesigned tab components use their own simplified local
   // types (a visual mock layer) rather than the store's real shapes. These map
-  // one to the other so real data reaches real UI.
-  const adaptedChores = communityChores.map(c => ({
+  // one to the other so real data reaches real UI. Memoized — these ran on
+  // every render regardless of whether their source data changed, producing
+  // a brand-new array of brand-new objects each time (this page has 15+
+  // useSelector calls, any one of which re-renders the component), which
+  // defeats reference-equality checks in any child that receives them.
+  const adaptedChores = useMemo(() => communityChores.map(c => ({
     id: c.id,
     title: c.taskName,
     assignedTo: c.roommateId,
     status: c.status,
     dueDate: c.dayOfWeek,
     points: 10
-  }))
+  })), [communityChores])
 
-  const adaptedDisputes = communityDisputes.map(d => ({
+  const adaptedDisputes = useMemo(() => communityDisputes.map(d => ({
     id: d.id,
     title: d.title,
     description: d.description,
@@ -354,15 +356,15 @@ export default function CommunityPage() {
     status: (d.status === 'mediating' ? 'investigating' : d.status) as 'pending' | 'resolved' | 'investigating',
     timestamp: d.timestamp,
     resolutionDetails: d.resolutionDetails
-  }))
+  })), [communityDisputes])
 
-  const adaptedCommunities = communities.map(c => ({
+  const adaptedCommunities = useMemo(() => communities.map(c => ({
     id: c.id,
     name: c.name,
     kind: c.kind,
     suburb: c.suburb,
     memberCount: communityMemberCounts[toUUID(c.id)] || 0
-  }))
+  })), [communities, communityMemberCounts])
 
   // Four clusters, each carrying one secondary accent layered on top of the
   // base gold palette (used only as a subtle icon-badge tint, never replacing

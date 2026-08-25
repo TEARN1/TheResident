@@ -44,7 +44,10 @@ export default function BusinessPage() {
   // eslint-disable-next-line react-hooks/purity
   const now = useMemo(() => Date.now(), [])
   const guest = isGuestUser(currentUser)
-  const myListings = currentUser ? listings.filter(l => l.landlordId === currentUser.id) : []
+  const myListings = useMemo(
+    () => currentUser ? listings.filter(l => l.landlordId === currentUser.id) : [],
+    [listings, currentUser]
+  )
   const myService = currentUser ? services.find(s => s.ownerId === currentUser.id) : undefined
   const isLandlord = currentUser?.role === 'landlord'
   const isProvider = !!myService

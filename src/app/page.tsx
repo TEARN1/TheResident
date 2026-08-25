@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Shield, Lock, Crown, Download, Smartphone, X, LogIn, Loader } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import styles from './page.module.css'
 import { AppDispatch, RootState } from '../store'
 import { performLogin } from '../utils/authLogin'
@@ -65,7 +66,7 @@ export default function Home() {
       {/* Navbar */}
       <nav className={styles.navbar}>
         <div className={styles.logo} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/logo.png" alt="The Resident Logo" style={{ height: '32px', width: '32px', borderRadius: '4px' }} />
+          <Image src="/logo.png" alt="The Resident Logo" width={32} height={32} style={{ borderRadius: '4px' }} />
           THE RESIDENT
         </div>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>

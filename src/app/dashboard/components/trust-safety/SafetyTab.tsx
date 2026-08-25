@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
+import Image from 'next/image'
 import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction } from 'lucide-react'
 import { outageConsensus, type StatusReport } from '../../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../../store'
@@ -349,8 +350,7 @@ export default function SafetyTab({
                       className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-left"
                     >
                       {p.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                        <Image src={p.avatar_url} alt="" width={32} height={32} className="w-8 h-8 rounded-full object-cover" />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-white/10" />
                       )}
@@ -367,8 +367,7 @@ export default function SafetyTab({
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
               <div className="flex items-center gap-3">
                 {selectedSubject.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={selectedSubject.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+                  <Image src={selectedSubject.avatar_url} alt="" width={36} height={36} className="w-9 h-9 rounded-full object-cover" />
                 ) : (
                   <div className="w-9 h-9 rounded-full bg-white/10" />
                 )}

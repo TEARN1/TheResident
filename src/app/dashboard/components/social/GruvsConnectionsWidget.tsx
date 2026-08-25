@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { Users, ShieldCheck, ChevronRight, ChevronLeft } from 'lucide-react'
 import { getMutualConnections, type Connection } from '../../../../utils/social'
 
@@ -53,8 +54,7 @@ export default function GruvsConnectionsWidget() {
           {visible.map(person => (
             <div key={person.id} className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-xl px-3 py-2 shrink-0">
               {person.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={person.avatarUrl} alt={person.displayName} className="w-7 h-7 rounded-full object-cover" />
+                <Image src={person.avatarUrl} alt={person.displayName} width={28} height={28} className="w-7 h-7 rounded-full object-cover" />
               ) : (
                 <div className="w-7 h-7 rounded-full bg-gold-primary/20 flex items-center justify-center text-[10px] font-black text-gold-primary">
                   {person.displayName.charAt(0)}
