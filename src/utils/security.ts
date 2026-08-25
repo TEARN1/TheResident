@@ -698,7 +698,21 @@ export const containsHeuristicAnomaly = (input: string): boolean => {
   const ratio = specialChars / input.length
 
   if (ratio > 0.45) return true
-  if (/(.)\1{6,}/.test(input)) return true
+
+  // Repeated-run detection, split by character class. A single rule at 7+ of
+  // ANY character used to cover both, which false-positived hard: the proxy
+  // scans every /dashboard and /api query string, so GUEST_USER_ID
+  // ('00000000-0000-4000-8000-000000000001') returned a 400 Security
+  // Exception on its eight consecutive zeros, and so would any ordinary
+  // input with a run — a price like 10000000, or someone typing "yoooooooo".
+  //
+  // Punctuation runs are what fuzzer padding actually looks like ('''''''',
+  // %%%%%%%%, ////////) and stay on a tight threshold. Alphanumeric runs are
+  // usually legitimate, so they need a much higher bar before they resemble
+  // buffer-overflow padding (AAAA…) rather than ordinary text or an id.
+  if (/([^a-zA-Z0-9\s])\1{5,}/.test(input)) return true
+  if (/([a-zA-Z0-9])\1{19,}/.test(input)) return true
+
   if (/['"`;()|&]{4,}/.test(input)) return true
 
   return false

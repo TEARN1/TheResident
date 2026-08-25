@@ -34,6 +34,7 @@ import {
   checkRateLimit,
   isValidContentType,
   scanInput,
+  containsHeuristicAnomaly,
 } from './security'
 
 // ===== 1. XSS Protection Tests =====
@@ -357,4 +358,30 @@ test('Master scanInput — detects multiple threat vectors', () => {
   const safeResult = scanInput('Looking for 2-bedroom apartment in Ivory Park')
   assert.strictEqual(safeResult.safe, true)
   assert.strictEqual(safeResult.threats.length, 0)
+})
+
+// The proxy scans EVERY /dashboard and /api query string through scanInput,
+// so a false positive here is a hard 400 Security Exception on a legitimate
+// URL — not a soft warning. containsHeuristicAnomaly had no coverage at all
+// until this block, which is how it shipped 400ing GUEST_USER_ID.
+test('heuristic anomaly does not false-positive on legitimate input', () => {
+  // The exact URL that was returning 400 in the running app.
+  assert.strictEqual(containsHeuristicAnomaly('to=00000000-0000-4000-8000-000000000001'), false)
+  // Ordinary UUIDs, ids and prices.
+  assert.strictEqual(containsHeuristicAnomaly('to=7a138d94-9ed4-471e-9044-7a699d5767f3'), false)
+  assert.strictEqual(containsHeuristicAnomaly('maxPrice=10000000&suburb=Ivory Park'), false)
+  // Human text with a drawn-out run.
+  assert.strictEqual(containsHeuristicAnomaly('q=yoooooooo is that place still free'), false)
+  assert.strictEqual(containsHeuristicAnomaly('Looking for a room in Ivory Park Zone 5'), false)
+})
+
+test('heuristic anomaly still catches automated fuzzer padding', () => {
+  // Punctuation runs — what padding actually looks like.
+  assert.strictEqual(containsHeuristicAnomaly("q=''''''''''''''''"), true)
+  assert.strictEqual(containsHeuristicAnomaly('q=%%%%%%%%%%%%%%%%'), true)
+  assert.strictEqual(containsHeuristicAnomaly('path=////////////////'), true)
+  // Buffer-overflow style alphanumeric padding (20+).
+  assert.strictEqual(containsHeuristicAnomaly('name=' + 'A'.repeat(40)), true)
+  // High special-character density.
+  assert.strictEqual(containsHeuristicAnomaly("';|&$(){}[]<>~^*!#@"), true)
 })
