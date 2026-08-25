@@ -1769,6 +1769,7 @@ export const fetchSupabaseData = createAsyncThunk(
     const { data: profileRows, error: profilesError } = await supabase
       .from('profiles')
       .select('id, display_name, username')
+      .limit(2000)
     if (profilesError) {
       markFailed('profiles', profilesError.message)
     } else {

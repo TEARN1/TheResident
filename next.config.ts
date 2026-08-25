@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
+  },
   // Pinned because an empty, orphaned package-lock.json sits in the user's
   // home directory (no package.json, no node_modules beside it — junk from a
   // stray `npm install` run there once). Next walked up, found it, and
