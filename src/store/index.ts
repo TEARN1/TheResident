@@ -130,7 +130,14 @@ export interface RoomRequest {
 export interface SecurityLog {
   id: string
   timestamp: string
-  ip: string
+  /**
+   * Server-observed IP, when a route actually has one. Every call site used
+   * to hardcode '127.0.0.1', which is worse than an empty field in an audit
+   * log — it reads like real evidence. The browser cannot know its own
+   * public IP, so this is left unset client-side and populated only where
+   * the server genuinely sees it.
+   */
+  ip?: string
   action: string
   type: 'xss_blocked' | 'rate_limit_triggered' | 'idor_prevented' | 'auth_success' | 'auth_failed' | 'brute_force_blocked' | 'upload_malware_blocked' | 'sqli_blocked' | 'role_switched' | 'org_broadcast_sent'
   details: string
@@ -2349,6 +2356,32 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
 
   const state = store.getState()
   const currentUser = state.auth.currentUser
+
+  // Security log entries are handled before everything else and returned
+  // early, deliberately OUTSIDE the shared try/catch below: they are
+  // best-effort telemetry, so a failure to record one must never surface a
+  // "Sync failed" notification, trigger a reconcile refetch, or land in the
+  // offline queue for replay. This handler is what makes the audit trail
+  // real — for its entire history addLog wrote only to in-memory Redux,
+  // while SECURITY.md and MAINTENANCE.md both described it as something a
+  // maintainer could review after the fact.
+  if (addLog.match(action)) {
+    if (!supabase) return
+    // Never awaited by the caller: logging must not add latency to, or be
+    // able to fail, the user action that produced it.
+    void supabase.from('res_security_logs').insert({
+      user_id: currentUser && !isGuestUser(currentUser) ? toUUID(currentUser.id) : null,
+      event_type: action.payload.type,
+      action: action.payload.action,
+      details: action.payload.details ?? null,
+      ip_address: action.payload.ip ?? null,
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 500) : null
+    }).then(
+      () => {},
+      () => {}
+    )
+    return
+  }
 
   // Human-readable label of what was being saved, for the failure notification
   let syncLabel = ''

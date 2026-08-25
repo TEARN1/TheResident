@@ -120,7 +120,6 @@ export default function OrgBroadcastsPanel() {
     try {
       await postBroadcast(targetUnitId, currentUser.id, sanitize(title.trim()), sanitize(body.trim()))
       dispatch(addLog({
-        ip: '127.0.0.1',
         action: `Org broadcast sent from unit ${targetUnitId}`,
         type: 'org_broadcast_sent',
         details: `Sender ${currentUser.id} posted "${title.trim().slice(0, 60)}" to unit ${targetUnitId}.`

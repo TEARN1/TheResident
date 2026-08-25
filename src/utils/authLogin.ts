@@ -32,7 +32,6 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
   const secondsLeft = secondsLockedOut(lockedUntil, email)
   if (secondsLeft > 0) {
     dispatch(addLog({
-      ip: '127.0.0.1',
       action: 'Attempted login to locked account blocked',
       type: 'brute_force_blocked',
       details: `Failed authorization request for locked account ${email}. Lock expires in ${secondsLeft}s.`
@@ -51,7 +50,6 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
     const attempts = (failedAttempts[email] || 0) + 1
 
     dispatch(addLog({
-      ip: '127.0.0.1',
       action: 'Failed login attempt recorded',
       type: 'auth_failed',
       details: `Incorrect credentials entered for ${email}. Failed attempts: ${attempts}/5`
@@ -91,7 +89,6 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
   }))
 
   dispatch(addLog({
-    ip: '127.0.0.1',
     action: 'Logged in safely: Supabase session authenticated',
     type: 'auth_success',
     details: `Email: ${email}`

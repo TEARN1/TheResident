@@ -55,9 +55,27 @@ reasonable window to fix it first.
   names, policy names, or constraint names to the client.
 - **Auditable account-affecting actions**: role switches, org broadcast
   sends, XSS-blocked input, auth success/failure, and brute-force lockouts
-  all write to the security log (`addLog` in `store/index.ts`) — the solo
-  maintainer's way of seeing what happened without having been online when
-  it did.
+  write via `addLog` (`store/index.ts`) and are persisted to
+  `res_security_logs` in Postgres — read them from the Supabase dashboard,
+  which uses the service role and bypasses RLS.
+
+  The table is insert-only for both `anon` and `authenticated` (the most
+  useful events — failed logins, brute-force lockouts, XSS blocked on the
+  signup form — happen *before* anyone is authenticated, so anonymous
+  inserts must be allowed, with `user_id` forced null so an entry can never
+  be forged against another account). There is deliberately **no select
+  policy**: an audit trail its own subject can read, or that an attacker can
+  read to confirm what was detected, is worth less. Rate-limited by trigger
+  (60/min per user, 300/min anonymous) since an anon-insertable table is a
+  spam target, and prunable past 180 days via `res_prune_security_logs()`.
+  See `theresident_security_log_schema.sql`.
+
+  Historical note, because it shaped the design: for most of this app's life
+  `addLog` wrote **only to in-memory Redux** — never synced, never stored,
+  never rendered in any UI, and cleared on both refresh and logout. This
+  file and `MAINTENANCE.md` nevertheless described it as a reviewable audit
+  trail. It wasn't; the entries never left the user's browser tab. Treat any
+  claim here as unverified until there's a test or a query behind it.
 - **Org broadcast messaging (Batch 10)**: opt-in only (`res_org_follows` is
   strictly self-service — nobody can see or create another person's follow
   row); posting requires a `sender` membership on the target unit or an

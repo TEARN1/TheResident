@@ -121,7 +121,6 @@ export default function AuthPage() {
     
     if (!scan.safe) {
       dispatch(addLog({
-        ip: '127.0.0.1',
         action: `Threats detected and neutralized: ${scan.threats.join(', ')}`,
         type: 'xss_blocked',
         details: `Sanitized input: ${original.substring(0, 100)} => ${sanitized.substring(0, 100)}`
@@ -218,7 +217,6 @@ export default function AuthPage() {
       }))
 
       dispatch(addLog({
-        ip: '127.0.0.1',
         action: `New account onboarded: Supabase auth created`,
         type: 'auth_success',
         details: `Created account for ${sanitizedName}.`
@@ -292,7 +290,6 @@ export default function AuthPage() {
     dispatch(resetFailedAttempts(email))
     dispatch(loginUser(visitorUser))
     dispatch(addLog({
-      ip: '127.0.0.1',
       action: 'Entered application in Guest / Visitor mode',
       type: 'auth_success',
       details: 'Browsing limits applied'

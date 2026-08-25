@@ -142,7 +142,6 @@ export default function ProfilePage() {
       // any other account-state change is (addLog), and visible to the
       // account owner (addNotification) in case it wasn't them.
       dispatch(addLog({
-        ip: '127.0.0.1',
         action: `Account role switched: ${previousRole} → ${newRole}`,
         type: 'role_switched',
         details: `User ${currentUser.id} switched from ${previousRole} to ${newRole}.`

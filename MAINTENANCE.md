@@ -6,12 +6,23 @@ it should live here, not only in one person's head.
 
 ## Weekly (~15 min)
 - Check GitHub Actions CI status on the default branch.
-- Skim the `res_audit_log` / security log entries (`addLog` action in
-  `src/store/index.ts`) for anything unexpected — `xss_blocked`,
-  `auth_failed`, `brute_force_blocked`, `role_switched`,
-  `org_broadcast_sent`, or a spike in `Sync failed` notifications, which now
-  surface with a real error message instead of `[object Object]` (see
-  `utils/errors.ts`).
+- Skim the security log for anything unexpected. Supabase dashboard →
+  SQL Editor (the service role bypasses RLS; there is intentionally no
+  select policy for normal users):
+
+  ```sql
+  select created_at, event_type, action, details, user_id
+  from public.res_security_logs
+  where created_at > now() - interval '7 days'
+  order by created_at desc
+  limit 200;
+  ```
+
+  Watch for `brute_force_blocked` and `auth_failed` clustering on one
+  account, unexpected `role_switched` entries, `xss_blocked` spikes, and
+  `org_broadcast_sent` from units you don't recognise. Also check for a rise
+  in `Sync failed` notifications, which now carry a real error message
+  instead of `[object Object]` (see `utils/errors.ts`).
 
 ## Monthly (~1 hour)
 - `npm audit` and a dependency bump pass.
@@ -20,6 +31,9 @@ it should live here, not only in one person's head.
   detection rules (never auto-actioned — human review only).
 - Re-run `npm run fuzzer` and confirm it's still 100% blocked across all
   attack categories.
+- Prune the security log if it's grown large: `select public.res_prune_security_logs();`
+  (drops entries older than 180 days — unbounded growth on a free tier is
+  its own outage).
 
 ## Quarterly (~half a day)
 - Full manual click-through of each dashboard tab (Housing, Community,
