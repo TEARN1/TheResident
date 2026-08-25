@@ -14,6 +14,7 @@ import { distanceMetres } from '../../../../utils/logic'
 import { searchPlaces, reverseGeocode, type GeocodeResult } from '../../../../utils/geocode'
 import { supabase } from '../../../../utils/supabase'
 import { encodeHTMLEntities } from '../../../../utils/security'
+import { getErrorMessage } from '../../../../utils/errors'
 import MapSearchBox from './MapSearchBox'
 import SavedPinsPanel from './SavedPinsPanel'
 import DistanceMatrixPanel, { type MatrixPoint } from './DistanceMatrixPanel'
@@ -687,15 +688,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       setReportNote('')
       if (center) loadZones(center.lat, center.lon)
     } catch (err) {
-      // reportZone can reject with a Supabase PostgrestError, which is a
-      // plain object (not an Error instance) — String(err) on that produces
-      // the useless literal text "[object Object]" instead of the real
-      // message.
-      const msg = err instanceof Error
-        ? err.message
-        : (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string')
-          ? (err as { message: string }).message
-          : String(err)
+      const msg = getErrorMessage(err)
       if (msg.includes('rate_limited')) {
         setReportError('Too many reports in the last hour — try again shortly.')
       } else {

@@ -1,5 +1,7 @@
 import { configureStore, createSlice, PayloadAction, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import { supabase } from '../utils/supabase'
+import { resilientCall } from '../utils/resilientCall'
+import { getErrorMessage } from '../utils/errors'
 
 // Mappers between app models and the deployed schema live in dbMappers.ts;
 // toUUID is re-exported from there so existing imports keep working.
@@ -2294,23 +2296,32 @@ const ROLLED_BACK_ACTIONS: string[] = [
 
 const isReplayable = (actionType: string) => !ROLLED_BACK_ACTIONS.includes(actionType)
 
+// Every write below this function funnels through it, which makes it the
+// one place to apply the retry-with-backoff layer generally instead of
+// re-solving it per call site — a transient failure gets one automatic
+// retry; a permission failure (resilientCall's isRetryableError) does not,
+// since retrying can't fix "you're not allowed." The 3rd tier — the offline
+// queue — is the caller's (syncActionToSupabase's catch block).
 const dbUpdate = async (table: string, payload: Record<string, unknown> | null, eqCol?: string, eqVal?: unknown) => {
   assertNetworkAlive();
   if (supabase) {
-    if (eqCol && eqVal !== undefined) {
-      if (payload === null) {
-        const { error } = await supabase.from(table).delete().eq(eqCol, eqVal);
-        if (error) throw error;
+    const client = supabase;
+    await resilientCall(async () => {
+      if (eqCol && eqVal !== undefined) {
+        if (payload === null) {
+          const { error } = await client.from(table).delete().eq(eqCol, eqVal);
+          if (error) throw error;
+        } else {
+          const { error } = await client.from(table).update(payload).eq(eqCol, eqVal);
+          if (error) throw error;
+        }
       } else {
-        const { error } = await supabase.from(table).update(payload).eq(eqCol, eqVal);
-        if (error) throw error;
+        if (payload) {
+          const { error } = await client.from(table).insert(payload);
+          if (error) throw error;
+        }
       }
-    } else {
-      if (payload) {
-        const { error } = await supabase.from(table).insert(payload);
-        if (error) throw error;
-      }
-    }
+    })
   } else {
     // Simulated DB latency
     await new Promise(resolve => setTimeout(resolve, 20));
@@ -2752,7 +2763,10 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     }
 
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
+    // A Supabase PostgrestError is a plain object, not an Error instance —
+    // `String(err)` on one used to produce the useless literal "[object
+    // Object]" here instead of the real message.
+    const message = getErrorMessage(err)
     console.error(`Error syncing with Supabase${syncLabel ? ` (${syncLabel})` : ''}:`, message)
 
     // Undo optimistic updates where a dedicated rollback reducer exists
