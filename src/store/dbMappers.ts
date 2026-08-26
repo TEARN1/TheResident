@@ -186,7 +186,9 @@ export const serviceToRow = (service: HandymanService): DbRow => ({
   price_estimate: service.priceEstimate,
   description: service.description,
   image: service.image,
-  reviews_count: service.reviewsCount
+  reviews_count: service.reviewsCount,
+  ...(service.lat != null ? { lat: service.lat } : {}),
+  ...(service.lon != null ? { lon: service.lon } : {})
 })
 
 export const dispatchToRow = (disp: ServiceDispatch): DbRow => ({

@@ -703,7 +703,7 @@ export default function HousingPage() {
                         <div className="flex items-center text-[10px] text-gray-500 font-black uppercase tracking-widest gap-2">
                            <MapPin size={12} className="text-gold-primary" /> {item.suburb}, {item.location}
                         </div>
-                        <OpenInMapsButton address={`${item.location}, ${item.suburb}`} />
+                        <OpenInMapsButton address={`${item.location}, ${item.suburb}`} lat={item.lat} lon={item.lon} label={item.title} />
                      </div>
                      {item.listingType === 'guesthouse' && item.eventId && gruvsEventInfo[item.eventId] && (
                         <div className="flex items-center gap-1.5 text-[10px] font-black text-purple-400 uppercase tracking-widest">

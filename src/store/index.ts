@@ -201,6 +201,8 @@ export interface HandymanService {
   description: string
   image: string
   reviewsCount: number
+  lat?: number
+  lon?: number
 }
 
 export interface ServiceDispatch {
@@ -1860,7 +1862,9 @@ export const fetchSupabaseData = createAsyncThunk(
         priceEstimate: item.price_estimate || '',
         description: item.description || '',
         image: item.image || '',
-        reviewsCount: item.reviews_count || 0
+        reviewsCount: item.reviews_count || 0,
+        lat: item.lat ?? undefined,
+        lon: item.lon ?? undefined
       }))))
     }
 

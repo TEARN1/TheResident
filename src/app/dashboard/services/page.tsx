@@ -23,6 +23,8 @@ import { formatCurrency } from '../../../utils/logic'
 import FollowButton from '../components/social/FollowButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
 import OpenInMapsButton from '../components/map/OpenInMapsButton'
+import MapSearchBox from '../components/map/MapSearchBox'
+import type { GeocodeResult } from '../../../utils/geocode'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import EmptyState from '../components/shared/EmptyState'
 import { directionsUrlForAddress } from '../../../utils/navigation'
@@ -62,6 +64,11 @@ export default function ServicesPage() {
   const [bizDesc, setBizDesc] = useState('')
   const [bizLocation, setBizLocation] = useState('')
   const [bizSuburb, setBizSuburb] = useState('')
+  // res_handyman_services.lat/lon existed in the DB but nothing ever wrote
+  // to it — "View on map" always fell back to re-geocoding free text, and
+  // the map's own Handymen layer had nothing real to plot.
+  const [bizLat, setBizLat] = useState<number | null>(null)
+  const [bizLon, setBizLon] = useState<number | null>(null)
 
   // Hire Modal State
   const [selectedBiz, setSelectedBiz] = useState<HandymanService | null>(null)
@@ -217,7 +224,9 @@ export default function ServicesPage() {
       priceEstimate: bizPrice,
       description: bizDesc,
       image: 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?auto=format&fit=crop&w=600&q=80',
-      reviewsCount: 0
+      reviewsCount: 0,
+      lat: bizLat ?? undefined,
+      lon: bizLon ?? undefined
     }
     dispatch(addService(newBiz))
     setShowBusinessRegModal(false)
@@ -439,7 +448,7 @@ export default function ServicesPage() {
                            <div className="flex items-center text-[10px] text-gray-500 font-black uppercase tracking-widest gap-2">
                               <MapPin size={12} className="text-gold-primary" /> {srv.suburb}
                            </div>
-                           <OpenInMapsButton address={`${srv.location}, ${srv.suburb}`} />
+                           <OpenInMapsButton address={`${srv.location}, ${srv.suburb}`} lat={srv.lat} lon={srv.lon} label={srv.businessName} />
                         </div>
                      </div>
                      <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80 font-medium italic">&quot;{srv.description}&quot;</p>
@@ -640,6 +649,15 @@ export default function ServicesPage() {
                               <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Suburb / Neighbourhood</label>
                               <input value={bizSuburb} onChange={e => setBizSuburb(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. Kreuzberg" />
                            </div>
+                        </div>
+                        <div className="space-y-2">
+                           <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                              Pin the exact spot on the map <span className="normal-case font-normal text-gray-600">(optional, but makes &quot;View on map&quot; point here for real)</span>
+                           </label>
+                           <MapSearchBox onSelect={(result: GeocodeResult) => { setBizLat(result.lat); setBizLon(result.lon) }} />
+                           {bizLat != null && bizLon != null && (
+                              <p className="text-[10px] text-gold-primary">Pinned — {bizLat.toFixed(4)}, {bizLon.toFixed(4)}</p>
+                           )}
                         </div>
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Rate Estimate</label>

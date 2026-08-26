@@ -146,6 +146,24 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   // them onto the right side alongside Layers instead.
   const [showToolsMenu, setShowToolsMenu] = useState(false)
 
+  // First-time orientation — a brand-new resident opening this for the
+  // first time sees a plain tile background with a stack of unlabelled
+  // floating icon buttons and no hint that tapping the map does anything.
+  // Shown once (localStorage-gated, not per-session) and dismissible.
+  const [showOrientationTip, setShowOrientationTip] = useState(false)
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('res_map_tip_seen')) setShowOrientationTip(true)
+    } catch {
+      // Storage can throw in private-browsing / locked-down contexts —
+      // just skip the tip rather than break the map over it.
+    }
+  }, [])
+  const dismissOrientationTip = () => {
+    setShowOrientationTip(false)
+    try { localStorage.setItem('res_map_tip_seen', '1') } catch { /* see above */ }
+  }
+
   // The legend used to be pure decoration — a static color key with no way
   // to act on it. Now each row is a real filter: unchecking "Heavy traffic"
   // actually hides those markers, and "Confirmed only" cuts noise from
@@ -263,20 +281,32 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   // centred (their approximate location or a searched place).
   const distanceOrigin = livePosition || center
 
-  // A "Directions" link elsewhere in the app (listings, services) routes here
-  // as /dashboard/community?tab=vibemap&place=<address> rather than deep-linking
-  // out to Google Maps — the shared zone reports, saved pins and geofence
-  // alerts only exist on our own map, so handing the user to an external app
-  // drops every layer that makes this map worth opening.
+  // A "View on map" link elsewhere in the app (listings, services) routes
+  // here rather than deep-linking out to Google Maps — the shared zone
+  // reports, saved pins and geofence alerts only exist on our own map, so
+  // handing the user to an external app drops every layer that makes this
+  // map worth opening.
+  //
+  // Two forms of that link exist: lat/lon (a listing/service with its own
+  // real coordinates — jumps straight there, no geocoding, no risk of
+  // landing on the wrong building on a street with a common name) and the
+  // older place=<address> text form (geocoded via Nominatim), kept as a
+  // fallback for records that predate coordinate capture.
+  const focusLatParam = searchParams.get('lat')
+  const focusLonParam = searchParams.get('lon')
+  const focusLabelParam = searchParams.get('label')
+  const focusLat = focusLatParam ? Number(focusLatParam) : null
+  const focusLon = focusLonParam ? Number(focusLonParam) : null
+  const hasFocusCoords = focusLat != null && focusLon != null && Number.isFinite(focusLat) && Number.isFinite(focusLon)
   const focusPlace = searchParams.get('place')
 
   useEffect(() => {
-    // An explicit place from the URL wins over "where am I" — otherwise the
-    // geolocation callback would land and yank the view back off the address
-    // the user actually asked to see.
-    // A focusPlace deep-link resolves geoResolved itself once the place
-    // lookup below finishes, rather than here — its center isn't known yet.
-    if (focusPlace) return
+    // An explicit place/coordinate from the URL wins over "where am I" —
+    // otherwise the geolocation callback would land and yank the view back
+    // off the spot the user actually asked to see.
+    // A focusPlace/hasFocusCoords deep-link resolves geoResolved itself
+    // once its own effect finishes, rather than here.
+    if (hasFocusCoords || focusPlace) return
     if (!('geolocation' in navigator)) {
       setLocationDenied(true)
       setGeoResolved(true)
@@ -293,10 +323,19 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       },
       { timeout: 8000 }
     )
-  }, [focusPlace])
+  }, [hasFocusCoords, focusPlace])
 
   useEffect(() => {
-    if (!focusPlace) return
+    if (!hasFocusCoords || focusLat == null || focusLon == null) return
+    setCenter({ lat: focusLat, lon: focusLon })
+    setPendingPoint({ label: focusLabelParam || `${focusLat.toFixed(4)}, ${focusLon.toFixed(4)}`, lat: focusLat, lon: focusLon })
+    setGeoResolved(true)
+  }, [hasFocusCoords, focusLat, focusLon, focusLabelParam])
+
+  useEffect(() => {
+    // Coordinates already answer "where" — no need to also geocode the
+    // legacy text fallback.
+    if (hasFocusCoords || !focusPlace) return
     let cancelled = false
     searchPlaces(focusPlace).then(results => {
       if (cancelled) return
@@ -311,7 +350,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       setGeoResolved(true)
     })
     return () => { cancelled = true }
-  }, [focusPlace])
+  }, [hasFocusCoords, focusPlace])
 
   const loadZones = async (lat: number, lon: number) => {
     setLoading(true)
@@ -1337,6 +1376,45 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             </>
           )}
         </div>
+
+        {/* First-time orientation — dismissed for good once tapped, and
+            skipped entirely once a resident has already engaged with the
+            map (dropped a pin, opened a drawer), since by then they've
+            plainly figured it out. */}
+        {showOrientationTip && !pendingPoint && drawer === 'none' && (
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[500] w-[92%] max-w-sm">
+            <div className="bg-black/90 backdrop-blur-xl border border-gold-primary/30 rounded-2xl p-3.5 shadow-2xl">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs text-gray-200 leading-relaxed">
+                  <strong className="text-gold-primary">Tap anywhere on the map</strong> to report a road closure or save a place. The <Layers size={11} className="inline -mt-0.5" /> icon top-right filters what&apos;s shown — rooms, handymen, marketplace, communities and civic reports all live here.
+                </p>
+                <button onClick={dismissOrientationTip} className="text-gray-500 hover:text-white shrink-0"><X size={14} /></button>
+              </div>
+              <button
+                onClick={dismissOrientationTip}
+                className="mt-2.5 w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-widest transition-all"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Nothing reported nearby yet — an all-empty map with no
+            explanation just reads as broken, especially for the first
+            residents in a new area before there's anything to see. */}
+        {!loading && geoResolved && !showOrientationTip &&
+          zones.length === 0 && handymen.length === 0 &&
+          marketItemsNearby.length === 0 && communities.length === 0 &&
+          listings.length === 0 &&
+          !pendingPoint && drawer === 'none' && (
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[500] w-[92%] max-w-sm">
+            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-2xl text-center">
+              <p className="text-xs text-gray-300">Nothing reported near you yet.</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Be the first — tap the map to report a closure, or list a room, service or item to put it here.</p>
+            </div>
+          </div>
+        )}
 
         {locationDenied && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 text-xs text-gray-300 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-2.5 shadow-2xl">
