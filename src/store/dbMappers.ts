@@ -327,7 +327,9 @@ export const marketItemToRow = (m: MarketItem): DbRow => ({
   price: m.price,
   currency: m.currency,
   images: m.imageUrl ? [m.imageUrl] : [],
-  status: m.status === 'sold' ? 'gone' : 'available'
+  status: m.status === 'sold' ? 'gone' : 'available',
+  ...(m.lat != null ? { lat: m.lat } : {}),
+  ...(m.lon != null ? { lon: m.lon } : {})
 })
 
 const VENDOR_KINDS = ['spaza', 'airtime', 'gas', 'food', 'produce'] as const

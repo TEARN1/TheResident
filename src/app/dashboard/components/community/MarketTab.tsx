@@ -8,6 +8,9 @@ import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAl
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
 import UpgradeButton from '../shared/UpgradeButton'
+import OpenInMapsButton from '../map/OpenInMapsButton'
+import MapSearchBox from '../map/MapSearchBox'
+import type { GeocodeResult } from '../../../../utils/geocode'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -18,7 +21,7 @@ interface MarketTabProps {
   lostFound: LostFound[]
   currentUserId: string
   formatCurrency: (amount: number, currency?: string) => string
-  onPostItem?: (item: { title: string; description: string; price: number | null; category: string; imageUrl: string | null }) => void
+  onPostItem?: (item: { title: string; description: string; price: number | null; category: string; imageUrl: string | null; lat?: number | null; lon?: number | null }) => void
   onPledge?: (groupBuyId: string, quantity: number) => void
   onReunite?: (id: string) => void
   onReport?: (subjectType: string, subjectId: string) => void
@@ -57,6 +60,11 @@ export default function MarketTab({
   const [postImage, setPostImage] = useState<File | null>(null)
   const [postImagePreview, setPostImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
+  // res_market_items.lat/lon existed in the DB but nothing ever wrote to it
+  // — no "View on map" link on an item, and the map's own Marketplace
+  // layer had nothing real to plot beyond whatever was already there.
+  const [postLat, setPostLat] = useState<number | null>(null)
+  const [postLon, setPostLon] = useState<number | null>(null)
   const [posting, setPosting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -92,6 +100,7 @@ export default function MarketTab({
     setPostTitle(''); setPostDesc(''); setPostPrice(''); setPostCategory('Household')
     clearPostImage()
     setImageError(null)
+    setPostLat(null); setPostLon(null)
     setShowForm(false)
   }
 
@@ -123,7 +132,9 @@ export default function MarketTab({
       description: postDesc,
       price: postPrice.trim() === '' ? null : Number(postPrice),
       category: postCategory,
-      imageUrl
+      imageUrl,
+      lat: postLat,
+      lon: postLon
     })
     setPosting(false)
     resetForm()
@@ -180,6 +191,13 @@ export default function MarketTab({
                    <div className="mt-auto pt-3 border-t border-white/5 flex justify-between items-center">
                       <span className="text-[10px] text-gray-600">In {item.suburb}</span>
                       <div className="flex items-center gap-3">
+                         <OpenInMapsButton
+                           address={item.suburb}
+                           lat={item.lat}
+                           lon={item.lon}
+                           label={item.title}
+                           className="inline-flex items-center gap-1 text-gold-primary text-[10px] font-bold hover:underline"
+                         />
                          {item.createdBy === currentUserId && (
                            <UpgradeButton
                              item="market_boost"
@@ -376,6 +394,13 @@ export default function MarketTab({
                       <option>Food</option>
                       <option>Other</option>
                    </select>
+                </div>
+                <div className="space-y-1.5">
+                   <label className="text-[10px] text-gray-500 uppercase font-bold">Pickup spot on the map <span className="normal-case font-normal text-gray-600">(optional)</span></label>
+                   <MapSearchBox onSelect={(result: GeocodeResult) => { setPostLat(result.lat); setPostLon(result.lon) }} />
+                   {postLat != null && postLon != null && (
+                      <p className="text-[10px] text-gold-primary">Pinned — {postLat.toFixed(4)}, {postLon.toFixed(4)}</p>
+                   )}
                 </div>
                 <button type="submit" disabled={posting} className="w-full bg-gold-primary text-black font-black py-2.5 rounded-lg text-xs uppercase tracking-widest disabled:opacity-50">
                   {posting ? 'Posting…' : 'Post it'}

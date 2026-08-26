@@ -568,6 +568,8 @@ export interface MarketItem {
   createdBy: string
   createdAt: string
   featuredUntil?: string | null
+  lat?: number
+  lon?: number
 }
 
 export interface Vendor {
@@ -2121,7 +2123,9 @@ export const fetchSupabaseData = createAsyncThunk(
         status: (item.status === 'available' ? 'available' : 'sold') as MarketItem['status'],
         createdBy: item.user_id,
         createdAt: item.created_at,
-        featuredUntil: item.featured_until || null
+        featuredUntil: item.featured_until || null,
+        lat: item.lat ?? undefined,
+        lon: item.lon ?? undefined
       }))))
     }
 

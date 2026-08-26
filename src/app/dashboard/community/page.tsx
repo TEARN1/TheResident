@@ -625,7 +625,9 @@ export default function CommunityPage() {
                     imageUrl: item.imageUrl || undefined,
                     status: 'available',
                     createdBy: currentUser.id,
-                    createdAt: new Date().toISOString()
+                    createdAt: new Date().toISOString(),
+                    lat: item.lat ?? undefined,
+                    lon: item.lon ?? undefined
                   }))
                   setAlertNotification('Posted to the local market.')
                   setTimeout(() => setAlertNotification(null), 3000)
