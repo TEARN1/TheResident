@@ -8,7 +8,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import { Navigation, LocateFixed, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon, Wrench } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState, isGuestUser } from '../../../../store'
-import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../../utils/mapZones'
+import { fetchSharedZones, verifyZone, reportZone, reportRoadSegment, isSegmentKind, type SharedZone, type ReportableZoneKind } from '../../../../utils/mapZones'
 import { fetchNearbyHandymen, type NearbyHandyman } from '../../../../utils/mapHandymen'
 import { fetchNearbyMarketItems, type NearbyMarketItem } from '../../../../utils/mapMarket'
 import { fetchNearbyCommunities, type NearbyCommunity } from '../../../../utils/mapCommunities'
@@ -67,6 +67,16 @@ const DURATION_OPTIONS: Array<{ hours: number; label: string }> = [
 
 type Drawer = 'none' | 'pins' | 'matrix' | 'geofence'
 
+// Local <input type="datetime-local"> uses the browser's timezone with no
+// offset info, and needs "YYYY-MM-DDTHH:mm" — Date#toISOString gives UTC
+// with seconds/millis, which the input rejects. This round-trips through
+// the LOCAL time fields instead so what a resident types is what they meant
+// in their own clock, not silently shifted by the UTC conversion.
+const toDatetimeLocalValue = (d: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 // Module-level so the reference is stable across renders. Declared inside the
 // component it was a fresh object every render, which made it a churning
 // dependency of the map-init effect below.
@@ -99,6 +109,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const handymenClusterRef = useRef<import('leaflet').MarkerClusterGroup | null>(null)
   const marketClusterRef = useRef<import('leaflet').MarkerClusterGroup | null>(null)
   const communitiesLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const segmentPreviewRef = useRef<import('leaflet').LayerGroup | null>(null)
   const leafletRef = useRef<typeof import('leaflet') | null>(null)
   const tileLayerRef = useRef<import('leaflet').TileLayer | null>(null)
 
@@ -175,6 +186,23 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const [reportNote, setReportNote] = useState('')
   const [reportSubmitting, setReportSubmitting] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
+
+  // Point A → point B closure reporting. pendingPoint (already tracked
+  // above) is point A; segmentEnd is point B. pickingSegmentEnd flips the
+  // map's own click handler over to "the next tap sets the other end"
+  // instead of dropping a new pending point — the friendliest version of
+  // this is reusing the exact same tap-the-map gesture a resident already
+  // just used to set the start, not a separate coordinate-entry UI.
+  const [segmentEnd, setSegmentEnd] = useState<{ lat: number; lon: number } | null>(null)
+  const [pickingSegmentEnd, setPickingSegmentEnd] = useState(false)
+  // The map's click handler is bound once when the map is created (see the
+  // map-init effect below) — it closes over state as it was at that moment,
+  // so it would never see later setPickingSegmentEnd calls. Mirrored into a
+  // ref it reads from instead.
+  const pickingSegmentEndRef = useRef(false)
+  useEffect(() => { pickingSegmentEndRef.current = pickingSegmentEnd }, [pickingSegmentEnd])
+  const [scheduleLater, setScheduleLater] = useState(false)
+  const [scheduledAt, setScheduledAt] = useState('')
 
   const currentUserId = !isGuestUser(currentUser) && currentUser ? currentUser.id : null
 
@@ -382,6 +410,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         spiderfyOnMaxZoom: true
       }).addTo(map)
       communitiesLayerRef.current = L.layerGroup().addTo(map)
+      segmentPreviewRef.current = L.layerGroup().addTo(map)
       searchMarkerRef.current = L.layerGroup().addTo(map)
       pinsLayerRef.current = L.layerGroup().addTo(map)
       liveMarkerRef.current = L.layerGroup().addTo(map)
@@ -394,8 +423,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       // dropping the pin at an unreliable location.
       const MIN_REPORT_ZOOM = 15
       map.on('click', async (e: import('leaflet').LeafletMouseEvent) => {
+        // Mid-flow in the point A → point B closure picker: this tap sets
+        // point B and leaves point A / the open form untouched, instead of
+        // the normal "start a fresh report here" behaviour.
+        if (pickingSegmentEndRef.current) {
+          setSegmentEnd({ lat: e.latlng.lat, lon: e.latlng.lng })
+          setPickingSegmentEnd(false)
+          return
+        }
         setShowReportForm(false)
         setReportError(null)
+        setSegmentEnd(null)
         const initialLabel = `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`
         setPendingPoint({ label: initialLabel, lat: e.latlng.lat, lon: e.latlng.lng })
         if (map.getZoom() < MIN_REPORT_ZOOM) {
@@ -530,17 +568,34 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         interactive: false
       }).addTo(group)
 
-      const marker = L.circleMarker([zone.lat, zone.lon], {
-        radius: 8 + zone.severity * 2,
-        color: isVerified ? '#ffffff' : color,
-        fillColor: color,
-        fillOpacity: (isVerified ? 0.95 : 0.55) * expiryFactor,
-        weight: isVerified ? 2.5 : 2
-      })
+      // A road-closure segment (point A → point B) draws as a polyline
+      // along its real path rather than a single circleMarker at one
+      // representative point — both are Leaflet Path layers, so everything
+      // below (popup, confirm/dispute, addTo) works identically on either.
+      const marker: import('leaflet').Path = zone.path
+        ? L.polyline(zone.path, {
+            color: isVerified ? '#ffffff' : color,
+            weight: 5 + zone.severity,
+            opacity: (isVerified ? 0.95 : 0.65) * expiryFactor
+          })
+        : L.circleMarker([zone.lat, zone.lon], {
+            radius: 8 + zone.severity * 2,
+            color: isVerified ? '#ffffff' : color,
+            fillColor: color,
+            fillOpacity: (isVerified ? 0.95 : 0.55) * expiryFactor,
+            weight: isVerified ? 2.5 : 2
+          })
 
       const sourceLabel = zone.source_app === 'gruvs' ? 'The Gruvs' : 'The Resident'
       const expiry = zone.endsAt
         ? new Date(zone.endsAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })
+        : null
+      // A closure reported ahead of time ("road works from Monday 8am")
+      // hasn't started yet — the popup should say so rather than reading
+      // identically to one already in effect.
+      const startsInFuture = !!zone.startsAt && new Date(zone.startsAt).getTime() > now
+      const startsLabel = startsInFuture
+        ? new Date(zone.startsAt as string).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })
         : null
       const distanceLabel = distanceOrigin
         ? (() => {
@@ -563,6 +618,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           </div>
           ${zone.label ? `<div>${encodeHTMLEntities(zone.label)}</div>` : ''}
           ${zone.note ? `<div style="opacity:0.7;font-size:0.85em;margin-top:4px">${encodeHTMLEntities(zone.note)}</div>` : ''}
+          ${startsLabel ? `<div style="font-size:0.75em;margin-top:6px;color:#f59e0b">Starts ${startsLabel}</div>` : ''}
           ${expiry ? `<div style="font-size:0.75em;margin-top:6px;color:${expiryFactor < 1 ? '#f59e0b' : '#D4AF37'}">${now >= new Date(zone.endsAt as string).getTime() ? 'Cleared' : 'Clears by'} ${expiry}</div>` : ''}
           <div style="font-size:0.75em;opacity:0.6;margin-top:6px">
             Reported via ${sourceLabel} · ${zone.status}
@@ -643,6 +699,43 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       })
     }).bindPopup(encodeHTMLEntities(pendingPoint.label)).addTo(layer).openPopup()
   }, [pendingPoint])
+
+  // Live preview of the A → B segment being reported — a dashed line plus a
+  // marker at point B once it's set, so what's about to be submitted is
+  // visible before submitting, not just two coordinate pairs in a form.
+  useEffect(() => {
+    const L = leafletRef.current
+    const layer = segmentPreviewRef.current
+    if (!L || !layer) return
+    layer.clearLayers()
+    if (!pendingPoint || !showReportForm || !reportKind || !isSegmentKind(reportKind)) return
+
+    L.marker([pendingPoint.lat, pendingPoint.lon], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#ef4444;border:2px solid white;color:white;font:800 10px sans-serif">A</div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9]
+      })
+    }).addTo(layer)
+
+    if (segmentEnd) {
+      L.marker([segmentEnd.lat, segmentEnd.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#ef4444;border:2px solid white;color:white;font:800 10px sans-serif">B</div>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9]
+        })
+      }).addTo(layer)
+      L.polyline([[pendingPoint.lat, pendingPoint.lon], [segmentEnd.lat, segmentEnd.lon]], {
+        color: '#ef4444',
+        weight: 4,
+        dashArray: '8 6',
+        opacity: 0.8
+      }).addTo(layer)
+    }
+  }, [pendingPoint, segmentEnd, showReportForm, reportKind])
 
   useEffect(() => {
     const L = leafletRef.current
@@ -889,19 +982,39 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
   const submitClosureReport = async () => {
     if (!pendingPoint) return
+    if (isSegmentKind(reportKind) && !segmentEnd) return
     setReportSubmitting(true)
     setReportError(null)
     try {
-      await reportZone({
-        kind: reportKind,
-        lat: pendingPoint.lat,
-        lon: pendingPoint.lon,
-        label: KIND_LABEL[reportKind],
-        note: reportNote || undefined,
-        durationHours: reportDurationHours
-      })
+      const startsAt = scheduleLater && scheduledAt ? new Date(scheduledAt).toISOString() : null
+      if (isSegmentKind(reportKind) && segmentEnd) {
+        await reportRoadSegment({
+          kind: reportKind,
+          lat1: pendingPoint.lat,
+          lon1: pendingPoint.lon,
+          lat2: segmentEnd.lat,
+          lon2: segmentEnd.lon,
+          label: KIND_LABEL[reportKind],
+          note: reportNote || undefined,
+          startsAt,
+          durationHours: reportDurationHours
+        })
+      } else {
+        await reportZone({
+          kind: reportKind,
+          lat: pendingPoint.lat,
+          lon: pendingPoint.lon,
+          label: KIND_LABEL[reportKind],
+          note: reportNote || undefined,
+          durationHours: reportDurationHours
+        })
+      }
       setShowReportForm(false)
       setPendingPoint(null)
+      setSegmentEnd(null)
+      setPickingSegmentEnd(false)
+      setScheduleLater(false)
+      setScheduledAt('')
       setReportNote('')
       if (center) loadZones(center.lat, center.lon)
     } catch (err) {
@@ -1238,7 +1351,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             <div className="bg-black/85 backdrop-blur-xl border border-white/10 rounded-2xl p-3.5 shadow-2xl space-y-2.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-gray-300 truncate flex items-center gap-1.5"><MapPin size={13} className="text-green-500 shrink-0" /> {pendingPoint.label}</span>
-                <button onClick={() => { setPendingPoint(null); setShowReportForm(false) }} className="text-gray-500 hover:text-white shrink-0"><X size={14} /></button>
+                <button onClick={() => { setPendingPoint(null); setShowReportForm(false); setSegmentEnd(null); setPickingSegmentEnd(false) }} className="text-gray-500 hover:text-white shrink-0"><X size={14} /></button>
               </div>
 
               {!showReportForm ? (
@@ -1269,7 +1382,11 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                   <div className="grid grid-cols-2 gap-2">
                     <select
                       value={reportKind}
-                      onChange={e => setReportKind(e.target.value as ReportableZoneKind)}
+                      onChange={e => {
+                        const kind = e.target.value as ReportableZoneKind
+                        setReportKind(kind)
+                        if (!isSegmentKind(kind)) { setSegmentEnd(null); setPickingSegmentEnd(false) }
+                      }}
                       className="bg-black border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none focus:border-red-500/40"
                     >
                       {REPORTABLE_KINDS.map(k => <option key={k.kind} value={k.kind}>{k.label}</option>)}
@@ -1282,6 +1399,71 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                       {DURATION_OPTIONS.map(d => <option key={d.hours} value={d.hours}>{d.label}</option>)}
                     </select>
                   </div>
+
+                  {/* Point A → point B — road_closed/detour only. A is
+                      already the pending point; this fills in B the same
+                      way A was set, by tapping the map, with a live line
+                      preview (segmentPreviewRef) so what's about to be
+                      reported is visible before submitting. */}
+                  {isSegmentKind(reportKind) && (
+                    !segmentEnd ? (
+                      <button
+                        onClick={() => setPickingSegmentEnd(true)}
+                        className={`w-full flex items-center justify-center gap-1.5 font-black px-3 py-2.5 rounded-lg text-[10px] uppercase tracking-widest border transition-all ${
+                          pickingSegmentEnd
+                            ? 'bg-red-500 text-white border-red-500 animate-pulse'
+                            : 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20'
+                        }`}
+                      >
+                        <MapPin size={12} />
+                        {pickingSegmentEnd ? 'Tap the map where it ends…' : 'Set where the closure ends'}
+                      </button>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+                        <span className="text-[10px] text-gray-300">
+                          From <strong className="text-white">A</strong> to <strong className="text-white">B</strong> — {Math.round(distanceMetres(segmentEnd, pendingPoint))}m stretch
+                        </span>
+                        <button
+                          onClick={() => { setSegmentEnd(null); setPickingSegmentEnd(true) }}
+                          className="text-[9px] text-gold-primary font-black uppercase tracking-widest shrink-0 hover:underline"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    )
+                  )}
+
+                  {/* Starts now vs scheduled — a closure that hasn't
+                      happened yet ("road works from Monday 8am") is just as
+                      real a thing to report as one already in effect. */}
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => setScheduleLater(false)}
+                      className={`flex-1 text-[10px] font-black uppercase tracking-widest py-1.5 rounded-lg border transition-all ${!scheduleLater ? 'bg-gold-primary text-black border-gold-primary' : 'bg-white/5 text-gray-400 border-white/10'}`}
+                    >
+                      Starts now
+                    </button>
+                    <button
+                      onClick={() => {
+                        setScheduleLater(true)
+                        if (!scheduledAt) setScheduledAt(toDatetimeLocalValue(new Date(Date.now() + 60 * 60 * 1000)))
+                      }}
+                      className={`flex-1 text-[10px] font-black uppercase tracking-widest py-1.5 rounded-lg border transition-all ${scheduleLater ? 'bg-gold-primary text-black border-gold-primary' : 'bg-white/5 text-gray-400 border-white/10'}`}
+                    >
+                      Schedule for later
+                    </button>
+                  </div>
+                  {scheduleLater && (
+                    <input
+                      type="datetime-local"
+                      value={scheduledAt}
+                      min={toDatetimeLocalValue(new Date())}
+                      max={toDatetimeLocalValue(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000))}
+                      onChange={e => setScheduledAt(e.target.value)}
+                      className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-red-500/40"
+                    />
+                  )}
+
                   <input
                     value={reportNote}
                     onChange={e => setReportNote(e.target.value)}
@@ -1293,13 +1475,13 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                   <div className="flex gap-2">
                     <button
                       onClick={submitClosureReport}
-                      disabled={reportSubmitting}
+                      disabled={reportSubmitting || (isSegmentKind(reportKind) && !segmentEnd)}
                       className="flex-1 bg-red-500 hover:bg-red-600 text-white font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                     >
                       {reportSubmitting ? <Loader size={12} className="animate-spin" /> : <Ban size={12} />}
                       {reportSubmitting ? 'Reporting…' : `Report for ${DURATION_OPTIONS.find(d => d.hours === reportDurationHours)?.label}`}
                     </button>
-                    <button onClick={() => setShowReportForm(false)} className="text-gray-500 hover:text-white text-[10px] font-bold uppercase tracking-widest px-2">Cancel</button>
+                    <button onClick={() => { setShowReportForm(false); setSegmentEnd(null); setPickingSegmentEnd(false) }} className="text-gray-500 hover:text-white text-[10px] font-bold uppercase tracking-widest px-2">Cancel</button>
                   </div>
                 </div>
               )}

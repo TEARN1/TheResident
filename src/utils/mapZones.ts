@@ -24,6 +24,12 @@ export interface SharedZone {
   confirmCount: number
   disputeCount: number
   endsAt: string | null
+  startsAt: string | null
+  // Populated only when the underlying geometry is a road segment
+  // (LineString) rather than a single point — a road closure reported
+  // point A → point B, not just one dropped pin. [lat, lon][] so it can be
+  // handed straight to Leaflet's L.polyline.
+  path: [number, number][] | null
 }
 
 interface GeoJsonGeometry {
@@ -31,16 +37,41 @@ interface GeoJsonGeometry {
   coordinates?: unknown
 }
 
+function toLatLon(c: unknown): [number, number] | null {
+  if (!Array.isArray(c) || c.length < 2) return null
+  const lat = Number(c[1])
+  const lon = Number(c[0])
+  return Number.isFinite(lat) && Number.isFinite(lon) ? [lat, lon] : null
+}
+
+// A representative single point for popup anchoring / distance calc — for a
+// LineString (a road segment, point A → point B) that's the segment's
+// midpoint, not its start, so "how far away is this" and the popup land
+// where the closure actually is rather than skewed toward one end.
 function geojsonPoint(g: GeoJsonGeometry | null): [number, number] | null {
   if (!g) return null
+  if (g.type === 'LineString') {
+    const coords = (g.coordinates as unknown[] | undefined) || []
+    const a = toLatLon(coords[0])
+    const b = toLatLon(coords[coords.length - 1])
+    if (a && b) return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
+    return a || b
+  }
   const c: unknown =
     g.type === 'Point' ? g.coordinates :
-    g.type === 'LineString' ? (g.coordinates as unknown[] | undefined)?.[0] :
     g.type === 'Polygon' ? ((g.coordinates as unknown[][] | undefined)?.[0])?.[0] :
     g.type === 'MultiPolygon' ? (((g.coordinates as unknown[][][] | undefined)?.[0])?.[0])?.[0] :
     null
-  if (!Array.isArray(c) || c.length < 2) return null
-  return [Number(c[1]), Number(c[0])] // [lat, lon]
+  return toLatLon(c)
+}
+
+// The full path when the geometry is a LineString — a road-closure segment
+// to draw as a polyline, not a single dropped pin.
+function geojsonPath(g: GeoJsonGeometry | null): [number, number][] | null {
+  if (!g || g.type !== 'LineString') return null
+  const coords = (g.coordinates as unknown[] | undefined) || []
+  const path = coords.map(toLatLon).filter((p): p is [number, number] => p !== null)
+  return path.length >= 2 ? path : null
 }
 
 export async function fetchSharedZones(
@@ -65,7 +96,8 @@ export async function fetchSharedZones(
         label: z.label, note: z.note, status: z.status,
         severity: z.severity, lat: p[0], lon: p[1],
         confirmCount: z.confirm_count || 0, disputeCount: z.dispute_count || 0,
-        endsAt: z.ends_at || null,
+        endsAt: z.ends_at || null, startsAt: z.starts_at || null,
+        path: geojsonPath(g),
       })
     }
     return out
@@ -113,6 +145,50 @@ export async function reportZone(args: {
     p_label: args.label ?? null,
     p_note: args.note ?? null,
     p_severity: args.severity ?? 2,
+    p_duration_hours: args.durationHours
+  })
+  if (error) throw error
+  return data as string
+}
+
+// road_closed and detour are the two kinds that mean "a stretch of road",
+// not a single spot — those get the point A → point B flow. heavy_traffic
+// and no_parking stay single-pin reports (a jam or a no-parking spot isn't
+// a segment with two ends the way a closure is).
+export type SegmentZoneKind = 'road_closed' | 'detour'
+const SEGMENT_KINDS = new Set<ReportableZoneKind>(['road_closed', 'detour'])
+export const isSegmentKind = (k: ReportableZoneKind): k is SegmentZoneKind => SEGMENT_KINDS.has(k)
+
+/**
+ * Report a road closure/detour as a segment (point A → point B), not a
+ * single pin — res_report_road_segment validates coordinates/duration/
+ * start-time window and rate-limits 5/hr server-side, same as reportZone.
+ * p_starts_at lets a resident report a closure that hasn't started yet
+ * ("road works from Monday 8am"), not just ones already in effect.
+ */
+export async function reportRoadSegment(args: {
+  kind: SegmentZoneKind
+  lat1: number
+  lon1: number
+  lat2: number
+  lon2: number
+  label?: string
+  note?: string
+  severity?: 1 | 2 | 3
+  startsAt?: string | null
+  durationHours: number
+}): Promise<string> {
+  if (!supabase) throw new Error('Not connected')
+  const { data, error } = await supabase.rpc('res_report_road_segment', {
+    p_kind: args.kind,
+    p_lat1: args.lat1,
+    p_lon1: args.lon1,
+    p_lat2: args.lat2,
+    p_lon2: args.lon2,
+    p_label: args.label ?? null,
+    p_note: args.note ?? null,
+    p_severity: args.severity ?? 2,
+    p_starts_at: args.startsAt ?? null,
     p_duration_hours: args.durationHours
   })
   if (error) throw error
