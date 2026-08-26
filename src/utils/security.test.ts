@@ -133,6 +133,45 @@ test('Command Injection — containsCommandInjection', () => {
   assert.strictEqual(containsCommandInjection('Just a normal search'), false)
 })
 
+// A real URL query string is itself "&"-joined key=value pairs — a param
+// whose NAME happens to match one of the blocked commands (cp, sh, nc,
+// mv...) must not be flagged as a background-exec attempt just because it's
+// preceded by the same "&" every param is. Found via VibeMap's own
+// ?kind=listing&id=<uuid> deep link getting blocked by this app's own
+// middleware (src/proxy.ts / middleware.ts calls scanInput on the raw query
+// string).
+test('Command Injection — ordinary query-string params never false-positive', () => {
+  assert.strictEqual(containsCommandInjection('tab=vibemap&id=a1b2c3d4-e5f6-4789-9abc-def012345678'), false)
+  assert.strictEqual(containsCommandInjection('foo=bar&cp=1'), false)
+  assert.strictEqual(containsCommandInjection('foo=bar&sh=dark'), false)
+  assert.strictEqual(containsCommandInjection('foo=bar&nc=1'), false)
+  // A lone flag-style param (no "=") must not false-positive either.
+  assert.strictEqual(containsCommandInjection('foo=bar&id'), false)
+  // A genuine background-exec attempt — the command followed by a space and
+  // an argument, not "=" — must still be caught.
+  assert.strictEqual(containsCommandInjection('foo=bar&whoami -a'), true)
+})
+
+// "ID" is an extremely common ordinary-English abbreviation ("ID verified",
+// "photo ID") — this is a residential-listings app, so free-text fields
+// (a market/notice description, a signup bio) hit that collision for real:
+// "Room for rent | ID verified residents only" is a completely ordinary
+// listing, not a pipe-into-a-shell attack. 'id' and 'cmd' were dropped from
+// the shared command word list for exactly this reason; $(id) / backtick
+// substitution is still caught below via the unambiguous patterns that
+// don't depend on that list.
+test('Command Injection — "ID" as ordinary English text never false-positives', () => {
+  assert.strictEqual(containsCommandInjection('Room for rent | ID verified residents only'), false)
+  assert.strictEqual(containsCommandInjection('Free; ID required on collection'), false)
+  assert.strictEqual(containsCommandInjection('Please bring your cmd line skills to the meetup'), false)
+  // Command substitution is still caught by its own dedicated pattern.
+  assert.strictEqual(containsCommandInjection('$(id)'), true)
+  assert.strictEqual(containsCommandInjection('`id`'), true)
+  // Real attacks using the remaining command words are still caught.
+  assert.strictEqual(containsCommandInjection('| cat /etc/passwd'), true)
+  assert.strictEqual(containsCommandInjection('; rm -rf /'), true)
+})
+
 // ===== 5. NoSQL Injection Tests =====
 test('NoSQL Injection — containsNoSQLi', () => {
   assert.strictEqual(containsNoSQLi('{"$gt": ""}'), true)

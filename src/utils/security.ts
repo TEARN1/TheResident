@@ -177,7 +177,19 @@ export const containsPathTraversal = (input: string): boolean => {
 // ---------------------------------------------------------------------------
 
 export const containsCommandInjection = (input: string): boolean => {
-  const cmds = 'ls|cat|rm|mv|cp|chmod|chown|wget|curl|nc|ncat|bash|sh|zsh|powershell|cmd|id|whoami|uname|hostname|ping|ifconfig|ipconfig|netstat'
+  // 'id' and 'cmd' deliberately excluded from this list — unlike every other
+  // entry here, both are extremely common as ordinary English abbreviations
+  // ("ID verified", "government ID") rather than shell commands, and a
+  // residential-listings app's free-text fields (a market item or notice
+  // description, a signup bio) hit that collision constantly: "Room for
+  // rent | ID verified residents only" is a completely ordinary listing,
+  // not an attack. `$(id)` / backtick command substitution is still caught
+  // below via the unambiguous patterns that don't depend on this list, so
+  // removing the bare word from here loses essentially no real detection —
+  // a lone `id`/`cmd` invocation isn't a meaningful payload on its own, and
+  // this stack never passes these strings to an OS shell anyway (they go
+  // into Postgres via parameterized RPC args, not exec()).
+  const cmds = 'ls|cat|rm|mv|cp|chmod|chown|wget|curl|nc|ncat|bash|sh|zsh|powershell|whoami|uname|hostname|ping|ifconfig|ipconfig|netstat'
   const patterns = [
     new RegExp(`;\\s*(${cmds})\\b`, 'gi'),
     new RegExp(`\\|\\s*(${cmds})\\b`, 'gi'),
@@ -187,7 +199,14 @@ export const containsCommandInjection = (input: string): boolean => {
     new RegExp(`\\|\\|\\s*(${cmds})\\b`, 'gi'),
     new RegExp(`[\\r\\n]\\s*(${cmds})\\b`, 'gi'), // Newlines/Carriage returns
     new RegExp(`%0[ad]\\s*(${cmds})\\b`, 'gi'),    // URL-encoded CR/LF
-    new RegExp(`(?:&|\\|&)\\s*(${cmds})\\b`, 'gi'), // Ampersand or background pipe execution
+    // Ampersand or background pipe execution ("... && rm -rf /"). Excludes a
+    // bare "&paramname=" — every query string is itself "&"-joined key=value
+    // pairs, so without this a totally ordinary param whose name happens to
+    // collide with a listed command (?cp=..., ?sh=...) reads as an attack
+    // and blocks a real user's request. A genuine background-exec attempt
+    // is still "&cmd " (a space/argument) or "&cmd;" etc, never "&cmd=" or
+    // "&cmd" as a lone token — that shape is what's excluded.
+    new RegExp(`(?:&|\\|&)\\s*(${cmds})\\b(?!\\s*(?:=|&|$))`, 'gi'),
     />\s*\/dev\//gi,         // Redirect to devices
     />\s*\/tmp\//gi,         // Write to tmp
     /\beval\s*\(/gi,         // eval() calls
