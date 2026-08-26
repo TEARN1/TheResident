@@ -311,7 +311,28 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     const startZoom = center ? 14 : 2
 
     let cancelled = false
-    Promise.all([import('leaflet'), import('leaflet.markercluster')]).then(([L]) => {
+    // NOT Promise.all([import('leaflet'), import('leaflet.markercluster')]) —
+    // leaflet.markercluster is an old-style UMD bundle: it never `require`s
+    // leaflet, it just reads a global `L` at import time (as if loaded via
+    // a <script> tag) and mutates it in place (L.MarkerClusterGroup = ...).
+    // Importing both in parallel means the plugin's module-level code can
+    // run before `window.L` is ever set below, throwing "L is not defined"
+    // and silently aborting map creation — which is exactly what was
+    // happening here (confirmed: the map never mounted at all, on a clean
+    // production build of main, before this fix). Has to be sequential:
+    // import leaflet, expose it as window.L, THEN import the plugin.
+    import('leaflet').then(async Lmodule => {
+      if (cancelled || !mapContainerRef.current || mapRef.current) return
+      // The ES module namespace object `import('leaflet')` returns is frozen
+      // per spec, so assigning it directly to window.L still throws once the
+      // plugin tries to attach L.MarkerClusterGroup to it ("object is not
+      // extensible"). A shallow copy is a genuinely mutable plain object
+      // with the same exports, which the plugin can extend — used as `L` for
+      // the rest of this component from here on, not the original frozen
+      // namespace.
+      const L = { ...Lmodule } as typeof Lmodule
+      ;(window as unknown as { L: typeof L }).L = L
+      await import('leaflet.markercluster')
       if (cancelled || !mapContainerRef.current || mapRef.current) return
       leafletRef.current = L
 
