@@ -9,6 +9,9 @@ import { Navigation, LocateFixed, RefreshCw, Check, X, ShieldAlert, MapPin, Bell
 import { useSelector } from 'react-redux'
 import { RootState, isGuestUser } from '../../../../store'
 import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../../utils/mapZones'
+import { fetchNearbyHandymen, type NearbyHandyman } from '../../../../utils/mapHandymen'
+import { fetchNearbyMarketItems, type NearbyMarketItem } from '../../../../utils/mapMarket'
+import { fetchNearbyCommunities, type NearbyCommunity } from '../../../../utils/mapCommunities'
 import { fetchSavedPins, saveNewPin, deleteSavedPin, type SavedPin } from '../../../../utils/savedPins'
 import { distanceMetres } from '../../../../utils/logic'
 import { searchPlaces, reverseGeocode, type GeocodeResult } from '../../../../utils/geocode'
@@ -89,6 +92,13 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   // one simple marker each, so they're the layer that's actually safe to
   // cluster.
   const listingsClusterRef = useRef<import('leaflet').MarkerClusterGroup | null>(null)
+  // Same clustering reasoning as listingsClusterRef — one simple marker per
+  // business/item, safe to cluster. Communities stay a plain layer group
+  // (below): each one draws a catchment circle, not a point, and clustering
+  // circles the way markers are clustered would be meaningless.
+  const handymenClusterRef = useRef<import('leaflet').MarkerClusterGroup | null>(null)
+  const marketClusterRef = useRef<import('leaflet').MarkerClusterGroup | null>(null)
+  const communitiesLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const leafletRef = useRef<typeof import('leaflet') | null>(null)
   const tileLayerRef = useRef<import('leaflet').TileLayer | null>(null)
 
@@ -140,6 +150,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const [pendingPoint, setPendingPoint] = useState<{ label: string; lat: number; lon: number } | null>(null)
   const [savedPins, setSavedPins] = useState<SavedPin[]>([])
   const [pinsLoading, setPinsLoading] = useState(false)
+
+  // The map's own content layers beyond civic zone reports — handymen,
+  // marketplace items, and communities previously had zero presence on the
+  // map at all, despite it being the one place a resident could see
+  // "what's actually near me" across every part of the app at once.
+  const [handymen, setHandymen] = useState<NearbyHandyman[]>([])
+  const [showHandymenLayer, setShowHandymenLayer] = useState(true)
+  const [marketItemsNearby, setMarketItemsNearby] = useState<NearbyMarketItem[]>([])
+  const [showMarketLayer, setShowMarketLayer] = useState(true)
+  const [communities, setCommunities] = useState<NearbyCommunity[]>([])
+  const [showCommunitiesLayer, setShowCommunitiesLayer] = useState(true)
 
   const [matrixPoints, setMatrixPoints] = useState<MatrixPoint[]>([])
   const [alertRadiusM, setAlertRadiusM] = useState(500)
@@ -266,8 +287,19 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
   const loadZones = async (lat: number, lon: number) => {
     setLoading(true)
-    const data = await fetchSharedZones(lat, lon, 15000)
-    setZones(data)
+    // Refreshing the map means "give me everything current here" — the
+    // civic zone reports and every content layer share the same gesture
+    // (the refresh button, recentring, an initial location fix).
+    const [zonesData, handymenData, marketData, communitiesData] = await Promise.all([
+      fetchSharedZones(lat, lon, 15000),
+      fetchNearbyHandymen(lat, lon, 15000),
+      fetchNearbyMarketItems(lat, lon, 15000),
+      fetchNearbyCommunities(lat, lon, 15000)
+    ])
+    setZones(zonesData)
+    setHandymen(handymenData)
+    setMarketItemsNearby(marketData)
+    setCommunities(communitiesData)
     setLoading(false)
   }
 
@@ -318,6 +350,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         maxClusterRadius: 60,
         spiderfyOnMaxZoom: true
       }).addTo(map)
+      handymenClusterRef.current = L.markerClusterGroup({
+        disableClusteringAtZoom: 16,
+        maxClusterRadius: 60,
+        spiderfyOnMaxZoom: true
+      }).addTo(map)
+      marketClusterRef.current = L.markerClusterGroup({
+        disableClusteringAtZoom: 16,
+        maxClusterRadius: 60,
+        spiderfyOnMaxZoom: true
+      }).addTo(map)
+      communitiesLayerRef.current = L.layerGroup().addTo(map)
       searchMarkerRef.current = L.layerGroup().addTo(map)
       pinsLayerRef.current = L.layerGroup().addTo(map)
       liveMarkerRef.current = L.layerGroup().addTo(map)
@@ -630,6 +673,135 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     })
   }, [listings])
 
+  // Handymen/services layer — one marker per business, no proximity
+  // grouping needed (a service call-out spot isn't "the same house number"
+  // the way two independent room listings sharing an address can be).
+  useEffect(() => {
+    const L = leafletRef.current
+    const cluster = handymenClusterRef.current
+    if (!L || !cluster) return
+    cluster.clearLayers()
+    if (!showHandymenLayer) return
+
+    handymen.forEach(h => {
+      const marker = L.marker([h.lat, h.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#a855f7;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4)">
+                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+                 </div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        })
+      })
+      const distanceLabel = distanceOrigin
+        ? (() => {
+            const m = distanceMetres(distanceOrigin, h)
+            return m < 1000 ? `${Math.round(m)}m away` : `${(m / 1000).toFixed(1)}km away`
+          })()
+        : null
+      const stars = h.rating > 0 ? `★ ${h.rating.toFixed(1)}` : ''
+      // encodeHTMLEntities on every field pulled from user content — the
+      // same stored-XSS risk flagged on the zone popups above applies here.
+      marker.bindPopup(`
+        <div style="font-family:inherit;min-width:170px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <strong>${encodeHTMLEntities(h.category)}</strong>
+            ${distanceLabel ? `<span style="font-size:0.75em;opacity:0.6;white-space:nowrap">${distanceLabel}</span>` : ''}
+          </div>
+          <div style="font-weight:700;font-size:0.9em;margin-top:2px">${encodeHTMLEntities(h.businessName)}</div>
+          <div style="font-size:0.8em;opacity:0.75;margin-top:2px">${[stars, h.priceEstimate ? encodeHTMLEntities(h.priceEstimate) : ''].filter(Boolean).join(' · ')}</div>
+        </div>
+      `)
+      marker.addTo(cluster)
+    })
+  }, [handymen, showHandymenLayer, distanceOrigin])
+
+  // Marketplace layer — same reasoning as handymen, one marker per item.
+  useEffect(() => {
+    const L = leafletRef.current
+    const cluster = marketClusterRef.current
+    if (!L || !cluster) return
+    cluster.clearLayers()
+    if (!showMarketLayer) return
+
+    marketItemsNearby.forEach(m => {
+      const marker = L.marker([m.lat, m.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#22c55e;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4)">
+                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                 </div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11]
+        })
+      })
+      const distanceLabel = distanceOrigin
+        ? (() => {
+            const dm = distanceMetres(distanceOrigin, m)
+            return dm < 1000 ? `${Math.round(dm)}m away` : `${(dm / 1000).toFixed(1)}km away`
+          })()
+        : null
+      marker.bindPopup(`
+        <div style="font-family:inherit;min-width:170px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <strong>${encodeHTMLEntities(m.category)}</strong>
+            ${distanceLabel ? `<span style="font-size:0.75em;opacity:0.6;white-space:nowrap">${distanceLabel}</span>` : ''}
+          </div>
+          <div style="font-weight:700;font-size:0.9em;margin-top:2px">${encodeHTMLEntities(m.title)}</div>
+          <div style="font-size:0.9em;margin-top:2px;color:#D4AF37;font-weight:700">${m.price ? `${m.currency} ${m.price}` : 'Free'}</div>
+        </div>
+      `)
+      marker.addTo(cluster)
+    })
+  }, [marketItemsNearby, showMarketLayer, distanceOrigin])
+
+  // Communities layer — each community is an area, not a point, so it draws
+  // its actual catchment circle (radius_m) plus a small center marker for
+  // visibility at zoom levels where the circle itself is imperceptible.
+  useEffect(() => {
+    const L = leafletRef.current
+    const layer = communitiesLayerRef.current
+    if (!L || !layer) return
+    layer.clearLayers()
+    if (!showCommunitiesLayer) return
+
+    communities.forEach(c => {
+      const distanceLabel = c.distanceM < 1000 ? `${Math.round(c.distanceM)}m away` : `${(c.distanceM / 1000).toFixed(1)}km away`
+      const popupHtml = `
+        <div style="font-family:inherit;min-width:170px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <strong>${encodeHTMLEntities(c.name)}</strong>
+            <span style="font-size:0.75em;opacity:0.6;white-space:nowrap">${distanceLabel}</span>
+          </div>
+          <div style="font-size:0.8em;opacity:0.75;margin-top:2px">
+            ${encodeHTMLEntities(c.kind)}${c.isPrivate ? ' · Private' : ' · Public'}
+          </div>
+          <div style="font-size:0.8em;opacity:0.75">${c.memberCount} member${c.memberCount === 1 ? '' : 's'}</div>
+        </div>
+      `
+      if (c.radiusM > 0) {
+        L.circle([c.lat, c.lon], {
+          radius: c.radiusM,
+          color: '#14b8a6',
+          weight: 1.5,
+          fillColor: '#14b8a6',
+          fillOpacity: 0.08
+        }).bindPopup(popupHtml).addTo(layer)
+      }
+      L.marker([c.lat, c.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#14b8a6;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4)">
+                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                 </div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        })
+      }).bindPopup(popupHtml).addTo(layer)
+    })
+  }, [communities, showCommunitiesLayer])
+
   useEffect(() => {
     const L = leafletRef.current
     const layer = liveMarkerRef.current
@@ -855,6 +1027,40 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             // the 190px fixed panel used to eat most of a phone-width map.
             <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl w-[52px] sm:w-[200px]">
               <p className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Map key — tap to filter</p>
+              <button
+                onClick={() => setShowHandymenLayer(v => !v)}
+                aria-pressed={showHandymenLayer}
+                aria-label={`${showHandymenLayer ? 'Hide' : 'Show'} handymen and services${handymen.length > 0 ? ` (${handymen.length} nearby)` : ''}`}
+                title="Handymen & services"
+                className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${showHandymenLayer ? 'text-gray-200' : 'text-gray-600 opacity-50'} hover:opacity-100`}
+              >
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: '#a855f7', boxShadow: showHandymenLayer ? '0 0 8px #a855f7' : 'none' }} />
+                <span className="hidden sm:inline flex-1 text-left">Handymen &amp; services</span>
+                {handymen.length > 0 && <span className="hidden sm:inline text-gray-500 font-bold">{handymen.length}</span>}
+              </button>
+              <button
+                onClick={() => setShowMarketLayer(v => !v)}
+                aria-pressed={showMarketLayer}
+                aria-label={`${showMarketLayer ? 'Hide' : 'Show'} marketplace items${marketItemsNearby.length > 0 ? ` (${marketItemsNearby.length} nearby)` : ''}`}
+                title="Marketplace"
+                className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${showMarketLayer ? 'text-gray-200' : 'text-gray-600 opacity-50'} hover:opacity-100`}
+              >
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: '#22c55e', boxShadow: showMarketLayer ? '0 0 8px #22c55e' : 'none' }} />
+                <span className="hidden sm:inline flex-1 text-left">Marketplace</span>
+                {marketItemsNearby.length > 0 && <span className="hidden sm:inline text-gray-500 font-bold">{marketItemsNearby.length}</span>}
+              </button>
+              <button
+                onClick={() => setShowCommunitiesLayer(v => !v)}
+                aria-pressed={showCommunitiesLayer}
+                aria-label={`${showCommunitiesLayer ? 'Hide' : 'Show'} communities${communities.length > 0 ? ` (${communities.length} nearby)` : ''}`}
+                title="Communities"
+                className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${showCommunitiesLayer ? 'text-gray-200' : 'text-gray-600 opacity-50'} hover:opacity-100`}
+              >
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ background: '#14b8a6', boxShadow: showCommunitiesLayer ? '0 0 8px #14b8a6' : 'none' }} />
+                <span className="hidden sm:inline flex-1 text-left">Communities</span>
+                {communities.length > 0 && <span className="hidden sm:inline text-gray-500 font-bold">{communities.length}</span>}
+              </button>
+              <div className="border-t border-white/5 my-1.5" />
               {Object.entries(KIND_LABEL).map(([kind, label]) => {
                 const bounds = mapRef.current?.getBounds()
                 const count = zones.filter(z => z.kind === kind && (!bounds || bounds.contains([z.lat, z.lon]))).length
