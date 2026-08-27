@@ -551,36 +551,31 @@ set search_path = public
 as $$
 declare
   v_alert record;
-  v_recipient uuid;
 begin
   select * into v_alert from res_alerts where id = p_alert_id;
   if not found then
     raise exception 'alert not found';
   end if;
 
-  -- Find verified profiles who are members of the community
-  -- or located nearby (for simplicity, we scope to the same community, suburb, or city)
-  for v_recipient in
-    select p.id
-    from profiles p
-    left join res_community_members cm on cm.user_id = p.id
-    where p.id <> v_alert.user_id
-      and p.is_verified = true
-      and (
-        (v_alert.community_id is not null and cm.community_id = v_alert.community_id)
-        or (v_alert.community_id is null and v_alert.suburb is not null and p.city = v_alert.city)
-      )
-  loop
-    insert into notifications (recipient_id, actor_id, type, title, body, data)
-    values (
-      v_recipient,
-      v_alert.user_id,
-      'res_alert_panic',
-      '🚨 NEIGHBOURHOOD ALERT: ' || v_alert.title,
-      v_alert.description,
-      jsonb_build_object('alert_id', v_alert.id, 'kind', v_alert.kind)
+  -- Find verified profiles who are members of the community or located
+  -- nearby (for simplicity, we scope to the same community, suburb, or
+  -- city) — one set-based insert rather than a per-recipient loop.
+  insert into notifications (recipient_id, actor_id, type, title, body, data)
+  select
+    p.id,
+    v_alert.user_id,
+    'res_alert_panic',
+    '🚨 NEIGHBOURHOOD ALERT: ' || v_alert.title,
+    v_alert.description,
+    jsonb_build_object('alert_id', v_alert.id, 'kind', v_alert.kind)
+  from profiles p
+  left join res_community_members cm on cm.user_id = p.id
+  where p.id <> v_alert.user_id
+    and p.is_verified = true
+    and (
+      (v_alert.community_id is not null and cm.community_id = v_alert.community_id)
+      or (v_alert.community_id is null and v_alert.suburb is not null and p.city = v_alert.city)
     );
-  end loop;
 end;
 $$;
 
@@ -809,7 +804,15 @@ create policy res_members_delete on public.res_community_members
 -- res_alerts
 drop policy if exists res_alerts_select on public.res_alerts;
 create policy res_alerts_select on public.res_alerts
-  for select to authenticated using (true);
+  for select to authenticated using (
+    user_id = auth.uid()
+    or (community_id is not null and public.res_is_community_member(community_id, auth.uid()))
+    or (
+      community_id is null
+      and city is not null
+      and exists (select 1 from public.profiles p where p.id = auth.uid() and p.city = res_alerts.city)
+    )
+  );
 drop policy if exists res_alerts_insert on public.res_alerts;
 create policy res_alerts_insert on public.res_alerts
   for insert to authenticated with check (user_id = auth.uid());
@@ -929,7 +932,15 @@ create policy res_resources_update on public.res_shared_resources
 -- res_neighbourhood_status
 drop policy if exists res_status_select on public.res_neighbourhood_status;
 create policy res_status_select on public.res_neighbourhood_status
-  for select to authenticated using (true);
+  for select to authenticated using (
+    reporter_id = auth.uid()
+    or (community_id is not null and public.res_is_community_member(community_id, auth.uid()))
+    or (
+      community_id is null
+      and city is not null
+      and exists (select 1 from public.profiles p where p.id = auth.uid() and p.city = res_neighbourhood_status.city)
+    )
+  );
 drop policy if exists res_status_insert on public.res_neighbourhood_status;
 create policy res_status_insert on public.res_neighbourhood_status
   for insert to authenticated with check (reporter_id = auth.uid());
