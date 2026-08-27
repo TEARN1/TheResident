@@ -290,3 +290,79 @@ test('rowToAlert / rowToMarketItem / rowToNeighbourhoodStatus translate DB codes
   assert.strictEqual(ns.status, 'outage')
   assertKeysInSchema('res_neighbourhood_status', db.neighbourhoodStatusToRow(ns, UID))
 })
+
+test('rowToRequest and rowToDispatch resolve cross-referenced titles/names via injected lookups', () => {
+  const nameOf = (id: string | null | undefined) => (id === UID ? 'Thandi' : '')
+
+  const req = db.rowToRequest(
+    { id: 'req-1', tenant_id: UID, listing_id: 'listing-1', landlord_id: UID2, status: 'approved' },
+    nameOf,
+    id => (id === 'listing-1' ? 'Sunny Room' : '')
+  )
+  assert.strictEqual(req.tenantName, 'Thandi')
+  assert.strictEqual(req.listingTitle, 'Sunny Room')
+  assertKeysInSchema('res_room_requests', db.requestToRow(req))
+
+  const disp = db.rowToDispatch(
+    { id: 'disp-1', service_id: 'svc-1', sender_id: UID, status: 'accepted' },
+    nameOf,
+    id => (id === 'svc-1' ? 'Sipho Plumbers' : '')
+  )
+  assert.strictEqual(disp.senderName, 'Thandi')
+  assert.strictEqual(disp.serviceName, 'Sipho Plumbers')
+  assertKeysInSchema('res_service_dispatches', db.dispatchToRow(disp))
+})
+
+test('rowToRoommate / rowToChore / rowToDispute resolve names from a row', () => {
+  const nameOf = (id: string | null | undefined) => (id === UID ? 'Thandi' : '')
+
+  const roommate = db.rowToRoommate({ id: UID, gender: 'women', budget: '2000', suburb: 'Ivory Park' }, nameOf)
+  assert.strictEqual(roommate.name, 'Thandi')
+  assertKeysInSchema('res_roommate_seekers', db.seekerToRow(roommate))
+
+  const chore = db.rowToChore({ id: 'chore-1', listing_id: 'listing-1', roommate_id: UID, task_name: 'Dishes', status: 'pending' }, nameOf)
+  assert.strictEqual(chore.roommateName, 'Thandi')
+  assertKeysInSchema('res_chore_schedule', db.choreToRow(chore))
+
+  const dispute = db.rowToDispute({ id: 'dispute-1', title: 'Noise', reported_by_id: UID, status: 'pending' }, nameOf)
+  assert.strictEqual(dispute.reportedBy, 'Thandi')
+  assertKeysInSchema('res_community_disputes', db.disputeToRow(dispute))
+})
+
+test('rowToCommunity / rowToVendor / rowToGroupBuy / rowToSkill / rowToLostFound map without a name lookup', () => {
+  const community = db.rowToCommunity({ id: 'c-1', name: 'Ivory Park', kind: 'suburb', suburb: 'Ivory Park', created_by: UID })
+  assert.strictEqual(community.name, 'Ivory Park')
+  assertKeysInSchema('res_communities', db.communityToRow(community))
+
+  const vendor = db.rowToVendor({ id: 'v-1', name: 'Spaza Shop', kind: 'spaza' })
+  assert.strictEqual(vendor.category, 'spaza')
+  assertKeysInSchema('res_vendors', db.vendorToRow(vendor, UID))
+
+  const gb = db.rowToGroupBuy({ id: 'gb-1', title: 'Bulk rice', organizer_id: UID, status: 'open', target_quantity: 10, current_quantity: 2 })
+  assert.strictEqual(gb.targetAmount, 10)
+  assertKeysInSchema('res_group_buys', db.groupBuyToRow(gb))
+
+  const skill = db.rowToSkill({ id: 's-1', user_id: UID, title: 'Tutoring', category: 'education' })
+  assert.strictEqual(skill.category, 'education')
+  assertKeysInSchema('res_skills', db.skillToRow(skill))
+
+  const lf = db.rowToLostFound({ id: 'lf-1', title: 'Lost cat', kind: 'lost', status: 'reunited', images: ['cat.jpg'] })
+  assert.strictEqual(lf.status, 'resolved')
+  assert.strictEqual(lf.imageUrl, 'cat.jpg')
+  assertKeysInSchema('res_lost_found', db.lostFoundToRow(lf, UID))
+})
+
+test('rowToCareCircle / rowToSharedResource / rowToTrafficReport map DB rows into app models', () => {
+  const nameOf = (id: string | null | undefined) => (id === UID ? 'Thandi' : '')
+  const care = db.rowToCareCircle({ id: 'care-1', subject_id: UID, carer_id: UID2, status: 'active' }, nameOf)
+  assert.strictEqual(care.name, 'Thandi')
+  assert.strictEqual(care.status, 'ok')
+
+  const sr = db.rowToSharedResource({ id: 'sr-1', title: 'Borehole', kind: 'borehole', lat: '1', lon: '2' })
+  assert.strictEqual(sr.type, 'borehole')
+  assertKeysInSchema('res_shared_resources', db.sharedResourceToRow(sr, UID))
+
+  const tr = db.rowToTrafficReport({ id: 'tr-1', reporter_id: UID, lat: '1', lon: '2', report_type: 'congestion' })
+  assert.strictEqual(tr.reportType, 'congestion')
+  assertKeysInSchema('res_traffic_reports', db.trafficToRow(tr))
+})

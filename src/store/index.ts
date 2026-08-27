@@ -1836,17 +1836,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_room_requests').select('*').limit(200)
       if (error) return markFailed('res_room_requests', error.message)
       if (!data) return
-      dispatch(setRequests(data.map(item => ({
-        id: item.id,
-        tenantId: item.tenant_id,
-        tenantName: nameOf(item.tenant_id),
-        listingId: item.listing_id,
-        listingTitle: listingTitleById[String(item.listing_id)] || '',
-        landlordId: item.landlord_id,
-        status: (item.status || 'pending') as 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'saved',
-        message: item.message || '',
-        timestamp: item.created_at || new Date().toISOString()
-      }))))
+      dispatch(setRequests(data.map(item => db.rowToRequest(item, nameOf, id => listingTitleById[String(id)] || ''))))
     }
 
     // 3. Lifts
@@ -1862,17 +1852,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_roommate_seekers').select('*').limit(200)
       if (error) return markFailed('res_roommate_seekers', error.message)
       if (!data) return
-      dispatch(setRoommates(data.map(item => ({
-        id: item.id,
-        name: nameOf(item.id),
-        gender: (item.gender || 'men') as 'men' | 'women',
-        childrenCount: item.children_count || 0,
-        budget: Number(item.budget || 0),
-        currency: item.currency || 'ZAR',
-        location: item.location || '',
-        suburb: item.suburb || '',
-        bio: item.bio || ''
-      }))))
+      dispatch(setRoommates(data.map(item => db.rowToRoommate(item, nameOf))))
     }
 
     // 6. Dispatches
@@ -1880,19 +1860,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_service_dispatches').select('*').limit(200)
       if (error) return markFailed('res_service_dispatches', error.message)
       if (!data) return
-      dispatch(setDispatches(data.map(item => ({
-        id: item.id,
-        serviceId: item.service_id,
-        serviceName: serviceNameById[String(item.service_id)] || '',
-        senderId: item.sender_id,
-        senderName: nameOf(item.sender_id),
-        senderRole: 'tenant' as ServiceDispatch['senderRole'],
-        message: item.message || '',
-        status: (item.status || 'pending') as ServiceDispatch['status'],
-        timestamp: item.created_at || new Date().toISOString(),
-        proofFileName: undefined,
-        proofFileUrl: item.proof_file_url || undefined
-      }))))
+      dispatch(setDispatches(data.map(item => db.rowToDispatch(item, nameOf, id => serviceNameById[String(id)] || ''))))
     }
 
     // 7. Utility Vouchers (schema: meter_label / claimed_by / status 'claimed';
@@ -1917,16 +1885,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_chore_schedule').select('*').limit(200)
       if (error) return markFailed('res_chore_schedule', error.message)
       if (!data) return
-      dispatch(setChores(data.map(item => ({
-        id: item.id,
-        listingId: item.listing_id,
-        roommateId: item.roommate_id,
-        roommateName: nameOf(item.roommate_id),
-        taskName: item.task_name,
-        dayOfWeek: item.day_of_week || '',
-        status: (item.status || 'pending') as ChoreAssignment['status'],
-        completedAt: item.completed_at || undefined
-      }))))
+      dispatch(setChores(data.map(item => db.rowToChore(item, nameOf))))
     }
 
     // 10. Disputes
@@ -1934,21 +1893,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_community_disputes').select('*').limit(200)
       if (error) return markFailed('res_community_disputes', error.message)
       if (!data) return
-      dispatch(setDisputes(data.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description || '',
-        category: (item.category || 'Other') as CommunityDispute['category'],
-        reportedBy: nameOf(item.reported_by_id),
-        reportedById: item.reported_by_id,
-        againstUser: nameOf(item.against_user_id),
-        againstUserId: item.against_user_id || '',
-        mediatorId: item.mediator_id || '',
-        mediatorName: nameOf(item.mediator_id),
-        status: (item.status || 'pending') as CommunityDispute['status'],
-        resolutionDetails: item.resolution_details || undefined,
-        timestamp: item.created_at || new Date().toISOString()
-      }))))
+      dispatch(setDisputes(data.map(item => db.rowToDispute(item, nameOf))))
     }
 
     // 11. Notices (rsvps/vibes/echos are uuid[] in the DB; the UI tracks names)
@@ -1964,16 +1909,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_communities').select('*').limit(200)
       if (error) return markFailed('res_communities', error.message)
       if (!data) return
-      dispatch(setCommunities(data.map(item => ({
-        id: item.id,
-        name: item.name,
-        kind: (item.kind || 'suburb') as Community['kind'],
-        description: '',
-        location: item.suburb || '',
-        suburb: item.suburb || '',
-        createdBy: item.created_by,
-        createdAt: item.created_at
-      }))))
+      dispatch(setCommunities(data.map(item => db.rowToCommunity(item))))
     }
 
     // Community membership: who am I in, and how many members does each have.
@@ -2017,22 +1953,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_vendors').select('*').limit(200)
       if (error) return markFailed('res_vendors', error.message)
       if (!data) return
-      dispatch(setVendors(data.map(item => ({
-        id: item.id,
-        name: item.name,
-        category: item.kind || '',
-        description: '',
-        contactNumber: item.phone || '',
-        status: 'active' as Vendor['status'],
-        rating: 5.0,
-        reviewsCount: 0,
-        lat: item.lat ? Number(item.lat) : undefined,
-        lon: item.lon ? Number(item.lon) : undefined,
-        approachPhotoUrl: item.approach_photo_url || undefined,
-        microLandmark: item.micro_landmark || undefined,
-        lastVerifiedAt: item.last_verified_at || undefined,
-        verifiedByUserId: item.verified_by_user_id || undefined
-      }))))
+      dispatch(setVendors(data.map(item => db.rowToVendor(item))))
     }
 
     // 16. Group Buys
@@ -2040,16 +1961,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_group_buys').select('*').limit(200)
       if (error) return markFailed('res_group_buys', error.message)
       if (!data) return
-      dispatch(setGroupBuys(data.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description || '',
-        targetAmount: Number(item.target_quantity || 0),
-        currentPledges: Number(item.current_quantity || 0),
-        status: item.status as GroupBuy['status'],
-        createdBy: item.organizer_id,
-        endDate: item.deadline || ''
-      }))))
+      dispatch(setGroupBuys(data.map(item => db.rowToGroupBuy(item))))
     }
 
     // 17. Skills
@@ -2057,15 +1969,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_skills').select('*').limit(200)
       if (error) return markFailed('res_skills', error.message)
       if (!data) return
-      dispatch(setSkills(data.map(item => ({
-        id: item.id,
-        userId: item.user_id,
-        title: item.title,
-        category: item.category || '',
-        description: item.description || '',
-        experienceLevel: item.rate_note || '',
-        contactInfo: ''
-      }))))
+      dispatch(setSkills(data.map(item => db.rowToSkill(item))))
     }
 
     // 18. Lost & Found
@@ -2073,16 +1977,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_lost_found').select('*').limit(200)
       if (error) return markFailed('res_lost_found', error.message)
       if (!data) return
-      dispatch(setLostFound(data.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description || '',
-        type: item.kind as LostFound['type'],
-        location: item.last_seen || '',
-        contactInfo: '',
-        imageUrl: (item.images && item.images[0]) || undefined,
-        status: (item.status === 'reunited' ? 'resolved' : 'active') as LostFound['status']
-      }))))
+      dispatch(setLostFound(data.map(item => db.rowToLostFound(item))))
     }
 
     // 19. Care Circle
@@ -2090,13 +1985,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_care_circle').select('*').limit(200)
       if (error) return markFailed('res_care_circle', error.message)
       if (!data) return
-      dispatch(setCareCircle(data.map(item => ({
-        id: item.id,
-        name: nameOf(item.subject_id),
-        status: (item.status === 'active' ? 'ok' : 'pending') as CareCircleCheck['status'],
-        lastCheckedAt: item.last_ok_at || new Date().toISOString(),
-        checkedByName: nameOf(item.carer_id) || undefined
-      }))))
+      dispatch(setCareCircle(data.map(item => db.rowToCareCircle(item, nameOf))))
     }
 
     // 20. Shared Resources
@@ -2104,20 +1993,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_shared_resources').select('*').limit(200)
       if (error) return markFailed('res_shared_resources', error.message)
       if (!data) return
-      dispatch(setSharedResources(data.map(item => ({
-        id: item.id,
-        name: item.title,
-        type: (item.kind === 'wifi_hotspot' ? 'hotspot' : item.kind === 'borehole' ? 'borehole' : 'other') as SharedResource['type'],
-        status: item.availability || 'available',
-        description: item.access_note || '',
-        location: item.suburb || '',
-        latitude: Number(item.lat || 0),
-        longitude: Number(item.lon || 0),
-        approachPhotoUrl: item.approach_photo_url || undefined,
-        microLandmark: item.micro_landmark || undefined,
-        lastVerifiedAt: item.last_verified_at || undefined,
-        verifiedByUserId: item.verified_by_user_id || undefined
-      }))))
+      dispatch(setSharedResources(data.map(item => db.rowToSharedResource(item))))
     }
 
     // 21. Neighbourhood Statuses
@@ -2133,17 +2009,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_traffic_reports').select('*').limit(200)
       if (error) return markFailed('res_traffic_reports', error.message)
       if (!data) return
-      dispatch(setTrafficReports(data.map(item => ({
-        id: item.id,
-        reporterId: item.reporter_id,
-        suburb: item.suburb || '',
-        city: item.city || '',
-        lat: Number(item.lat),
-        lon: Number(item.lon),
-        reportType: item.report_type as TrafficReport['reportType'],
-        description: item.description || '',
-        createdAt: item.created_at
-      }))))
+      dispatch(setTrafficReports(data.map(item => db.rowToTrafficReport(item))))
     }
 
     // Listings + services first so requests/dispatches can resolve titles,

@@ -29,6 +29,7 @@ import type {
   LostFound,
   SharedResource,
   NeighbourhoodStatus,
+  CareCircleCheck,
   UserProfile,
   LandlordPreferences,
   TrafficReport
@@ -192,6 +193,22 @@ export const requestToRow = (req: RoomRequest): DbRow => ({
   created_at: toISO(req.timestamp)
 })
 
+export const rowToRequest = (
+  item: DbRow,
+  nameOf: (id: string | null | undefined) => string,
+  listingTitleOf: (listingId: string | null | undefined) => string
+): RoomRequest => ({
+  id: item.id as string,
+  tenantId: item.tenant_id as string,
+  tenantName: nameOf(item.tenant_id as string | null | undefined),
+  listingId: item.listing_id as string,
+  listingTitle: listingTitleOf(item.listing_id as string | null | undefined),
+  landlordId: item.landlord_id as string,
+  status: ((item.status as string) || 'pending') as RoomRequest['status'],
+  message: (item.message as string) || '',
+  timestamp: (item.created_at as string) || new Date().toISOString()
+})
+
 export const seekerToRow = (seeker: RoommateSeeker): DbRow => ({
   id: toUUID(seeker.id),
   gender: seeker.gender,
@@ -201,6 +218,18 @@ export const seekerToRow = (seeker: RoommateSeeker): DbRow => ({
   location: seeker.location,
   suburb: seeker.suburb,
   bio: seeker.bio
+})
+
+export const rowToRoommate = (item: DbRow, nameOf: (id: string | null | undefined) => string): RoommateSeeker => ({
+  id: item.id as string,
+  name: nameOf(item.id as string | null | undefined),
+  gender: ((item.gender as string) || 'men') as 'men' | 'women',
+  childrenCount: (item.children_count as number) || 0,
+  budget: Number(item.budget || 0),
+  currency: (item.currency as string) || 'ZAR',
+  location: (item.location as string) || '',
+  suburb: (item.suburb as string) || '',
+  bio: (item.bio as string) || ''
 })
 
 export const liftToRow = (lift: LiftClub, driverId: string): DbRow => ({
@@ -258,6 +287,24 @@ export const dispatchToRow = (disp: ServiceDispatch): DbRow => ({
   status: disp.status,
   proof_file_url: disp.proofFileUrl || null,
   created_at: toISO(disp.timestamp)
+})
+
+export const rowToDispatch = (
+  item: DbRow,
+  nameOf: (id: string | null | undefined) => string,
+  serviceNameOf: (serviceId: string | null | undefined) => string
+): ServiceDispatch => ({
+  id: item.id as string,
+  serviceId: item.service_id as string,
+  serviceName: serviceNameOf(item.service_id as string | null | undefined),
+  senderId: item.sender_id as string,
+  senderName: nameOf(item.sender_id as string | null | undefined),
+  senderRole: 'tenant' as ServiceDispatch['senderRole'],
+  message: (item.message as string) || '',
+  status: ((item.status as string) || 'pending') as ServiceDispatch['status'],
+  timestamp: (item.created_at as string) || new Date().toISOString(),
+  proofFileName: undefined,
+  proofFileUrl: (item.proof_file_url as string) || undefined
 })
 
 // App status 'sold' maps to schema status 'claimed' (broker posture: vouchers
@@ -344,6 +391,17 @@ export const choreToRow = (chore: ChoreAssignment): DbRow | null => {
   }
 }
 
+export const rowToChore = (item: DbRow, nameOf: (id: string | null | undefined) => string): ChoreAssignment => ({
+  id: item.id as string,
+  listingId: item.listing_id as string,
+  roommateId: item.roommate_id as string,
+  roommateName: nameOf(item.roommate_id as string | null | undefined),
+  taskName: item.task_name as string,
+  dayOfWeek: (item.day_of_week as string) || '',
+  status: ((item.status as string) || 'pending') as ChoreAssignment['status'],
+  completedAt: (item.completed_at as string) || undefined
+})
+
 // against_user_id / mediator_id are FKs to profiles(id), but the dispute form
 // collects the accused as free text and assigns a placeholder mediator — those
 // are not real accounts, so sending them would violate the FK. They stay null;
@@ -359,6 +417,22 @@ export const disputeToRow = (dispute: CommunityDispute): DbRow => ({
   mediator_id: null,
   status: dispute.status,
   created_at: toISO(dispute.timestamp)
+})
+
+export const rowToDispute = (item: DbRow, nameOf: (id: string | null | undefined) => string): CommunityDispute => ({
+  id: item.id as string,
+  title: item.title as string,
+  description: (item.description as string) || '',
+  category: ((item.category as string) || 'Other') as CommunityDispute['category'],
+  reportedBy: nameOf(item.reported_by_id as string | null | undefined),
+  reportedById: item.reported_by_id as string,
+  againstUser: nameOf(item.against_user_id as string | null | undefined),
+  againstUserId: (item.against_user_id as string) || '',
+  mediatorId: (item.mediator_id as string) || '',
+  mediatorName: nameOf(item.mediator_id as string | null | undefined),
+  status: ((item.status as string) || 'pending') as CommunityDispute['status'],
+  resolutionDetails: (item.resolution_details as string) || undefined,
+  timestamp: (item.created_at as string) || new Date().toISOString()
 })
 
 export const disputeStatusToRow = (status: string, resolutionDetails?: string): DbRow => ({
@@ -398,6 +472,17 @@ export const communityToRow = (c: Community): DbRow => ({
   kind: c.kind || 'suburb',
   suburb: c.suburb,
   created_by: toUUID(c.createdBy)
+})
+
+export const rowToCommunity = (item: DbRow): Community => ({
+  id: item.id as string,
+  name: item.name as string,
+  kind: ((item.kind as string) || 'suburb') as Community['kind'],
+  description: '',
+  location: (item.suburb as string) || '',
+  suburb: (item.suburb as string) || '',
+  createdBy: item.created_by as string,
+  createdAt: item.created_at as string
 })
 
 const ALERT_SEVERITY: Record<Alert['severity'], string> = {
@@ -486,6 +571,23 @@ export const vendorToRow = (v: Vendor, userId: string): DbRow => ({
   micro_landmark: v.microLandmark || null
 })
 
+export const rowToVendor = (item: DbRow): Vendor => ({
+  id: item.id as string,
+  name: item.name as string,
+  category: (item.kind as string) || '',
+  description: '',
+  contactNumber: (item.phone as string) || '',
+  status: 'active' as Vendor['status'],
+  rating: 5.0,
+  reviewsCount: 0,
+  lat: item.lat ? Number(item.lat) : undefined,
+  lon: item.lon ? Number(item.lon) : undefined,
+  approachPhotoUrl: (item.approach_photo_url as string) || undefined,
+  microLandmark: (item.micro_landmark as string) || undefined,
+  lastVerifiedAt: (item.last_verified_at as string) || undefined,
+  verifiedByUserId: (item.verified_by_user_id as string) || undefined
+})
+
 export const groupBuyToRow = (g: GroupBuy): DbRow => ({
   id: toUUID(g.id),
   organizer_id: toUUID(g.createdBy),
@@ -496,6 +598,17 @@ export const groupBuyToRow = (g: GroupBuy): DbRow => ({
   display_price: 0,
   status: g.status,
   deadline: g.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+})
+
+export const rowToGroupBuy = (item: DbRow): GroupBuy => ({
+  id: item.id as string,
+  title: item.title as string,
+  description: (item.description as string) || '',
+  targetAmount: Number(item.target_quantity || 0),
+  currentPledges: Number(item.current_quantity || 0),
+  status: item.status as GroupBuy['status'],
+  createdBy: item.organizer_id as string,
+  endDate: (item.deadline as string) || ''
 })
 
 // Pledges and seat bookings have no *ToRow mapper by design: they are counter
@@ -511,6 +624,16 @@ export const skillToRow = (s: Skill): DbRow => ({
   description: s.description
 })
 
+export const rowToSkill = (item: DbRow): Skill => ({
+  id: item.id as string,
+  userId: item.user_id as string,
+  title: item.title as string,
+  category: (item.category as string) || '',
+  description: (item.description as string) || '',
+  experienceLevel: (item.rate_note as string) || '',
+  contactInfo: ''
+})
+
 export const lostFoundToRow = (lf: LostFound, userId: string): DbRow => ({
   id: toUUID(lf.id),
   user_id: toUUID(userId),
@@ -521,6 +644,17 @@ export const lostFoundToRow = (lf: LostFound, userId: string): DbRow => ({
   last_seen: lf.location || null,
   images: lf.imageUrl ? [lf.imageUrl] : [],
   status: lf.status === 'resolved' ? 'reunited' : 'open'
+})
+
+export const rowToLostFound = (item: DbRow): LostFound => ({
+  id: item.id as string,
+  title: item.title as string,
+  description: (item.description as string) || '',
+  type: item.kind as LostFound['type'],
+  location: (item.last_seen as string) || '',
+  contactInfo: '',
+  imageUrl: ((item.images as string[])?.[0]) || undefined,
+  status: (item.status === 'reunited' ? 'resolved' : 'active') as LostFound['status']
 })
 
 export const sharedResourceToRow = (sr: SharedResource, ownerId: string): DbRow => ({
@@ -536,6 +670,33 @@ export const sharedResourceToRow = (sr: SharedResource, ownerId: string): DbRow 
   micro_landmark: sr.microLandmark || null
 })
 
+export const rowToSharedResource = (item: DbRow): SharedResource => ({
+  id: item.id as string,
+  name: item.title as string,
+  type: (item.kind === 'wifi_hotspot' ? 'hotspot' : item.kind === 'borehole' ? 'borehole' : 'other') as SharedResource['type'],
+  status: (item.availability as string) || 'available',
+  description: (item.access_note as string) || '',
+  location: (item.suburb as string) || '',
+  latitude: Number(item.lat || 0),
+  longitude: Number(item.lon || 0),
+  approachPhotoUrl: (item.approach_photo_url as string) || undefined,
+  microLandmark: (item.micro_landmark as string) || undefined,
+  lastVerifiedAt: (item.last_verified_at as string) || undefined,
+  verifiedByUserId: (item.verified_by_user_id as string) || undefined
+})
+
+// Not written through a mapper — the care-circle "checked in" write goes
+// straight through dbUpdate with a small inline payload — but the read
+// direction is still shared between fetchSupabaseData and any future
+// realtime handler, so it lives here like the others.
+export const rowToCareCircle = (item: DbRow, nameOf: (id: string | null | undefined) => string): CareCircleCheck => ({
+  id: item.id as string,
+  name: nameOf(item.subject_id as string | null | undefined),
+  status: (item.status === 'active' ? 'ok' : 'pending') as CareCircleCheck['status'],
+  lastCheckedAt: (item.last_ok_at as string) || new Date().toISOString(),
+  checkedByName: nameOf(item.carer_id as string | null | undefined) || undefined
+})
+
 export const trafficToRow = (tr: TrafficReport): DbRow => ({
   id: toUUID(tr.id),
   reporter_id: toUUID(tr.reporterId),
@@ -545,6 +706,18 @@ export const trafficToRow = (tr: TrafficReport): DbRow => ({
   lon: tr.lon,
   report_type: tr.reportType,
   description: tr.description || null
+})
+
+export const rowToTrafficReport = (item: DbRow): TrafficReport => ({
+  id: item.id as string,
+  reporterId: item.reporter_id as string,
+  suburb: (item.suburb as string) || '',
+  city: (item.city as string) || '',
+  lat: Number(item.lat),
+  lon: Number(item.lon),
+  reportType: item.report_type as TrafficReport['reportType'],
+  description: (item.description as string) || '',
+  createdAt: item.created_at as string
 })
 
 const NS_KIND: Record<NeighbourhoodStatus['service'], string> = {
