@@ -7,15 +7,37 @@
 --       sharing this Supabase project (The Gruvs or The Resident) could
 --       read every panic alert and every outage report ever filed,
 --       anywhere. Narrowed to: your own rows, rows in a community you
---       belong to, or (when an alert/status has no community_id) rows
---       in your own city — mirroring the scoping res_broadcast_alert
---       already uses to decide who gets notified.
+--       belong to, or (when an alert/status has a city on it) rows in
+--       your own city.
+--
+--       IMPORTANT: today the app never sets community_id or city when
+--       creating an alert or status report (alertToRow / neighbourhood
+--       StatusToRow in src/store/dbMappers.ts only send suburb, lat,
+--       lon — not those two columns). An earlier version of this file
+--       narrowed access to ONLY those two signals, which would have
+--       made every alert/status report invisible to everyone except
+--       its own creator, since community_id and city are always null
+--       in practice. Fixed: rows with neither signal set fall back to
+--       the original authenticated-can-read-all behaviour, so nothing
+--       regresses today; the narrowing takes effect automatically once
+--       a future change starts populating community_id/city on insert.
 --
 --   #4. res_broadcast_alert fanned out notifications with a plpgsql
 --       for-loop doing one `insert into notifications` per recipient.
 --       Rewritten as a single set-based `insert ... select`, same
 --       recipient logic, one query instead of N round-trips through
 --       the PL/pgSQL executor.
+--
+--       Same caveat applies here too and predates this change: because
+--       community_id/city are never set on insert, res_broadcast_alert's
+--       community/city match never fires today, so panic-alert push
+--       notifications are effectively a no-op in production right now.
+--       That's a separate, pre-existing gap (the alert row itself has
+--       always been visible to everyone via the old `using (true)`
+--       policy; it's only the *notification* that silently never sent).
+--       Not fixed here — closing it means deciding how an alert's
+--       community/city should be captured at creation time, which is a
+--       product decision, not a one-line SQL patch.
 --
 -- Paste this into the Supabase SQL editor and run it. It only touches
 -- res_alerts / res_neighbourhood_status policies and the
@@ -27,6 +49,7 @@ drop policy if exists res_alerts_select on public.res_alerts;
 create policy res_alerts_select on public.res_alerts
   for select to authenticated using (
     user_id = auth.uid()
+    or (community_id is null and city is null)
     or (community_id is not null and public.res_is_community_member(community_id, auth.uid()))
     or (
       community_id is null
@@ -40,6 +63,7 @@ drop policy if exists res_status_select on public.res_neighbourhood_status;
 create policy res_status_select on public.res_neighbourhood_status
   for select to authenticated using (
     reporter_id = auth.uid()
+    or (community_id is null and city is null)
     or (community_id is not null and public.res_is_community_member(community_id, auth.uid()))
     or (
       community_id is null

@@ -806,6 +806,10 @@ drop policy if exists res_alerts_select on public.res_alerts;
 create policy res_alerts_select on public.res_alerts
   for select to authenticated using (
     user_id = auth.uid()
+    -- alertToRow never sets community_id/city today, so rows with neither
+    -- fall back to visible-to-all rather than becoming invisible to
+    -- everyone but their creator. See theresident_safety_scoping.sql.
+    or (community_id is null and city is null)
     or (community_id is not null and public.res_is_community_member(community_id, auth.uid()))
     or (
       community_id is null
@@ -934,6 +938,10 @@ drop policy if exists res_status_select on public.res_neighbourhood_status;
 create policy res_status_select on public.res_neighbourhood_status
   for select to authenticated using (
     reporter_id = auth.uid()
+    -- neighbourhoodStatusToRow never sets community_id/city today, so rows
+    -- with neither fall back to visible-to-all. See
+    -- theresident_safety_scoping.sql.
+    or (community_id is null and city is null)
     or (community_id is not null and public.res_is_community_member(community_id, auth.uid()))
     or (
       community_id is null
