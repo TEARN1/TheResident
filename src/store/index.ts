@@ -2182,7 +2182,13 @@ const dbUpdate = async (table: string, payload: Record<string, unknown> | null, 
         }
       } else {
         if (payload) {
-          const { error } = await client.from(table).insert(payload);
+          // upsert, not insert: every *ToRow mapper stamps a client-generated
+          // id (toUUID(...)) onto the payload before it gets here, so a retry
+          // after a timeout that actually succeeded server-side (the common
+          // "request committed, response never arrived" shape resilientCall's
+          // retry can hit) re-submits the same row instead of creating a
+          // second one with a new id.
+          const { error } = await client.from(table).upsert(payload);
           if (error) throw error;
         }
       }
@@ -2683,15 +2689,22 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
       const offline = isOffline()
 
       // Hold the write and replay it when connectivity returns, rather than
-      // losing it silently. Never re-queue during a replay: that would grow
-      // the queue without bound while the network stays down.
-      if (offline && !options.replay && isReplayable(action.type)) {
+      // losing it silently. This also covers the network dropping again
+      // MID-replay: replayOfflineQueue clears the queue once up front (see
+      // its own comment on why), so re-queuing a replay failure here just
+      // puts that one item back — it can't grow unbounded, and without this
+      // the item (and everything replayed after it while still offline)
+      // used to be silently dropped, contradicting the "queued and will
+      // sync when you reconnect" promise.
+      if (offline && isReplayable(action.type)) {
         store.dispatch(queueOfflineAction({ action: action.type, payload: action.payload }))
-        store.dispatch(addNotification({
-          title: 'Saved offline',
-          message: `You're offline — ${syncLabel} is queued and will sync when you reconnect.`,
-          read: false
-        }))
+        if (!options.replay) {
+          store.dispatch(addNotification({
+            title: 'Saved offline',
+            message: `You're offline — ${syncLabel} is queued and will sync when you reconnect.`,
+            read: false
+          }))
+        }
       } else {
         store.dispatch(addNotification({
           title: 'Sync failed',
@@ -2739,11 +2752,20 @@ export const replayOfflineQueue = createAsyncThunk(
       await syncActionToSupabase(syncStore, { type: item.action, payload: item.payload }, { replay: true })
     }
 
-    dispatch(addNotification({
-      title: 'Back online',
-      message: `Synced ${queued.length} change${queued.length === 1 ? '' : 's'} made while you were offline.`,
-      read: false
-    }))
+    // A failure during replay re-queues that item (see syncActionToSupabase),
+    // so whatever's left over — e.g. the network dropped again mid-replay —
+    // is still safely queued for the next reconnect, not lost.
+    const stillQueued = (getState() as RootState).ui.offlineQueue.length
+    const synced = queued.length - stillQueued
+    if (synced > 0) {
+      dispatch(addNotification({
+        title: 'Back online',
+        message: stillQueued > 0
+          ? `Synced ${synced} change${synced === 1 ? '' : 's'} made while you were offline. ${stillQueued} still queued — we'll retry.`
+          : `Synced ${synced} change${synced === 1 ? '' : 's'} made while you were offline.`,
+        read: false
+      }))
+    }
 
     // One reconcile at the end, rather than after every replayed write.
     dispatch(fetchSupabaseData())
