@@ -11,7 +11,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../utils/supabase'
 import type { AppDispatch } from './index'
-import { fetchSupabaseData, setNotifications } from './index'
+import { fetchRealtimeTable, setNotifications, type RealtimeTable } from './index'
 import { shouldDeliver } from '../utils/logic'
 import { playNotificationSound } from '../utils/notificationSounds'
 
@@ -91,25 +91,27 @@ export const subscribeToRealtime = (dispatch: AppDispatch, userId: string): (() 
       }
     })
 
-  // #44.2 — a change merges into the store via one targeted refetch rather than
-  // re-pulling all 21 tables per event. Debounced so a burst is one fetch.
-  let pending: ReturnType<typeof setTimeout> | null = null
-  const refetchSoon = () => {
-    if (pending) clearTimeout(pending)
-    pending = setTimeout(() => {
-      dispatch(fetchSupabaseData())
-      pending = null
+  // #44.2 — a change merges into the store via a targeted refetch of just the
+  // table that changed, not all 23 tables per event (fetchSupabaseData was
+  // costing every connected client a full reload on any single row edit
+  // anywhere). Debounced per table so a burst on one table is one fetch.
+  const pending: Partial<Record<RealtimeTable, ReturnType<typeof setTimeout>>> = {}
+  const refetchSoon = (table: RealtimeTable) => () => {
+    if (pending[table]) clearTimeout(pending[table])
+    pending[table] = setTimeout(() => {
+      dispatch(fetchRealtimeTable(table))
+      delete pending[table]
     }, 400)
   }
 
   const content = supabase
     .channel('res-content')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_notice_events' }, refetchSoon)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_listings' }, refetchSoon)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_market_items' }, refetchSoon)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_lift_clubs' }, refetchSoon)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_tool_library' }, refetchSoon)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_utility_tokens' }, refetchSoon)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_notice_events' }, refetchSoon('res_notice_events'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_listings' }, refetchSoon('res_listings'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_market_items' }, refetchSoon('res_market_items'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_lift_clubs' }, refetchSoon('res_lift_clubs'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_tool_library' }, refetchSoon('res_tool_library'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_utility_tokens' }, refetchSoon('res_utility_tokens'))
     .subscribe()
   channels.push(content)
 
@@ -117,8 +119,8 @@ export const subscribeToRealtime = (dispatch: AppDispatch, userId: string): (() 
   // thing that must reach you regardless of what you are looking at.
   const safety = supabase
     .channel('res-safety')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_alerts' }, refetchSoon)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_neighbourhood_status' }, refetchSoon)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_alerts' }, refetchSoon('res_alerts'))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'res_neighbourhood_status' }, refetchSoon('res_neighbourhood_status'))
     .subscribe()
   channels.push(safety)
 
@@ -141,7 +143,7 @@ export const subscribeToRealtime = (dispatch: AppDispatch, userId: string): (() 
 
   // #44.3 — unsubscribe, or the channels leak on every tab change.
   return () => {
-    if (pending) clearTimeout(pending)
+    Object.values(pending).forEach(t => clearTimeout(t))
     channels.forEach(ch => { supabase!.removeChannel(ch) })
   }
 }

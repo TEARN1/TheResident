@@ -2307,6 +2307,215 @@ export const fetchSupabaseData = createAsyncThunk(
   }
 )
 
+// The realtime subscriptions in store/realtime.ts used to call the full
+// fetchSupabaseData() (23 queries) on every single postgres_changes event on
+// any of 8 tables — one market-item edit anywhere refetched everything for
+// every connected client. This does only the table that actually changed
+// (plus a profiles lookup for the handful of tables that resolve a display
+// name), matching the same read-mapping fetchSupabaseData uses inline.
+export const REALTIME_TABLES = [
+  'res_notice_events', 'res_listings', 'res_market_items',
+  'res_lift_clubs', 'res_tool_library', 'res_utility_tokens',
+  'res_alerts', 'res_neighbourhood_status'
+] as const
+export type RealtimeTable = typeof REALTIME_TABLES[number]
+
+export const fetchRealtimeTable = createAsyncThunk(
+  'data/fetchRealtimeTable',
+  async (table: RealtimeTable, { dispatch }) => {
+    if (!supabase) return
+    const needsNames = table === 'res_listings' || table === 'res_lift_clubs' ||
+      table === 'res_tool_library' || table === 'res_utility_tokens' || table === 'res_notice_events'
+
+    const nameMap: NameMap = {}
+    if (needsNames) {
+      const { data: profileRows } = await supabase.from('profiles').select('id, display_name, username').limit(2000)
+      for (const p of profileRows || []) {
+        nameMap[String(p.id).toLowerCase()] = p.display_name || p.username || ''
+      }
+    }
+    const nameOf = (id: string | null | undefined) => db.resolveName(nameMap, id ?? undefined)
+
+    switch (table) {
+      case 'res_listings': {
+        const { data, error } = await supabase.from('res_listings').select('*').limit(200)
+        if (error || !data) return
+        dispatch(setListings(data.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          price: Number(item.price),
+          currency: item.currency || 'ZAR',
+          location: item.location,
+          suburb: item.suburb || '',
+          safetyRating: (item.safety_rating || 'medium') as 'high' | 'medium' | 'low',
+          safetyNotes: item.safety_notes || '',
+          landlordId: item.landlord_id,
+          landlordName: nameOf(item.landlord_id),
+          landlordLivesHere: !!item.landlord_lives_here,
+          images: item.images || [],
+          amenities: {
+            wifi: !!item.wifi,
+            parking: !!item.parking,
+            bathroom: (item.bathroom || 'shared') as 'shared' | 'private' | 'ensuite'
+          },
+          requirements: {
+            genderPreference: (item.req_gender_pref || 'any') as 'men' | 'women' | 'couple' | 'any',
+            childrenAllowed: !!item.req_children_allowed,
+            maxChildren: item.req_max_children || 0,
+            smokingAllowed: !!item.req_smoking_allowed,
+            petsAllowed: !!item.req_pets_allowed
+          },
+          lat: item.lat ? Number(item.lat) : undefined,
+          lon: item.lon ? Number(item.lon) : undefined,
+          approachPhotoUrl: item.approach_photo_url || undefined,
+          microLandmark: item.micro_landmark || undefined,
+          lastVerifiedAt: item.last_verified_at || undefined,
+          verifiedByUserId: item.verified_by_user_id || undefined,
+          featuredUntil: item.featured_until || null,
+          propertyId: item.property_id || undefined,
+          createdAt: item.created_at || undefined,
+          quickPost: !!item.quick_post,
+          listingType: (item.listing_type === 'sale' || item.listing_type === 'guesthouse' ? item.listing_type : 'rent') as 'rent' | 'sale' | 'guesthouse',
+          eventId: item.event_id || null,
+          visibleUntil: item.visible_until || null
+        }))))
+        return
+      }
+      case 'res_lift_clubs': {
+        const { data, error } = await supabase.from('res_lift_clubs').select('*').limit(200)
+        if (error || !data) return
+        dispatch(setLifts(data.map(item => ({
+          id: item.id,
+          driverId: item.driver_id,
+          driverName: nameOf(item.driver_id),
+          origin: item.origin,
+          destination: item.destination,
+          departureTime: item.departure_time || '',
+          days: item.days || '',
+          pricePerSeat: Number(item.price_per_seat),
+          currency: item.currency || 'ZAR',
+          availableSeats: item.available_seats || 0,
+          totalSeats: item.total_seats || 0,
+          eventId: item.event_id || null
+        }))))
+        return
+      }
+      case 'res_utility_tokens': {
+        const { data, error } = await supabase.from('res_utility_tokens').select('*').limit(200)
+        if (error || !data) return
+        dispatch(setTokens(data.map(item => ({
+          id: item.id,
+          landlordId: item.landlord_id,
+          landlordName: nameOf(item.landlord_id),
+          meterNumber: item.meter_label || '',
+          price: Number(item.price),
+          currency: item.currency || 'ZAR',
+          tokenCode: '',
+          status: (item.status === 'claimed' ? 'sold' : 'available') as UtilityToken['status'],
+          purchasedBy: item.claimed_by || undefined,
+          purchasedAt: item.claimed_at || undefined
+        }))))
+        return
+      }
+      case 'res_tool_library': {
+        const { data, error } = await supabase.from('res_tool_library').select('*').limit(200)
+        if (error || !data) return
+        dispatch(setTools(data.map(item => ({
+          id: item.id,
+          ownerId: item.owner_id,
+          ownerName: nameOf(item.owner_id),
+          title: item.title,
+          description: item.description || '',
+          pricePerDay: Number(item.price_per_day),
+          currency: item.currency || 'ZAR',
+          deposit: Number(item.deposit || 0),
+          location: item.location || '',
+          status: (item.status || 'available') as ToolItem['status'],
+          rentedBy: item.rented_by || undefined,
+          rentedByName: item.rented_by ? nameOf(item.rented_by) : undefined,
+          rentedUntil: item.rented_until || undefined
+        }))))
+        return
+      }
+      case 'res_notice_events': {
+        const { data, error } = await supabase.from('res_notice_events').select('*').limit(200)
+        if (error || !data) return
+        dispatch(setNotices(data.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          type: (item.type || 'notice') as NoticeEvent['type'],
+          postedBy: nameOf(item.posted_by_id),
+          postedById: item.posted_by_id,
+          timestamp: item.created_at || new Date().toISOString(),
+          eventDate: item.event_date || undefined,
+          rsvps: db.uuidsToNames(item.rsvps, nameMap),
+          vibes: db.uuidsToNames(item.vibes, nameMap),
+          echos: db.uuidsToNames(item.echos, nameMap)
+        }))))
+        return
+      }
+      case 'res_alerts': {
+        const { data, error } = await supabase.from('res_alerts').select('*').limit(200)
+        if (error || !data) return
+        dispatch(setAlerts(data.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          kind: (item.kind || 'incident') as Alert['kind'],
+          category: (item.kind === 'panic' || item.kind === 'suspicious' ? 'security' : 'other') as Alert['category'],
+          severity: ({ low: 'info', medium: 'warning', high: 'critical', critical: 'panic' }[String(item.severity)] || 'warning') as Alert['severity'],
+          status: (item.status === 'active' ? 'active' : 'resolved') as Alert['status'],
+          suburb: item.suburb || '',
+          createdBy: item.user_id,
+          createdAt: item.created_at,
+          lat: Number(item.lat || 0),
+          lon: Number(item.lon || 0)
+        }))))
+        return
+      }
+      case 'res_market_items': {
+        const { data, error } = await supabase.from('res_market_items').select('*').limit(200)
+        if (error || !data) return
+        dispatch(setMarketItems(data.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          price: Number(item.price || 0),
+          currency: item.currency || 'ZAR',
+          category: item.category || '',
+          suburb: item.suburb || '',
+          imageUrl: (item.images && item.images[0]) || undefined,
+          status: (item.status === 'available' ? 'available' : 'sold') as MarketItem['status'],
+          createdBy: item.user_id,
+          createdAt: item.created_at,
+          featuredUntil: item.featured_until || null,
+          lat: item.lat ?? undefined,
+          lon: item.lon ?? undefined
+        }))))
+        return
+      }
+      case 'res_neighbourhood_status': {
+        const { data, error } = await supabase.from('res_neighbourhood_status').select('*').limit(200)
+        if (error || !data) return
+        dispatch(setNeighbourhoodStatus(data.map(item => ({
+          id: item.id,
+          service: (item.kind === 'power' ? 'electricity' : item.kind) as NeighbourhoodStatus['service'],
+          status: (item.status === 'up' ? 'active' : 'outage') as NeighbourhoodStatus['status'],
+          suburb: item.suburb || '',
+          updatedAt: item.created_at || new Date().toISOString(),
+          startsAt: item.starts_at || item.created_at || new Date().toISOString(),
+          endsAt: item.ends_at || null,
+          source: (item.source === 'official' ? 'official' : 'crowd') as NeighbourhoodStatus['source'],
+          providerId: item.provider_id || null
+        }))))
+        return
+      }
+    }
+  }
+)
+
 // Background synchronization middleware for Supabase mirror
 import { Middleware } from 'redux'
 
