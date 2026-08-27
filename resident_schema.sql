@@ -411,6 +411,11 @@ create table if not exists public.res_care_circle (
   cadence text check (cadence in ('daily', 'weekly')) default 'daily' not null,
   last_ok_at timestamptz default now(),
   status text check (status in ('active', 'paused')) default 'active' not null,
+  -- Independent of `status` (which tracks whether the check-in cadence
+  -- itself is running): whether the subject has flagged that they need
+  -- help. See theresident_care_circle_flag.sql.
+  flag text check (flag in ('none', 'needs_assistance')) default 'none' not null,
+  flagged_at timestamptz,
   note text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()

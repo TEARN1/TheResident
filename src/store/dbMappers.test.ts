@@ -358,6 +358,19 @@ test('rowToCareCircle / rowToSharedResource / rowToTrafficReport map DB rows int
   assert.strictEqual(care.name, 'Thandi')
   assert.strictEqual(care.status, 'ok')
 
+  // A needs_assistance flag must survive the round trip and take priority
+  // over the cadence status — this is the write path that used to silently
+  // do nothing (audit finding #53).
+  const flagRow = db.careCircleCheckToRow('needs_assistance', '2026-01-01T00:00:00.000Z')
+  assertKeysInSchema('res_care_circle', flagRow)
+  const flagged = db.rowToCareCircle({ id: 'care-2', subject_id: UID, carer_id: UID2, status: 'active', ...flagRow }, nameOf)
+  assert.strictEqual(flagged.status, 'needs_assistance')
+
+  const okRow = db.careCircleCheckToRow('ok', '2026-01-02T00:00:00.000Z')
+  assertKeysInSchema('res_care_circle', okRow)
+  const cleared = db.rowToCareCircle({ id: 'care-3', subject_id: UID, carer_id: UID2, ...okRow }, nameOf)
+  assert.strictEqual(cleared.status, 'ok', 'marking OK must clear a prior needs_assistance flag')
+
   const sr = db.rowToSharedResource({ id: 'sr-1', title: 'Borehole', kind: 'borehole', lat: '1', lon: '2' })
   assert.strictEqual(sr.type, 'borehole')
   assertKeysInSchema('res_shared_resources', db.sharedResourceToRow(sr, UID))

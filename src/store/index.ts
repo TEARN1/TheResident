@@ -2599,16 +2599,11 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
       await dbUpdate('res_lost_found', { status: 'reunited' }, 'id', toUUID(action.payload))
     }
 
-    // 20. Sync Care Circle Check (only an OK check-in maps to the schema)
+    // 20. Sync Care Circle Check
     if (checkCareCircle.match(action)) {
       const { id, status } = action.payload
-      if (status === 'ok') {
-        syncLabel = 'the check-in'
-        await dbUpdate('res_care_circle', {
-          status: 'active',
-          last_ok_at: new Date().toISOString()
-        }, 'id', toUUID(id))
-      }
+      syncLabel = status === 'ok' ? 'the check-in' : 'the assistance flag'
+      await dbUpdate('res_care_circle', db.careCircleCheckToRow(status, new Date().toISOString()), 'id', toUUID(id))
     }
 
     // 21. Sync Shared Resources

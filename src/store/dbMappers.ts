@@ -685,17 +685,26 @@ export const rowToSharedResource = (item: DbRow): SharedResource => ({
   verifiedByUserId: (item.verified_by_user_id as string) || undefined
 })
 
-// Not written through a mapper — the care-circle "checked in" write goes
-// straight through dbUpdate with a small inline payload — but the read
-// direction is still shared between fetchSupabaseData and any future
-// realtime handler, so it lives here like the others.
 export const rowToCareCircle = (item: DbRow, nameOf: (id: string | null | undefined) => string): CareCircleCheck => ({
   id: item.id as string,
   name: nameOf(item.subject_id as string | null | undefined),
-  status: (item.status === 'active' ? 'ok' : 'pending') as CareCircleCheck['status'],
+  // `flag` is independent of `status` (active/paused tracks the check-in
+  // cadence, not urgency) — a needs_assistance flag always takes priority
+  // over however the cadence status maps.
+  status: (item.flag === 'needs_assistance'
+    ? 'needs_assistance'
+    : item.status === 'active' ? 'ok' : 'pending') as CareCircleCheck['status'],
   lastCheckedAt: (item.last_ok_at as string) || new Date().toISOString(),
   checkedByName: nameOf(item.carer_id as string | null | undefined) || undefined
 })
+
+// The care-circle "checked in" write goes through dbUpdate with this
+// payload rather than a full-row *ToRow mapper (the row already exists;
+// this only updates the check-in fields).
+export const careCircleCheckToRow = (status: 'ok' | 'needs_assistance', timestamp: string): DbRow =>
+  status === 'ok'
+    ? { status: 'active', last_ok_at: timestamp, flag: 'none', flagged_at: null }
+    : { flag: 'needs_assistance', flagged_at: timestamp }
 
 export const trafficToRow = (tr: TrafficReport): DbRow => ({
   id: toUUID(tr.id),
@@ -782,7 +791,7 @@ export const SCHEMA_COLUMNS: Record<string, string[]> = {
   res_group_buy_pledges: ['id', 'group_buy_id', 'user_id', 'quantity', 'note', 'created_at'],
   res_skills: ['id', 'user_id', 'title', 'category', 'description', 'rate_note', 'availability', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
   res_lost_found: ['id', 'user_id', 'kind', 'category', 'title', 'description', 'images', 'last_seen', 'status', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
-  res_care_circle: ['id', 'subject_id', 'carer_id', 'cadence', 'last_ok_at', 'status', 'note', 'created_at', 'updated_at'],
+  res_care_circle: ['id', 'subject_id', 'carer_id', 'cadence', 'last_ok_at', 'status', 'flag', 'flagged_at', 'note', 'created_at', 'updated_at'],
   res_shared_resources: ['id', 'owner_id', 'kind', 'title', 'access_note', 'availability', 'is_free', 'price_note', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id'],
   res_neighbourhood_status: ['id', 'reporter_id', 'kind', 'status', 'detail', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'starts_at', 'ends_at', 'source', 'provider_id'],
   res_traffic_reports: ['id', 'reporter_id', 'suburb', 'city', 'lat', 'lon', 'report_type', 'description', 'created_at']
