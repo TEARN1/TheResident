@@ -15,33 +15,61 @@ export interface GeocodeResult {
   lon: number
 }
 
+// Every keystroke in MapSearchBox and every map click/marker re-render can
+// re-issue the same search/reverse-geocode request against Nominatim's free,
+// rate-limited API. A small in-memory cache (per browser tab, cleared on
+// reload) makes repeats — retyping a search, re-opening the same popup —
+// free instead of a fresh network round trip.
+const CACHE_LIMIT = 200
+const searchCache = new Map<string, GeocodeResult[]>()
+const reverseCache = new Map<string, string | null>()
+
+function rememberIn<K, V>(cache: Map<K, V>, key: K, value: V) {
+  cache.set(key, value)
+  if (cache.size > CACHE_LIMIT) {
+    const oldest = cache.keys().next().value
+    if (oldest !== undefined) cache.delete(oldest)
+  }
+}
+
 export async function searchPlaces(query: string, signal?: AbortSignal): Promise<GeocodeResult[]> {
   const q = query.trim()
   if (q.length < 3) return []
+  const cacheKey = q.toLowerCase()
+  const cached = searchCache.get(cacheKey)
+  if (cached) return cached
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5`
     const res = await fetch(url, { signal, headers: { Accept: 'application/json' } })
     if (!res.ok) return []
     const data = await res.json()
     if (!Array.isArray(data)) return []
-    return data.map((r: { place_id: number; display_name: string; lat: string; lon: string }) => ({
+    const results = data.map((r: { place_id: number; display_name: string; lat: string; lon: string }) => ({
       id: String(r.place_id),
       label: r.display_name,
       lat: parseFloat(r.lat),
       lon: parseFloat(r.lon)
     })).filter((r: GeocodeResult) => Number.isFinite(r.lat) && Number.isFinite(r.lon))
+    rememberIn(searchCache, cacheKey, results)
+    return results
   } catch {
     return []
   }
 }
 
 export async function reverseGeocode(lat: number, lon: number, signal?: AbortSignal): Promise<string | null> {
+  // Rounded to ~11m precision — plenty for a display address, and turns
+  // near-identical popup opens into cache hits instead of near-misses.
+  const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`
+  if (reverseCache.has(cacheKey)) return reverseCache.get(cacheKey) ?? null
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
     const res = await fetch(url, { signal, headers: { Accept: 'application/json' } })
     if (!res.ok) return null
     const data = await res.json()
-    return data.display_name || null
+    const label = data.display_name || null
+    rememberIn(reverseCache, cacheKey, label)
+    return label
   } catch {
     return null
   }
