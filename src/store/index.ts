@@ -1803,46 +1803,7 @@ export const fetchSupabaseData = createAsyncThunk(
       if (error) return markFailed('res_listings', error.message)
       if (!data) return
       data.forEach(item => { listingTitleById[String(item.id)] = item.title })
-      dispatch(setListings(data.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description || '',
-        price: Number(item.price),
-        currency: item.currency || 'ZAR',
-        location: item.location,
-        suburb: item.suburb || '',
-        safetyRating: (item.safety_rating || 'medium') as 'high' | 'medium' | 'low',
-        safetyNotes: item.safety_notes || '',
-        landlordId: item.landlord_id,
-        landlordName: nameOf(item.landlord_id),
-        landlordLivesHere: !!item.landlord_lives_here,
-        images: item.images || [],
-        amenities: {
-          wifi: !!item.wifi,
-          parking: !!item.parking,
-          bathroom: (item.bathroom || 'shared') as 'shared' | 'private' | 'ensuite'
-        },
-        requirements: {
-          genderPreference: (item.req_gender_pref || 'any') as 'men' | 'women' | 'couple' | 'any',
-          childrenAllowed: !!item.req_children_allowed,
-          maxChildren: item.req_max_children || 0,
-          smokingAllowed: !!item.req_smoking_allowed,
-          petsAllowed: !!item.req_pets_allowed
-        },
-        lat: item.lat ? Number(item.lat) : undefined,
-        lon: item.lon ? Number(item.lon) : undefined,
-        approachPhotoUrl: item.approach_photo_url || undefined,
-        microLandmark: item.micro_landmark || undefined,
-        lastVerifiedAt: item.last_verified_at || undefined,
-        verifiedByUserId: item.verified_by_user_id || undefined,
-        featuredUntil: item.featured_until || null,
-        propertyId: item.property_id || undefined,
-        createdAt: item.created_at || undefined,
-        quickPost: !!item.quick_post,
-        listingType: (item.listing_type === 'sale' || item.listing_type === 'guesthouse' ? item.listing_type : 'rent') as 'rent' | 'sale' | 'guesthouse',
-        eventId: item.event_id || null,
-        visibleUntil: item.visible_until || null
-      }))))
+      dispatch(setListings(data.map(item => db.rowToListing(item, nameOf))))
     }
 
     // 5. Services (fetched early: dispatches resolve their names from it)
@@ -2340,46 +2301,7 @@ export const fetchRealtimeTable = createAsyncThunk(
       case 'res_listings': {
         const { data, error } = await supabase.from('res_listings').select('*').limit(200)
         if (error || !data) return
-        dispatch(setListings(data.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          price: Number(item.price),
-          currency: item.currency || 'ZAR',
-          location: item.location,
-          suburb: item.suburb || '',
-          safetyRating: (item.safety_rating || 'medium') as 'high' | 'medium' | 'low',
-          safetyNotes: item.safety_notes || '',
-          landlordId: item.landlord_id,
-          landlordName: nameOf(item.landlord_id),
-          landlordLivesHere: !!item.landlord_lives_here,
-          images: item.images || [],
-          amenities: {
-            wifi: !!item.wifi,
-            parking: !!item.parking,
-            bathroom: (item.bathroom || 'shared') as 'shared' | 'private' | 'ensuite'
-          },
-          requirements: {
-            genderPreference: (item.req_gender_pref || 'any') as 'men' | 'women' | 'couple' | 'any',
-            childrenAllowed: !!item.req_children_allowed,
-            maxChildren: item.req_max_children || 0,
-            smokingAllowed: !!item.req_smoking_allowed,
-            petsAllowed: !!item.req_pets_allowed
-          },
-          lat: item.lat ? Number(item.lat) : undefined,
-          lon: item.lon ? Number(item.lon) : undefined,
-          approachPhotoUrl: item.approach_photo_url || undefined,
-          microLandmark: item.micro_landmark || undefined,
-          lastVerifiedAt: item.last_verified_at || undefined,
-          verifiedByUserId: item.verified_by_user_id || undefined,
-          featuredUntil: item.featured_until || null,
-          propertyId: item.property_id || undefined,
-          createdAt: item.created_at || undefined,
-          quickPost: !!item.quick_post,
-          listingType: (item.listing_type === 'sale' || item.listing_type === 'guesthouse' ? item.listing_type : 'rent') as 'rent' | 'sale' | 'guesthouse',
-          eventId: item.event_id || null,
-          visibleUntil: item.visible_until || null
-        }))))
+        dispatch(setListings(data.map(item => db.rowToListing(item, nameOf))))
         return
       }
       case 'res_lift_clubs': {

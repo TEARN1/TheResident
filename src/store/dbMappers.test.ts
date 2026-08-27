@@ -199,3 +199,32 @@ test('name helpers resolve via the profiles map', () => {
   assert.deepStrictEqual(db.uuidsToNames([UID, UID2], nameMap), ['Thandi', UID2])
   assert.deepStrictEqual(db.uuidsToNames(null, nameMap), [])
 })
+
+test('rowToListing maps a res_listings row the same way for both the full sync and a realtime refetch', () => {
+  const nameOf = (id: string | null | undefined) => (id === UID ? 'Thandi Landlord' : '')
+  const row: db.DbRow = {
+    id: 'listing-1', landlord_id: UID, title: 'Sunny room', description: null,
+    price: '1500', currency: 'ZAR', location: 'Midrand', suburb: 'Ivory Park',
+    safety_rating: 'high', safety_notes: null, landlord_lives_here: true,
+    images: ['a.jpg'], wifi: true, parking: false, bathroom: 'shared',
+    req_gender_pref: 'any', req_children_allowed: true, req_max_children: 1,
+    req_smoking_allowed: false, req_pets_allowed: false,
+    lat: '-25.98', lon: '28.13', listing_type: 'sale', quick_post: true,
+    created_at: '2026-01-01T00:00:00.000Z'
+  }
+
+  const listing = db.rowToListing(row, nameOf)
+
+  assert.strictEqual(listing.id, 'listing-1')
+  assert.strictEqual(listing.landlordName, 'Thandi Landlord')
+  assert.strictEqual(listing.price, 1500)
+  assert.strictEqual(listing.lat, -25.98)
+  assert.strictEqual(listing.listingType, 'sale')
+  assert.strictEqual(listing.amenities.wifi, true)
+  assert.strictEqual(listing.requirements.maxChildren, 1)
+  assert.strictEqual(listing.quickPost, true)
+
+  // Round-tripping through listingToRow must stay a subset of the real schema
+  // columns — guards against the read mapper drifting from what dbUpdate can write.
+  assertKeysInSchema('res_listings', db.listingToRow(listing))
+})

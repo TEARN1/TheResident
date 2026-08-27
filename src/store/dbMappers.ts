@@ -138,6 +138,50 @@ export const listingToRow = (listing: Listing): DbRow => ({
   ...(listing.visibleUntil ? { visible_until: listing.visibleUntil } : {})
 })
 
+// Read-side counterpart of listingToRow, shared by fetchSupabaseData and
+// fetchRealtimeTable so the row->Listing shape only exists in one place
+// (previously duplicated between the two).
+export const rowToListing = (item: DbRow, nameOf: (id: string | null | undefined) => string): Listing => ({
+  id: item.id as string,
+  title: item.title as string,
+  description: (item.description as string) || '',
+  price: Number(item.price),
+  currency: (item.currency as string) || 'ZAR',
+  location: item.location as string,
+  suburb: (item.suburb as string) || '',
+  safetyRating: ((item.safety_rating as string) || 'medium') as 'high' | 'medium' | 'low',
+  safetyNotes: (item.safety_notes as string) || '',
+  landlordId: item.landlord_id as string,
+  landlordName: nameOf(item.landlord_id as string | null | undefined),
+  landlordLivesHere: !!item.landlord_lives_here,
+  images: (item.images as string[]) || [],
+  amenities: {
+    wifi: !!item.wifi,
+    parking: !!item.parking,
+    bathroom: ((item.bathroom as string) || 'shared') as 'shared' | 'private' | 'ensuite'
+  },
+  requirements: {
+    genderPreference: ((item.req_gender_pref as string) || 'any') as 'men' | 'women' | 'couple' | 'any',
+    childrenAllowed: !!item.req_children_allowed,
+    maxChildren: (item.req_max_children as number) || 0,
+    smokingAllowed: !!item.req_smoking_allowed,
+    petsAllowed: !!item.req_pets_allowed
+  },
+  lat: item.lat ? Number(item.lat) : undefined,
+  lon: item.lon ? Number(item.lon) : undefined,
+  approachPhotoUrl: (item.approach_photo_url as string) || undefined,
+  microLandmark: (item.micro_landmark as string) || undefined,
+  lastVerifiedAt: (item.last_verified_at as string) || undefined,
+  verifiedByUserId: (item.verified_by_user_id as string) || undefined,
+  featuredUntil: (item.featured_until as string) || null,
+  propertyId: (item.property_id as string) || undefined,
+  createdAt: (item.created_at as string) || undefined,
+  quickPost: !!item.quick_post,
+  listingType: (item.listing_type === 'sale' || item.listing_type === 'guesthouse' ? item.listing_type : 'rent') as 'rent' | 'sale' | 'guesthouse',
+  eventId: (item.event_id as string) || null,
+  visibleUntil: (item.visible_until as string) || null
+})
+
 export const requestToRow = (req: RoomRequest): DbRow => ({
   id: toUUID(req.id),
   tenant_id: toUUID(req.tenantId),
