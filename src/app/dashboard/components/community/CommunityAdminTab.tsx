@@ -51,6 +51,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
   const [redeemInput, setRedeemInput] = useState('')
   const [redeemStatus, setRedeemStatus] = useState<string | null>(null)
   const [redeeming, setRedeeming] = useState(false)
+  const [moderateError, setModerateError] = useState<string | null>(null)
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -158,6 +159,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
 
   const handleModerate = async (action: 'remove_member' | 'promote' | 'demote', subjectId: string) => {
     if (!supabase || !selectedId) return
+    setModerateError(null)
     const { error } = await supabase.rpc('res_moderate', {
       p_community: selectedId,
       p_action: action,
@@ -166,7 +168,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
       p_reason: null
     })
     if (error) {
-      setRedeemStatus(humanizeDbError(error.message))
+      setModerateError(humanizeDbError(error.message))
       return
     }
     load()
@@ -242,6 +244,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
               <ShieldCheck size={20} className="text-gold-primary" /> Members
             </h3>
+            {moderateError && <p className="text-xs text-red-400">{moderateError}</p>}
             {loading ? (
               <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">Loading...</p>
             ) : (
@@ -260,7 +263,11 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
                         {role === 'founder' && m.role === 'admin' && (
                           <button onClick={() => handleModerate('demote', m.userId)} title="Demote to member" className="text-gray-500 hover:text-gold-primary transition-colors"><ArrowDown size={16} /></button>
                         )}
-                        <button onClick={() => handleModerate('remove_member', m.userId)} title="Remove from community" className="text-gray-500 hover:text-red-400 transition-colors"><UserMinus size={16} /></button>
+                        {/* A plain admin may only remove ordinary members — removing another
+                            admin or the founder is a founder-only action, same gating as demote. */}
+                        {(role === 'founder' || (m.role !== 'admin' && m.role !== 'founder')) && (
+                          <button onClick={() => handleModerate('remove_member', m.userId)} title="Remove from community" className="text-gray-500 hover:text-red-400 transition-colors"><UserMinus size={16} /></button>
+                        )}
                       </div>
                     )}
                   </div>

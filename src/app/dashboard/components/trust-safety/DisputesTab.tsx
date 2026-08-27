@@ -40,9 +40,16 @@ export default function DisputesTab({
   const [saving, setSaving] = useState(false)
 
   const startMediation = (disputeId: string) => {
+    // onModerate is a synchronous, optimistic Redux dispatch (the real DB
+    // write happens later, untracked here) — resetting `saving` right after
+    // calling it made the disabled state a no-op against a double-click in
+    // the same tick. Left true instead: the dispute's status flips to
+    // 'mediating' on the very next render, which unmounts this button
+    // itself (see the `dispute.status === 'pending'` guard around it), so
+    // there's nothing left to double-submit into. Reset happens when a
+    // moderation panel is (re)opened, in toggleModerating below.
     setSaving(true)
     onModerate?.(disputeId, 'mediating')
-    setSaving(false)
   }
 
   const resolveCase = (disputeId: string) => {
@@ -51,6 +58,12 @@ export default function DisputesTab({
     onModerate?.(disputeId, 'resolved', resolutionDraft.trim())
     setSaving(false)
     setModerating(null)
+    setResolutionDraft('')
+  }
+
+  const toggleModerating = (disputeId: string) => {
+    setModerating(prev => (prev === disputeId ? null : disputeId))
+    setSaving(false)
     setResolutionDraft('')
   }
   return (
@@ -108,7 +121,7 @@ export default function DisputesTab({
                    <div className="flex flex-col md:items-end justify-center gap-3">
                       {dispute.status !== 'resolved' && currentUser?.role === 'landlord' && (
                         <button
-                          onClick={() => setModerating(moderating === dispute.id ? null : dispute.id)}
+                          onClick={() => toggleModerating(dispute.id)}
                           className="bg-gold-primary text-black font-black px-6 py-2 rounded-lg text-[10px] uppercase tracking-widest hover:bg-gold-secondary transition-all shadow-lg shadow-gold-primary/10"
                         >
                           {moderating === dispute.id ? 'Cancel' : 'Moderate Case'}
