@@ -217,6 +217,21 @@ export const liftToRow = (lift: LiftClub, driverId: string): DbRow => ({
   ...(lift.eventId ? { event_id: toUUID(lift.eventId) } : {})
 })
 
+export const rowToLift = (item: DbRow, nameOf: (id: string | null | undefined) => string): LiftClub => ({
+  id: item.id as string,
+  driverId: item.driver_id as string,
+  driverName: nameOf(item.driver_id as string | null | undefined),
+  origin: item.origin as string,
+  destination: item.destination as string,
+  departureTime: (item.departure_time as string) || '',
+  days: (item.days as string) || '',
+  pricePerSeat: Number(item.price_per_seat),
+  currency: (item.currency as string) || 'ZAR',
+  availableSeats: (item.available_seats as number) || 0,
+  totalSeats: (item.total_seats as number) || 0,
+  eventId: (item.event_id as string) || null
+})
+
 export const serviceToRow = (service: HandymanService): DbRow => ({
   id: toUUID(service.id),
   owner_id: toUUID(service.ownerId),
@@ -256,6 +271,19 @@ export const tokenToRow = (token: UtilityToken): DbRow => ({
   status: token.status === 'sold' ? 'claimed' : 'available'
 })
 
+export const rowToToken = (item: DbRow, nameOf: (id: string | null | undefined) => string): UtilityToken => ({
+  id: item.id as string,
+  landlordId: item.landlord_id as string,
+  landlordName: nameOf(item.landlord_id as string | null | undefined),
+  meterNumber: (item.meter_label as string) || '',
+  price: Number(item.price),
+  currency: (item.currency as string) || 'ZAR',
+  tokenCode: '',
+  status: (item.status === 'claimed' ? 'sold' : 'available') as UtilityToken['status'],
+  purchasedBy: (item.claimed_by as string) || undefined,
+  purchasedAt: (item.claimed_at as string) || undefined
+})
+
 export const tokenClaimToRow = (buyerId: string, timestamp: string): DbRow => ({
   status: 'claimed',
   claimed_by: toUUID(buyerId),
@@ -272,6 +300,22 @@ export const toolToRow = (tool: ToolItem): DbRow => ({
   deposit: tool.deposit,
   location: tool.location,
   status: tool.status
+})
+
+export const rowToTool = (item: DbRow, nameOf: (id: string | null | undefined) => string): ToolItem => ({
+  id: item.id as string,
+  ownerId: item.owner_id as string,
+  ownerName: nameOf(item.owner_id as string | null | undefined),
+  title: item.title as string,
+  description: (item.description as string) || '',
+  pricePerDay: Number(item.price_per_day),
+  currency: (item.currency as string) || 'ZAR',
+  deposit: Number(item.deposit || 0),
+  location: (item.location as string) || '',
+  status: ((item.status as string) || 'available') as ToolItem['status'],
+  rentedBy: (item.rented_by as string) || undefined,
+  rentedByName: item.rented_by ? nameOf(item.rented_by as string) : undefined,
+  rentedUntil: (item.rented_until as string) || undefined
 })
 
 export const toolRentToRow = (rentedBy: string, rentedUntil: string): DbRow => ({
@@ -332,6 +376,20 @@ export const noticeToRow = (notice: NoticeEvent): DbRow => ({
   created_at: toISO(notice.timestamp)
 })
 
+export const rowToNotice = (item: DbRow, nameOf: (id: string | null | undefined) => string, nameMap: NameMap): NoticeEvent => ({
+  id: item.id as string,
+  title: item.title as string,
+  description: (item.description as string) || '',
+  type: ((item.type as string) || 'notice') as NoticeEvent['type'],
+  postedBy: nameOf(item.posted_by_id as string | null | undefined),
+  postedById: item.posted_by_id as string,
+  timestamp: (item.created_at as string) || new Date().toISOString(),
+  eventDate: (item.event_date as string) || undefined,
+  rsvps: uuidsToNames(item.rsvps, nameMap),
+  vibes: uuidsToNames(item.vibes, nameMap),
+  echos: uuidsToNames(item.echos, nameMap)
+})
+
 // ── Phase 4 community tables ─────────────────────────────────────────────────
 
 export const communityToRow = (c: Community): DbRow => ({
@@ -362,6 +420,25 @@ export const alertToRow = (a: Alert): DbRow => ({
   lon: a.lon
 })
 
+const ALERT_SEVERITY_FROM_DB: Record<string, Alert['severity']> = {
+  low: 'info', medium: 'warning', high: 'critical', critical: 'panic'
+}
+
+export const rowToAlert = (item: DbRow): Alert => ({
+  id: item.id as string,
+  title: item.title as string,
+  description: (item.description as string) || '',
+  kind: ((item.kind as string) || 'incident') as Alert['kind'],
+  category: (item.kind === 'panic' || item.kind === 'suspicious' ? 'security' : 'other') as Alert['category'],
+  severity: ALERT_SEVERITY_FROM_DB[String(item.severity)] || 'warning',
+  status: (item.status === 'active' ? 'active' : 'resolved') as Alert['status'],
+  suburb: (item.suburb as string) || '',
+  createdBy: item.user_id as string,
+  createdAt: item.created_at as string,
+  lat: Number(item.lat || 0),
+  lon: Number(item.lon || 0)
+})
+
 export const marketItemToRow = (m: MarketItem): DbRow => ({
   id: toUUID(m.id),
   user_id: toUUID(m.createdBy),
@@ -374,6 +451,23 @@ export const marketItemToRow = (m: MarketItem): DbRow => ({
   status: m.status === 'sold' ? 'gone' : 'available',
   ...(m.lat != null ? { lat: m.lat } : {}),
   ...(m.lon != null ? { lon: m.lon } : {})
+})
+
+export const rowToMarketItem = (item: DbRow): MarketItem => ({
+  id: item.id as string,
+  title: item.title as string,
+  description: (item.description as string) || '',
+  price: Number(item.price || 0),
+  currency: (item.currency as string) || 'ZAR',
+  category: (item.category as string) || '',
+  suburb: (item.suburb as string) || '',
+  imageUrl: ((item.images as string[])?.[0]) || undefined,
+  status: (item.status === 'available' ? 'available' : 'sold') as MarketItem['status'],
+  createdBy: item.user_id as string,
+  createdAt: item.created_at as string,
+  featuredUntil: (item.featured_until as string) || null,
+  lat: (item.lat as number) ?? undefined,
+  lon: (item.lon as number) ?? undefined
 })
 
 const VENDOR_KINDS = ['spaza', 'airtime', 'gas', 'food', 'produce'] as const
@@ -475,6 +569,21 @@ export const neighbourhoodStatusToRow = (ns: NeighbourhoodStatus, reporterId: st
   status: NS_STATUS[ns.status] || 'up',
   suburb: ns.suburb,
   ends_at: ns.endsAt || null
+})
+
+const NS_KIND_FROM_DB: Record<string, NeighbourhoodStatus['service']> = { power: 'electricity', water: 'water', network: 'network' }
+const NS_STATUS_FROM_DB: Record<string, NeighbourhoodStatus['status']> = { up: 'active', down: 'outage', stage: 'outage' }
+
+export const rowToNeighbourhoodStatus = (item: DbRow): NeighbourhoodStatus => ({
+  id: item.id as string,
+  service: NS_KIND_FROM_DB[item.kind as string] || (item.kind as NeighbourhoodStatus['service']),
+  status: NS_STATUS_FROM_DB[item.status as string] || 'outage',
+  suburb: (item.suburb as string) || '',
+  updatedAt: (item.created_at as string) || new Date().toISOString(),
+  startsAt: (item.starts_at as string) || (item.created_at as string) || new Date().toISOString(),
+  endsAt: (item.ends_at as string) || null,
+  source: (item.source === 'official' ? 'official' : 'crowd') as NeighbourhoodStatus['source'],
+  providerId: (item.provider_id as string) || null
 })
 
 // ── Schema column allowlist (from resident_schema.sql) — used by tests ────────

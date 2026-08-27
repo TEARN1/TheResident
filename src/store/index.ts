@@ -1854,20 +1854,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_lift_clubs').select('*').limit(200)
       if (error) return markFailed('res_lift_clubs', error.message)
       if (!data) return
-      dispatch(setLifts(data.map(item => ({
-        id: item.id,
-        driverId: item.driver_id,
-        driverName: nameOf(item.driver_id),
-        origin: item.origin,
-        destination: item.destination,
-        departureTime: item.departure_time || '',
-        days: item.days || '',
-        pricePerSeat: Number(item.price_per_seat),
-        currency: item.currency || 'ZAR',
-        availableSeats: item.available_seats || 0,
-        totalSeats: item.total_seats || 0,
-        eventId: item.event_id || null
-      }))))
+      dispatch(setLifts(data.map(item => db.rowToLift(item, nameOf))))
     }
 
     // 4. Roommates
@@ -1914,18 +1901,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_utility_tokens').select('*').limit(200)
       if (error) return markFailed('res_utility_tokens', error.message)
       if (!data) return
-      dispatch(setTokens(data.map(item => ({
-        id: item.id,
-        landlordId: item.landlord_id,
-        landlordName: nameOf(item.landlord_id),
-        meterNumber: item.meter_label || '',
-        price: Number(item.price),
-        currency: item.currency || 'ZAR',
-        tokenCode: '',
-        status: (item.status === 'claimed' ? 'sold' : 'available') as UtilityToken['status'],
-        purchasedBy: item.claimed_by || undefined,
-        purchasedAt: item.claimed_at || undefined
-      }))))
+      dispatch(setTokens(data.map(item => db.rowToToken(item, nameOf))))
     }
 
     // 8. Tools
@@ -1933,21 +1909,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_tool_library').select('*').limit(200)
       if (error) return markFailed('res_tool_library', error.message)
       if (!data) return
-      dispatch(setTools(data.map(item => ({
-        id: item.id,
-        ownerId: item.owner_id,
-        ownerName: nameOf(item.owner_id),
-        title: item.title,
-        description: item.description || '',
-        pricePerDay: Number(item.price_per_day),
-        currency: item.currency || 'ZAR',
-        deposit: Number(item.deposit || 0),
-        location: item.location || '',
-        status: (item.status || 'available') as ToolItem['status'],
-        rentedBy: item.rented_by || undefined,
-        rentedByName: item.rented_by ? nameOf(item.rented_by) : undefined,
-        rentedUntil: item.rented_until || undefined
-      }))))
+      dispatch(setTools(data.map(item => db.rowToTool(item, nameOf))))
     }
 
     // 9. Chores
@@ -1994,19 +1956,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_notice_events').select('*').limit(200)
       if (error) return markFailed('res_notice_events', error.message)
       if (!data) return
-      dispatch(setNotices(data.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description || '',
-        type: (item.type || 'notice') as NoticeEvent['type'],
-        postedBy: nameOf(item.posted_by_id),
-        postedById: item.posted_by_id,
-        timestamp: item.created_at || new Date().toISOString(),
-        eventDate: item.event_date || undefined,
-        rsvps: db.uuidsToNames(item.rsvps, nameMap),
-        vibes: db.uuidsToNames(item.vibes, nameMap),
-        echos: db.uuidsToNames(item.echos, nameMap)
-      }))))
+      dispatch(setNotices(data.map(item => db.rowToNotice(item, nameOf, nameMap))))
     }
 
     // 12. Communities
@@ -2051,20 +2001,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_alerts').select('*').limit(200)
       if (error) return markFailed('res_alerts', error.message)
       if (!data) return
-      dispatch(setAlerts(data.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description || '',
-        kind: (item.kind || 'incident') as Alert['kind'],
-        category: (item.kind === 'panic' || item.kind === 'suspicious' ? 'security' : 'other') as Alert['category'],
-        severity: ({ low: 'info', medium: 'warning', high: 'critical', critical: 'panic' }[String(item.severity)] || 'warning') as Alert['severity'],
-        status: (item.status === 'active' ? 'active' : 'resolved') as Alert['status'],
-        suburb: item.suburb || '',
-        createdBy: item.user_id,
-        createdAt: item.created_at,
-        lat: Number(item.lat || 0),
-        lon: Number(item.lon || 0)
-      }))))
+      dispatch(setAlerts(data.map(item => db.rowToAlert(item))))
     }
 
     // 14. Market Items
@@ -2072,22 +2009,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_market_items').select('*').limit(200)
       if (error) return markFailed('res_market_items', error.message)
       if (!data) return
-      dispatch(setMarketItems(data.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description || '',
-        price: Number(item.price || 0),
-        currency: item.currency || 'ZAR',
-        category: item.category || '',
-        suburb: item.suburb || '',
-        imageUrl: (item.images && item.images[0]) || undefined,
-        status: (item.status === 'available' ? 'available' : 'sold') as MarketItem['status'],
-        createdBy: item.user_id,
-        createdAt: item.created_at,
-        featuredUntil: item.featured_until || null,
-        lat: item.lat ?? undefined,
-        lon: item.lon ?? undefined
-      }))))
+      dispatch(setMarketItems(data.map(item => db.rowToMarketItem(item))))
     }
 
     // 15. Vendors
@@ -2203,17 +2125,7 @@ export const fetchSupabaseData = createAsyncThunk(
       const { data, error } = await supabase!.from('res_neighbourhood_status').select('*').limit(200)
       if (error) return markFailed('res_neighbourhood_status', error.message)
       if (!data) return
-      dispatch(setNeighbourhoodStatus(data.map(item => ({
-        id: item.id,
-        service: (item.kind === 'power' ? 'electricity' : item.kind) as NeighbourhoodStatus['service'],
-        status: (item.status === 'up' ? 'active' : 'outage') as NeighbourhoodStatus['status'],
-        suburb: item.suburb || '',
-        updatedAt: item.created_at || new Date().toISOString(),
-        startsAt: item.starts_at || item.created_at || new Date().toISOString(),
-        endsAt: item.ends_at || null,
-        source: (item.source === 'official' ? 'official' : 'crowd') as NeighbourhoodStatus['source'],
-        providerId: item.provider_id || null
-      }))))
+      dispatch(setNeighbourhoodStatus(data.map(item => db.rowToNeighbourhoodStatus(item))))
     }
 
     // 22. Traffic Reports
@@ -2307,131 +2219,43 @@ export const fetchRealtimeTable = createAsyncThunk(
       case 'res_lift_clubs': {
         const { data, error } = await supabase.from('res_lift_clubs').select('*').limit(200)
         if (error || !data) return
-        dispatch(setLifts(data.map(item => ({
-          id: item.id,
-          driverId: item.driver_id,
-          driverName: nameOf(item.driver_id),
-          origin: item.origin,
-          destination: item.destination,
-          departureTime: item.departure_time || '',
-          days: item.days || '',
-          pricePerSeat: Number(item.price_per_seat),
-          currency: item.currency || 'ZAR',
-          availableSeats: item.available_seats || 0,
-          totalSeats: item.total_seats || 0,
-          eventId: item.event_id || null
-        }))))
+        dispatch(setLifts(data.map(item => db.rowToLift(item, nameOf))))
         return
       }
       case 'res_utility_tokens': {
         const { data, error } = await supabase.from('res_utility_tokens').select('*').limit(200)
         if (error || !data) return
-        dispatch(setTokens(data.map(item => ({
-          id: item.id,
-          landlordId: item.landlord_id,
-          landlordName: nameOf(item.landlord_id),
-          meterNumber: item.meter_label || '',
-          price: Number(item.price),
-          currency: item.currency || 'ZAR',
-          tokenCode: '',
-          status: (item.status === 'claimed' ? 'sold' : 'available') as UtilityToken['status'],
-          purchasedBy: item.claimed_by || undefined,
-          purchasedAt: item.claimed_at || undefined
-        }))))
+        dispatch(setTokens(data.map(item => db.rowToToken(item, nameOf))))
         return
       }
       case 'res_tool_library': {
         const { data, error } = await supabase.from('res_tool_library').select('*').limit(200)
         if (error || !data) return
-        dispatch(setTools(data.map(item => ({
-          id: item.id,
-          ownerId: item.owner_id,
-          ownerName: nameOf(item.owner_id),
-          title: item.title,
-          description: item.description || '',
-          pricePerDay: Number(item.price_per_day),
-          currency: item.currency || 'ZAR',
-          deposit: Number(item.deposit || 0),
-          location: item.location || '',
-          status: (item.status || 'available') as ToolItem['status'],
-          rentedBy: item.rented_by || undefined,
-          rentedByName: item.rented_by ? nameOf(item.rented_by) : undefined,
-          rentedUntil: item.rented_until || undefined
-        }))))
+        dispatch(setTools(data.map(item => db.rowToTool(item, nameOf))))
         return
       }
       case 'res_notice_events': {
         const { data, error } = await supabase.from('res_notice_events').select('*').limit(200)
         if (error || !data) return
-        dispatch(setNotices(data.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          type: (item.type || 'notice') as NoticeEvent['type'],
-          postedBy: nameOf(item.posted_by_id),
-          postedById: item.posted_by_id,
-          timestamp: item.created_at || new Date().toISOString(),
-          eventDate: item.event_date || undefined,
-          rsvps: db.uuidsToNames(item.rsvps, nameMap),
-          vibes: db.uuidsToNames(item.vibes, nameMap),
-          echos: db.uuidsToNames(item.echos, nameMap)
-        }))))
+        dispatch(setNotices(data.map(item => db.rowToNotice(item, nameOf, nameMap))))
         return
       }
       case 'res_alerts': {
         const { data, error } = await supabase.from('res_alerts').select('*').limit(200)
         if (error || !data) return
-        dispatch(setAlerts(data.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          kind: (item.kind || 'incident') as Alert['kind'],
-          category: (item.kind === 'panic' || item.kind === 'suspicious' ? 'security' : 'other') as Alert['category'],
-          severity: ({ low: 'info', medium: 'warning', high: 'critical', critical: 'panic' }[String(item.severity)] || 'warning') as Alert['severity'],
-          status: (item.status === 'active' ? 'active' : 'resolved') as Alert['status'],
-          suburb: item.suburb || '',
-          createdBy: item.user_id,
-          createdAt: item.created_at,
-          lat: Number(item.lat || 0),
-          lon: Number(item.lon || 0)
-        }))))
+        dispatch(setAlerts(data.map(item => db.rowToAlert(item))))
         return
       }
       case 'res_market_items': {
         const { data, error } = await supabase.from('res_market_items').select('*').limit(200)
         if (error || !data) return
-        dispatch(setMarketItems(data.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          price: Number(item.price || 0),
-          currency: item.currency || 'ZAR',
-          category: item.category || '',
-          suburb: item.suburb || '',
-          imageUrl: (item.images && item.images[0]) || undefined,
-          status: (item.status === 'available' ? 'available' : 'sold') as MarketItem['status'],
-          createdBy: item.user_id,
-          createdAt: item.created_at,
-          featuredUntil: item.featured_until || null,
-          lat: item.lat ?? undefined,
-          lon: item.lon ?? undefined
-        }))))
+        dispatch(setMarketItems(data.map(item => db.rowToMarketItem(item))))
         return
       }
       case 'res_neighbourhood_status': {
         const { data, error } = await supabase.from('res_neighbourhood_status').select('*').limit(200)
         if (error || !data) return
-        dispatch(setNeighbourhoodStatus(data.map(item => ({
-          id: item.id,
-          service: (item.kind === 'power' ? 'electricity' : item.kind) as NeighbourhoodStatus['service'],
-          status: (item.status === 'up' ? 'active' : 'outage') as NeighbourhoodStatus['status'],
-          suburb: item.suburb || '',
-          updatedAt: item.created_at || new Date().toISOString(),
-          startsAt: item.starts_at || item.created_at || new Date().toISOString(),
-          endsAt: item.ends_at || null,
-          source: (item.source === 'official' ? 'official' : 'crowd') as NeighbourhoodStatus['source'],
-          providerId: item.provider_id || null
-        }))))
+        dispatch(setNeighbourhoodStatus(data.map(item => db.rowToNeighbourhoodStatus(item))))
         return
       }
     }

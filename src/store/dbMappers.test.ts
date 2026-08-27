@@ -228,3 +228,65 @@ test('rowToListing maps a res_listings row the same way for both the full sync a
   // columns — guards against the read mapper drifting from what dbUpdate can write.
   assertKeysInSchema('res_listings', db.listingToRow(listing))
 })
+
+test('rowToLift / rowToToken / rowToTool resolve names and status codes from a row', () => {
+  const nameOf = (id: string | null | undefined) => (id === UID ? 'Thandi' : '')
+
+  const lift = db.rowToLift({
+    id: 'lift-1', driver_id: UID, origin: 'A', destination: 'B',
+    price_per_seat: '25', available_seats: 2, total_seats: 4
+  }, nameOf)
+  assert.strictEqual(lift.driverName, 'Thandi')
+  assert.strictEqual(lift.pricePerSeat, 25)
+  assertKeysInSchema('res_lift_clubs', db.liftToRow(lift, UID))
+
+  const token = db.rowToToken({
+    id: 'tok-1', landlord_id: UID, meter_label: 'MTR-1', price: '100', status: 'claimed', claimed_by: UID2
+  }, nameOf)
+  assert.strictEqual(token.status, 'sold')
+  assert.strictEqual(token.landlordName, 'Thandi')
+  assertKeysInSchema('res_utility_tokens', db.tokenToRow(token))
+
+  const tool = db.rowToTool({
+    id: 'tool-1', owner_id: UID, title: 'Drill', price_per_day: '50', status: 'rented', rented_by: UID2
+  }, nameOf)
+  assert.strictEqual(tool.status, 'rented')
+  assert.strictEqual(tool.ownerName, 'Thandi')
+  assertKeysInSchema('res_tool_library', db.toolToRow(tool))
+})
+
+test('rowToNotice resolves postedBy and reaction uuid arrays via the name map', () => {
+  const nameMap: db.NameMap = { [UID]: 'Thandi', [UID2]: 'Sipho' }
+  const nameOf = (id: string | null | undefined) => db.resolveName(nameMap, id)
+  const notice = db.rowToNotice({
+    id: 'notice-1', title: 'Braai', type: 'event', posted_by_id: UID,
+    rsvps: [UID, UID2], vibes: [UID], echos: []
+  }, nameOf, nameMap)
+  assert.strictEqual(notice.postedBy, 'Thandi')
+  assert.deepStrictEqual(notice.rsvps, ['Thandi', 'Sipho'])
+  assert.deepStrictEqual(notice.vibes, ['Thandi'])
+  assertKeysInSchema('res_notice_events', db.noticeToRow(notice))
+})
+
+test('rowToAlert / rowToMarketItem / rowToNeighbourhoodStatus translate DB codes to app enums', () => {
+  const alert = db.rowToAlert({
+    id: 'alert-1', title: 'Break-in', kind: 'panic', severity: 'critical', status: 'active', user_id: UID
+  })
+  assert.strictEqual(alert.severity, 'panic')
+  assert.strictEqual(alert.category, 'security')
+  assertKeysInSchema('res_alerts', db.alertToRow(alert))
+
+  const item = db.rowToMarketItem({
+    id: 'mi-1', title: 'Bicycle', status: 'available', user_id: UID, images: ['bike.jpg']
+  })
+  assert.strictEqual(item.status, 'available')
+  assert.strictEqual(item.imageUrl, 'bike.jpg')
+  assertKeysInSchema('res_market_items', db.marketItemToRow(item))
+
+  const ns = db.rowToNeighbourhoodStatus({
+    id: 'ns-1', kind: 'power', status: 'down', suburb: 'Ivory Park'
+  })
+  assert.strictEqual(ns.service, 'electricity')
+  assert.strictEqual(ns.status, 'outage')
+  assertKeysInSchema('res_neighbourhood_status', db.neighbourhoodStatusToRow(ns, UID))
+})
