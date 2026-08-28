@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Resident Crew</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #faf9f6;
+    --surface: #ffffff;
+    --border: #e4e0d8;
+    --ink: #2b2a26;
+    --ink-soft: #5c594e;
+    --accent: #2f5d4f;
+    --accent-soft: #eaf0ec;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1a17;
+      --surface: #232220;
+      --border: #38362f;
+      --ink: #eae7de;
+      --ink-soft: #b3afa2;
+      --accent: #7fbfa6;
+      --accent-soft: #263029;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Source Sans 3', system-ui, sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+  }
+
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+  }
+
+  header.hero {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.9rem;
+  }
+
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    line-height: 1.1;
+    margin: 0 0 0.75rem;
+    text-wrap: balance;
+  }
+
+  .meta {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .app-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 100px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 1rem;
+  }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-size: 1.4rem;
+    margin: 2.75rem 0 1rem;
+    text-wrap: balance;
+  }
+
+  h2 .num {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    margin-right: 0.5rem;
+  }
+
+  p { margin: 0 0 1rem; max-width: 65ch; color: var(--ink); }
+
+  ul {
+    margin: 0 0 1rem;
+    padding-left: 1.2rem;
+  }
+  li { margin-bottom: 0.55rem; max-width: 62ch; }
+  li::marker { color: var(--accent); }
+
+  strong { font-weight: 600; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0 1.5rem;
+    font-size: 0.92rem;
+  }
+  .table-wrap { overflow-x: auto; }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.4rem;
+    margin: 1.5rem 0;
+  }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  footer {
+    margin-top: 3.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 480px) {
+    .page { padding: 3rem 1.25rem 4rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <p class="eyebrow">Privacy Policy</p>
+    <h1>How Resident Crew handles your data</h1>
+    <p class="meta">Effective 28 August 2026 · Applies to the Resident Crew web app and its Android package</p>
+    <span class="app-tag">🏘️ Resident Crew — neighborhood app</span>
+  </header>
+
+  <p>Resident Crew is a neighborhood-watch and community app: residents share alerts, chat, coordinate on a shared map, and connect with neighbors. This policy explains what information the app collects, why, and how you can control it.</p>
+
+  <h2><span class="num">01</span>Information we collect</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Category</th><th>What it includes</th><th>Why we collect it</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Account info</td>
+          <td>Email address, display name, avatar</td>
+          <td>To create and secure your account, and identify you to neighbors</td>
+        </tr>
+        <tr>
+          <td>Location</td>
+          <td>Device GPS coordinates or manually entered suburb, resolved to an approximate area via OpenStreetMap</td>
+          <td>To show relevant local alerts and place you on the community map</td>
+        </tr>
+        <tr>
+          <td>Community content</td>
+          <td>Posts, messages, gossip-feed items, notices, and trust-circle connections</td>
+          <td>To power the core features you post and send</td>
+        </tr>
+        <tr>
+          <td>Safety reports</td>
+          <td>Incident details you submit, and automated anomaly-scan metadata</td>
+          <td>To flag and route safety-relevant activity to the right people</td>
+        </tr>
+        <tr>
+          <td>Subscription &amp; billing</td>
+          <td>Plan tier and payment status (handled by our payment processor — we do not store card numbers)</td>
+          <td>To manage paid features</td>
+        </tr>
+        <tr>
+          <td>Device &amp; usage</td>
+          <td>Notification tokens, sign-in timestamps, basic diagnostic logs</td>
+          <td>To deliver notifications and keep the service running and secure</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2><span class="num">02</span>How we use it</h2>
+  <ul>
+    <li>Operate core features: the community map, alerts, messaging, trust circles, and organization broadcasts.</li>
+    <li>Send notifications you've opted into — safety alerts, replies, and community updates.</li>
+    <li>Detect abuse and security issues, including automated scans for suspicious activity.</li>
+    <li>Maintain and improve reliability, and diagnose bugs.</li>
+  </ul>
+  <p>We do not sell your personal information, and we do not use your data to serve third-party advertising.</p>
+
+  <h2><span class="num">03</span>Who we share it with</h2>
+  <p>Content you post to a community, group, or public feed is visible to other members of that community by design. Beyond that, we share data only with:</p>
+  <ul>
+    <li><strong>Supabase</strong> — our backend and database provider, which stores account, location, and content data on our behalf.</li>
+    <li><strong>OpenStreetMap / Nominatim</strong> — used to turn GPS coordinates into a readable suburb or city name. Coordinates are sent for this lookup only when you use the live-location feature.</li>
+    <li><strong>Payment processors</strong> — for subscription billing, if you upgrade to a paid plan.</li>
+    <li><strong>Law enforcement or authorities</strong> — only where required by law, or to protect the safety of residents.</li>
+  </ul>
+
+  <h2><span class="num">04</span>Location data, specifically</h2>
+  <div class="card">
+    <p>Live location is <strong>opt-in</strong>. It's requested only when you tap a location feature (like posting your position on the map), and your browser or device will always show its own native permission prompt first. You can decline and enter your suburb manually instead. You can revoke location permission at any time in your browser or device settings.</p>
+  </div>
+
+  <h2><span class="num">05</span>Data retention</h2>
+  <p>We keep account and community data for as long as your account is active. Safety and security logs are retained separately for a limited period to support abuse investigation. If you delete your account, we remove your personal data within a reasonable period, except where we're required to retain records by law or to resolve an open safety report.</p>
+
+  <h2><span class="num">06</span>Your choices</h2>
+  <ul>
+    <li><strong>Access &amp; correction</strong> — update your profile, name, and avatar directly in the app.</li>
+    <li><strong>Deletion</strong> — request account deletion from within the app's settings, or by contacting us below.</li>
+    <li><strong>Notifications</strong> — manage or disable push notifications in your device settings.</li>
+    <li><strong>Location</strong> — revoke location access at any time; the app falls back to manual suburb entry.</li>
+  </ul>
+
+  <h2><span class="num">07</span>Children's privacy</h2>
+  <p>Resident Crew is intended for adult residents and is not directed at children under 13. We do not knowingly collect personal information from children under 13.</p>
+
+  <h2><span class="num">08</span>Security</h2>
+  <p>We use industry-standard safeguards — encrypted connections, access controls, and database-level hardening — to protect your data. No method of transmission or storage is 100% secure, and we can't guarantee absolute security.</p>
+
+  <h2><span class="num">09</span>Changes to this policy</h2>
+  <p>We may update this policy as the app evolves. Material changes will be reflected by updating the effective date above.</p>
+
+  <h2><span class="num">10</span>Contact us</h2>
+  <p>Questions about this policy or your data? Reach out to <a href="mailto:asemahlenkwali@gmail.com">asemahlenkwali@gmail.com</a>.</p>
+
+  <footer>
+    Resident Crew is an independent, open-source community app.
+  </footer>
+</div>
+</body>
+</html>
