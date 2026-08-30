@@ -62,6 +62,35 @@ create table if not exists public.res_infra_partner_admins (
   primary key (provider_id, user_id)
 );
 
+-- Shapes copied from theresident_undocumented_tables_schema.sql / resident_schema.sql.
+create table if not exists public.res_properties (
+  id uuid primary key default uuid_generate_v4(),
+  landlord_id uuid not null,
+  address text not null,
+  suburb text,
+  city text,
+  lat double precision,
+  lon double precision,
+  total_rooms integer default 0,
+  doc_review_status text default 'none',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.res_listings (
+  id uuid primary key default uuid_generate_v4(),
+  landlord_id uuid not null,
+  title text not null,
+  description text,
+  price numeric,
+  currency text default 'ZAR',
+  location text,
+  suburb text,
+  images text[] default '{}',
+  property_id uuid references public.res_properties(id) on delete set null,
+  created_at timestamptz default now()
+);
+
 create table if not exists public.res_rate_limits (
   user_id uuid not null,
   action text not null,

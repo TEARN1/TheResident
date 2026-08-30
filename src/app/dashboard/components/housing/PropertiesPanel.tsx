@@ -12,6 +12,7 @@ import { Plus, X, MapPin, ShieldCheck, ShieldAlert, ShieldQuestion, Upload, Aler
 import { supabase } from '../../../../utils/supabase'
 import type { GeocodeResult } from '../../../../utils/geocode'
 import MapSearchBox from '../map/MapSearchBox'
+import RoomInventoryPanel from './RoomInventoryPanel'
 import type { Listing } from '../../../../store'
 
 export interface ResProperty {
@@ -145,8 +146,20 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
     }
   }, [verifyingFor, checkMismatch])
 
+  // The accept attr on the file input allows image/*,application/pdf — this
+  // was the one uploader in the app with no size/type check at all before an
+  // upload was attempted.
+  const MAX_DOC_BYTES = 10 * 1024 * 1024
   const handleUploadDoc = async (file: File) => {
     if (!supabase || !verifyingFor) return
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      onNotify('Please upload an image or a PDF.')
+      return
+    }
+    if (file.size > MAX_DOC_BYTES) {
+      onNotify('That file is over 10MB — please upload a smaller copy.')
+      return
+    }
     setUploading(true)
     try {
       const path = `${currentUserId}/${verifyingFor.id}-${Date.now()}-${file.name}`
@@ -267,6 +280,13 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                     ))}
                   </div>
                 )}
+
+                <RoomInventoryPanel
+                  propertyId={p.id}
+                  currentUserId={currentUserId}
+                  onNotify={onNotify}
+                  onAdvertised={onRefresh}
+                />
 
                 {p.doc_review_status === 'none' && (
                   <button
