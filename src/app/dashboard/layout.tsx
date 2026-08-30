@@ -24,6 +24,7 @@ import { unlockNotificationAudio } from '../../utils/notificationSounds'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
 import AutomationControlPanel from './components/shared/AutomationControlPanel'
+import UrgentBroadcastBanner from './components/shared/UrgentBroadcastBanner'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -268,6 +269,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           expressing that as a single slot keeps it that way structurally
           rather than by coincidence, and matches the established pattern
           instead of being a third, ad hoc way of stacking banners. */}
+      {/* An unacknowledged urgent announcement outranks both onboarding
+          nudges below: those are chores the resident can do whenever, this is
+          a school closing tomorrow. It renders above them rather than joining
+          the either/or slot, because unlike those two it cannot be dismissed
+          — it clears only by being acknowledged (see UrgentBroadcastBanner). */}
+      <div className="px-4 pt-3 empty:hidden">
+        <UrgentBroadcastBanner />
+      </div>
+
       {currentUser && isGuestUser(currentUser) && !guestBannerDismissed ? (
         <div className="guest-summary-banner">
           <Sparkles size={16} className="shrink-0" style={{ color: '#D4AF37' }} />

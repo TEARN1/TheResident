@@ -51,8 +51,15 @@ psql_f() { run "psql -h $SOCK -p $PORT -U postgres -v ON_ERROR_STOP=1 -q -f $1";
 echo "→ prelude"
 psql_f "$ROOT/sql-tests/00-prelude.sql"
 
-echo "→ applying theresident_service_desk_schema.sql"
-psql_f "$ROOT/theresident_service_desk_schema.sql"
+# Applied in dependency order, exactly as they must be pasted into Supabase.
+for schema in \
+  theresident_org_broadcast_schema.sql \
+  theresident_service_desk_schema.sql \
+  theresident_directory_urgency_schema.sql
+do
+  echo "→ applying $schema"
+  psql_f "$ROOT/$schema"
+done
 
 failed=0
 for t in "$ROOT"/sql-tests/*.test.sql; do

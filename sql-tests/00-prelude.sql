@@ -20,6 +20,33 @@ create table if not exists public.res_profiles (
   updated_at timestamptz default now()
 );
 
+-- Gruvs-owned shared rail. Column list copied verbatim from the live table —
+-- note it really does carry BOTH read/is_read and body/message, which is why
+-- the client reads defensively and the fan-out writes both.
+create table if not exists public.notifications (
+  id uuid primary key default uuid_generate_v4(),
+  recipient_id uuid not null,
+  sender_id uuid,
+  type text not null,
+  action_id text,
+  action_type text,
+  title text,
+  message text,
+  icon text,
+  read boolean default false,
+  read_at timestamptz,
+  action_url text,
+  created_at timestamptz default now(),
+  expires_at timestamptz,
+  user_id uuid,
+  actor_id uuid,
+  event_id uuid,
+  echo_id uuid,
+  body text,
+  is_read boolean default false,
+  data jsonb
+);
+
 create table if not exists public.res_infra_providers (
   id uuid primary key default uuid_generate_v4(),
   name text not null,

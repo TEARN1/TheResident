@@ -8,12 +8,29 @@
 import { supabase } from './supabase'
 import { resilientCall } from './resilientCall'
 
+export type OrgTier =
+  | 'department' | 'hod' | 'school' | 'teacher' | 'business' | 'branch'
+  | 'municipality' | 'ward' | 'utility' | 'isp'
+  | 'university' | 'faculty' | 'grade' | 'class'
+  | 'clinic' | 'other'
+
+export type OrgSector =
+  | 'education' | 'utility' | 'government' | 'business' | 'health' | 'transport' | 'other'
+
+/** Only 'urgent' and 'critical' reach the bell; only a verified unit may send them. */
+export type BroadcastPriority = 'normal' | 'important' | 'urgent' | 'critical'
+
 export interface OrgUnit {
   id: string
   parentId: string | null
   name: string
-  tier: 'department' | 'hod' | 'school' | 'teacher' | 'business' | 'branch'
+  tier: OrgTier
   ownerUserId: string | null
+  sector: OrgSector | null
+  verified: boolean
+  suburb: string | null
+  city: string | null
+  description: string | null
 }
 
 export interface OrgBroadcast {
@@ -22,7 +39,64 @@ export interface OrgBroadcast {
   senderId: string
   title: string
   body: string
+  priority: BroadcastPriority
+  category: string | null
+  expiresAt: string | null
   createdAt: string
+}
+
+/** An urgent announcement this user has not acknowledged yet. */
+export interface PendingUrgentBroadcast {
+  id: string
+  unitId: string
+  unitName: string
+  title: string
+  body: string
+  priority: BroadcastPriority
+  createdAt: string
+}
+
+export const TIER_LABEL: Record<OrgTier, string> = {
+  department: 'Department', hod: 'District office', school: 'School',
+  teacher: 'Teacher', business: 'Business', branch: 'Branch',
+  municipality: 'Municipality', ward: 'Ward', utility: 'Utility', isp: 'Internet provider',
+  university: 'University', faculty: 'Faculty', grade: 'Grade', class: 'Class',
+  clinic: 'Clinic', other: 'Other'
+}
+
+/** Which sector a tier belongs to, so the directory can group sensibly. */
+export function sectorForTier(tier: OrgTier): OrgSector {
+  switch (tier) {
+    case 'department': case 'hod': case 'school': case 'teacher':
+    case 'university': case 'faculty': case 'grade': case 'class':
+      return 'education'
+    case 'municipality': case 'ward':
+      return 'government'
+    case 'utility': case 'isp':
+      return 'utility'
+    case 'clinic':
+      return 'health'
+    case 'business': case 'branch':
+      return 'business'
+    default:
+      return 'other'
+  }
+}
+
+/**
+ * Free-text search over the directory. Matches on the unit's own name, its
+ * tier label, and any ancestor's name — so typing a school's name finds its
+ * classes, which is how a parent actually looks for "Grade 10A".
+ */
+export function searchUnits(units: OrgUnit[], query: string): OrgUnit[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return units
+  return units.filter(u => {
+    const trail = unitBreadcrumb(units, u.id).map(b => b.name).join(' ')
+    return `${trail} ${TIER_LABEL[u.tier] ?? ''} ${u.suburb ?? ''} ${u.city ?? ''}`
+      .toLowerCase()
+      .includes(q)
+  })
 }
 
 /** All descendant unit ids of `rootId`, including `rootId` itself. */
@@ -87,8 +161,13 @@ function mapUnitRow(row: Record<string, unknown>): OrgUnit {
     id: row.id as string,
     parentId: (row.parent_id as string | null) ?? null,
     name: row.name as string,
-    tier: row.tier as OrgUnit['tier'],
-    ownerUserId: (row.owner_user_id as string | null) ?? null
+    tier: row.tier as OrgTier,
+    ownerUserId: (row.owner_user_id as string | null) ?? null,
+    sector: (row.sector as OrgSector | null) ?? null,
+    verified: !!row.verified,
+    suburb: (row.suburb as string | null) ?? null,
+    city: (row.city as string | null) ?? null,
+    description: (row.description as string | null) ?? null
   }
 }
 
@@ -99,6 +178,9 @@ function mapBroadcastRow(row: Record<string, unknown>): OrgBroadcast {
     senderId: row.sender_id as string,
     title: row.title as string,
     body: row.body as string,
+    priority: ((row.priority as BroadcastPriority | null) ?? 'normal'),
+    category: (row.category as string | null) ?? null,
+    expiresAt: (row.expires_at as string | null) ?? null,
     createdAt: row.created_at as string
   }
 }
@@ -188,13 +270,20 @@ export async function createUnit(unit: NewOrgUnit): Promise<OrgUnit> {
   })
 }
 
-export async function postBroadcast(unitId: string, senderId: string, title: string, body: string): Promise<OrgBroadcast> {
+export async function postBroadcast(
+  unitId: string,
+  senderId: string,
+  title: string,
+  body: string,
+  priority: BroadcastPriority = 'normal',
+  category?: string
+): Promise<OrgBroadcast> {
   if (!supabase) throw new Error('Not connected')
   const client = supabase
   return resilientCall(async () => {
     const { data, error } = await client
       .from('res_org_broadcasts')
-      .insert({ unit_id: unitId, sender_id: senderId, title, body })
+      .insert({ unit_id: unitId, sender_id: senderId, title, body, priority, category: category ?? null })
       .select('*')
       .single()
     if (error) throw error
@@ -203,4 +292,33 @@ export async function postBroadcast(unitId: string, senderId: string, title: str
   // resilientCall's default isRetryableError already excludes 'rate_limited'
   // messages — a rate-limit rejection surfaces immediately, not retried into
   // a second identical rejection.
+}
+
+/**
+ * Urgent/critical announcements this user still has to acknowledge. Drives the
+ * banner that does not go away on its own — the ask was something that "won't
+ * stop blinking until you open it", so unlike every other dismissible thing in
+ * this app the state lives in the DB (res_org_broadcast_receipts) rather than
+ * sessionStorage, and therefore survives a refresh or a different device.
+ */
+export async function fetchPendingUrgentBroadcasts(): Promise<PendingUrgentBroadcast[]> {
+  if (!supabase) return []
+  const { data, error } = await supabase.rpc('res_pending_urgent_broadcasts')
+  if (error || !data) return []
+  return (data as Record<string, unknown>[]).map(r => ({
+    id: r.id as string,
+    unitId: r.unit_id as string,
+    unitName: (r.unit_name as string) || 'Announcement',
+    title: r.title as string,
+    body: r.body as string,
+    priority: r.priority as BroadcastPriority,
+    createdAt: r.created_at as string
+  }))
+}
+
+/** Marks it dealt with, and clears the matching bell entry so the two agree. */
+export async function acknowledgeBroadcast(broadcastId: string): Promise<void> {
+  if (!supabase) throw new Error('Not connected')
+  const { error } = await supabase.rpc('res_ack_broadcast', { p_broadcast: broadcastId })
+  if (error) throw error
 }

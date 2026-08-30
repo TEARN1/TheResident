@@ -653,3 +653,23 @@ body {
   background: rgba(255,255,255,0.1);
   border-radius: 10px;
 }
+
+/* An urgent org announcement that has not been acknowledged yet. The brief
+   asked for something that "won't stop blinking until you open it" — this is
+   that signal. Kept to a slow border/shadow breath rather than an opacity
+   flash: it has to be noticeable at a glance without making the text under it
+   hard to read, and it may sit on screen for a while. */
+@keyframes urgent-broadcast-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35); }
+  50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+.urgent-broadcast--pulse {
+  animation: urgent-broadcast-pulse 2s ease-in-out infinite;
+}
+
+/* Anyone who has asked their OS to reduce motion still gets the colour and the
+   icon — they just don't get the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .urgent-broadcast--pulse { animation: none; }
+}
