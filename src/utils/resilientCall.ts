@@ -26,6 +26,9 @@ export function isRetryableError(err: unknown): boolean {
     message.includes('permission denied') ||
     message.includes('jwt') ||
     message.includes('rate_limited') ||
+    // The shared res_check_rate_limit() RPC raises this exact string; without
+    // it a throttled call was retried, which only drove the counter higher.
+    message.includes('rate_limit_exceeded') ||
     message.includes('rate limit') ||
     message.includes('violates') ||
     message.includes('duplicate key') ||

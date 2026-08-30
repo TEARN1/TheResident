@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, X, Shield, Users, Droplets, Lock,
+  Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, X, Shield, Users, Droplets, Lock, LifeBuoy,
   LayoutGrid, AlertTriangle, ListChecks, Sparkles, DoorOpen, Map as MapIcon
 } from 'lucide-react'
 import {
@@ -55,6 +55,7 @@ import SharedResourcesTab from '../components/household/SharedResourcesTab'
 import CommunityAdminTab from '../components/community/CommunityAdminTab'
 import GruvsConnectionsWidget from '../components/social/GruvsConnectionsWidget'
 import OrgBroadcastsPanel from '../components/community/OrgBroadcastsPanel'
+import ServiceDeskPanel from '../components/community/ServiceDeskPanel'
 import dynamic from 'next/dynamic'
 import { formatCurrency, type StatusReport } from '../../../utils/logic'
 
@@ -66,7 +67,7 @@ const VibeMap = dynamic(() => import('../components/map/VibeMap'), {
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
   const searchParams = useSearchParams()
-  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'resources' | 'admin'>(
+  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'resources' | 'admin' | 'servicedesk'>(
     searchParams.get('tab') === 'vibemap' ? 'vibemap' : 'overview'
   )
   const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
@@ -397,6 +398,7 @@ export default function CommunityPage() {
       accent: 'text-rose-400 bg-rose-400/10',
       tabs: [
         { id: 'safety', label: 'Safety', icon: ShieldCheck },
+        { id: 'servicedesk', label: 'Service Desk', icon: LifeBuoy },
         { id: 'disputes', label: 'Disputes', icon: Gavel },
         { id: 'household', label: 'Household', icon: Home },
         { id: 'chores', label: 'Chores', icon: Award },
@@ -655,6 +657,7 @@ export default function CommunityPage() {
                 myCommunities={communities.filter(c => myCommunityIds.some(id => toUUID(id) === toUUID(c.id))).map(c => ({ id: c.id, name: c.name }))}
               />
             )}
+            {subTab === 'servicedesk' && <ServiceDeskPanel />}
             {subTab === 'safety' && (
               <SafetyTab
                 alerts={alerts}
