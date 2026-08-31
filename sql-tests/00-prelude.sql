@@ -95,6 +95,13 @@ create table if not exists public.res_listings (
   created_at timestamptz default now()
 );
 
+create table if not exists public.res_gossip_posts (
+  id uuid primary key default uuid_generate_v4(),
+  author_id uuid references public.profiles(id) on delete cascade not null,
+  body text not null,
+  created_at timestamptz default now()
+);
+
 create table if not exists public.res_rate_limits (
   user_id uuid not null,
   action text not null,

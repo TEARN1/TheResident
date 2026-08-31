@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2 } from 'lucide-react'
+import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, Heart } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
@@ -98,6 +98,11 @@ export default function GossipPage() {
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({})
   const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({})
 
+  // Reaction counts and whether the current user has reacted, per post.
+  const [reactionCounts, setReactionCounts] = useState<Record<string, number>>({})
+  const [myReactions, setMyReactions] = useState<Record<string, boolean>>({})
+  const [reacting, setReacting] = useState<Record<string, boolean>>({})
+
   const sentinelRef = useRef<HTMLDivElement>(null)
   const loadingMoreRef = useRef(false)
   const hasMoreRef = useRef(true)
@@ -152,6 +157,43 @@ export default function GossipPage() {
     await fetchProfilesFor([...new Set(rows.map(c => c.author_id))].filter(id => !profileMapRef.current[id]))
   }, [fetchProfilesFor])
 
+  // One batched query per page of posts, same shape as fetchCommentPreviewsFor
+  // above — counts per post plus whether the current user is among the
+  // reactors, without one request per post.
+  const fetchReactionsFor = useCallback(async (postIds: string[]) => {
+    if (!supabase || postIds.length === 0) return
+    const { data } = await supabase
+      .from('res_gossip_post_reactions')
+      .select('post_id, user_id')
+      .in('post_id', postIds)
+    const rows = (data || []) as { post_id: string; user_id: string }[]
+    const counts: Record<string, number> = {}
+    const mine: Record<string, boolean> = {}
+    for (const r of rows) {
+      counts[r.post_id] = (counts[r.post_id] || 0) + 1
+      if (r.user_id === myId) mine[r.post_id] = true
+    }
+    setReactionCounts(prev => ({ ...prev, ...counts }))
+    setMyReactions(prev => ({ ...prev, ...mine }))
+  }, [myId])
+
+  const toggleReaction = async (postId: string) => {
+    if (!supabase || !myId || reacting[postId]) return
+    setReacting(prev => ({ ...prev, [postId]: true }))
+    const alreadyReacted = !!myReactions[postId]
+    // Optimistic — a like toggle should feel instant; rolled back on failure.
+    setMyReactions(prev => ({ ...prev, [postId]: !alreadyReacted }))
+    setReactionCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + (alreadyReacted ? -1 : 1) }))
+    const { error: reactionError } = alreadyReacted
+      ? await supabase.from('res_gossip_post_reactions').delete().eq('post_id', postId).eq('user_id', myId)
+      : await supabase.from('res_gossip_post_reactions').insert({ post_id: postId, user_id: myId })
+    if (reactionError) {
+      setMyReactions(prev => ({ ...prev, [postId]: alreadyReacted }))
+      setReactionCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + (alreadyReacted ? 1 : -1) }))
+    }
+    setReacting(prev => ({ ...prev, [postId]: false }))
+  }
+
   const loadPosts = useCallback(async () => {
     if (!supabase) { setLoading(false); return }
     setLoading(true)
@@ -173,8 +215,9 @@ export default function GossipPage() {
     hasMoreRef.current = rows.length === PAGE_SIZE
     await fetchProfilesFor([...new Set(rows.map(p => p.author_id))])
     await fetchCommentPreviewsFor(rows.map(p => p.id))
+    await fetchReactionsFor(rows.map(p => p.id))
     setLoading(false)
-  }, [fetchProfilesFor, fetchCommentPreviewsFor])
+  }, [fetchProfilesFor, fetchCommentPreviewsFor, fetchReactionsFor])
 
   const loadMore = useCallback(async () => {
     if (!supabase || loadingMoreRef.current || !hasMoreRef.current || posts.length === 0) return
@@ -201,9 +244,10 @@ export default function GossipPage() {
     hasMoreRef.current = more
     await fetchProfilesFor([...new Set(rows.map(p => p.author_id))])
     await fetchCommentPreviewsFor(rows.map(p => p.id))
+    await fetchReactionsFor(rows.map(p => p.id))
     loadingMoreRef.current = false
     setLoadingMore(false)
-  }, [posts, fetchProfilesFor, fetchCommentPreviewsFor])
+  }, [posts, fetchProfilesFor, fetchCommentPreviewsFor, fetchReactionsFor])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -549,13 +593,24 @@ export default function GossipPage() {
                       <span className="text-[11px] font-bold text-white/90">{nameOf(post.author_id)}</span>
                       <span className="text-[10px] text-white/60">{new Date(post.created_at).toLocaleString()}</span>
                     </div>
-                    <button
-                      onClick={() => toggleExpand(post.id)}
-                      className="absolute bottom-3 right-4 flex items-center gap-1.5 text-[11px] text-white/90 font-bold hover:underline"
-                    >
-                      {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                      {expanded[post.id] ? 'Hide' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
-                    </button>
+                    <div className="absolute bottom-3 right-4 flex items-center gap-3">
+                      <button
+                        onClick={() => toggleReaction(post.id)}
+                        disabled={reacting[post.id]}
+                        aria-label={myReactions[post.id] ? 'Remove reaction' : 'React to this post'}
+                        className={`flex items-center gap-1.5 text-[11px] font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-red-400' : 'text-white/90'}`}
+                      >
+                        <Heart size={13} className={myReactions[post.id] ? 'fill-red-400' : ''} />
+                        {reactionCounts[post.id] || ''}
+                      </button>
+                      <button
+                        onClick={() => toggleExpand(post.id)}
+                        className="flex items-center gap-1.5 text-[11px] text-white/90 font-bold hover:underline"
+                      >
+                        {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                        {expanded[post.id] ? 'Hide' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
+                      </button>
+                    </div>
                   </div>
 
                   {!expanded[post.id] && (commentPreviews[post.id]?.length ?? 0) > 0 && (
@@ -639,13 +694,24 @@ export default function GossipPage() {
                   <video src={post.media_url} controls className="mt-3 w-full max-h-96 rounded-lg border border-white/5" />
                 )}
 
-                <button
-                  onClick={() => toggleExpand(post.id)}
-                  className="flex items-center gap-1.5 text-[11px] text-gold-primary font-bold mt-4 hover:underline"
-                >
-                  {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                  {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
-                </button>
+                <div className="flex items-center gap-4 mt-4">
+                  <button
+                    onClick={() => toggleReaction(post.id)}
+                    disabled={reacting[post.id]}
+                    aria-label={myReactions[post.id] ? 'Remove reaction' : 'React to this post'}
+                    className={`flex items-center gap-1.5 text-[11px] font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-red-400' : 'text-gray-400'}`}
+                  >
+                    <Heart size={13} className={myReactions[post.id] ? 'fill-red-400' : ''} />
+                    {reactionCounts[post.id] || ''}
+                  </button>
+                  <button
+                    onClick={() => toggleExpand(post.id)}
+                    className="flex items-center gap-1.5 text-[11px] text-gold-primary font-bold hover:underline"
+                  >
+                    {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
+                  </button>
+                </div>
 
                 {!expanded[post.id] && (commentPreviews[post.id]?.length ?? 0) > 0 && (
                   <div className="mt-2 space-y-1.5">
