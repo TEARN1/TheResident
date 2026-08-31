@@ -654,6 +654,18 @@ body {
   border-radius: 10px;
 }
 
+/* App-wide: scrolling stays functional everywhere, the visible scrollbar
+   chrome does not. Applied to every element rather than a handful of named
+   containers, since any div can end up scrollable (overflow-auto/-scroll)
+   without a class ever being added to it. */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 /* An urgent org announcement that has not been acknowledged yet. The brief
    asked for something that "won't stop blinking until you open it" — this is
    that signal. Kept to a slow border/shadow breath rather than an opacity

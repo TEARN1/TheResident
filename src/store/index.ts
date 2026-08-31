@@ -3,6 +3,7 @@ import { supabase } from '../utils/supabase'
 import { resilientCall } from '../utils/resilientCall'
 import { getErrorMessage } from '../utils/errors'
 import { safeGetJSON, safeSetJSON, safeRemove } from '../utils/safeStorage'
+import type { i18nLang } from '../utils/i18n'
 
 // Mappers between app models and the deployed schema live in dbMappers.ts;
 // toUUID is re-exported from there so existing imports keep working.
@@ -1609,6 +1610,8 @@ export interface AppNotification {
    * came from the shared `notifications` table and have no real type.
    */
   type?: string
+  /** Where to navigate on click, when the notification has a real destination — see loadNotifications. */
+  actionUrl?: string
 }
 
 const notificationsSlice = createSlice({
@@ -1639,6 +1642,13 @@ const notificationsSlice = createSlice({
       state.items.forEach(item => {
         item.read = true
       })
+    },
+    markNotificationRead: (state, action: PayloadAction<string>) => {
+      const item = state.items.find(n => n.id === action.payload)
+      if (item && !item.read) {
+        item.read = true
+        state.virtualCount = Math.max(0, state.virtualCount - 1)
+      }
     },
     // Bumps just the badge count, O(1) memory — `items` is deliberately left
     // untouched (still capped at 50 by addNotification above) rather than
@@ -1741,6 +1751,7 @@ export const {
   setNotifications,
   addNotification,
   markAllNotificationsRead,
+  markNotificationRead,
   floodNotifications
 } = notificationsSlice.actions
 
@@ -2772,7 +2783,7 @@ export const replayOfflineQueue = createAsyncThunk(
 const MAX_OFFLINE_QUEUE = 100
 
 interface UIState {
-  language: 'en' | 'zu' | 'xh' | 'af'
+  language: i18nLang
   offlineQueue: Array<{ action: string; payload: unknown }>
   dataStatus: 'idle' | 'loading' | 'ready' | 'error'
   failedTables: string[]
@@ -2789,7 +2800,7 @@ const uiSlice = createSlice({
   name: 'ui',
   initialState: initialUIState,
   reducers: {
-    setLanguage: (state, action: PayloadAction<'en' | 'zu' | 'xh' | 'af'>) => {
+    setLanguage: (state, action: PayloadAction<i18nLang>) => {
       state.language = action.payload
     },
     setDataStatus: (state, action: PayloadAction<{ status: UIState['dataStatus']; failedTables: string[] }>) => {

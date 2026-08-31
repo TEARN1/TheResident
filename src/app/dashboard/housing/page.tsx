@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Camera
 } from 'lucide-react'
 import {
   RootState,
@@ -105,6 +105,8 @@ export default function HousingPage() {
   const [newChildrenAllowed, setNewChildrenAllowed] = useState(true)
   const [newMaxChildren, setNewMaxChildren] = useState(2)
   const [newPropertyId, setNewPropertyId] = useState('')
+  const [newPhotos, setNewPhotos] = useState<string[]>([])
+  const [uploadingPhotos, setUploadingPhotos] = useState(false)
 
   // Landlord's Properties (the layer above listings — a property groups rooms
   // under one address so occupancy can be tracked instead of every listing
@@ -239,6 +241,37 @@ export default function HousingPage() {
     : null
   const newListingLooksSuspicious = isSuspiciousPrice(newPrice, newListingPriceStats)
 
+  // Same validation/upload pattern as RoomInventoryPanel's photo picker: this
+  // form had no image field at all before — every listing got the same
+  // hardcoded stock photo regardless of what the room actually looked like.
+  const MAX_LISTING_PHOTOS = 6
+  const MAX_LISTING_IMAGE_BYTES = 5 * 1024 * 1024
+  const handleListingPhotoSelect = async (files: FileList | null) => {
+    if (!supabase || !files || files.length === 0 || !currentUser) return
+    const incoming = Array.from(files)
+    if (newPhotos.length + incoming.length > MAX_LISTING_PHOTOS) {
+      setAlertNotification(`Up to ${MAX_LISTING_PHOTOS} photos per listing.`)
+      setTimeout(() => setAlertNotification(null), 4000)
+      return
+    }
+    setUploadingPhotos(true)
+    try {
+      const uploaded: string[] = []
+      for (const file of incoming) {
+        if (!file.type.startsWith('image/')) continue
+        if (file.size > MAX_LISTING_IMAGE_BYTES) continue
+        const path = `${currentUser.id}/listing-${Date.now()}-${file.name}`
+        const { error } = await supabase.storage.from('gossip-media').upload(path, file)
+        if (error) continue
+        const { data } = supabase.storage.from('gossip-media').getPublicUrl(path)
+        uploaded.push(data.publicUrl)
+      }
+      setNewPhotos(p => [...p, ...uploaded])
+    } finally {
+      setUploadingPhotos(false)
+    }
+  }
+
   const handleCreateListing = (e: React.FormEvent) => {
     e.preventDefault()
     const listing: Listing = {
@@ -254,7 +287,9 @@ export default function HousingPage() {
       landlordId: currentUser?.id || '',
       landlordName: currentUser?.name || '',
       landlordLivesHere: newLivesHere,
-      images: ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80'],
+      images: newPhotos.length > 0
+        ? newPhotos
+        : ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80'],
       amenities: { wifi: newWifi, parking: newParking, bathroom: newBathroom },
       requirements: {
         genderPreference: newGenderPref,
@@ -278,6 +313,7 @@ export default function HousingPage() {
     setNewQuickPost(false)
     setNewListingType('rent')
     setNewEventId('')
+    setNewPhotos([])
     setAlertNotification('Property listed successfully!')
   }
 
@@ -945,6 +981,27 @@ export default function HousingPage() {
                               <option value="ensuite">En-suite</option>
                            </select>
                         </div>
+                     </div>
+                     <div className="space-y-2">
+                        <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Photos</label>
+                        <div className="flex flex-wrap gap-2">
+                           {newPhotos.map((url, i) => (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img key={i} src={url} alt="" className="w-16 h-16 rounded-lg object-cover border border-white/10" />
+                           ))}
+                           <label className="w-16 h-16 rounded-lg border border-dashed border-white/20 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gold-primary hover:border-gold-primary/40 transition-colors">
+                              {uploadingPhotos ? <Loader size={16} className="animate-spin" /> : <Camera size={16} />}
+                              <input
+                                 type="file"
+                                 accept="image/*"
+                                 multiple
+                                 hidden
+                                 disabled={uploadingPhotos || newPhotos.length >= MAX_LISTING_PHOTOS}
+                                 onChange={e => handleListingPhotoSelect(e.target.files)}
+                              />
+                           </label>
+                        </div>
+                        <p className="text-[10px] text-gray-600">Up to {MAX_LISTING_PHOTOS} photos of the actual room — a real photo does more for an application than any description.</p>
                      </div>
                      <div className="flex flex-wrap gap-6 bg-white/5 p-4 rounded-2xl border border-white/5">
                         <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-400 uppercase tracking-widest">

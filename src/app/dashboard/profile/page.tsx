@@ -8,16 +8,24 @@ import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, 
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
+import type { i18nLang } from '../../../utils/i18n'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import Card from '../../../components/ui/Card'
 
-const LANGUAGES: { code: 'en' | 'zu' | 'xh' | 'af'; label: string }[] = [
+const LANGUAGES: { code: i18nLang; label: string }[] = [
   { code: 'en', label: 'English' },
   { code: 'zu', label: 'isiZulu' },
   { code: 'xh', label: 'isiXhosa' },
-  { code: 'af', label: 'Afrikaans' }
+  { code: 'af', label: 'Afrikaans' },
+  { code: 'nso', label: 'Sepedi' },
+  { code: 'st', label: 'Sesotho' },
+  { code: 'tn', label: 'Setswana' },
+  { code: 'ts', label: 'Xitsonga' },
+  { code: 'ss', label: 'siSwati' },
+  { code: 've', label: 'Tshivenda' },
+  { code: 'nr', label: 'isiNdebele' }
 ]
 
 // The `updateProfile` / `updatePreferences` actions — and their full

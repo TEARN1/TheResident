@@ -37,22 +37,26 @@ export const useGeolocation = (setAlertNotification: (msg: string | null) => voi
 
           if (cityCountryStr) {
             setLocation(cityCountryStr)
+            setAlertNotification('Live location resolved successfully!')
           } else {
-            setLocation(`Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}`)
+            // Coordinates resolved but Nominatim had no address for them
+            // (rare, but happens near borders/water) — a raw "Lat: -25.9955,
+            // Lon: 28.2024" string used to land straight in the search box,
+            // which reads as broken rather than as a location. Leave whatever
+            // the user already typed alone and just say so.
+            setAlertNotification("Got your location, but couldn't resolve it to an address — try entering your suburb.")
           }
 
           if (setSuburb && resolvedSuburb) {
             setSuburb(resolvedSuburb)
           }
 
-          setAlertNotification('Live location resolved successfully!')
-          setTimeout(() => setAlertNotification(null), 3000)
+          setTimeout(() => setAlertNotification(null), 4000)
         } catch {
-          setLocation(`Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}`)
           if (setSuburb) {
             setSuburb('')
           }
-          setAlertNotification('Location resolved to coordinates (reverse geocoding failed).')
+          setAlertNotification('Could not resolve your location to an address — try entering your suburb.')
           setTimeout(() => setAlertNotification(null), 4000)
         } finally {
           setLocationLoading(false)

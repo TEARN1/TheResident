@@ -15,6 +15,7 @@ import {
   RootState,
   AppDispatch,
   markAllNotificationsRead,
+  markNotificationRead,
   GUEST_USER_ID,
   isGuestUser
 } from '../../store'
@@ -367,12 +368,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                          {notifications.items.length === 0 ? (
                             <p className="text-[10px] text-gray-600 italic text-center py-4">{t('noRecentAlerts', lang)}</p>
                          ) : (
-                            notifications.items.map(item => (
-                               <div key={item.id} className={`p-3 rounded-lg border ${item.read ? 'bg-black/20 border-white/5 opacity-60' : 'bg-gold-primary/5 border-gold-primary/20'}`}>
-                                  <p className="text-[10px] font-black text-white uppercase tracking-tight">{item.title}</p>
-                                  <p className="text-[10px] text-gray-400 mt-1">{item.message}</p>
-                               </div>
-                            ))
+                            notifications.items.map(item => {
+                               const rowClasses = `p-3 rounded-lg border w-full text-left ${item.read ? 'bg-black/20 border-white/5 opacity-60' : 'bg-gold-primary/5 border-gold-primary/20'} ${item.actionUrl ? 'cursor-pointer hover:border-gold-primary/40 transition-colors' : ''}`
+                               const body = (
+                                  <>
+                                     <p className="text-[10px] font-black text-white uppercase tracking-tight">{item.title}</p>
+                                     <p className="text-[10px] text-gray-400 mt-1">{item.message}</p>
+                                  </>
+                               )
+                               if (!item.actionUrl) {
+                                  return <div key={item.id} className={rowClasses}>{body}</div>
+                               }
+                               return (
+                                  <button
+                                     key={item.id}
+                                     className={rowClasses}
+                                     onClick={() => {
+                                        dispatch(markNotificationRead(item.id))
+                                        if (supabase) {
+                                           supabase.from('notifications').update({ read: true, is_read: true }).eq('id', item.id).then(() => {})
+                                        }
+                                        setShowNotifMenu(false)
+                                        router.push(item.actionUrl!)
+                                     }}
+                                  >
+                                     {body}
+                                  </button>
+                               )
+                            })
                          )}
                       </div>
                    </div>
@@ -399,7 +422,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ))}
       </nav>
 
-      <AutomationControlPanel />
+      {/* Demo/telemetry surface only (simulated WhatsApp/EFT/POPIA-audit
+          triggers) — was mounted unconditionally, visible to every real user
+          in production. First NODE_ENV gate in this codebase; there's no
+          existing admin-role check to reuse instead. */}
+      {process.env.NODE_ENV !== 'production' && <AutomationControlPanel />}
     </div>
   )
 }

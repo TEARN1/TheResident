@@ -58,15 +58,6 @@ const SERVICES: Array<{ key: 'power' | 'water' | 'network' | 'fiber' | 'road'; l
   { key: 'road', label: 'Road / Traffic', Icon: Construction }
 ]
 
-// "How long" options for a crowd report's optional end time. The DB trigger
-// rejects crowd windows shorter than 8 hours, so nothing below that is offered.
-const DURATION_OPTIONS: Array<{ key: string; label: string; hours: number | null }> = [
-  { key: '8h', label: '8 hours', hours: 8 },
-  { key: '24h', label: '24 hours', hours: 24 },
-  { key: '3d', label: '3 days', hours: 72 },
-  { key: 'ufn', label: 'Until further notice', hours: null }
-]
-
 const formatExpiry = (endsAt: string | null | undefined): string | null => {
   if (!endsAt) return null
   const end = new Date(endsAt)
@@ -76,6 +67,22 @@ const formatExpiry = (endsAt: string | null | undefined): string | null => {
   if (diffHours < 36) return `until ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
   const days = Math.round(diffHours / 24)
   return `for the next ${days} day${days === 1 ? '' : 's'}`
+}
+
+// A pick-a-duration control asked residents to guess how long an outage would
+// last before it had even been fixed — nobody knows that. Report now just
+// starts an open-ended clock from when it was made; this reads the elapsed
+// time back, same shape as formatExpiry but counting forward instead of down.
+const formatSince = (startedAt: string | null | undefined): string | null => {
+  if (!startedAt) return null
+  const start = new Date(startedAt)
+  const diffMs = Date.now() - start.getTime()
+  if (diffMs <= 0) return null
+  const diffHours = diffMs / (60 * 60 * 1000)
+  if (diffHours < 1) return 'reported just now'
+  if (diffHours < 36) return `reported ${Math.round(diffHours)}h ago`
+  const days = Math.round(diffHours / 24)
+  return `reported ${days} day${days === 1 ? '' : 's'} ago`
 }
 
 export default function SafetyTab({
@@ -108,7 +115,6 @@ export default function SafetyTab({
   const activeAlerts = alerts.filter(a => a.status === 'active')
 
   // Duration picked per-service before submitting an outage report.
-  const [durationByKey, setDurationByKey] = useState<Record<string, string>>({})
 
   // Official reports carry a provider_id — batch-fetch the provider names
   // rather than issuing one lookup per row.
@@ -552,7 +558,7 @@ export default function SafetyTab({
                const isDown = officialRow ? officialRow.status === 'outage' : (consensus.confirmed || crowdRow?.status === 'outage')
                const expiry = formatExpiry(officialRow ? officialRow.endsAt : crowdRow?.endsAt)
                const providerName = officialRow?.providerId ? providerNames[officialRow.providerId] : null
-               const selectedDuration = durationByKey[key] || '8h'
+               const since = isDown ? formatSince(officialRow ? officialRow.startsAt : crowdRow?.startsAt) : null
 
                return (
                  <div key={key} className="flex items-center justify-between group">
@@ -574,23 +580,10 @@ export default function SafetyTab({
                           </span>
                        </div>
                        {expiry && <span className="text-[9px] text-gray-500">{expiry}</span>}
+                       {since && <span className="text-[9px] text-gray-500">{since}</span>}
                        <div className="flex items-center gap-1">
-                          <select
-                            value={selectedDuration}
-                            onChange={e => setDurationByKey(prev => ({ ...prev, [key]: e.target.value }))}
-                            className="bg-black border border-white/10 rounded px-1 py-0.5 text-[9px] text-gray-400 outline-none"
-                            title="How long"
-                          >
-                            {DURATION_OPTIONS.map(opt => (
-                              <option key={opt.key} value={opt.key}>{opt.label}</option>
-                            ))}
-                          </select>
                           <button
-                            onClick={() => {
-                              const opt = DURATION_OPTIONS.find(o => o.key === selectedDuration)
-                              const endsAt = opt?.hours ? new Date(Date.now() + opt.hours * 60 * 60 * 1000).toISOString() : null
-                              onReportStatus?.(key, 'down', endsAt)
-                            }}
+                            onClick={() => onReportStatus?.(key, 'down', null)}
                             className="text-[9px] text-red-400 hover:text-red-300 uppercase font-bold"
                           >
                             Report down
@@ -608,9 +601,12 @@ export default function SafetyTab({
                )
              })}
 
-             <div className="pt-4 border-t border-white/5">
+             <div className="pt-4 border-t border-white/5 space-y-1">
                 <p className="text-[10px] text-gray-500 uppercase font-bold">
                   Three neighbours reporting the same outage within 30 minutes confirms it.
+                </p>
+                <p className="text-[10px] text-gray-600">
+                  This is a demo of the feature for now — reports here are crowd-sourced, not confirmed by the utility itself.
                 </p>
              </div>
           </div>

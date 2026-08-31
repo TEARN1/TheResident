@@ -33,7 +33,7 @@ export const loadNotifications = async (dispatch: AppDispatch) => {
   if (!supabase) return
   const { data, error } = await supabase
     .from('notifications')
-    .select('id, type, title, body, message, read, is_read, created_at, data')
+    .select('id, type, title, body, message, read, is_read, created_at, data, action_url')
     .order('created_at', { ascending: false })
     .limit(50)
 
@@ -48,7 +48,8 @@ export const loadNotifications = async (dispatch: AppDispatch) => {
     message: n.body || n.message || '',
     read: !!(n.read ?? n.is_read),
     timestamp: n.created_at || new Date().toISOString(),
-    type: n.type || undefined
+    type: n.type || undefined,
+    actionUrl: n.action_url || undefined
   }))))
 }
 
