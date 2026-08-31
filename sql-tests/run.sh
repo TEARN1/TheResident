@@ -56,7 +56,8 @@ for schema in \
   theresident_org_broadcast_schema.sql \
   theresident_service_desk_schema.sql \
   theresident_directory_urgency_schema.sql \
-  theresident_room_inventory_schema.sql
+  theresident_room_inventory_schema.sql \
+  theresident_property_delete_and_verification_meaning.sql
 do
   echo "→ applying $schema"
   psql_f "$ROOT/$schema"

@@ -8,7 +8,7 @@
  */
 import React, { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, X, MapPin, ShieldCheck, ShieldAlert, ShieldQuestion, Upload, AlertTriangle, Home } from 'lucide-react'
+import { Plus, X, MapPin, ShieldCheck, ShieldAlert, ShieldQuestion, Upload, AlertTriangle, Home, Info, Trash2 } from 'lucide-react'
 import { supabase } from '../../../../utils/supabase'
 import type { GeocodeResult } from '../../../../utils/geocode'
 import MapSearchBox from '../map/MapSearchBox'
@@ -64,6 +64,9 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
   const [mismatchChecking, setMismatchChecking] = useState(false)
   const [mismatch, setMismatch] = useState(false)
   const [submittingVerification, setSubmittingVerification] = useState(false)
+  const [verifyInfoOpenId, setVerifyInfoOpenId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const loadOccupancy = useCallback(async () => {
     if (!supabase || properties.length === 0) return
@@ -194,6 +197,30 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
     }
   }
 
+  // Two-tap confirm: the first click arms it, the second (within the same
+  // render, on the same property) actually deletes — no modal needed for a
+  // destructive action this scoped, but no accidental single-click delete
+  // either.
+  const handleDeleteProperty = async (p: ResProperty) => {
+    if (confirmDeleteId !== p.id) {
+      setConfirmDeleteId(p.id)
+      return
+    }
+    if (!supabase) return
+    setDeleting(true)
+    try {
+      const { error } = await supabase.rpc('res_delete_property', { p_property: p.id })
+      if (error) throw error
+      onNotify('Property and everything under it deleted.')
+      setConfirmDeleteId(null)
+      onRefresh()
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Could not delete property.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const badgeFor = (status: ResProperty['doc_review_status']) => {
     if (status === 'reviewed') {
       return (
@@ -257,8 +284,24 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                     </div>
                     <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{p.suburb}, {p.city}</p>
                   </div>
-                  {badgeFor(p.doc_review_status)}
+                  <div className="flex items-center gap-1.5">
+                    {badgeFor(p.doc_review_status)}
+                    <button
+                      onClick={() => setVerifyInfoOpenId(v => v === p.id ? null : p.id)}
+                      title="What does this badge mean?"
+                      aria-label="What does this verification badge mean?"
+                      className="text-gray-600 hover:text-gray-300 transition-colors"
+                    >
+                      <Info size={14} />
+                    </button>
+                  </div>
                 </div>
+
+                {verifyInfoOpenId === p.id && (
+                  <p className="text-[10px] text-gray-500 bg-white/5 border border-white/10 rounded-lg p-3 leading-relaxed">
+                    <strong className="text-gray-300">Unverified</strong> means nobody has checked this address yet — anyone can list a property. <strong className="text-gray-300">Under review</strong> means a proof document (lease, utility bill, or title deed) was submitted and is waiting to be checked. <strong className="text-gold-primary">Verified</strong> means that document was reviewed and the address matched. It&apos;s a check on the landlord&apos;s claim to the address, not a guarantee about the room itself.
+                  </p>
+                )}
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
@@ -299,6 +342,21 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                 {p.doc_review_status === 'pending' && p.doc_review_note && (
                   <p className="text-[10px] text-amber-400/80">{p.doc_review_note}</p>
                 )}
+
+                <button
+                  onClick={() => handleDeleteProperty(p)}
+                  disabled={deleting && confirmDeleteId === p.id}
+                  className={`w-full flex items-center justify-center gap-2 font-black py-3 rounded-xl transition-all text-[10px] uppercase tracking-widest border ${
+                    confirmDeleteId === p.id
+                      ? 'bg-red-500/20 border-red-500/40 text-red-300'
+                      : 'bg-white/5 border-white/10 text-gray-500 hover:text-red-400 hover:border-red-500/30'
+                  } disabled:opacity-50`}
+                >
+                  <Trash2 size={12} />
+                  {confirmDeleteId === p.id
+                    ? (deleting ? 'Deleting…' : 'Tap again to permanently delete')
+                    : 'Delete property'}
+                </button>
               </motion.div>
             )
           })}
