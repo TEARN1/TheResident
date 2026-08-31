@@ -135,6 +135,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const [zones, setZones] = useState<SharedZone[]>([])
   const [loading, setLoading] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
+  const [locateError, setLocateError] = useState<string | null>(null)
   // Closed by default — a color-coded map with the legend open on every
   // load competes with the map itself for attention before the user has
   // asked for it. The Layers toggle is one tap away.
@@ -1087,12 +1088,20 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const STREET_LEVEL_ZOOM = 18
   const handleCenterOnMe = () => {
     setLocating(true)
+    setLocateError(null)
     navigator.geolocation.getCurrentPosition(
       pos => {
         mapRef.current?.setView([pos.coords.latitude, pos.coords.longitude], STREET_LEVEL_ZOOM)
         setLocating(false)
       },
-      () => setLocating(false),
+      err => {
+        setLocating(false)
+        setLocateError(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location access is blocked — allow it in your browser settings to center on your exact position.'
+            : 'Could not get your exact location — try again in a moment.'
+        )
+      },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
     )
   }
@@ -1571,6 +1580,13 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 text-xs text-red-300 bg-black/90 backdrop-blur-xl border border-red-500/30 rounded-xl p-2.5 shadow-2xl">
             <span>{voteError}</span>
             <button onClick={() => setVoteError(null)}><X size={14} /></button>
+          </div>
+        )}
+
+        {locateError && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 text-xs text-red-300 bg-black/90 backdrop-blur-xl border border-red-500/30 rounded-xl p-2.5 shadow-2xl max-w-xs text-center">
+            <span>{locateError}</span>
+            <button onClick={() => setLocateError(null)}><X size={14} /></button>
           </div>
         )}
 

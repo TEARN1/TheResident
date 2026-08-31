@@ -10,6 +10,7 @@ import {
 import { RootState, isGuestUser } from '../../../store'
 import { getMyProviderTier, type ProviderTier } from '../../../utils/subscriptions'
 import { getTrustInfo, type TrustInfo } from '../../../utils/trust'
+import { supabase } from '../../../utils/supabase'
 import { PRICING, formatPrice } from '../../../utils/pricing'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import ReviewsList from '../components/social/ReviewsList'
@@ -35,6 +36,7 @@ export default function BusinessPage() {
   const [tier, setTier] = useState<ProviderTier>(null)
   const [tierLoading, setTierLoading] = useState(true)
   const [trust, setTrust] = useState<TrustInfo | null>(null)
+  const [hasReview, setHasReview] = useState(false)
 
   // Still technically impure at render time even memoized (the memo callback
   // itself runs during the first render) — deferring this to an effect would
@@ -55,7 +57,17 @@ export default function BusinessPage() {
   useEffect(() => {
     if (guest) { setTierLoading(false); return }
     getMyProviderTier().then(t => { setTier(t); setTierLoading(false) })
-    if (currentUser) getTrustInfo(currentUser.id).then(setTrust)
+    if (currentUser) {
+      getTrustInfo(currentUser.id).then(setTrust)
+      if (supabase) {
+        supabase
+          .from('res_reviews')
+          .select('id', { count: 'exact', head: true })
+          .eq('subject_type', 'user')
+          .eq('subject_id', currentUser.id)
+          .then(({ count }) => setHasReview(!!count && count > 0))
+      }
+    }
   }, [guest, currentUser])
 
   if (!currentUser) return null
@@ -107,7 +119,7 @@ export default function BusinessPage() {
     { label: isLandlord ? 'At least one active listing' : 'Service listed', done: isLandlord ? activeListings > 0 : isProvider },
     { label: 'On a paid visibility tier', done: !!tier, action: !tier && <Link href="#tiers" className="text-[10px] text-gold-primary font-black uppercase hover:underline">See tiers</Link> },
     { label: isLandlord ? 'A listing currently boosted' : 'Business has a contact number', done: isLandlord ? boostedListings > 0 : !!myService?.contactNumber },
-    { label: 'Has at least one review', done: false /* resolved async below via ReviewsList presence check would double-fetch; left actionable via the panel itself */ }
+    { label: 'Has at least one review', done: hasReview }
   ]
   const completedCount = checklist.filter(c => c.done).length
 
