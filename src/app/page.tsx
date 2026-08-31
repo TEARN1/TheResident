@@ -230,6 +230,11 @@ export default function Home() {
         ))}
       </div>
 
+      <footer style={{ display: 'flex', justifyContent: 'center', gap: '20px', padding: '32px 16px', fontSize: '0.75rem', color: '#6b7280' }}>
+        <Link href="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy Policy</Link>
+        <Link href="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Terms of Service</Link>
+      </footer>
+
       {showIosModal && (
         <div style={{
           position: 'fixed',
