@@ -10,7 +10,11 @@ language sql stable as $$ select uid from auth._current limit 1 $$;
 
 create table if not exists public.profiles (
   id uuid primary key default uuid_generate_v4(),
-  city text
+  city text,
+  display_name text,
+  username text,
+  avatar_url text,
+  is_verified boolean default false
 );
 
 create table if not exists public.res_profiles (

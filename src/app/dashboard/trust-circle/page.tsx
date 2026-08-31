@@ -2,10 +2,14 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { ShieldCheck, Search, UserPlus, Check, Users, Info, Loader } from 'lucide-react'
+import { ShieldCheck, Search, UserPlus, Check, Users, Info, Loader, Link2, Copy } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
+import {
+  COMMON_RELATIONSHIPS, createKinVerificationLink, fetchMyKinLinks, kinLinkStatusLabel,
+  verifyKinLinkUrl, type KinVerificationLink
+} from '../../../utils/kinVerification'
 
 // Next of Kin — a SEPARATE, safety-oriented graph from "Follow"
 // (src/utils/social.ts). Built entirely on res_trust_connections via explicit
@@ -60,6 +64,55 @@ export default function TrustCirclePage() {
   const [rowsLoading, setRowsLoading] = useState(true)
   const [confirming, setConfirming] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
+
+  // Kin verification links — for the person who isn't a Resident user at
+  // all, so the in-app request/confirm flow above can't reach them.
+  const [kinLinks, setKinLinks] = useState<KinVerificationLink[]>([])
+  const [kinLinksLoading, setKinLinksLoading] = useState(true)
+  const [claimedName, setClaimedName] = useState('')
+  const [relationship, setRelationship] = useState<string>(COMMON_RELATIONSHIPS[0])
+  const [creatingLink, setCreatingLink] = useState(false)
+  const [kinError, setKinError] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const loadKinLinks = useCallback(async () => {
+    setKinLinksLoading(true)
+    const links = await fetchMyKinLinks()
+    setKinLinks(links)
+    setKinLinksLoading(false)
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadKinLinks()
+  }, [loadKinLinks])
+
+  const handleCreateKinLink = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!claimedName.trim()) return
+    setCreatingLink(true)
+    setKinError(null)
+    try {
+      await createKinVerificationLink(claimedName.trim(), relationship)
+      setClaimedName('')
+      await loadKinLinks()
+    } catch (err) {
+      setKinError(err instanceof Error ? err.message : 'Could not create the link.')
+    } finally {
+      setCreatingLink(false)
+    }
+  }
+
+  const copyLink = async (link: KinVerificationLink) => {
+    const url = verifyKinLinkUrl(link.token, window.location.origin)
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedId(link.id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch {
+      setKinError('Could not copy — long-press the link to copy it manually.')
+    }
+  }
 
   const loadGate = useCallback(async () => {
     if (!supabase || !myId) { setGateLoading(false); return }
@@ -257,6 +310,67 @@ export default function TrustCirclePage() {
                 >
                   {sentTo[p.id] ? <><Check size={12} /> Sent</> : <><UserPlus size={12} /> Request</>}
                 </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="glass-panel p-6">
+        <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-1 flex items-center gap-2">
+          <Link2 size={16} className="text-gold-primary" /> Verify someone who isn&apos;t on the app
+        </h3>
+        <p className="text-[11px] text-gray-500 mb-4 leading-relaxed">
+          Not everyone you&apos;d list as next of kin has Resident — a parent, a sibling. Create a link, send it to them yourself (WhatsApp, SMS, however), and they answer one question with no account needed: is this really your {relationship.toLowerCase()}?
+        </p>
+
+        <form onSubmit={handleCreateKinLink} className="flex flex-col sm:flex-row gap-2 mb-4">
+          <input
+            value={claimedName}
+            onChange={e => setClaimedName(e.target.value)}
+            placeholder="Their name, e.g. Sipho Dlamini"
+            required
+            className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40"
+          />
+          <select
+            value={relationship}
+            onChange={e => setRelationship(e.target.value)}
+            className="bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40"
+          >
+            {COMMON_RELATIONSHIPS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <button
+            type="submit"
+            disabled={creatingLink || !claimedName.trim()}
+            className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest bg-gold-primary text-black hover:bg-gold-secondary transition-all disabled:opacity-50"
+          >
+            {creatingLink ? 'Creating…' : 'Create link'}
+          </button>
+        </form>
+        {kinError && <p className="text-[11px] text-red-400 mb-3">{kinError}</p>}
+
+        {kinLinksLoading ? (
+          <p className="text-[11px] text-gray-500">Loading…</p>
+        ) : kinLinks.length === 0 ? (
+          <p className="text-[11px] text-gray-500 italic">No verification links yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {kinLinks.map(link => (
+              <div key={link.id} className="flex items-center justify-between gap-3 p-3 bg-black/40 border border-white/5 rounded-lg">
+                <div className="min-w-0">
+                  <p className="text-sm text-white font-medium truncate">{link.claimedName} <span className="text-gray-500">· {link.claimedRelationship}</span></p>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest ${link.status === 'confirmed' ? 'text-green-400' : link.status === 'denied' ? 'text-red-400' : 'text-gray-500'}`}>
+                    {kinLinkStatusLabel(link.status)}
+                  </p>
+                </div>
+                {link.status === 'pending' && (
+                  <button
+                    onClick={() => copyLink(link)}
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 transition-all"
+                  >
+                    {copiedId === link.id ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy link</>}
+                  </button>
+                )}
               </div>
             ))}
           </div>
