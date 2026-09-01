@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, Trash2 } from 'lucide-react'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
@@ -50,6 +50,34 @@ export default function ProfilePage() {
     document.cookie = 'guest-mode=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
     dispatch(logoutUser())
     router.push('/auth')
+  }
+
+  // Play Store / App Store both require real self-service deletion, not just
+  // deactivation. The `delete-account` edge function already exists and does
+  // the real work (purges owned rows, wipes storage, removes the login) —
+  // this was the missing piece: nothing in the app could ever call it.
+  // Type-to-confirm rather than a plain "are you sure" dialog, since this is
+  // the one action here that can't be undone.
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  const handleDeleteAccount = async () => {
+    if (!supabase || deleteConfirmText.trim().toUpperCase() !== 'DELETE') return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-account', { method: 'POST' })
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+      document.cookie = 'guest-mode=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+      dispatch(logoutUser())
+      router.push('/auth')
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Could not delete your account — try again, or contact support.')
+      setDeleting(false)
+    }
   }
 
   // Shared app-wide theme — 'residentTheme' in localStorage, the same key
@@ -528,6 +556,52 @@ export default function ProfilePage() {
       >
         <LogOut size={14} /> Log Out
       </button>
+
+      {!guest && (
+        <div className="glass-panel p-4 space-y-3 border-red-500/10">
+          {!showDeleteConfirm ? (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 text-red-500/70 hover:text-red-400 font-bold py-2 text-xs uppercase tracking-widest transition-all"
+            >
+              <Trash2 size={14} /> Delete Account
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-red-400 leading-relaxed">
+                This permanently deletes your profile, listings, posts, and messages, and cannot be undone.
+                Type <strong>DELETE</strong> to confirm.
+              </p>
+              <input
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full bg-black border border-red-500/30 rounded-xl p-3 text-sm text-white outline-none focus:border-red-500/60"
+              />
+              {deleteError && <p className="text-[11px] text-red-400">{deleteError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); setDeleteError(null) }}
+                  className="flex-1 bg-white/5 text-gray-300 font-black py-3 rounded-xl text-xs uppercase tracking-widest"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={deleting || deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
+                  className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/40 text-red-400 font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+                >
+                  {deleting ? <Loader size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  {deleting ? 'Deleting…' : 'Permanently Delete'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
