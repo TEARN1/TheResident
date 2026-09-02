@@ -2,6 +2,10 @@
 -- can be executed for real against a throwaway Postgres. Shapes copied from
 -- the verified live information_schema output, not guessed.
 create extension if not exists "uuid-ossp";
+-- Jurisdiction boundaries are real geometry, so the harness needs PostGIS to
+-- execute theresident_jurisdictions_schema.sql for real rather than skipping
+-- the one rule that matters most (Debian/Ubuntu: postgresql-16-postgis-3).
+create extension if not exists postgis;
 
 create schema if not exists auth;
 create table if not exists auth._current (uid uuid);

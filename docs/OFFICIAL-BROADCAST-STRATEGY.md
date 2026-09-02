@@ -1,8 +1,23 @@
 # Official Area Broadcasts — strategy
 
-**Status:** strategy only. Nothing in this document is built yet.
+**Status:** Phases A and B are **built and live**; C, D, E and F are not.
 **Decision owner:** you. **Written:** during the session that shipped the
 Service Desk, the institution directory, and urgency broadcasts.
+
+| Phase | State |
+|---|---|
+| A — resident home area | ✅ built, applied, tested |
+| B — jurisdictions, boundary import, containment + verification gate | ✅ built, applied, tested |
+| C — map targeting UI + audience preview | not started |
+| D — send, fan-out, receipts, public record | not started |
+| E — Web Push | blocked on a VAPID key from you |
+| F — billing | blocked on your payment portal |
+
+**Boundaries are not loaded yet.** The machinery is live but
+`res_jurisdictions` is empty until someone runs
+`scripts/import-boundaries.mjs` against Municipal Demarcation Board GeoJSON —
+see §5. Until then no official has an area, and the containment gate refuses
+everything, which is the correct default.
 
 ---
 
@@ -95,7 +110,20 @@ Then one rule governs the entire hierarchy:
 > **You may broadcast to any area fully contained within your own jurisdiction,
 > and nowhere else.**
 
-Enforced server-side as `ST_Within(target_area, jurisdiction)`.
+Enforced server-side as `ST_Covers(jurisdiction, target_area)`.
+
+> **Correction, found while building Phase B.** An earlier draft of this
+> document said `ST_Within`. That is wrong twice over. `geography` does not
+> support `ST_Within` at all, and — the trap that actually matters — on
+> `geography` a polygon does not even **cover itself**: `ST_Covers(g, g)`
+> returns false, because geography edges are geodesics and polygon-covers-
+> polygon is not reliably supported there. Left uncorrected, *"send to my whole
+> ward"* — the single most common action in this feature — would have been
+> silently refused in production. Boundaries are therefore **stored** as
+> geography (correct for point-in-polygon and for radius targeting with
+> `ST_DWithin`) while polygon containment **casts both sides to `::geometry`**.
+> The local test harness caught this; `sql-tests/90-jurisdictions.test.sql`
+> now pins both behaviours so it cannot be "simplified" back.
 
 Why this is the right design:
 
@@ -111,17 +139,19 @@ policy to enforce by hand. **The boundary does the enforcing.**
 
 ---
 
-## 5. Data model (proposed)
+## 5. Data model
 
-Four pieces. All `res_`-prefixed per `CONTRACT.md` §2.
+Four pieces. All `res_`-prefixed per `CONTRACT.md` §2. The first two are built;
+`res_area_broadcasts` arrives in Phase D.
 
 ### `res_home_areas` — where a resident is, Resident-owned
 
 ```
-user_id     uuid primary key -> profiles(id)
-point       geography(Point, 4326)
-precision   text  -- 'coarse' | 'exact'
-set_at      timestamptz
+user_id      uuid primary key -> profiles(id)
+lat, lon     double precision   -- CONTRACT.md §4: locations are lat/lon doubles
+granularity  text               -- 'coarse' | 'exact'
+suburb, city, label  text       -- from the same reverse-geocode as the pin
+set_at       timestamptz
 ```
 
 - **Opt-in.** The resident drops a pin for their home area; nothing is inferred
@@ -139,7 +169,8 @@ set_at      timestamptz
 id            uuid primary key
 name          text          -- 'Ward 12, City of Tshwane'
 level         text          -- ward | municipality | district | province | national | service_area
-external_ref  text          -- official ward/municipal code
+external_ref  text          -- official ward/municipal code; upsert key with level
+parent_id     uuid          -- wards nest in municipalities, for labelling
 boundary      geography(MultiPolygon, 4326)
 ```
 
@@ -150,6 +181,14 @@ hand-drawn.
 
 `service_area` rows are for institutions and are drawn by us or by the
 institution during onboarding.
+
+**Loading them:** `scripts/import-boundaries.mjs` takes a GeoJSON file and a
+level and upserts through the service-role-only `res_upsert_jurisdiction` RPC.
+The data is deliberately not committed — the national ward set is tens of MB
+and is redetermined periodically. Import parents before children (provinces →
+municipalities → wards) so `parent_id` resolves. Re-running after a
+redetermination **updates** a ward rather than creating a second one that
+would double-notify everyone inside it.
 
 ### `res_org_units.jurisdiction_id`
 
@@ -318,8 +357,8 @@ a separate build. Naming it here so it isn't a surprise later.
 
 | Phase | What | Blocked on |
 |---|---|---|
-| **A** | `res_home_areas` + the home-pin UI + suburb normalisation | — |
-| **B** | `res_jurisdictions`, Demarcation Board boundary import, bind units, verification gate | — |
+| **A** | ✅ **Done.** `res_home_areas` + home-pin UI + suburb normalisation | — |
+| **B** | ✅ **Done.** `res_jurisdictions`, `scripts/import-boundaries.mjs`, `res_org_units.jurisdiction_id`, containment rule + verification gate | — |
 | **C** | Map targeting UI (a → b → c → d) + audience-count preview | A, B |
 | **D** | Send, fan-out, receipts, public record | C |
 | **E** | Web Push so emergencies reach closed phones | **VAPID key from you** |

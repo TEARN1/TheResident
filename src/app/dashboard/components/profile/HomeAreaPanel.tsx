@@ -26,6 +26,9 @@ import {
   fetchMyHomeArea, setHomeArea, clearHomeArea, describeHomeArea, coarsen,
   COARSE_GRID_KM, type HomeArea, type HomeAreaGranularity
 } from '../../../../utils/homeArea'
+import {
+  fetchMyJurisdictions, describeJurisdiction, type Jurisdiction
+} from '../../../../utils/jurisdictions'
 import { goldButtonClass } from '../../../../components/ui/GoldButton'
 
 interface PendingPick {
@@ -46,13 +49,24 @@ export default function HomeAreaPanel() {
   const [clearing, setClearing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  // Which official areas the saved home area falls inside. Shown so the pin
+  // visibly does something, and so a resident can see exactly which
+  // councillor/municipality would be able to reach them.
+  const [areas, setAreas] = useState<Jurisdiction[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const mine = await fetchMyHomeArea()
       setArea(mine)
-      if (mine) setGranularity(mine.granularity)
+      if (mine) {
+        setGranularity(mine.granularity)
+        // Boundaries may not be imported yet — an empty list is a normal
+        // state here, not a failure worth surfacing.
+        setAreas(await fetchMyJurisdictions())
+      } else {
+        setAreas([])
+      }
     } catch {
       // A missing home area is the normal state, not an error worth shouting
       // about on a settings screen.
@@ -123,6 +137,7 @@ export default function HomeAreaPanel() {
       setArea(next)
       setPending(null)
       setSaved(true)
+      setAreas(await fetchMyJurisdictions())
       setTimeout(() => setSaved(false), 2500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save your home area.')
@@ -138,6 +153,7 @@ export default function HomeAreaPanel() {
       await clearHomeArea()
       setArea(null)
       setPending(null)
+      setAreas([])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not remove your home area.')
     } finally {
@@ -192,6 +208,26 @@ export default function HomeAreaPanel() {
                   ? 'Stored as an exact location.'
                   : `Stored approximately, to about ${COARSE_GRID_KM}km.`}
               </p>
+            )}
+            {area && areas.length > 0 && (
+              <div className="pt-2 mt-2 border-t border-white/5 space-y-1">
+                <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest">
+                  Official areas you fall inside
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {areas.map(a => (
+                    <span
+                      key={a.id}
+                      className="text-[10px] text-gray-300 bg-white/5 border border-white/10 rounded-lg px-2 py-1"
+                    >
+                      {describeJurisdiction(a)}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-600">
+                  These are the areas whose officials could reach you with a notice.
+                </p>
+              </div>
             )}
           </div>
 
