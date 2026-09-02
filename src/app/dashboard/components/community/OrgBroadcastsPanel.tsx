@@ -13,6 +13,7 @@ import { getErrorMessage } from '../../../../utils/errors'
 import { cleanScriptTags, encodeHTMLEntities } from '../../../../utils/security'
 import { goldButtonClass } from '../../../../components/ui/GoldButton'
 import EmptyState from '../shared/EmptyState'
+import AreaTargetPicker from './AreaTargetPicker'
 
 const sanitize = (text: string) => encodeHTMLEntities(cleanScriptTags(text))
 
@@ -232,6 +233,15 @@ export default function OrgBroadcastsPanel() {
               </p>
             )}
           </div>
+          {units.find(u => u.id === targetUnitId)?.verified && (
+            <div className="space-y-2">
+              <AreaTargetPicker unitId={targetUnitId} priority={priority} />
+              <p className="text-[10px] text-gray-600 leading-relaxed">
+                Preview only for now — this send still goes to everyone who follows this account.
+                Sending to an area is switched on once area broadcasts go live.
+              </p>
+            </div>
+          )}
           <div className="flex gap-2">
             <button onClick={handlePost} disabled={submitting || !targetUnitId || !title.trim() || !body.trim()} className={`${goldButtonClass()} text-[10px] px-4 py-2 flex items-center gap-1 disabled:opacity-50`}>
               <Send size={12} /> {submitting ? 'Sending…' : 'Send'}

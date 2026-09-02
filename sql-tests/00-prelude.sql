@@ -106,6 +106,18 @@ create table if not exists public.res_gossip_posts (
   created_at timestamptz default now()
 );
 
+-- Shape copied from the live information_schema. muted_types is a text[] of
+-- notification types, which is what lets area broadcasts be muted per
+-- category ('res_area_broadcast:library') without a schema change.
+create table if not exists public.res_notification_prefs (
+  user_id uuid primary key,
+  muted_types text[] default '{}',
+  quiet_hours_start integer,
+  quiet_hours_end integer,
+  digest boolean default false,
+  updated_at timestamptz default now()
+);
+
 create table if not exists public.res_rate_limits (
   user_id uuid not null,
   action text not null,
