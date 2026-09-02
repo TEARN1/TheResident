@@ -23,6 +23,7 @@ export interface GeocodeResult {
 const CACHE_LIMIT = 200
 const searchCache = new Map<string, GeocodeResult[]>()
 const reverseCache = new Map<string, string | null>()
+const partsCache = new Map<string, ReverseGeocodeParts>()
 
 function rememberIn<K, V>(cache: Map<K, V>, key: K, value: V) {
   cache.set(key, value)
@@ -54,6 +55,52 @@ export async function searchPlaces(query: string, signal?: AbortSignal): Promise
     return results
   } catch {
     return []
+  }
+}
+
+export interface ReverseGeocodeParts {
+  label: string | null
+  suburb: string | null
+  city: string | null
+}
+
+/**
+ * Structured reverse geocode — the same Nominatim call as reverseGeocode, but
+ * keeping the suburb/city fields instead of throwing away everything except
+ * display_name.
+ *
+ * The home-area feature needs these separately: the label is what a resident
+ * is shown ("12 Vine Street, Kreuzberg"), while suburb/city are what get
+ * normalised onto res_profiles so area targeting can still reach residents
+ * who never dropped a pin. PropertiesPanel's geocode-mismatch check reads the
+ * same `address` object inline; this is that parsing done once, reusably.
+ */
+export async function reverseGeocodeParts(
+  lat: number,
+  lon: number,
+  signal?: AbortSignal
+): Promise<ReverseGeocodeParts> {
+  const empty: ReverseGeocodeParts = { label: null, suburb: null, city: null }
+  const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`
+  const cached = partsCache.get(cacheKey)
+  if (cached) return cached
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+    const res = await fetch(url, { signal, headers: { Accept: 'application/json' } })
+    if (!res.ok) return empty
+    const data = await res.json()
+    const addr = data?.address || {}
+    const parts: ReverseGeocodeParts = {
+      label: data?.display_name || null,
+      // Nominatim's naming varies by country and by how densely an area is
+      // mapped, so fall through the plausible keys rather than assuming one.
+      suburb: addr.suburb || addr.neighbourhood || addr.city_district || addr.village || null,
+      city: addr.city || addr.town || addr.municipality || addr.county || null
+    }
+    rememberIn(partsCache, cacheKey, parts)
+    return parts
+  } catch {
+    return empty
   }
 }
 
