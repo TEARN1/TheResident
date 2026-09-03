@@ -16,6 +16,9 @@ import EmptyState from '../shared/EmptyState'
 import AreaTargetPicker, { type AreaTarget } from './AreaTargetPicker'
 import { sendAreaBroadcast, canSend, describeSendResult, type AudiencePreview } from '../../../../utils/areaTargeting'
 import AreaLicenceNotice from './AreaLicenceNotice'
+import RequestVerificationPanel from './RequestVerificationPanel'
+import VerificationQueuePanel from './VerificationQueuePanel'
+import { isPlatformAdmin } from '../../../../utils/officialVerification'
 import { fetchAreaLicence, canSendAtPriority, type AreaLicence } from '../../../../utils/areaBilling'
 
 const sanitize = (text: string) => encodeHTMLEntities(cleanScriptTags(text))
@@ -56,6 +59,9 @@ export default function OrgBroadcastsPanel() {
   const [areaPreview, setAreaPreview] = useState<AudiencePreview | null>(null)
   const [sendToArea, setSendToArea] = useState(false)
   const [licence, setLicence] = useState<AreaLicence | null>(null)
+  // Drives the admin queue. Presentation only — every decision function checks
+  // res_is_platform_admin() server-side as well.
+  const [admin, setAdmin] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -75,6 +81,11 @@ export default function OrgBroadcastsPanel() {
       setLoaded(true)
     })
     return () => { cancelled = true }
+  }, [currentUser, guest])
+
+  useEffect(() => {
+    if (!currentUser || guest) return
+    isPlatformAdmin().then(setAdmin)
   }, [currentUser, guest])
 
   // The licence belongs to the unit, so it is re-read whenever the sender
@@ -211,6 +222,20 @@ export default function OrgBroadcastsPanel() {
       {error && (
         <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{error}</div>
       )}
+
+      {admin && <VerificationQueuePanel />}
+
+      {/* An office cannot reach an area until somebody outside it says so.
+          This is where its owner asks. */}
+      {postableUnits.filter(u => !u.verified).map(u => (
+        <RequestVerificationPanel
+          key={u.id}
+          unitId={u.id}
+          unitName={u.name}
+          unitVerified={u.verified}
+          onChanged={() => { fetchAllUnits().then(setUnits) }}
+        />
+      ))}
 
       {showCreateUnit && (
         <div className="bg-black/40 border border-white/5 rounded-xl p-4 space-y-3">
