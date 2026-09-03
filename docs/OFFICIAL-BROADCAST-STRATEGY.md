@@ -1,7 +1,11 @@
 # Official Area Broadcasts — strategy
 
-**Status:** Phases A, B, C and D are **built and live**; E and F are not.
+**Status:** Phases A through E are **built and live**; F is not.
 
+> **Push needs three secrets before it does anything** — see
+> `docs/PUSH-SETUP.md`. Until they are set, urgent notices still reach the
+> in-app bell and banner; they just will not wake a closed phone.
+>
 > **Two things still gate real use.** `res_jurisdictions` is empty until
 > someone runs `scripts/import-boundaries.mjs` against Municipal Demarcation
 > Board data — with no boundaries loaded, no official has an area to send to.

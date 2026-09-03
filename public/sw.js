@@ -87,3 +87,53 @@ self.addEventListener('fetch', (event) => {
   )
 })
 
+
+// 4. Push events — Phase E of the official-broadcast work.
+//    Reaching a phone with the app closed is the whole point: an evacuation
+//    notice that only appears next time someone opens the app is not an
+//    evacuation notice.
+self.addEventListener('push', (event) => {
+  if (!event.data) return
+
+  let payload
+  try {
+    payload = event.data.json()
+  } catch {
+    payload = { title: 'The Resident', body: event.data.text() }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'The Resident', {
+      body: payload.body || '',
+      icon: '/logo.png',
+      badge: '/logo.png',
+      // tag collapses repeats of the same notice rather than stacking them;
+      // renotify still buzzes so a genuine update is not silent.
+      tag: payload.tag || undefined,
+      renotify: !!payload.tag,
+      // Emergencies stay on screen until the resident deals with them, the
+      // same rule the in-app urgent banner already follows.
+      requireInteraction: !!payload.requireInteraction,
+      data: { url: payload.url || '/dashboard' }
+    })
+  )
+})
+
+// 5. Tapping a notification opens the thing it is about — focusing an
+//    already-open tab rather than piling up new ones.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = (event.notification.data && event.notification.data.url) || '/dashboard'
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      for (const client of windows) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(target)
+          return client.focus()
+        }
+      }
+      return self.clients.openWindow(target)
+    })
+  )
+})

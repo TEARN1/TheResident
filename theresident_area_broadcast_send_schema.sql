@@ -307,6 +307,17 @@ begin
       false,
       p_expires_at
     from _area_audience a;
+
+    -- Mirror it out to devices. Defined in
+    -- theresident_web_push_dispatch_schema.sql and deliberately incapable of
+    -- failing the send: if push is not configured it returns 0 and the notice
+    -- is still in the rail. Apply that file after this one.
+    begin
+      perform public.res_push_area_broadcast(v_row.id);
+    exception when undefined_function then
+      -- Push dispatch not installed yet. In-app delivery already happened.
+      null;
+    end;
   end if;
 
   return v_row;

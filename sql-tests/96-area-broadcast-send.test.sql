@@ -315,6 +315,25 @@ select 'acknowledging_is_recorded' as check,
 
 reset role;
 
+-- ── Push must never be able to break a send ────────────────────────────────
+--
+-- This harness has no pg_net and no vault, which is exactly the unconfigured
+-- state a real project sits in before the VAPID secrets are set. Every send
+-- above already succeeded under those conditions — that IS the assertion, and
+-- it is the one that matters: an evacuation notice must not fail to deliver
+-- in-app because a push gateway is missing.
+select 'sends_succeed_with_push_unconfigured' as check,
+  (select count(*) from res_area_broadcasts
+   where title in ('Water shutdown', 'Evacuate now', 'Suburb reach')) = 3 as pass;
+
+select 'push_dispatch_reports_zero_rather_than_raising' as check,
+  public.res_push_area_broadcast(
+    (select id from res_area_broadcasts where title = 'Evacuate now')) = 0 as pass;
+
+select 'push_dispatch_is_not_callable_by_residents' as check,
+  not has_function_privilege('authenticated', 'public.res_push_area_broadcast(uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.res_push_area_broadcast(uuid)', 'execute') as pass;
+
 -- ── Grant boundary ─────────────────────────────────────────────────────────
 --
 -- RLS is the first lock; the absent table grants are the second. Supabase's
