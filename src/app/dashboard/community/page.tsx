@@ -48,6 +48,7 @@ import ToolLibraryTab from '../components/household/ToolLibraryTab'
 import ChoreSchedulerTab from '../components/household/ChoreSchedulerTab'
 import DisputesTab from '../components/trust-safety/DisputesTab'
 import SafetyTab from '../components/trust-safety/SafetyTab'
+import AreaNoticesPanel from '../components/community/AreaNoticesPanel'
 import MarketTab from '../components/community/MarketTab'
 import HouseholdTab from '../components/household/HouseholdTab'
 import CommunitiesTab from '../components/community/CommunitiesTab'
@@ -590,6 +591,7 @@ export default function CommunityPage() {
             )}
             {subTab === 'notices' && (
               <div className="space-y-6">
+                <AreaNoticesPanel />
                 <NoticeBoardTab
                     communityNotices={communityNotices}
                     currentUser={currentUser}

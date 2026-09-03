@@ -1,0 +1,44 @@
+# Runs the same checks the README tells a contributor to run locally. Nothing
+# here is CI-only — if it passes on a laptop it passes here, and vice versa.
+name: checks
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  app:
+    name: types, lint, tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx eslint src/
+      - run: npm test
+      # The build needs the public Supabase values to exist, but never calls
+      # out to them — these are placeholders so the client module initialises.
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: build-time-placeholder
+
+  sql:
+    name: schema and RLS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # PostGIS is required: the jurisdiction containment rule that decides
+      # who may broadcast to whom is real geometry, and skipping it would skip
+      # the single most important test in the suite.
+      - name: Install PostgreSQL 16 with PostGIS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-16 postgresql-16-postgis-3
+      - name: Run the SQL suite
+        run: bash sql-tests/run.sh

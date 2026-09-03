@@ -268,3 +268,39 @@ export function describeSendResult(sent: SentAreaBroadcast): string {
     ? `Sent to ${people} in ${sent.targetLabel} — ${sent.pinnedCount.toLocaleString()} with a home area here, ${sent.textMatchedCount.toLocaleString()} matched on their suburb.`
     : `Sent to ${people} in ${sent.targetLabel}.`
 }
+
+export interface AreaNotice {
+  id: string
+  unitName: string
+  targetLabel: string
+  priority: string
+  category: string | null
+  title: string
+  body: string
+  sentAt: string
+  acknowledgedAt: string | null
+}
+
+/**
+ * The area notices this resident actually received. Self-scoped in SQL: it
+ * reads the caller's own notifications rail and nobody else's, so it cannot
+ * be turned into "what was sent to that person".
+ */
+export async function fetchMyAreaNotices(): Promise<AreaNotice[]> {
+  if (!supabase) return []
+  const client = supabase
+  return resilientCall(async () => {
+    const { data, error } = await client.rpc('res_my_area_notices')
+    if (error) throw error
+    const rows = (data as {
+      id: string; unit_name: string; target_label: string; priority: string
+      category: string | null; title: string; body: string
+      sent_at: string; acknowledged_at: string | null
+    }[]) || []
+    return rows.map(r => ({
+      id: r.id, unitName: r.unit_name, targetLabel: r.target_label,
+      priority: r.priority, category: r.category, title: r.title, body: r.body,
+      sentAt: r.sent_at, acknowledgedAt: r.acknowledged_at
+    }))
+  })
+}
