@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import AppErrorBoundary from './components/shared/AppErrorBoundary'
+import { installErrorReporting } from '../../utils/errorReporting'
 import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -35,6 +37,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
+  // Catches what error boundaries cannot: throws from event handlers, timers
+  // and unhandled promise rejections. Installed once, as early as the
+  // dashboard mounts, so a crash on first paint is still recorded.
+  useEffect(() => { installErrorReporting() }, [])
+
   // Browser autoplay policy blocks audio until a real user gesture — this
   // creates/resumes the shared AudioContext on the FIRST click or keypress
   // anywhere in the dashboard, so it's already running by the time a
@@ -405,7 +412,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         <main className="dashboard-page-body">
-          {children}
+          <AppErrorBoundary area="dashboard">
+            {children}
+          </AppErrorBoundary>
         </main>
       </div>
 
