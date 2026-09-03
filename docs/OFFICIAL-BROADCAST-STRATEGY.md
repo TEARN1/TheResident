@@ -6,10 +6,19 @@
 > `docs/PUSH-SETUP.md`. Until they are set, urgent notices still reach the
 > in-app bell and banner; they just will not wake a closed phone.
 >
-> **Two things still gate real use.** `res_jurisdictions` is empty until
-> someone runs `scripts/import-boundaries.mjs` against Municipal Demarcation
-> Board data — with no boundaries loaded, no official has an area to send to.
-> And official verification is still a manual `verified` flag, so the door is
+> **Boundaries are loaded.** 1 national, 9 provinces, 44 district
+> municipalities and 213 municipalities are in `res_jurisdictions`, verified
+> for parent/child containment and spot-checked against real locations. See
+> `theresident_import_boundaries.sql`.
+>
+> **Wards are not, deliberately.** The only ward set reachable from here is the
+> 2011 one — it names municipalities abolished in 2016 and misses the twenty
+> created then. Loading it would bind councillors to boundaries that stopped
+> existing. Until a current Municipal Demarcation Board file is loaded, a ward
+> councillor cannot be bound to an area; mayors, metros, premiers and
+> institutions can.
+>
+> **Official verification is still a manual `verified` flag**, so the door is
 > closed by default rather than guarded by a process.
 **Decision owner:** you. **Written:** during the session that shipped the
 Service Desk, the institution directory, and urgency broadcasts.

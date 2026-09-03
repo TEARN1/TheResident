@@ -96,7 +96,10 @@ exist on `profiles`.
 
 - [`docs/PUSH-SETUP.md`](docs/PUSH-SETUP.md) — the three secrets that turn on
   push notifications.
-- Official boundaries: `scripts/import-boundaries.mjs` loads Municipal
-  Demarcation Board GeoJSON into `res_jurisdictions`. Until it is run, no
-  official has an area to broadcast to.
+- Official boundaries: **loaded** — see `theresident_import_boundaries.sql`
+  and `data/boundaries/README.md`. Provinces, districts and municipalities are
+  in place; **wards are not**, because the only reachable ward set is the 2011
+  one and would bind councillors to boundaries that no longer exist. Load a
+  current Municipal Demarcation Board ward file with
+  `scripts/import-boundaries.mjs`.
 - Official verification is a manual `verified` flag on `res_org_units`.
