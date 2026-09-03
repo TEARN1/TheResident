@@ -20,6 +20,7 @@ import RequestVerificationPanel from './RequestVerificationPanel'
 import VerificationQueuePanel from './VerificationQueuePanel'
 import { isPlatformAdmin } from '../../../../utils/officialVerification'
 import { fetchAreaLicence, canSendAtPriority, type AreaLicence } from '../../../../utils/areaBilling'
+import { AREA_CATEGORIES } from '../../../../utils/areaCategories'
 
 const sanitize = (text: string) => encodeHTMLEntities(cleanScriptTags(text))
 
@@ -58,6 +59,9 @@ export default function OrgBroadcastsPanel() {
   const [areaTarget, setAreaTarget] = useState<AreaTarget | null>(null)
   const [areaPreview, setAreaPreview] = useState<AudiencePreview | null>(null)
   const [sendToArea, setSendToArea] = useState(false)
+  // Without a category every notice arrives uncategorised, and the per-topic
+  // muting the resolver already supports can never be used by a resident.
+  const [category, setCategory] = useState('')
   const [licence, setLicence] = useState<AreaLicence | null>(null)
   // Drives the admin queue. Presentation only — every decision function checks
   // res_is_platform_admin() server-side as well.
@@ -153,6 +157,7 @@ export default function OrgBroadcastsPanel() {
           title: sanitize(title.trim()),
           body: sanitize(body.trim()),
           priority,
+          category: category || null,
           mode: areaTarget.mode,
           jurisdictionId: areaTarget.jurisdictionId,
           lat: areaTarget.lat,
@@ -178,6 +183,7 @@ export default function OrgBroadcastsPanel() {
       setBody('')
       setPriority('normal')
       setSendToArea(false)
+      setCategory('')
       setAreaTarget(null)
       setLicence(null)
       setAreaPreview(null)
@@ -319,16 +325,35 @@ export default function OrgBroadcastsPanel() {
               </label>
               {sendToArea && <AreaLicenceNotice unitId={targetUnitId} licence={licence} />}
               {sendToArea && (
+                <div className="space-y-1">
+                  <select
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+                  >
+                    <option value="">Choose a topic…</option>
+                    {AREA_CATEGORIES.map(c => (
+                      <option key={c.value} value={c.value}>{c.label} — {c.hint}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    Residents can mute a topic without muting your office. Emergencies always
+                    reach them whatever they have muted.
+                  </p>
+                </div>
+              )}
+              {sendToArea && (
                 <AreaTargetPicker
                   unitId={targetUnitId}
                   priority={priority}
+                  category={category || null}
                   onChange={(t, p) => { setAreaTarget(t); setAreaPreview(p) }}
                 />
               )}
             </div>
           )}
           <div className="flex gap-2">
-            <button onClick={handlePost} disabled={submitting || !targetUnitId || !title.trim() || !body.trim() || (sendToArea && (!canSend(areaPreview) || !canSendAtPriority(licence, priority)))} className={`${goldButtonClass()} text-[10px] px-4 py-2 flex items-center gap-1 disabled:opacity-50`}>
+            <button onClick={handlePost} disabled={submitting || !targetUnitId || !title.trim() || !body.trim() || (sendToArea && (!category || !canSend(areaPreview) || !canSendAtPriority(licence, priority)))} className={`${goldButtonClass()} text-[10px] px-4 py-2 flex items-center gap-1 disabled:opacity-50`}>
               <Send size={12} /> {submitting ? 'Sending…' : sendToArea ? 'Send to this area' : 'Send'}
             </button>
             <button onClick={() => setShowCompose(false)} className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white px-3 py-2"><X size={12} /></button>

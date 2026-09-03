@@ -6,6 +6,7 @@ import { Bell, Moon, Save, Check } from 'lucide-react'
 import { RootState } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
 import { PANIC_TYPE } from '../../../../utils/logic'
+import { areaMuteOptions } from '../../../../utils/areaCategories'
 
 // Curated list of mutable notification types — pulled from the RPC/type
 // strings actually in use (CONTRACT.md §4 + res_alert_panic in logic.ts).
@@ -24,7 +25,12 @@ const MUTABLE_TYPES: { value: string; label: string }[] = [
   { value: 'res_care_missed', label: 'Care circle check-ins' },
   { value: 'res_status', label: 'Neighbourhood status updates' },
   { value: 'res_trust_request', label: 'Trust circle requests' },
-  { value: 'res_gossip_comment', label: 'Gossip comments' }
+  { value: 'res_gossip_comment', label: 'Gossip comments' },
+  // Area notices reach a resident because of where they live, not because
+  // they followed anyone — so the ability to mute them, by topic, matters more
+  // here than anywhere else on this list. The resolver already honoured these
+  // keys; nothing offered them until now.
+  ...areaMuteOptions()
 ]
 
 interface Prefs {
