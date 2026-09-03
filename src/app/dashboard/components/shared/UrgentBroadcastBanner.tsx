@@ -5,15 +5,20 @@ import { useSelector } from 'react-redux'
 import { AlertTriangle, Check } from 'lucide-react'
 import { RootState, isGuestUser } from '../../../../store'
 import {
-  fetchPendingUrgentBroadcasts, acknowledgeBroadcast,
+  fetchPendingUrgentBroadcasts, acknowledgePending,
   type PendingUrgentBroadcast
 } from '../../../../utils/orgBroadcasts'
 import { getErrorMessage } from '../../../../utils/errors'
 
 /**
- * An urgent announcement from an organisation the resident follows — a school
- * closing tomorrow, a water shut-off — that keeps signalling until they
- * actually deal with it.
+ * An urgent announcement that keeps signalling until the resident actually
+ * deals with it — a school closing tomorrow, a water shut-off, an evacuation.
+ *
+ * Two sources feed it. A 'follow' notice comes from an organisation they chose
+ * to follow. An 'area' notice reached them because of where they live, whether
+ * or not they follow anyone — that is the half that carries evacuations, and
+ * until this banner read it too, the app's only interrupt-level surface was
+ * blind to exactly the notices that most needed it.
  *
  * Why this is not another dismissible banner: every other one in this app
  * (guest prompt, next-of-kin, map tip) stores its dismissal in
@@ -50,12 +55,14 @@ export default function UrgentBroadcastBanner() {
     return () => { cancelled = true; clearInterval(id) }
   }, [currentUser, guest, load])
 
-  const handleAck = async (id: string) => {
+  const handleAck = async (notice: PendingUrgentBroadcast) => {
     setBusy(true)
     setError(null)
     try {
-      await acknowledgeBroadcast(id)
-      setPending(list => list.filter(b => b.id !== id))
+      // Routed by source: follow-based and area notices live in different
+      // tables, and acknowledging the wrong one leaves the banner up.
+      await acknowledgePending(notice)
+      setPending(list => list.filter(b => b.id !== notice.id))
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
@@ -88,6 +95,13 @@ export default function UrgentBroadcastBanner() {
           </p>
           <p className="text-sm font-bold text-white mt-0.5 break-words">{notice.title}</p>
           <p className="text-xs text-gray-300 mt-1 break-words">{notice.body}</p>
+          {/* An area notice arrives without being followed, so saying which
+              area it covered is the only thing that explains why it is here. */}
+          {notice.source === 'area' && notice.targetLabel && (
+            <p className="text-[10px] text-gray-500 mt-1">
+              Sent to everyone in {notice.targetLabel}
+            </p>
+          )}
           {pending.length > 1 && (
             <p className="text-[10px] text-gray-500 mt-1">
               {pending.length - 1} more {pending.length - 1 === 1 ? 'notice' : 'notices'} after this
@@ -99,7 +113,7 @@ export default function UrgentBroadcastBanner() {
       {error && <p className="text-[10px] text-red-400">{error}</p>}
 
       <button
-        onClick={() => handleAck(notice.id)}
+        onClick={() => handleAck(notice)}
         disabled={busy}
         className={`w-full flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg transition-colors disabled:opacity-50 ${
           critical

@@ -238,3 +238,33 @@ test('formatCurrency never throws on an unrecognised ISO code', () => {
   assert.match(result, /XYZ/)
   assert.match(result, /500/)
 })
+
+test('a critical notice is never silenced by muting or quiet hours', () => {
+  // The server deliberately delivers a critical area broadcast to someone who
+  // muted the sender (res_resolve_area_audience). Without the matching
+  // exemption here the notice arrives and plays no sound — an evacuation that
+  // lands silently at 3am is, for the person asleep, one that did not land.
+  const muted = {
+    mutedTypes: ['res_area_broadcast'],
+    quietHoursStart: 22,
+    quietHoursEnd: 6
+  }
+  const threeAm = new Date('2026-09-03T03:00:00')
+
+  assert.equal(shouldDeliver('res_area_broadcast', muted, threeAm, 'critical'), true)
+  // Everything below critical still respects both.
+  assert.equal(shouldDeliver('res_area_broadcast', muted, threeAm, 'urgent'), false)
+  assert.equal(shouldDeliver('res_area_broadcast', muted, threeAm, 'important'), false)
+  assert.equal(shouldDeliver('res_area_broadcast', muted, threeAm), false)
+})
+
+test('quiet hours still apply to an unmuted, non-critical notice', () => {
+  const prefs = { mutedTypes: [], quietHoursStart: 22, quietHoursEnd: 6 }
+  assert.equal(shouldDeliver('res_org_broadcast', prefs, new Date('2026-09-03T03:00:00')), false)
+  assert.equal(shouldDeliver('res_org_broadcast', prefs, new Date('2026-09-03T12:00:00')), true)
+  // ...and critical overrides that too.
+  assert.equal(
+    shouldDeliver('res_org_broadcast', prefs, new Date('2026-09-03T03:00:00'), 'critical'),
+    true
+  )
+})

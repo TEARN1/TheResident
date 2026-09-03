@@ -131,9 +131,13 @@ export const subscribeToRealtime = (dispatch: AppDispatch, userId: string): (() 
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${userId}` },
-      (payload: { new?: { type?: string } }) => {
+      (payload: { new?: { type?: string; data?: { priority?: string } | null } }) => {
         const type = payload.new?.type
-        if (type && shouldDeliver(type, soundPrefs)) {
+        // The priority rides on the notification's data payload. A 'critical'
+        // notice is exempt from muting and quiet hours on the server, so it
+        // has to be exempt here too or it arrives silently.
+        const priority = payload.new?.data?.priority ?? null
+        if (type && shouldDeliver(type, soundPrefs, new Date(), priority)) {
           playNotificationSound(type)
         }
         loadNotifications(dispatch)

@@ -362,13 +362,25 @@ export function listingMatchesSearch(listing: Listing, f: SearchFilters): boolea
 
 export const PANIC_TYPE = 'res_alert_panic'
 
+/**
+ * Priorities that override muting and quiet hours entirely.
+ *
+ * The server already refuses to drop a `critical` area broadcast for a muted
+ * recipient (res_resolve_area_audience), so without the same exemption here
+ * the notice arrives — and plays no sound. An evacuation that lands silently
+ * at 3am is, for the person asleep, an evacuation that did not land.
+ */
+export const ALWAYS_DELIVER_PRIORITIES = ['critical'] as const
+
 // Logic 17: Notification delivery gating check.
 export function shouldDeliver(
   type: string,
   prefs: { mutedTypes: string[]; quietHoursStart?: number | null; quietHoursEnd?: number | null },
-  now: Date = new Date()
+  now: Date = new Date(),
+  priority?: string | null
 ): boolean {
   if (type === PANIC_TYPE) return true
+  if (priority && (ALWAYS_DELIVER_PRIORITIES as readonly string[]).includes(priority)) return true
   if (prefs.mutedTypes.includes(type)) return false
 
   const { quietHoursStart: qs, quietHoursEnd: qe } = prefs

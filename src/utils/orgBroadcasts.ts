@@ -54,6 +54,14 @@ export interface PendingUrgentBroadcast {
   body: string
   priority: BroadcastPriority
   createdAt: string
+  /**
+   * Which table this came from, and therefore which acknowledgement clears it.
+   * 'follow' — someone chose to follow this office.
+   * 'area'   — it reached them because of where they live, opted in or not.
+   */
+  source: 'follow' | 'area'
+  /** The area a notice covered, for area notices only. */
+  targetLabel: string | null
 }
 
 export const TIER_LABEL: Record<OrgTier, string> = {
@@ -312,7 +320,12 @@ export async function fetchPendingUrgentBroadcasts(): Promise<PendingUrgentBroad
     title: r.title as string,
     body: r.body as string,
     priority: r.priority as BroadcastPriority,
-    createdAt: r.created_at as string
+    createdAt: r.created_at as string,
+    // Defaulted rather than assumed: an older deployment of the RPC returns
+    // no source column, and a banner that throws is worse than one that
+    // acknowledges via the follow path it used to.
+    source: (r.source as 'follow' | 'area') ?? 'follow',
+    targetLabel: (r.target_label as string) ?? null
   }))
 }
 
@@ -320,5 +333,17 @@ export async function fetchPendingUrgentBroadcasts(): Promise<PendingUrgentBroad
 export async function acknowledgeBroadcast(broadcastId: string): Promise<void> {
   if (!supabase) throw new Error('Not connected')
   const { error } = await supabase.rpc('res_ack_broadcast', { p_broadcast: broadcastId })
+  if (error) throw error
+}
+
+/**
+ * Acknowledges whichever kind of notice this is. The two live in different
+ * tables with different receipt tables, so calling the wrong one silently
+ * fails to clear the banner and the notice returns on the next poll.
+ */
+export async function acknowledgePending(notice: PendingUrgentBroadcast): Promise<void> {
+  if (!supabase) throw new Error('Not connected')
+  const rpc = notice.source === 'area' ? 'res_ack_area_broadcast' : 'res_ack_broadcast'
+  const { error } = await supabase.rpc(rpc, { p_broadcast: notice.id })
   if (error) throw error
 }
