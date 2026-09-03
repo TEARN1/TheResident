@@ -203,3 +203,20 @@ end $$;
 select 'import_rejects_invalid_geojson' as check, true as pass;
 
 reset role;
+
+
+-- ── Grant boundary ─────────────────────────────────────────────────────────
+-- The boundary map decides who may broadcast to whom, so a resident who could
+-- redraw it would be a resident granting themselves authority. The SELECT-only
+-- policy refuses writes; these pin the grants behind it, which Supabase's
+-- defaults had left open on the live project until a sweep found them.
+select 'residents_cannot_redraw_the_boundary_map' as check,
+  not has_table_privilege('authenticated', 'public.res_jurisdictions', 'insert')
+  and not has_table_privilege('authenticated', 'public.res_jurisdictions', 'update')
+  and not has_table_privilege('authenticated', 'public.res_jurisdictions', 'delete') as pass;
+
+select 'residents_can_still_read_the_boundary_map' as check,
+  has_table_privilege('authenticated', 'public.res_jurisdictions', 'select') as pass;
+
+select 'signed_out_visitors_cannot_read_the_boundary_map' as check,
+  not has_table_privilege('anon', 'public.res_jurisdictions', 'select') as pass;

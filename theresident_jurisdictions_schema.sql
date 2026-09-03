@@ -102,6 +102,15 @@ drop policy if exists res_jurisdictions_select on public.res_jurisdictions;
 create policy res_jurisdictions_select on public.res_jurisdictions
   for select to authenticated using (true);
 
+-- Supabase's default privileges grant ALL on a new table to anon and
+-- authenticated, so "writable by nobody" needs a revoke, not just the absence
+-- of a policy. The SELECT-only policy already refuses writes; this is the
+-- second lock behind it, and it was missing on the live project until a grant
+-- sweep found it. Boundaries are loaded through res_upsert_jurisdiction,
+-- which is service_role only.
+revoke all on public.res_jurisdictions from anon, authenticated;
+grant select on public.res_jurisdictions to authenticated;
+
 -- ── 3. BIND A BODY TO ITS BOUNDARY ─────────────────────────────────────────
 
 alter table public.res_org_units
