@@ -68,6 +68,7 @@ for schema in \
   theresident_area_billing_schema.sql \
   theresident_official_verification_schema.sql \
   theresident_org_unit_column_lockdown.sql \
+  theresident_maintenance_scheduler.sql \
   theresident_urgent_banner_area_notices.sql \
   theresident_client_error_logging.sql \
   theresident_rate_limit_write_paths.sql \
