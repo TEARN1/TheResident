@@ -15,6 +15,8 @@ import { goldButtonClass } from '../../../../components/ui/GoldButton'
 import EmptyState from '../shared/EmptyState'
 import AreaTargetPicker, { type AreaTarget } from './AreaTargetPicker'
 import { sendAreaBroadcast, canSend, describeSendResult, type AudiencePreview } from '../../../../utils/areaTargeting'
+import AreaLicenceNotice from './AreaLicenceNotice'
+import { fetchAreaLicence, canSendAtPriority, type AreaLicence } from '../../../../utils/areaBilling'
 
 const sanitize = (text: string) => encodeHTMLEntities(cleanScriptTags(text))
 
@@ -53,6 +55,7 @@ export default function OrgBroadcastsPanel() {
   const [areaTarget, setAreaTarget] = useState<AreaTarget | null>(null)
   const [areaPreview, setAreaPreview] = useState<AudiencePreview | null>(null)
   const [sendToArea, setSendToArea] = useState(false)
+  const [licence, setLicence] = useState<AreaLicence | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -73,6 +76,17 @@ export default function OrgBroadcastsPanel() {
     })
     return () => { cancelled = true }
   }, [currentUser, guest])
+
+  // The licence belongs to the unit, so it is re-read whenever the sender
+  // switches which office they are posting as.
+  useEffect(() => {
+    if (!sendToArea || !targetUnitId) { setLicence(null); return }
+    let cancelled = false
+    fetchAreaLicence(targetUnitId)
+      .then(l => { if (!cancelled) setLicence(l) })
+      .catch(() => { if (!cancelled) setLicence(null) })
+    return () => { cancelled = true }
+  }, [sendToArea, targetUnitId])
 
   const refreshFeed = async () => {
     setFeed(await fetchBroadcastFeed())
@@ -154,6 +168,7 @@ export default function OrgBroadcastsPanel() {
       setPriority('normal')
       setSendToArea(false)
       setAreaTarget(null)
+      setLicence(null)
       setAreaPreview(null)
       setShowCompose(false)
       await refreshFeed()
@@ -277,6 +292,7 @@ export default function OrgBroadcastsPanel() {
                   <span className="text-gray-500"> This is recorded publicly.</span>
                 </span>
               </label>
+              {sendToArea && <AreaLicenceNotice unitId={targetUnitId} licence={licence} />}
               {sendToArea && (
                 <AreaTargetPicker
                   unitId={targetUnitId}
@@ -287,7 +303,7 @@ export default function OrgBroadcastsPanel() {
             </div>
           )}
           <div className="flex gap-2">
-            <button onClick={handlePost} disabled={submitting || !targetUnitId || !title.trim() || !body.trim() || (sendToArea && !canSend(areaPreview))} className={`${goldButtonClass()} text-[10px] px-4 py-2 flex items-center gap-1 disabled:opacity-50`}>
+            <button onClick={handlePost} disabled={submitting || !targetUnitId || !title.trim() || !body.trim() || (sendToArea && (!canSend(areaPreview) || !canSendAtPriority(licence, priority)))} className={`${goldButtonClass()} text-[10px] px-4 py-2 flex items-center gap-1 disabled:opacity-50`}>
               <Send size={12} /> {submitting ? 'Sending…' : sendToArea ? 'Send to this area' : 'Send'}
             </button>
             <button onClick={() => setShowCompose(false)} className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white px-3 py-2"><X size={12} /></button>

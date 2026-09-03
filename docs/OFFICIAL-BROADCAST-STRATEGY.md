@@ -1,6 +1,6 @@
 # Official Area Broadcasts — strategy
 
-**Status:** Phases A through E are **built and live**; F is not.
+**Status:** Phases A through F are **built and live**.
 
 > **Push needs three secrets before it does anything** — see
 > `docs/PUSH-SETUP.md`. Until they are set, urgent notices still reach the

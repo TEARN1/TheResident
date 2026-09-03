@@ -231,6 +231,27 @@ begin
   end if;
 
   -- Two limiters: the generic burst limit, then the per-level daily cap.
+  -- Billing (Phase F). A 'critical' notice is NEVER gated: an evacuation
+  -- must send whether or not anyone paid. Everything below it needs a live
+  -- licence — probation, active or exempt. Defined in
+  -- theresident_area_billing_schema.sql; if that file is not applied, the
+  -- undefined_function branch leaves sending open, which is the correct
+  -- failure direction for a feature that already worked before billing.
+  if p_priority <> 'critical' then
+    begin
+      perform public.res_ensure_area_probation(p_unit);
+      -- coalesce is load-bearing: res_area_billing_state is sender-scoped, so
+      -- it returns NO ROWS rather than false if the scoping ever fails to
+      -- match. `not (select ...)` on an empty result is NULL, and `if NULL`
+      -- does not fire — which would fail OPEN. Default to refusing instead.
+      if not coalesce((select allows_routine from public.res_area_billing_state(p_unit)), false) then
+        raise exception 'area_licence_required: this office has no active area-messaging licence';
+      end if;
+    exception
+      when undefined_function then null;
+    end;
+  end if;
+
   perform public.res_check_rate_limit('area_broadcast', 5, 3600);
 
   v_cap := public.res_area_daily_cap(v_level);

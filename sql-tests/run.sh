@@ -65,6 +65,7 @@ for schema in \
   theresident_area_audience_schema.sql \
   theresident_area_broadcast_send_schema.sql \
   theresident_web_push_dispatch_schema.sql \
+  theresident_area_billing_schema.sql \
   theresident_anon_grant_lockdown.sql
 do
   echo "→ applying $schema"
