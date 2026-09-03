@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  clampRadius, describeRadius, describeAudience, canSend,
+  clampRadius, describeRadius, describeAudience, canSend, describeSendResult,
   MIN_RADIUS_M, MAX_RADIUS_M, type AudiencePreview
 } from './areaTargeting'
 
@@ -45,4 +45,31 @@ test('canSend refuses until a real, permitted audience has been seen', () => {
   assert.ok(!canSend(preview()))
   assert.ok(!canSend(preview({ totalCount: 10, blockReason: 'not_verified' })))
   assert.ok(canSend(preview({ pinnedCount: 10, totalCount: 10 })))
+})
+
+const sent = (over: Partial<Parameters<typeof describeSendResult>[0]> = {}) => ({
+  id: 'b1', targetLabel: 'Ward 12', priority: 'urgent',
+  recipientCount: 0, pinnedCount: 0, textMatchedCount: 0,
+  sentAt: '2026-09-02T10:00:00Z', ...over
+})
+
+test('describeSendResult reports the same two populations the preview promised', () => {
+  // The number quoted after the fact is the number that lands on the public
+  // record, so it must not be inflated relative to what was previewed.
+  const mixed = describeSendResult(sent({ recipientCount: 1620, pinnedCount: 1240, textMatchedCount: 380 }))
+  assert.match(mixed, /1,620 residents/)
+  assert.match(mixed, /1,240 with a home area/)
+  assert.match(mixed, /380 matched on their suburb/)
+
+  const clean = describeSendResult(sent({ recipientCount: 900, pinnedCount: 900 }))
+  assert.match(clean, /Sent to 900 residents in Ward 12\./)
+  assert.doesNotMatch(clean, /suburb/)
+})
+
+test('describeSendResult does not claim a delivery that reached nobody', () => {
+  assert.match(describeSendResult(sent()), /Nothing to deliver/)
+})
+
+test('describeSendResult says "resident" for exactly one person', () => {
+  assert.match(describeSendResult(sent({ recipientCount: 1, pinnedCount: 1 })), /1 resident in/)
 })

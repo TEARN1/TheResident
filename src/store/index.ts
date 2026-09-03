@@ -151,7 +151,7 @@ export interface SecurityLog {
    */
   ip?: string
   action: string
-  type: 'xss_blocked' | 'rate_limit_triggered' | 'idor_prevented' | 'auth_success' | 'auth_failed' | 'brute_force_blocked' | 'upload_malware_blocked' | 'sqli_blocked' | 'role_switched' | 'org_broadcast_sent'
+  type: 'xss_blocked' | 'rate_limit_triggered' | 'idor_prevented' | 'auth_success' | 'auth_failed' | 'brute_force_blocked' | 'upload_malware_blocked' | 'sqli_blocked' | 'role_switched' | 'org_broadcast_sent' | 'area_broadcast_sent'
   details: string
 }
 

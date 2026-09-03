@@ -143,3 +143,128 @@ export async function previewAudience(args: PreviewArgs): Promise<AudiencePrevie
     }
   })
 }
+
+// ── Sending (Phase D) ──────────────────────────────────────────────────────
+
+export interface SendAreaArgs {
+  unitId: string
+  title: string
+  body: string
+  priority?: string
+  category?: string | null
+  mode: TargetMode
+  jurisdictionId?: string
+  lat?: number
+  lon?: number
+  radiusMetres?: number
+  expiresAt?: string | null
+}
+
+export interface SentAreaBroadcast {
+  id: string
+  targetLabel: string
+  priority: string
+  recipientCount: number
+  pinnedCount: number
+  textMatchedCount: number
+  sentAt: string
+}
+
+/**
+ * The send takes a target SPECIFICATION — a jurisdiction id, or a point and a
+ * radius — never a shape. The preview accepts geography because the
+ * containment gate makes reading safe, but this writes, and the smaller
+ * surface is the right one for a write.
+ */
+export async function sendAreaBroadcast(args: SendAreaArgs): Promise<SentAreaBroadcast> {
+  if (!supabase) throw new Error('Not connected')
+  const client = supabase
+  return resilientCall(async () => {
+    const { data, error } = await client.rpc('res_send_area_broadcast', {
+      p_unit: args.unitId,
+      p_title: args.title,
+      p_body: args.body,
+      p_priority: args.priority ?? 'important',
+      p_category: args.category ?? null,
+      p_jurisdiction: args.mode === 'jurisdiction' ? args.jurisdictionId : null,
+      p_lat: args.mode === 'radius' ? args.lat : null,
+      p_lon: args.mode === 'radius' ? args.lon : null,
+      p_metres: args.mode === 'radius' ? clampRadius(args.radiusMetres ?? 3000) : null,
+      p_expires_at: args.expiresAt ?? null
+    })
+    if (error) throw error
+    const row = (Array.isArray(data) ? data[0] : data) as {
+      id: string; target_label: string; priority: string; recipient_count: number
+      pinned_count: number; text_matched_count: number; sent_at: string
+    }
+    return {
+      id: row.id,
+      targetLabel: row.target_label,
+      priority: row.priority,
+      recipientCount: row.recipient_count,
+      pinnedCount: row.pinned_count,
+      textMatchedCount: row.text_matched_count,
+      sentAt: row.sent_at
+    }
+  })
+}
+
+export interface AreaBroadcastRecord {
+  id: string
+  unitId: string
+  unitName: string
+  targetLabel: string
+  priority: string
+  category: string | null
+  title: string
+  body: string
+  recipientCount: number
+  sentAt: string
+}
+
+/**
+ * An official's permanent, public send history — the accountability half of
+ * this feature, and the same instinct as the Service Desk's record of how
+ * long a provider takes to fix things.
+ */
+export async function fetchAreaBroadcastHistory(unitId?: string): Promise<AreaBroadcastRecord[]> {
+  if (!supabase) return []
+  const client = supabase
+  return resilientCall(async () => {
+    const { data, error } = await client.rpc('res_area_broadcast_history', { p_unit: unitId ?? null })
+    if (error) throw error
+    const rows = (data as {
+      id: string; unit_id: string; unit_name: string; target_label: string
+      priority: string; category: string | null; title: string; body: string
+      recipient_count: number; sent_at: string
+    }[]) || []
+    return rows.map(r => ({
+      id: r.id, unitId: r.unit_id, unitName: r.unit_name, targetLabel: r.target_label,
+      priority: r.priority, category: r.category, title: r.title, body: r.body,
+      recipientCount: r.recipient_count, sentAt: r.sent_at
+    }))
+  })
+}
+
+export async function acknowledgeAreaBroadcast(broadcastId: string): Promise<void> {
+  if (!supabase) throw new Error('Not connected')
+  const client = supabase
+  await resilientCall(async () => {
+    const { error } = await client.rpc('res_ack_area_broadcast', { p_broadcast: broadcastId })
+    if (error) throw error
+  })
+}
+
+/**
+ * What an official is told after the fact. Reports the two populations
+ * separately for the same reason the preview does — the record shown on their
+ * profile carries the same number, so it must not be inflated here.
+ */
+export function describeSendResult(sent: SentAreaBroadcast): string {
+  const n = sent.recipientCount
+  if (n === 0) return `Nothing to deliver — no residents are matched in ${sent.targetLabel} yet.`
+  const people = `${n.toLocaleString()} ${n === 1 ? 'resident' : 'residents'}`
+  return sent.textMatchedCount > 0
+    ? `Sent to ${people} in ${sent.targetLabel} — ${sent.pinnedCount.toLocaleString()} with a home area here, ${sent.textMatchedCount.toLocaleString()} matched on their suburb.`
+    : `Sent to ${people} in ${sent.targetLabel}.`
+}

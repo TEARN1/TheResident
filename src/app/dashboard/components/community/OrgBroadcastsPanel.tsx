@@ -13,7 +13,8 @@ import { getErrorMessage } from '../../../../utils/errors'
 import { cleanScriptTags, encodeHTMLEntities } from '../../../../utils/security'
 import { goldButtonClass } from '../../../../components/ui/GoldButton'
 import EmptyState from '../shared/EmptyState'
-import AreaTargetPicker from './AreaTargetPicker'
+import AreaTargetPicker, { type AreaTarget } from './AreaTargetPicker'
+import { sendAreaBroadcast, canSend, describeSendResult, type AudiencePreview } from '../../../../utils/areaTargeting'
 
 const sanitize = (text: string) => encodeHTMLEntities(cleanScriptTags(text))
 
@@ -47,6 +48,11 @@ export default function OrgBroadcastsPanel() {
   const [priority, setPriority] = useState<BroadcastPriority>('normal')
   const [directoryQuery, setDirectoryQuery] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // Area targeting (Phase D). Null target = this post goes to followers, the
+  // way it always has; a chosen area switches it to location-based reach.
+  const [areaTarget, setAreaTarget] = useState<AreaTarget | null>(null)
+  const [areaPreview, setAreaPreview] = useState<AudiencePreview | null>(null)
+  const [sendToArea, setSendToArea] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -116,16 +122,39 @@ export default function OrgBroadcastsPanel() {
     setSubmitting(true)
     setError(null)
     try {
-      await postBroadcast(targetUnitId, currentUser.id, sanitize(title.trim()), sanitize(body.trim()), priority)
-      dispatch(addLog({
-        action: `Org broadcast sent from unit ${targetUnitId}`,
-        type: 'org_broadcast_sent',
-        details: `Sender ${currentUser.id} posted "${title.trim().slice(0, 60)}" to unit ${targetUnitId}.`
-      }))
-      dispatch(addNotification({ title: 'Broadcast sent', message: 'Your announcement is live for everyone who follows this unit.', read: false }))
+      if (sendToArea && areaTarget) {
+        const sent = await sendAreaBroadcast({
+          unitId: targetUnitId,
+          title: sanitize(title.trim()),
+          body: sanitize(body.trim()),
+          priority,
+          mode: areaTarget.mode,
+          jurisdictionId: areaTarget.jurisdictionId,
+          lat: areaTarget.lat,
+          lon: areaTarget.lon,
+          radiusMetres: areaTarget.radiusMetres
+        })
+        dispatch(addLog({
+          action: `Area broadcast sent from unit ${targetUnitId}`,
+          type: 'area_broadcast_sent',
+          details: `Sender ${currentUser.id} sent "${title.trim().slice(0, 60)}" to ${sent.targetLabel}, reaching ${sent.recipientCount}.`
+        }))
+        dispatch(addNotification({ title: 'Area notice sent', message: describeSendResult(sent), read: false }))
+      } else {
+        await postBroadcast(targetUnitId, currentUser.id, sanitize(title.trim()), sanitize(body.trim()), priority)
+        dispatch(addLog({
+          action: `Org broadcast sent from unit ${targetUnitId}`,
+          type: 'org_broadcast_sent',
+          details: `Sender ${currentUser.id} posted "${title.trim().slice(0, 60)}" to unit ${targetUnitId}.`
+        }))
+        dispatch(addNotification({ title: 'Broadcast sent', message: 'Your announcement is live for everyone who follows this unit.', read: false }))
+      }
       setTitle('')
       setBody('')
       setPriority('normal')
+      setSendToArea(false)
+      setAreaTarget(null)
+      setAreaPreview(null)
       setShowCompose(false)
       await refreshFeed()
     } catch (err) {
@@ -235,16 +264,31 @@ export default function OrgBroadcastsPanel() {
           </div>
           {units.find(u => u.id === targetUnitId)?.verified && (
             <div className="space-y-2">
-              <AreaTargetPicker unitId={targetUnitId} priority={priority} />
-              <p className="text-[10px] text-gray-600 leading-relaxed">
-                Preview only for now — this send still goes to everyone who follows this account.
-                Sending to an area is switched on once area broadcasts go live.
-              </p>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendToArea}
+                  onChange={e => setSendToArea(e.target.checked)}
+                  className="accent-gold-primary mt-0.5"
+                />
+                <span className="text-[11px] text-gray-300 leading-relaxed">
+                  <strong className="text-white">Send to an area instead</strong> — reaches everyone
+                  who lives there, not only people who follow this account.
+                  <span className="text-gray-500"> This is recorded publicly.</span>
+                </span>
+              </label>
+              {sendToArea && (
+                <AreaTargetPicker
+                  unitId={targetUnitId}
+                  priority={priority}
+                  onChange={(t, p) => { setAreaTarget(t); setAreaPreview(p) }}
+                />
+              )}
             </div>
           )}
           <div className="flex gap-2">
-            <button onClick={handlePost} disabled={submitting || !targetUnitId || !title.trim() || !body.trim()} className={`${goldButtonClass()} text-[10px] px-4 py-2 flex items-center gap-1 disabled:opacity-50`}>
-              <Send size={12} /> {submitting ? 'Sending…' : 'Send'}
+            <button onClick={handlePost} disabled={submitting || !targetUnitId || !title.trim() || !body.trim() || (sendToArea && !canSend(areaPreview))} className={`${goldButtonClass()} text-[10px] px-4 py-2 flex items-center gap-1 disabled:opacity-50`}>
+              <Send size={12} /> {submitting ? 'Sending…' : sendToArea ? 'Send to this area' : 'Send'}
             </button>
             <button onClick={() => setShowCompose(false)} className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white px-3 py-2"><X size={12} /></button>
           </div>

@@ -62,7 +62,8 @@ for schema in \
   theresident_gossip_reactions.sql \
   theresident_home_area_schema.sql \
   theresident_jurisdictions_schema.sql \
-  theresident_area_audience_schema.sql
+  theresident_area_audience_schema.sql \
+  theresident_area_broadcast_send_schema.sql
 do
   echo "→ applying $schema"
   psql_f "$ROOT/$schema"

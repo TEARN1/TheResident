@@ -1,6 +1,12 @@
 # Official Area Broadcasts — strategy
 
-**Status:** Phases A and B are **built and live**; C, D, E and F are not.
+**Status:** Phases A, B, C and D are **built and live**; E and F are not.
+
+> **Two things still gate real use.** `res_jurisdictions` is empty until
+> someone runs `scripts/import-boundaries.mjs` against Municipal Demarcation
+> Board data — with no boundaries loaded, no official has an area to send to.
+> And official verification is still a manual `verified` flag, so the door is
+> closed by default rather than guarded by a process.
 **Decision owner:** you. **Written:** during the session that shipped the
 Service Desk, the institution directory, and urgency broadcasts.
 
@@ -142,7 +148,7 @@ policy to enforce by hand. **The boundary does the enforcing.**
 ## 5. Data model
 
 Four pieces. All `res_`-prefixed per `CONTRACT.md` §2. The first two are built;
-`res_area_broadcasts` arrives in Phase D.
+`res_area_broadcasts` arrived in Phase D — see `theresident_area_broadcast_send_schema.sql`.
 
 ### `res_home_areas` — where a resident is, Resident-owned
 
