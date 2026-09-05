@@ -51,34 +51,13 @@ psql_f() { run "psql -h $SOCK -p $PORT -U postgres -v ON_ERROR_STOP=1 -q -f $1";
 echo "→ prelude"
 psql_f "$ROOT/sql-tests/00-prelude.sql"
 
-# Applied in dependency order, exactly as they must be pasted into Supabase.
-for schema in \
-  theresident_org_broadcast_schema.sql \
-  theresident_service_desk_schema.sql \
-  theresident_directory_urgency_schema.sql \
-  theresident_room_inventory_schema.sql \
-  theresident_property_delete_and_verification_meaning.sql \
-  theresident_kin_verification_link.sql \
-  theresident_gossip_reactions.sql \
-  theresident_home_area_schema.sql \
-  theresident_jurisdictions_schema.sql \
-  theresident_area_audience_schema.sql \
-  theresident_area_broadcast_send_schema.sql \
-  theresident_web_push_dispatch_schema.sql \
-  theresident_area_billing_schema.sql \
-  theresident_official_verification_schema.sql \
-  theresident_org_unit_column_lockdown.sql \
-  theresident_traffic_reports_policy_cleanup.sql \
-  theresident_foreign_key_indexes.sql \
-  theresident_maintenance_scheduler.sql \
-  theresident_urgent_banner_area_notices.sql \
-  theresident_client_error_logging.sql \
-  theresident_rate_limit_write_paths.sql \
-  theresident_anon_grant_lockdown.sql
-do
-  echo "→ applying $schema"
-  psql_f "$ROOT/$schema"
-done
+# One file now. This used to be a hand-maintained list of 22 schema files in
+# dependency order — a list that had already drifted from what the repo
+# contains (the newest lockdown was never added to it), so the suite was
+# testing a schema nobody actually had. theresident_complete_schema.sql is the
+# whole thing in order, so there is no list left to forget to update.
+echo "→ applying theresident_complete_schema.sql"
+psql_f "$ROOT/theresident_complete_schema.sql"
 
 failed=0
 for t in "$ROOT"/sql-tests/*.test.sql; do

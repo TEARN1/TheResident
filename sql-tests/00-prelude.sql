@@ -1,6 +1,13 @@
--- Minimal stand-ins for what already exists live, so the Service Desk schema
--- can be executed for real against a throwaway Postgres. Shapes copied from
--- the verified live information_schema output, not guessed.
+-- Stand-ins for what the live project provides but this repo does not own.
+--
+-- This used to also carry cut-down copies of eight res_* tables. Those became
+-- a liability the moment the schema was consolidated: `create table if not
+-- exists` means the FIRST definition wins, so a 4-column stand-in for
+-- res_gossip_posts silently shadowed the real 9-column table and every policy
+-- referencing `hidden` failed. The real schema now builds here in full, so the
+-- only stand-ins left are the three Gruvs-owned objects (profiles,
+-- notifications, events), the two Gruvs helper functions, auth.uid(), and
+-- res_check_rate_limit — none of which this repo is the source of truth for.
 create extension if not exists "uuid-ossp";
 -- Jurisdiction boundaries are real geometry, so the harness needs PostGIS to
 -- execute theresident_jurisdictions_schema.sql for real rather than skipping
@@ -18,14 +25,43 @@ create table if not exists public.profiles (
   display_name text,
   username text,
   avatar_url text,
-  is_verified boolean default false
+  is_verified boolean default false,
+  -- res_account_ready() gates posting on account age, so the stand-in needs
+  -- created_at even though nothing in The Resident reads it directly.
+  created_at timestamptz default now()
 );
 
-create table if not exists public.res_profiles (
-  id uuid primary key,
-  role text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
+-- Gruvs-owned helpers the Resident's schema calls but does not own.
+--
+-- touch_updated_at() is the shared updated_at trigger used across the whole
+-- database; award_xp() is the gamification hook. Both are attached to or
+-- called from Resident objects, so the schema will not load without them.
+-- These stand-ins reproduce the contract (touch stamps updated_at; award_xp
+-- accepts the call and does nothing) rather than the implementation — the
+-- real behaviour belongs to Gruvs and is not this suite's to assert.
+create or replace function public.touch_updated_at()
+returns trigger language plpgsql as $touch$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$touch$;
+
+create or replace function public.award_xp(p_user uuid, p_amount int, p_reason text default null)
+returns void language plpgsql as $xp$
+begin
+  -- deliberately inert in tests
+  return;
+end;
+$xp$;
+
+-- Gruvs-owned. Referenced only as an FK target: res_notice_events.event_id and
+-- res_security_logs.event_id both point at it. The Resident never reads or
+-- writes it (CONTRACT.md §3), so the stand-in carries only the id the foreign
+-- keys need — enough to make the constraint resolvable, not enough to invite
+-- a test to depend on shape this project does not own.
+create table if not exists public.events (
+  id uuid primary key default uuid_generate_v4()
 );
 
 -- Gruvs-owned shared rail. Column list copied verbatim from the live table —
@@ -53,77 +89,6 @@ create table if not exists public.notifications (
   body text,
   is_read boolean default false,
   data jsonb
-);
-
-create table if not exists public.res_infra_providers (
-  id uuid primary key default uuid_generate_v4(),
-  name text not null,
-  kind text not null check (kind in ('power','water','network','fiber','road')),
-  contact_email text,
-  contact_phone text,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.res_infra_partner_admins (
-  provider_id uuid not null,
-  user_id uuid not null,
-  primary key (provider_id, user_id)
-);
-
--- Shapes copied from theresident_undocumented_tables_schema.sql / resident_schema.sql.
-create table if not exists public.res_properties (
-  id uuid primary key default uuid_generate_v4(),
-  landlord_id uuid not null,
-  address text not null,
-  suburb text,
-  city text,
-  lat double precision,
-  lon double precision,
-  total_rooms integer default 0,
-  doc_review_status text default 'none',
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
-
-create table if not exists public.res_listings (
-  id uuid primary key default uuid_generate_v4(),
-  landlord_id uuid not null,
-  title text not null,
-  description text,
-  price numeric,
-  currency text default 'ZAR',
-  location text,
-  suburb text,
-  images text[] default '{}',
-  property_id uuid references public.res_properties(id) on delete set null,
-  created_at timestamptz default now()
-);
-
-create table if not exists public.res_gossip_posts (
-  id uuid primary key default uuid_generate_v4(),
-  author_id uuid references public.profiles(id) on delete cascade not null,
-  body text not null,
-  created_at timestamptz default now()
-);
-
--- Shape copied from the live information_schema. muted_types is a text[] of
--- notification types, which is what lets area broadcasts be muted per
--- category ('res_area_broadcast:library') without a schema change.
-create table if not exists public.res_notification_prefs (
-  user_id uuid primary key,
-  muted_types text[] default '{}',
-  quiet_hours_start integer,
-  quiet_hours_end integer,
-  digest boolean default false,
-  updated_at timestamptz default now()
-);
-
-create table if not exists public.res_rate_limits (
-  user_id uuid not null,
-  action text not null,
-  window_start timestamptz not null,
-  count integer not null,
-  primary key (user_id, action, window_start)
 );
 
 -- Verbatim from the live database.

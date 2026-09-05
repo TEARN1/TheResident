@@ -20,8 +20,11 @@ begin
     values (v_landlord, '1 Test Street', 'Testburb', 'Testville', 2)
     returning id into v_property;
 
-  insert into public.res_listings (landlord_id, title, property_id)
-    values (v_landlord, 'Room in Test Street', v_property)
+  -- price and location are NOT NULL on the real table. This insert used to
+  -- omit them and pass, because the harness prelude carried a looser stand-in
+  -- for res_listings that shadowed the real definition.
+  insert into public.res_listings (landlord_id, title, property_id, price, location)
+    values (v_landlord, 'Room in Test Street', v_property, 2500, 'Testburb')
     returning id into v_listing;
 
   insert into public.res_rooms (property_id, landlord_id, label, listing_id)
