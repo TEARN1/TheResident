@@ -36,6 +36,8 @@ import PropertiesPanel, { type ResProperty } from '../components/housing/Propert
 import EmptyState from '../components/shared/EmptyState'
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
+import { fetchWatchedListingIds, watchRoomVacancy, unwatchRoomVacancy } from '../../../utils/roomInventory'
+import { Bell, BellOff } from 'lucide-react'
 
 // Top of the budget slider. Well above the real ceiling for a single room so
 // the control can express any listing on the platform; the max position means
@@ -202,6 +204,50 @@ export default function HousingPage() {
     })
     return () => { cancelled = true }
   }, [allListings])
+
+  // Which room-inventory listings the caller is currently occupied-and-
+  // watchable on, and which of those they already have a watch on. Keyed by
+  // listing id, since that's the only handle the browsing UI has — a room's
+  // own id is never exposed to a tenant (res_rooms is landlord-private).
+  const [roomOccupiedStatus, setRoomOccupiedStatus] = useState<Record<string, boolean>>({})
+  const [watchedListingIds, setWatchedListingIds] = useState<Set<string>>(new Set())
+  const [watchBusyId, setWatchBusyId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!supabase || isGuestUser(currentUser)) return
+    let cancelled = false
+    const ids = [...new Set(allListings.map(l => l.id))]
+    if (ids.length === 0) return
+    supabase.rpc('res_room_listing_status', { p_listing_ids: ids }).then(({ data }) => {
+      if (cancelled || !data) return
+      const map: Record<string, boolean> = {}
+      for (const row of data as { listing_id: string; is_vacant: boolean }[]) {
+        map[row.listing_id] = !row.is_vacant
+      }
+      setRoomOccupiedStatus(map)
+    })
+    fetchWatchedListingIds(ids).then(set => { if (!cancelled) setWatchedListingIds(set) })
+    return () => { cancelled = true }
+  }, [allListings, currentUser])
+
+  const handleToggleWatch = async (listingId: string) => {
+    setWatchBusyId(listingId)
+    try {
+      if (watchedListingIds.has(listingId)) {
+        await unwatchRoomVacancy(listingId)
+        setWatchedListingIds(prev => { const next = new Set(prev); next.delete(listingId); return next })
+        setAlertNotification('Notification cancelled.')
+      } else {
+        await watchRoomVacancy(listingId)
+        setWatchedListingIds(prev => new Set(prev).add(listingId))
+        setAlertNotification("You'll be notified the moment this room is vacant.")
+      }
+    } catch (err) {
+      setAlertNotification(err instanceof Error ? err.message.replace(/^\w+:\s*/, '') : 'That did not work.')
+    } finally {
+      setWatchBusyId(null)
+    }
+  }
 
   const filteredListingsRaw = useSelector((state: RootState) => selectFilteredListings(
     state,
@@ -749,6 +795,27 @@ export default function HousingPage() {
                   </div>
 
                   <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80">{item.description}</p>
+
+                  {/* Only shown for a room-inventory listing that's currently occupied —
+                      a plain listing (no linked res_rooms row) or an already-vacant
+                      room has nothing to notify about. */}
+                  {roomOccupiedStatus[item.id] && item.landlordId !== currentUser?.id && !isGuest && (
+                     <button
+                        onClick={() => handleToggleWatch(item.id)}
+                        disabled={watchBusyId === item.id}
+                        className={`flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-2 rounded-xl border transition-colors disabled:opacity-50 ${
+                           watchedListingIds.has(item.id)
+                              ? 'bg-gold-primary/10 border-gold-primary/40 text-gold-primary'
+                              : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                        }`}
+                     >
+                        {watchedListingIds.has(item.id) ? (
+                           <><BellOff size={12} /> Watching for vacancy — tap to cancel</>
+                        ) : (
+                           <><Bell size={12} /> Notify me when this room is vacant</>
+                        )}
+                     </button>
+                  )}
 
                   <div className="flex items-center justify-between gap-2 -mt-1">
                      <button

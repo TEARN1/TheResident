@@ -7817,3 +7817,239 @@ begin
   raise notice 'baseline grants: issued %', n;
 end
 $$;
+
+
+-- ==========================================================================
+-- 36. theresident_room_vacancy_schema.sql
+-- ==========================================================================
+
+-- theresident_room_vacancy_schema.sql
+--
+-- Two gaps in the room inventory feature (section 10), both requested
+-- directly: a landlord could not mark a room vacant/occupied with one click
+-- — status only ever changed as a side effect of adding or ending an
+-- occupant record — and a tenant had no way to ask to be told when a room
+-- opens back up.
+--
+-- MANUAL STATUS TOGGLE. res_set_room_status() lets the landlord flip a
+-- room's status directly, independent of whether they track occupants in the
+-- app at all. A landlord who just wants to mark "this room is free" without
+-- recording who moved out can now do exactly that.
+--
+-- VACANCY WATCH, KEYED BY LISTING. A tenant only ever sees a room through its
+-- public listing (res_rooms itself is landlord-private, section 10) — so the
+-- watch is keyed on listing_id, which is what the browsing UI already has on
+-- every card, rather than room_id, which a tenant has no way to look up.
+-- res_room_vacancy_watches keeps room_id too (resolved once, at watch time)
+-- because that is what the notify step actually needs to check, but every
+-- public-facing RPC takes a listing id.
+--
+-- The watch is one-shot: the moment the room goes vacant, every watcher is
+-- notified and the watch is cleared — "let me know when it opens up" is a
+-- single ping, not a standing subscription to every future vacancy on that
+-- room. Both status-changing paths — this file's manual toggle and
+-- res_end_room_occupancy() (section 10) — call the same notify function, so
+-- a watcher hears about it regardless of which route freed the room.
+--
+-- A room can only be watched once it is advertised (has a listing_id) and
+-- while it is currently occupied — watching an already-vacant room would
+-- never fire, since nothing here re-checks status on a timer.
+--
+-- Paste into the Supabase SQL editor. Additive only.
+
+-- ── 1. TABLE ───────────────────────────────────────────────────────────────
+
+create table if not exists public.res_room_vacancy_watches (
+  id uuid primary key default uuid_generate_v4(),
+  room_id uuid references public.res_rooms(id) on delete cascade not null,
+  listing_id uuid references public.res_listings(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now() not null,
+  unique (listing_id, user_id)
+);
+
+create index if not exists res_room_vacancy_watches_room_idx on public.res_room_vacancy_watches (room_id);
+create index if not exists res_room_vacancy_watches_listing_idx on public.res_room_vacancy_watches (listing_id);
+create index if not exists res_room_vacancy_watches_user_idx on public.res_room_vacancy_watches (user_id);
+
+-- ── 2. RLS ─────────────────────────────────────────────────────────────────
+-- Strictly self: a tenant sees and manages only their own watches — enough
+-- for the UI to ask "am I already watching this listing?" without needing
+-- any access to res_rooms, which stays landlord-private. Writes go through
+-- the RPCs in §3, where "must be advertised and currently occupied" is
+-- enforced against res_rooms directly (as the function owner, bypassing the
+-- landlord-only RLS on that table the same way res_owns_room does).
+
+alter table public.res_room_vacancy_watches enable row level security;
+
+drop policy if exists res_room_vacancy_watches_select on public.res_room_vacancy_watches;
+create policy res_room_vacancy_watches_select on public.res_room_vacancy_watches
+  for select to authenticated using (user_id = auth.uid());
+
+-- ── 3. RPCs ────────────────────────────────────────────────────────────────
+
+-- res_end_room_occupancy (section 10) is the OTHER path that can flip a
+-- room back to vacant — a tenant moving out through the normal occupant
+-- record, rather than the manual toggle below. Redefined here (same
+-- signature, same body, plus one call) so a watcher hears about a vacancy
+-- created either way, not only through the toggle this file adds.
+create or replace function public.res_end_room_occupancy(p_occupant uuid)
+returns public.res_room_occupants
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  v_row res_room_occupants;
+  v_room uuid;
+begin
+  select room_id into v_room from res_room_occupants where id = p_occupant;
+  if v_room is null then raise exception 'occupant_not_found'; end if;
+  if not public.res_owns_room(v_room) then raise exception 'not_your_room'; end if;
+
+  update res_room_occupants set moved_out_at = now()
+  where id = p_occupant and moved_out_at is null
+  returning * into v_row;
+
+  -- Only flips back to vacant if nobody else current remains — a room can
+  -- have more than one occupant on record.
+  if not exists (select 1 from res_room_occupants where room_id = v_room and moved_out_at is null) then
+    update res_rooms set status = 'vacant' where id = v_room;
+    perform public.res_notify_room_vacancy_watchers(v_room);
+  end if;
+
+  return v_row;
+end;
+$$;
+
+-- The landlord's one-click toggle. Independent of occupant records — a
+-- landlord who never adds an occupant row can still mark a room vacant or
+-- occupied directly.
+create or replace function public.res_set_room_status(p_room uuid, p_status text)
+returns public.res_rooms
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  v_row res_rooms;
+  v_was_vacant boolean;
+begin
+  if not public.res_owns_room(p_room) then raise exception 'not_your_room'; end if;
+  if p_status not in ('vacant', 'occupied') then raise exception 'invalid_status'; end if;
+
+  select (status = 'vacant') into v_was_vacant from res_rooms where id = p_room;
+
+  update res_rooms set status = p_status where id = p_room
+  returning * into v_row;
+
+  if p_status = 'vacant' and not v_was_vacant then
+    perform public.res_notify_room_vacancy_watchers(p_room);
+  end if;
+
+  return v_row;
+end;
+$$;
+
+-- Shared by the manual toggle above and res_end_room_occupancy() (section
+-- 10) so a watcher is told no matter which path freed the room up. Fans out
+-- into the Gruvs-owned notifications rail, same shape as the broadcast sends
+-- elsewhere in this file, then clears the watches it just fired — a one-time
+-- "it's free" ping, not a standing subscription.
+create or replace function public.res_notify_room_vacancy_watchers(p_room uuid)
+returns void
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  v_room res_rooms;
+begin
+  select * into v_room from res_rooms where id = p_room;
+  if v_room.id is null or v_room.listing_id is null then return; end if;
+
+  insert into notifications (recipient_id, type, title, body, message, data, action_url)
+  select
+    w.user_id,
+    'res_room_vacancy',
+    'A room you were watching is now available',
+    coalesce(v_room.label, 'Room') || ' is now vacant.',
+    coalesce(v_room.label, 'Room') || ' is now vacant.',
+    jsonb_build_object('room_id', v_room.id, 'listing_id', v_room.listing_id),
+    '/dashboard/housing?listing=' || v_room.listing_id::text
+  from res_room_vacancy_watches w
+  where w.room_id = p_room;
+
+  delete from res_room_vacancy_watches where room_id = p_room;
+end;
+$$;
+
+-- A tenant asks to be told when a room frees up, by the listing they're
+-- looking at. Refused (rather than silently accepted and never firing) when
+-- the listing isn't a room-inventory listing at all, or the room is already
+-- vacant right now.
+create or replace function public.res_watch_room_vacancy(p_listing uuid)
+returns public.res_room_vacancy_watches
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  v_row res_room_vacancy_watches;
+  v_room_id uuid;
+  v_status text;
+begin
+  if auth.uid() is null then raise exception 'not signed in'; end if;
+
+  select id, status into v_room_id, v_status from res_rooms where listing_id = p_listing;
+  if v_room_id is null then raise exception 'not_a_room_listing'; end if;
+  if v_status = 'vacant' then raise exception 'room_already_vacant: it is available right now'; end if;
+
+  insert into res_room_vacancy_watches (room_id, listing_id, user_id)
+  values (v_room_id, p_listing, auth.uid())
+  on conflict (listing_id, user_id) do nothing
+  returning * into v_row;
+
+  if v_row.id is null then
+    select * into v_row from res_room_vacancy_watches where listing_id = p_listing and user_id = auth.uid();
+  end if;
+
+  return v_row;
+end;
+$$;
+
+create or replace function public.res_unwatch_room_vacancy(p_listing uuid)
+returns void
+language plpgsql security definer
+set search_path = public
+as $$
+begin
+  delete from res_room_vacancy_watches where listing_id = p_listing and user_id = auth.uid();
+end;
+$$;
+
+-- Tells the browsing UI whether a listing is even a room-inventory listing,
+-- and whether it's currently occupied — without exposing anything about
+-- res_rooms itself, which stays landlord-private. A tenant legitimately
+-- needs "is this vacant right now" to decide whether "Notify me" makes sense
+-- to show at all; everything else about the room stays out of this.
+create or replace function public.res_room_listing_status(p_listing_ids uuid[])
+returns table (listing_id uuid, is_vacant boolean)
+language sql stable security definer
+set search_path = public
+as $$
+  select r.listing_id, (r.status = 'vacant')
+  from res_rooms r
+  where r.listing_id = any(p_listing_ids);
+$$;
+
+-- ── 4. GRANTS ──────────────────────────────────────────────────────────────
+
+revoke execute on function public.res_room_listing_status(uuid[]) from public, anon;
+grant execute on function public.res_room_listing_status(uuid[]) to authenticated, service_role;
+
+revoke execute on function public.res_set_room_status(uuid,text) from public, anon;
+revoke execute on function public.res_notify_room_vacancy_watchers(uuid) from public, anon, authenticated;
+revoke execute on function public.res_watch_room_vacancy(uuid) from public, anon;
+revoke execute on function public.res_unwatch_room_vacancy(uuid) from public, anon;
+
+grant execute on function public.res_set_room_status(uuid,text) to authenticated, service_role;
+grant execute on function public.res_notify_room_vacancy_watchers(uuid) to service_role;
+grant execute on function public.res_watch_room_vacancy(uuid) to authenticated, service_role;
+grant execute on function public.res_unwatch_room_vacancy(uuid) to authenticated, service_role;

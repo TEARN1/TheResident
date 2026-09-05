@@ -10,7 +10,7 @@ import {
   // for them to act as. It's exported from roomInventory.ts for whenever an
   // occupant-facing "my tenancy" screen picks it up.
   fetchRooms, fetchOccupants, createRoom, addRoomOccupant, endRoomOccupancy,
-  advertiseRoom,
+  advertiseRoom, setRoomStatus,
   sortRoomsForLandlord, isCurrentOccupant, occupantDisplayName, MAX_ROOM_PHOTOS,
   type Room, type RoomOccupant
 } from '../../../../utils/roomInventory'
@@ -154,6 +154,20 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
     }
   }
 
+  const handleToggleStatus = async (room: Room) => {
+    setBusyRoomId(room.id)
+    try {
+      const next = room.status === 'vacant' ? 'occupied' : 'vacant'
+      await setRoomStatus(room.id, next)
+      if (next === 'vacant') onNotify('Marked vacant — anyone watching this room has been notified.')
+      await load()
+    } catch (err) {
+      onNotify(getErrorMessage(err))
+    } finally {
+      setBusyRoomId(null)
+    }
+  }
+
   const handleAdvertise = async (roomId: string) => {
     setBusyRoomId(roomId)
     try {
@@ -191,8 +205,15 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-white truncate">{room.label}</p>
-                    <p className="text-[10px] text-gray-500">
-                      {room.status === 'vacant' ? 'Vacant' : 'Occupied'}
+                    <p className="text-[10px] text-gray-500 flex items-center gap-1 flex-wrap">
+                      <button
+                        onClick={() => handleToggleStatus(room)}
+                        disabled={busyRoomId === room.id}
+                        title="Click to flip vacant/occupied"
+                        className={`font-black uppercase tracking-widest hover:underline disabled:opacity-50 ${room.status === 'vacant' ? 'text-emerald-400' : 'text-gray-400'}`}
+                      >
+                        {room.status === 'vacant' ? 'Vacant' : 'Occupied'}
+                      </button>
                       {room.price ? ` · ${room.currency} ${room.price}` : ''}
                       {room.listingId ? ' · advertised' : ''}
                     </p>

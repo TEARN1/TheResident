@@ -218,3 +218,43 @@ export async function advertiseRoom(roomId: string): Promise<string> {
   const row = (Array.isArray(data) ? data[0] : data) as DbRow
   return row.id as string
 }
+
+/**
+ * The landlord's one-click toggle — independent of whether they track
+ * occupants in the app at all. Flipping to 'vacant' fires
+ * res_notify_room_vacancy_watchers() server-side.
+ */
+export async function setRoomStatus(roomId: string, status: RoomStatus): Promise<Room> {
+  if (!supabase) throw new Error('Not connected')
+  const { data, error } = await supabase.rpc('res_set_room_status', { p_room: roomId, p_status: status })
+  if (error) throw error
+  return mapRoom((Array.isArray(data) ? data[0] : data) as DbRow)
+}
+
+/**
+ * A tenant asks to be told when a room (identified by its listing, which is
+ * all the browsing UI has) opens back up. One-shot — the server clears the
+ * watch the moment it fires.
+ */
+export async function watchRoomVacancy(listingId: string): Promise<void> {
+  if (!supabase) throw new Error('Not connected')
+  const { error } = await supabase.rpc('res_watch_room_vacancy', { p_listing: listingId })
+  if (error) throw error
+}
+
+export async function unwatchRoomVacancy(listingId: string): Promise<void> {
+  if (!supabase) throw new Error('Not connected')
+  const { error } = await supabase.rpc('res_unwatch_room_vacancy', { p_listing: listingId })
+  if (error) throw error
+}
+
+/** Which of these listings the caller already has a vacancy watch on. */
+export async function fetchWatchedListingIds(listingIds: string[]): Promise<Set<string>> {
+  if (!supabase || listingIds.length === 0) return new Set()
+  const { data, error } = await supabase
+    .from('res_room_vacancy_watches')
+    .select('listing_id')
+    .in('listing_id', listingIds)
+  if (error || !data) return new Set()
+  return new Set(data.map(row => row.listing_id as string))
+}
