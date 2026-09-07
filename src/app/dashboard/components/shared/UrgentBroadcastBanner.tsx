@@ -90,7 +90,7 @@ export default function UrgentBroadcastBanner() {
       <div className="flex items-start gap-3">
         <AlertTriangle size={18} className={critical ? 'text-danger shrink-0 mt-0.5' : 'text-warning shrink-0 mt-0.5'} />
         <div className="min-w-0 flex-1">
-          <p className={`text-[9px] font-black uppercase tracking-widest ${critical ? 'text-danger' : 'text-warning'}`}>
+          <p className={`text-xs font-black uppercase tracking-widest ${critical ? 'text-danger' : 'text-warning'}`}>
             {notice.unitName}
           </p>
           <p className="text-sm font-bold text-content mt-0.5 break-words">{notice.title}</p>
@@ -98,24 +98,24 @@ export default function UrgentBroadcastBanner() {
           {/* An area notice arrives without being followed, so saying which
               area it covered is the only thing that explains why it is here. */}
           {notice.source === 'area' && notice.targetLabel && (
-            <p className="text-[10px] text-content-muted mt-1">
+            <p className="text-xs text-content-muted mt-1">
               Sent to everyone in {notice.targetLabel}
             </p>
           )}
           {pending.length > 1 && (
-            <p className="text-[10px] text-content-muted mt-1">
+            <p className="text-xs text-content-muted mt-1">
               {pending.length - 1} more {pending.length - 1 === 1 ? 'notice' : 'notices'} after this
             </p>
           )}
         </div>
       </div>
 
-      {error && <p className="text-[10px] text-danger">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
 
       <button
         onClick={() => handleAck(notice)}
         disabled={busy}
-        className={`w-full flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg transition-colors disabled:opacity-50 ${
+        className={`w-full flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-widest px-3 py-2 rounded-lg transition-colors disabled:opacity-50 ${
           critical
             ? 'bg-danger/20 text-danger hover:bg-danger/30'
             : 'bg-warning/20 text-warning hover:bg-warning/30'

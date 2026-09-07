@@ -55,7 +55,7 @@ export default function GruvsConnectionsWidget() {
           <p className="text-xs font-black text-content uppercase tracking-widest">
             {connections.length} cross-app connection{connections.length === 1 ? '' : 's'}
           </p>
-          <p className="text-[10px] text-content-muted">People you already know are here too — visible only to you</p>
+          <p className="text-xs text-content-muted">People you already know are here too — visible only to you</p>
         </div>
       </div>
 
@@ -71,7 +71,7 @@ export default function GruvsConnectionsWidget() {
               {person.avatarUrl ? (
                 <Image src={person.avatarUrl} alt={person.displayName} width={28} height={28} className="w-7 h-7 rounded-full object-cover" />
               ) : (
-                <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-[10px] font-black text-accent">
+                <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-black text-accent">
                   {person.displayName.charAt(0)}
                 </div>
               )}

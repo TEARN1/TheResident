@@ -68,7 +68,7 @@ export default function ClientErrorAdminPanel() {
           <select
             value={hours}
             onChange={e => setHours(Number(e.target.value))}
-            className="bg-surface-sunken/40 border border-default rounded-lg text-[10px] font-bold uppercase tracking-widest text-content px-2 py-1.5"
+            className="bg-surface-sunken/40 border border-default rounded-lg text-xs font-bold uppercase tracking-widest text-content px-2 py-1.5"
           >
             <option value={24}>24h</option>
             <option value={24 * 7}>7d</option>
@@ -85,7 +85,7 @@ export default function ClientErrorAdminPanel() {
         </div>
       </div>
 
-      <p className="text-[10px] text-content-subtle">
+      <p className="text-xs text-content-subtle">
         Founder-only. Nothing here changes anything on its own — it reports.
       </p>
 
@@ -107,7 +107,7 @@ export default function ClientErrorAdminPanel() {
                 <Icon size={14} className={`${tone.cls} shrink-0 mt-0.5`} />
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-content">{h.component}</p>
-                  <p className="text-[10px] text-content-muted leading-relaxed">{h.detail}</p>
+                  <p className="text-xs text-content-muted leading-relaxed">{h.detail}</p>
                 </div>
               </div>
             )
@@ -115,7 +115,7 @@ export default function ClientErrorAdminPanel() {
         </div>
       )}
 
-      <p className="text-[10px] font-black uppercase tracking-widest text-content-muted pt-1">
+      <p className="text-xs font-black uppercase tracking-widest text-content-muted pt-1">
         Crashes
       </p>
 
@@ -127,14 +127,14 @@ export default function ClientErrorAdminPanel() {
             <div key={row.label} className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-1">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-bold text-content">{row.label}</span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-danger">
+                <span className="text-xs font-black uppercase tracking-widest text-danger">
                   {row.occurrences}× &middot; {row.affectedUsers} user{row.affectedUsers === 1 ? '' : 's'}
                 </span>
               </div>
               {row.sampleMessage && (
-                <p className="text-[10px] text-content-muted font-mono truncate">{row.sampleMessage}</p>
+                <p className="text-xs text-content-muted font-mono truncate">{row.sampleMessage}</p>
               )}
-              <p className="text-[9px] text-content-subtle">Last seen {new Date(row.lastSeen).toLocaleString()}</p>
+              <p className="text-xs text-content-subtle">Last seen {new Date(row.lastSeen).toLocaleString()}</p>
             </div>
           ))}
         </div>

@@ -119,7 +119,7 @@ export default function MapSearchBox({ onSelect }: Props) {
       {open && visibleResults.length === 0 && showRecent && (
         <div className="absolute z-[500] mt-1 w-full glass-panel border border-default rounded-xl overflow-hidden max-h-64 overflow-y-auto">
           <div className="flex items-center justify-between px-3 py-1.5 border-b border-subtle">
-            <span className="text-[9px] font-black uppercase tracking-widest text-content-muted">Recent</span>
+            <span className="text-xs font-black uppercase tracking-widest text-content-muted">Recent</span>
             <button onClick={clearRecent} className="text-content-muted hover:text-content" aria-label="Clear recent searches">
               <X size={11} />
             </button>

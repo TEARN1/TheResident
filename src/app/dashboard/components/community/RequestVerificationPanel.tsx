@@ -94,14 +94,14 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
   }
 
   if (loading) {
-    return <p className="text-[11px] text-content-muted flex items-center gap-2">
+    return <p className="text-xs text-content-muted flex items-center gap-2">
       <Loader size={13} className="animate-spin" /> Checking verification…
     </p>
   }
 
   if (unitVerified) {
     return (
-      <p className="text-[11px] text-success flex items-center gap-1.5">
+      <p className="text-xs text-success flex items-center gap-1.5">
         <BadgeCheck size={13} /> {unitName} is verified and can send to its area.
       </p>
     )
@@ -109,14 +109,14 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
 
   return (
     <div className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-2.5">
-      <p className="text-[11px] text-content leading-relaxed">{describeVerification(state)}</p>
+      <p className="text-xs text-content leading-relaxed">{describeVerification(state)}</p>
 
       {state?.status === 'pending' && (
         <button
           type="button"
           onClick={withdraw}
           disabled={busy}
-          className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-danger disabled:opacity-50"
+          className="text-xs font-black uppercase tracking-widest text-content-muted hover:text-danger disabled:opacity-50"
         >
           Withdraw application
         </button>
@@ -126,7 +126,7 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`${goldButtonClass()} text-[10px] px-3 py-2 flex items-center gap-1.5`}
+          className={`${goldButtonClass()} text-xs px-3 py-2 flex items-center gap-1.5`}
         >
           <BadgeCheck size={12} /> Apply to be verified
         </button>
@@ -136,7 +136,7 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
         <div className="space-y-2.5">
           <div className="flex items-start gap-2 bg-info/5 border border-info/20 rounded-lg p-2.5">
             <Info size={12} className="text-info mt-0.5 shrink-0" />
-            <p className="text-[10px] text-content-muted leading-relaxed">
+            <p className="text-xs text-content-muted leading-relaxed">
               Verification lets this office send notices to <strong className="text-content">everyone living in
               a specific area</strong>, whether or not they follow you. Someone reviews the evidence before that
               is granted, and it can be withdrawn if the channel is misused.
@@ -174,14 +174,14 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
               type="button"
               onClick={submit}
               disabled={busy}
-              className={`${goldButtonClass()} text-[10px] px-4 py-2 flex items-center gap-1.5 disabled:opacity-50`}
+              className={`${goldButtonClass()} text-xs px-4 py-2 flex items-center gap-1.5 disabled:opacity-50`}
             >
               <Send size={12} /> {busy ? 'Sending…' : 'Send application'}
             </button>
             <button
               type="button"
               onClick={() => { setOpen(false); setError(null) }}
-              className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-content px-3 py-2"
+              className="text-xs font-black uppercase tracking-widest text-content-muted hover:text-content px-3 py-2"
             >
               <X size={12} />
             </button>
@@ -189,7 +189,7 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
         </div>
       )}
 
-      {error && <p className="text-[11px] text-danger">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   )
 }

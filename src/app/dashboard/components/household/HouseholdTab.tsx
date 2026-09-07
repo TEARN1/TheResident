@@ -207,7 +207,7 @@ export default function HouseholdTab({
                        </div>
                        <div>
                           <p className="text-sm font-bold text-content">{member.name} {member.userId === currentUserId && '(You)'}</p>
-                          <p className="text-[10px] text-content-muted capitalize">{member.role}</p>
+                          <p className="text-xs text-content-muted capitalize">{member.role}</p>
                        </div>
                     </div>
                     <div className="flex flex-col items-end">
@@ -224,7 +224,7 @@ export default function HouseholdTab({
                   <Shield size={20} className="text-info shrink-0" />
                   <div className="space-y-1">
                      <p className="text-xs font-bold text-content">Trust Level: High</p>
-                     <p className="text-[10px] text-content-muted">Your household has a perfect chore completion rate this month.</p>
+                     <p className="text-xs text-content-muted">Your household has a perfect chore completion rate this month.</p>
                   </div>
                </div>
             </div>
@@ -236,20 +236,20 @@ export default function HouseholdTab({
                  </p>
                  {activeTenancies.map(t => (
                    <div key={t.id} className="flex items-center justify-between gap-2">
-                      <p className="text-[10px] text-content-muted">
+                      <p className="text-xs text-content-muted">
                          {t.tenantId === currentUserId ? 'You are renting here.' : 'They rent from you here.'}
                       </p>
                       <button
                         onClick={() => endTenancy(t.id)}
                         disabled={ending === t.id}
-                        className="text-[10px] font-bold text-danger hover:text-danger uppercase tracking-widest disabled:opacity-50 shrink-0"
+                        className="text-xs font-bold text-danger hover:text-danger uppercase tracking-widest disabled:opacity-50 shrink-0"
                       >
                         {ending === t.id ? 'Ending…' : 'End Tenancy'}
                       </button>
                    </div>
                  ))}
-                 {endError && <p className="text-[10px] text-danger">{endError}</p>}
-                 <p className="text-[9px] text-content-subtle">Ending a tenancy frees the room and lets you apply elsewhere — you can only hold one active tenancy at a time.</p>
+                 {endError && <p className="text-xs text-danger">{endError}</p>}
+                 <p className="text-xs text-content-subtle">Ending a tenancy frees the room and lets you apply elsewhere — you can only hold one active tenancy at a time.</p>
               </div>
             )}
          </div>
@@ -271,23 +271,23 @@ export default function HouseholdTab({
                    <div key={chore.id} className={`glass-panel p-5 border-l-4 ${chore.status === 'completed' ? 'border-l-green-500 opacity-60' : 'border-l-gold-primary'}`}>
                       <div className="flex justify-between items-start mb-2">
                          <h4 className={`font-bold ${chore.status === 'completed' ? 'text-content-muted line-through' : 'text-content'}`}>{chore.title}</h4>
-                         <span className="text-[10px] bg-accent/10 text-accent px-1.5 py-0.5 rounded">+{chore.points} XP</span>
+                         <span className="text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded">+{chore.points} XP</span>
                       </div>
                       <div className="flex justify-between items-end mt-4">
                          <div className="space-y-1">
-                            <p className="text-[10px] text-content-muted">Assigned to: <span className="text-content font-bold">{members.find(m => m.userId === chore.assignedTo)?.name || 'Housemate'}</span></p>
-                            <p className="text-[10px] text-content-muted">Due: <span className="text-content">{chore.dueDate}</span></p>
+                            <p className="text-xs text-content-muted">Assigned to: <span className="text-content font-bold">{members.find(m => m.userId === chore.assignedTo)?.name || 'Housemate'}</span></p>
+                            <p className="text-xs text-content-muted">Due: <span className="text-content">{chore.dueDate}</span></p>
                          </div>
                          {chore.status !== 'completed' && chore.assignedTo === currentUserId && (
                            <button
                             onClick={() => onComplete?.(chore.id)}
-                            className="bg-accent text-content-on-accent font-bold px-4 py-1.5 rounded-lg text-[10px] hover:scale-105 transition-transform"
+                            className="bg-accent text-content-on-accent font-bold px-4 py-1.5 rounded-lg text-xs hover:scale-105 transition-transform"
                            >
                             Mark Done
                            </button>
                          )}
                          {chore.status === 'completed' && (
-                           <span className="text-success flex items-center gap-1 text-[10px] font-bold">
+                           <span className="text-success flex items-center gap-1 text-xs font-bold">
                               <CheckCircle2 size={12} /> COMPLETED
                            </span>
                          )}
@@ -350,7 +350,7 @@ export default function HouseholdTab({
                <h3 className="text-base font-bold text-content flex items-center gap-2">
                   <Package size={18} className="text-accent" /> Communal Cleaning Supplies Counter
                </h3>
-               <p className="text-[11px] text-content-muted">Tap a supply to toggle between OK and Low Stock so roommates know what to buy next.</p>
+               <p className="text-xs text-content-muted">Tap a supply to toggle between OK and Low Stock so roommates know what to buy next.</p>
                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {Object.entries(supplies).map(([name, status]) => (
                      <button
@@ -363,7 +363,7 @@ export default function HouseholdTab({
                         }`}
                      >
                         <span className="truncate">{name}</span>
-                        <span className={`text-[9px] font-black uppercase tracking-widest ${status === 'low' ? 'text-danger' : 'text-success'}`}>
+                        <span className={`text-xs font-black uppercase tracking-widest ${status === 'low' ? 'text-danger' : 'text-success'}`}>
                            {status === 'low' ? '⚠️ Low Stock' : '✓ Stock OK'}
                         </span>
                      </button>
@@ -377,7 +377,7 @@ export default function HouseholdTab({
                   <h4 className="text-sm font-bold text-content flex items-center gap-2">
                      <Calendar size={16} className="text-accent" /> Guest Stay Tracker
                   </h4>
-                  <p className="text-[10px] text-content-muted">Log guest nights to maintain house rule compliance (Max 5 nights/month per guest).</p>
+                  <p className="text-xs text-content-muted">Log guest nights to maintain house rule compliance (Max 5 nights/month per guest).</p>
                   <form onSubmit={handleAddGuestLog} className="flex gap-2">
                      <input
                         value={newGuestName}
@@ -407,7 +407,7 @@ export default function HouseholdTab({
                   <h4 className="text-sm font-bold text-content flex items-center gap-2">
                      <Moon size={16} className="text-accent" /> House Quiet Hours
                   </h4>
-                  <p className="text-[10px] text-content-muted">Standard quiet window is active between 22:00 – 07:00 daily.</p>
+                  <p className="text-xs text-content-muted">Standard quiet window is active between 22:00 – 07:00 daily.</p>
                   <button
                      onClick={() => setQuietHoursActive(!quietHoursActive)}
                      className={`w-full p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-between ${
@@ -417,7 +417,7 @@ export default function HouseholdTab({
                      }`}
                   >
                      <span>Quiet Hours Auto-Mute</span>
-                     <span className="text-[10px] uppercase font-black tracking-widest">{quietHoursActive ? 'Active (22:00-07:00)' : 'Disabled'}</span>
+                     <span className="text-xs uppercase font-black tracking-widest">{quietHoursActive ? 'Active (22:00-07:00)' : 'Disabled'}</span>
                   </button>
                </div>
             </div>

@@ -366,21 +366,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                              setAlertNotification('All notifications marked as read')
                              setTimeout(() => setAlertNotification(null), 3000)
                            }}
-                           className="text-[10px] text-accent font-bold hover:underline"
+                           className="text-xs text-accent font-bold hover:underline"
                          >
                            {t('markAllRead', lang)}
                          </button>
                       </div>
                       <div className="space-y-3">
                          {notifications.items.length === 0 ? (
-                            <p className="text-[10px] text-content-subtle italic text-center py-4">{t('noRecentAlerts', lang)}</p>
+                            <p className="text-xs text-content-subtle italic text-center py-4">{t('noRecentAlerts', lang)}</p>
                          ) : (
                             notifications.items.map(item => {
                                const rowClasses = `p-3 rounded-lg border w-full text-left ${item.read ? 'bg-surface-sunken/20 border-subtle opacity-60' : 'bg-accent/5 border-accent/20'} ${item.actionUrl ? 'cursor-pointer hover:border-accent/40 transition-colors' : ''}`
                                const body = (
                                   <>
-                                     <p className="text-[10px] font-black text-content uppercase tracking-tight">{item.title}</p>
-                                     <p className="text-[10px] text-content-muted mt-1">{item.message}</p>
+                                     <p className="text-xs font-black text-content uppercase tracking-tight">{item.title}</p>
+                                     <p className="text-xs text-content-muted mt-1">{item.message}</p>
                                   </>
                                )
                                if (!item.actionUrl) {
@@ -424,6 +424,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             key={item.href}
             href={item.href}
             className={`bottom-nav-item ${pathname === item.href ? 'active' : ''}`}
+            // The visible label is hidden at 380px and below (six of them do
+            // not fit legibly), so the accessible name has to come from here.
+            aria-label={item.name}
+            aria-current={pathname === item.href ? 'page' : undefined}
           >
             <item.icon size={20} />
             <span>{item.name}</span>

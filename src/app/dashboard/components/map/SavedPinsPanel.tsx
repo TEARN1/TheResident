@@ -52,7 +52,7 @@ export default function SavedPinsPanel({ pending, pins, loading, onSave, onDelet
 
       {pending && (
         <div className="mb-4 p-3 bg-surface-raised/5 border border-default rounded-xl space-y-2">
-          <p className="text-[11px] text-content-muted uppercase font-bold">Save this location</p>
+          <p className="text-xs text-content-muted uppercase font-bold">Save this location</p>
           <p className="text-xs text-content truncate">{pending.label}</p>
           <div className="flex gap-2">
             <input
@@ -69,7 +69,7 @@ export default function SavedPinsPanel({ pending, pins, loading, onSave, onDelet
               Save
             </button>
           </div>
-          {error && <p className="text-[11px] text-danger">{error}</p>}
+          {error && <p className="text-xs text-danger">{error}</p>}
         </div>
       )}
 

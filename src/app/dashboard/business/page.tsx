@@ -115,9 +115,9 @@ export default function BusinessPage() {
   // Completeness checklist — every item is a real, checkable fact, not a
   // fabricated "profile strength" score.
   const checklist = [
-    { label: 'Verified resident badge', done: !!trust?.isVerified, action: <UpgradeButton item="verification_speedup" className="text-[10px] text-accent font-black uppercase hover:underline" /> },
+    { label: 'Verified resident badge', done: !!trust?.isVerified, action: <UpgradeButton item="verification_speedup" className="text-xs text-accent font-black uppercase hover:underline" /> },
     { label: isLandlord ? 'At least one active listing' : 'Service listed', done: isLandlord ? activeListings > 0 : isProvider },
-    { label: 'On a paid visibility tier', done: !!tier, action: !tier && <Link href="#tiers" className="text-[10px] text-accent font-black uppercase hover:underline">See tiers</Link> },
+    { label: 'On a paid visibility tier', done: !!tier, action: !tier && <Link href="#tiers" className="text-xs text-accent font-black uppercase hover:underline">See tiers</Link> },
     { label: isLandlord ? 'A listing currently boosted' : 'Business has a contact number', done: isLandlord ? boostedListings > 0 : !!myService?.contactNumber },
     { label: 'Has at least one review', done: hasReview }
   ]
@@ -148,7 +148,7 @@ export default function BusinessPage() {
               {tier === 'premium' ? <Crown size={20} className="text-accent" /> : tier === 'priority' ? <Zap size={20} className="text-accent" /> : <Circle size={20} className="text-content-muted" />}
               <div>
                 <p className="text-sm font-bold text-content">{tier ? (tier === 'premium' ? 'Premium' : 'Priority') : 'Free listing'}</p>
-                <p className="text-[11px] text-content-muted">
+                <p className="text-xs text-content-muted">
                   {tier ? 'You already show ahead of free listings in search.' : 'Fully listed and bookable — paying only buys extra visibility, never a requirement to be found.'}
                 </p>
               </div>
@@ -156,9 +156,9 @@ export default function BusinessPage() {
             {tier !== 'premium' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {tier !== 'priority' && (
-                  <UpgradeButton item="priority" className="w-full bg-info/10 hover:bg-info hover:text-content border border-info/30 text-info font-black py-3 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+                  <UpgradeButton item="priority" className="w-full bg-info/10 hover:bg-info hover:text-content border border-info/30 text-info font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95" />
                 )}
-                <UpgradeButton item="premium" className="w-full bg-info/10 hover:bg-info hover:text-content border border-info/30 text-info font-black py-3 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+                <UpgradeButton item="premium" className="w-full bg-info/10 hover:bg-info hover:text-content border border-info/30 text-info font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95" />
               </div>
             )}
           </>
@@ -190,7 +190,7 @@ export default function BusinessPage() {
           <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
             <ShieldCheck size={16} /> Get Found Faster
           </h2>
-          <span className="text-[10px] text-content-muted font-bold">{completedCount}/{checklist.length}</span>
+          <span className="text-xs text-content-muted font-bold">{completedCount}/{checklist.length}</span>
         </div>
         <div className="w-full h-1.5 bg-surface-raised/5 rounded-full overflow-hidden">
           <div className="h-full bg-accent transition-all" style={{ width: `${(completedCount / checklist.length) * 100}%` }} />
@@ -228,7 +228,7 @@ export default function BusinessPage() {
         <ReviewsList userId={currentUser.id} />
       </div>
 
-      <p className="text-[10px] text-content-subtle text-center px-4">
+      <p className="text-xs text-content-subtle text-center px-4">
         Pricing is self-serve and pay-for-priority: {formatPrice('priority')} / {formatPrice('premium')} per month. {PRICING.priority.reasoning}
       </p>
     </div>
@@ -240,7 +240,7 @@ function StatCard({ icon: Icon, label, value, accent }: { icon: React.ComponentT
     <div className="glass-panel p-4 space-y-1">
       <Icon size={16} className={accent || 'text-content-muted'} />
       <p className={`text-xl font-black ${accent || 'text-content'}`}>{value}</p>
-      <p className="text-[10px] text-content-muted uppercase tracking-widest font-bold">{label}</p>
+      <p className="text-xs text-content-muted uppercase tracking-widest font-bold">{label}</p>
     </div>
   )
 }

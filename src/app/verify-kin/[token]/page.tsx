@@ -72,7 +72,7 @@ export default function VerifyKinPage({ params }: { params: Promise<{ token: str
               <strong className="text-content">{claim.requesterName}</strong> listed <strong className="text-content">{claim.claimedName}</strong> as their <strong className="text-accent">{claim.claimedRelationship.toLowerCase()}</strong> on The Resident.
             </p>
             <p className="text-xs text-content-muted">If you&apos;re {claim.claimedName}, is that true?</p>
-            {submitError && <p className="text-[11px] text-danger">{submitError}</p>}
+            {submitError && <p className="text-xs text-danger">{submitError}</p>}
             <div className="flex gap-3">
               <button
                 onClick={() => respond(true)}
@@ -89,7 +89,7 @@ export default function VerifyKinPage({ params }: { params: Promise<{ token: str
                 <X size={14} /> No
               </button>
             </div>
-            <p className="text-[10px] text-content-subtle">You don&apos;t need a Resident account to answer this.</p>
+            <p className="text-xs text-content-subtle">You don&apos;t need a Resident account to answer this.</p>
           </>
         )}
 

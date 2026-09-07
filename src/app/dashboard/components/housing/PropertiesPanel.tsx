@@ -224,20 +224,20 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
   const badgeFor = (status: ResProperty['doc_review_status']) => {
     if (status === 'reviewed') {
       return (
-        <span className="flex items-center gap-1.5 bg-accent/10 border border-accent/30 text-accent px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">
+        <span className="flex items-center gap-1.5 bg-accent/10 border border-accent/30 text-accent px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest">
           <ShieldCheck size={12} /> Verified
         </span>
       )
     }
     if (status === 'pending') {
       return (
-        <span className="flex items-center gap-1.5 bg-warning/10 border border-warning/30 text-warning px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">
+        <span className="flex items-center gap-1.5 bg-warning/10 border border-warning/30 text-warning px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest">
           <ShieldQuestion size={12} /> Under Review
         </span>
       )
     }
     return (
-      <span className="flex items-center gap-1.5 bg-surface-raised/5 border border-default text-content-muted px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">
+      <span className="flex items-center gap-1.5 bg-surface-raised/5 border border-default text-content-muted px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest">
         <ShieldAlert size={12} /> Unverified
       </span>
     )
@@ -248,7 +248,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
       <div className="flex justify-between items-center">
         <div className="space-y-1">
           <h2 className="text-xl font-black text-content uppercase tracking-tighter italic">My <span className="text-accent">Properties</span></h2>
-          <p className="text-[10px] text-content-muted font-black uppercase tracking-widest opacity-60">Group rooms under one address, track real occupancy</p>
+          <p className="text-xs text-content-muted font-black uppercase tracking-widest opacity-60">Group rooms under one address, track real occupancy</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
@@ -262,7 +262,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
         <div className="glass-panel p-10 text-center bg-surface-sunken/40 space-y-3">
           <Home size={32} className="mx-auto text-content-subtle" />
           <p className="text-sm text-content-muted font-bold">You haven&apos;t added a property yet.</p>
-          <p className="text-[10px] text-content-subtle uppercase tracking-widest font-black">Create one to start grouping rooms by address</p>
+          <p className="text-xs text-content-subtle uppercase tracking-widest font-black">Create one to start grouping rooms by address</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -282,7 +282,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                     <div className="flex items-center gap-2 text-content font-black text-sm">
                       <MapPin size={14} className="text-accent shrink-0" /> {p.address}
                     </div>
-                    <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">{p.suburb}, {p.city}</p>
+                    <p className="text-xs text-content-muted font-black uppercase tracking-widest">{p.suburb}, {p.city}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {badgeFor(p.doc_review_status)}
@@ -298,13 +298,13 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                 </div>
 
                 {verifyInfoOpenId === p.id && (
-                  <p className="text-[10px] text-content-muted bg-surface-raised/5 border border-default rounded-lg p-3 leading-relaxed">
+                  <p className="text-xs text-content-muted bg-surface-raised/5 border border-default rounded-lg p-3 leading-relaxed">
                     <strong className="text-content">Unverified</strong> means nobody has checked this address yet — anyone can list a property. <strong className="text-content">Under review</strong> means a proof document (lease, utility bill, or title deed) was submitted and is waiting to be checked. <strong className="text-accent">Verified</strong> means that document was reviewed and the address matched. It&apos;s a check on the landlord&apos;s claim to the address, not a guarantee about the room itself.
                   </p>
                 )}
 
                 <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-content-muted">
+                  <div className="flex justify-between text-xs font-black uppercase tracking-widest text-content-muted">
                     <span>{occupied} of {totalRooms} rooms occupied</span>
                     <span className="text-accent">{occ?.listed_rooms ?? rooms.length} listed</span>
                   </div>
@@ -318,7 +318,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                     {rooms.map((r, i) => (
                       <div key={r.id} className="flex justify-between items-center text-xs">
                         <span className="text-content font-bold truncate">{r.title}</span>
-                        <span className="text-[9px] text-content-subtle font-black uppercase tracking-widest shrink-0 ml-2">Room {i + 1} of {totalRooms}</span>
+                        <span className="text-xs text-content-subtle font-black uppercase tracking-widest shrink-0 ml-2">Room {i + 1} of {totalRooms}</span>
                       </div>
                     ))}
                   </div>
@@ -334,19 +334,19 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                 {p.doc_review_status === 'none' && (
                   <button
                     onClick={() => openVerify(p)}
-                    className="w-full bg-surface-raised/5 hover:bg-accent/10 border border-default hover:border-accent/30 text-content hover:text-accent font-black py-3 rounded-xl transition-all text-[10px] uppercase tracking-widest"
+                    className="w-full bg-surface-raised/5 hover:bg-accent/10 border border-default hover:border-accent/30 text-content hover:text-accent font-black py-3 rounded-xl transition-all text-xs uppercase tracking-widest"
                   >
                     Verify This Address
                   </button>
                 )}
                 {p.doc_review_status === 'pending' && p.doc_review_note && (
-                  <p className="text-[10px] text-warning/80">{p.doc_review_note}</p>
+                  <p className="text-xs text-warning/80">{p.doc_review_note}</p>
                 )}
 
                 <button
                   onClick={() => handleDeleteProperty(p)}
                   disabled={deleting && confirmDeleteId === p.id}
-                  className={`w-full flex items-center justify-center gap-2 font-black py-3 rounded-xl transition-all text-[10px] uppercase tracking-widest border ${
+                  className={`w-full flex items-center justify-center gap-2 font-black py-3 rounded-xl transition-all text-xs uppercase tracking-widest border ${
                     confirmDeleteId === p.id
                       ? 'bg-danger/20 border-danger/40 text-danger'
                       : 'bg-surface-raised/5 border-default text-content-muted hover:text-danger hover:border-danger/30'
@@ -375,33 +375,33 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
               </div>
               <form onSubmit={handleCreateProperty} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 <div className="space-y-2">
-                  <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Search Address (drops the pin)</label>
+                  <label className="text-xs text-content-muted uppercase font-black tracking-widest">Search Address (drops the pin)</label>
                   <MapSearchBox onSelect={handleSelectPlace} />
                   {newLat != null && newLon != null && (
-                    <p className="text-[10px] text-accent font-bold">Pinned at {newLat.toFixed(5)}, {newLon.toFixed(5)}</p>
+                    <p className="text-xs text-accent font-bold">Pinned at {newLat.toFixed(5)}, {newLon.toFixed(5)}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Street Address</label>
+                  <label className="text-xs text-content-muted uppercase font-black tracking-widest">Street Address</label>
                   <input value={newAddress} onChange={e => setNewAddress(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="e.g. 12 Vine Street" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Suburb</label>
+                    <label className="text-xs text-content-muted uppercase font-black tracking-widest">Suburb</label>
                     <input value={newSuburb} onChange={e => setNewSuburb(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="e.g. Kreuzberg" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">City</label>
+                    <label className="text-xs text-content-muted uppercase font-black tracking-widest">City</label>
                     <input value={newCity} onChange={e => setNewCity(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="e.g. Berlin" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Total Rooms</label>
+                    <label className="text-xs text-content-muted uppercase font-black tracking-widest">Total Rooms</label>
                     <input type="number" min={1} max={50} value={newTotalRooms} onChange={e => setNewTotalRooms(Number(e.target.value))} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Lat / Lon (fallback if search fails)</label>
+                    <label className="text-xs text-content-muted uppercase font-black tracking-widest">Lat / Lon (fallback if search fails)</label>
                     <div className="flex gap-2">
                       <input type="number" step="any" value={newLat ?? ''} onChange={e => setNewLat(e.target.value ? Number(e.target.value) : null)} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="Lat" />
                       <input type="number" step="any" value={newLon ?? ''} onChange={e => setNewLon(e.target.value ? Number(e.target.value) : null)} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="Lon" />
@@ -429,15 +429,15 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
               <div className="flex justify-between items-center">
                 <div className="space-y-1">
                   <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">Verify <span className="text-accent">Address</span></h3>
-                  <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">{verifyingFor.address}</p>
+                  <p className="text-xs text-content-muted font-black uppercase tracking-widest">{verifyingFor.address}</p>
                 </div>
                 <button onClick={() => setVerifyingFor(null)} className="text-content-muted hover:text-content"><X /></button>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Proof Document URL</label>
+                <label className="text-xs text-content-muted uppercase font-black tracking-widest">Proof Document URL</label>
                 <input value={docUrl} onChange={e => setDocUrl(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="https://... (lease, utility bill, title deed)" />
-                <label className="flex items-center gap-2 text-[10px] text-content-muted font-black uppercase tracking-widest cursor-pointer hover:text-accent transition-colors w-fit">
+                <label className="flex items-center gap-2 text-xs text-content-muted font-black uppercase tracking-widest cursor-pointer hover:text-accent transition-colors w-fit">
                   <Upload size={12} />
                   {uploading ? 'Uploading...' : 'Or upload a file'}
                   <input
@@ -450,7 +450,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
               </div>
 
               {mismatchChecking && (
-                <p className="text-[10px] text-content-muted">Checking the pinned location against your typed address...</p>
+                <p className="text-xs text-content-muted">Checking the pinned location against your typed address...</p>
               )}
               {!mismatchChecking && mismatch && (
                 <div className="flex items-start gap-2 bg-warning/10 border border-warning/20 rounded-xl p-3 text-warning text-xs">

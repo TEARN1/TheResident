@@ -49,7 +49,7 @@ function SlaBadge({ report, now }: { report: ServiceReport; now: number }) {
 
   if (state === 'done') {
     return (
-      <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/20 flex items-center gap-1">
+      <span className="text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/20 flex items-center gap-1">
         <CheckCircle2 size={10} /> {describeDuration(elapsed)} total
       </span>
     )
@@ -57,14 +57,14 @@ function SlaBadge({ report, now }: { report: ServiceReport; now: number }) {
   if (state === 'overdue') {
     const over = elapsed - report.targetHours
     return (
-      <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-danger/10 text-danger border border-danger/20 flex items-center gap-1">
+      <span className="text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-danger/10 text-danger border border-danger/20 flex items-center gap-1">
         <AlertTriangle size={10} /> {describeDuration(over)} overdue
       </span>
     )
   }
   const left = report.targetHours - elapsed
   return (
-    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+    <span className={`text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex items-center gap-1 ${
       state === 'due_soon'
         ? 'bg-warning/10 text-warning border-warning/20'
         : 'bg-surface-raised/5 text-content-muted border-default'
@@ -250,14 +250,14 @@ export default function ServiceDeskPanel() {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[9px] font-mono text-content-muted">{r.reference}</span>
-              <span className="text-[9px] font-black uppercase tracking-widest text-accent">
+              <span className="text-xs font-mono text-content-muted">{r.reference}</span>
+              <span className="text-xs font-black uppercase tracking-widest text-accent">
                 {CATEGORY_LABEL[r.category]}
               </span>
               <SlaBadge report={r} now={now} />
             </div>
             <p className="text-sm font-bold text-content mt-1 break-words">{r.title}</p>
-            <p className="text-[10px] text-content-muted mt-0.5">
+            <p className="text-xs text-content-muted mt-0.5">
               {STATUS_LABEL[r.status] || r.status}
               {provider ? ` · ${provider.name}` : r.providerNameRaw ? ` · ${r.providerNameRaw}` : ''}
               {r.suburb ? ` · ${r.suburb}` : ''}
@@ -273,14 +273,14 @@ export default function ServiceDeskPanel() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] text-content-muted flex items-center gap-1">
+          <span className="text-xs text-content-muted flex items-center gap-1">
             <Users size={10} /> {confirmations} {confirmations === 1 ? 'neighbour' : 'neighbours'} confirmed
           </span>
           {!isMine && !isSettled(r.status) && (
             <button
               onClick={() => handleConfirm(r.id)}
               disabled={busyId === r.id}
-              className="text-[10px] font-black uppercase tracking-widest text-accent hover:underline disabled:opacity-50"
+              className="text-xs font-black uppercase tracking-widest text-accent hover:underline disabled:opacity-50"
             >
               This is happening to me too
             </button>
@@ -289,7 +289,7 @@ export default function ServiceDeskPanel() {
             <button
               onClick={() => handleClose(r.id)}
               disabled={busyId === r.id}
-              className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-content disabled:opacity-50"
+              className="text-xs font-black uppercase tracking-widest text-content-muted hover:text-content disabled:opacity-50"
             >
               Mark sorted
             </button>
@@ -299,7 +299,7 @@ export default function ServiceDeskPanel() {
         {expanded && (
           <div className="border-t border-subtle pt-2 space-y-2">
             {r.detail && <p className="text-xs text-content-muted">{r.detail}</p>}
-            <p className="text-[10px] text-content-subtle">
+            <p className="text-xs text-content-subtle">
               Expected within {describeDuration(r.targetHours)} of filing
               {' '}(by {new Date(targetDeadline(r)).toLocaleDateString()})
               {r.acknowledgedAt && ` · acknowledged after ${describeDuration(hoursBetween(r.createdAt, r.acknowledgedAt))}`}
@@ -307,7 +307,7 @@ export default function ServiceDeskPanel() {
             </p>
             <div className="space-y-1">
               {timeline.map(u => (
-                <div key={u.id} className="text-[10px] text-content-muted flex gap-2">
+                <div key={u.id} className="text-xs text-content-muted flex gap-2">
                   <span className="text-content-subtle shrink-0">
                     {new Date(u.createdAt).toLocaleDateString()}
                   </span>
@@ -352,12 +352,12 @@ export default function ServiceDeskPanel() {
           </div>
           <div>
             <p className="text-xs font-black text-content uppercase tracking-widest">Service Desk</p>
-            <p className="text-[10px] text-content-muted">Report a fault — and track how long the fix takes</p>
+            <p className="text-xs text-content-muted">Report a fault — and track how long the fix takes</p>
           </div>
         </div>
         <button
           onClick={() => setShowForm(v => !v)}
-          className={`${goldButtonClass({ size: 'sm' })} text-[10px] px-3 py-2 flex items-center gap-1`}
+          className={`${goldButtonClass({ size: 'sm' })} text-xs px-3 py-2 flex items-center gap-1`}
         >
           <Plus size={12} /> Report
         </button>
@@ -436,7 +436,7 @@ export default function ServiceDeskPanel() {
             />
           )}
 
-          <p className="text-[10px] text-content-muted">
+          <p className="text-xs text-content-muted">
             A {severity} {CATEGORY_LABEL[category].toLowerCase()} problem is expected to be
             dealt with within {describeDuration(expectedHours)}. You&apos;ll get a reference
             number, and your neighbours can confirm they&apos;re affected too.
@@ -446,7 +446,7 @@ export default function ServiceDeskPanel() {
             <button
               onClick={handleSubmit}
               disabled={submitting || !title.trim() || !suburb.trim() || !city.trim()}
-              className={`${goldButtonClass({ size: 'sm' })} text-[10px] px-4 py-2 disabled:opacity-50`}
+              className={`${goldButtonClass({ size: 'sm' })} text-xs px-4 py-2 disabled:opacity-50`}
             >
               {submitting ? 'Filing…' : 'File report'}
             </button>
@@ -463,11 +463,11 @@ export default function ServiceDeskPanel() {
 
       {performance.length > 0 && (
         <div className="bg-surface-sunken/20 border border-subtle rounded-xl p-3 space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-content-muted flex items-center gap-1">
+          <p className="text-xs font-black uppercase tracking-widest text-content-muted flex items-center gap-1">
             <Gauge size={12} /> How long they actually take
           </p>
           {performance.map(p => (
-            <div key={p.providerId} className="flex items-center justify-between gap-2 text-[10px]">
+            <div key={p.providerId} className="flex items-center justify-between gap-2 text-xs">
               <span className="text-content font-bold truncate">{p.providerName}</span>
               <span className="text-content-muted shrink-0">
                 {p.resolvedCount > 0
@@ -483,14 +483,14 @@ export default function ServiceDeskPanel() {
 
       {mine.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-content-muted">Your reports</p>
+          <p className="text-xs font-black uppercase tracking-widest text-content-muted">Your reports</p>
           {mine.map(r => renderReport(r, true))}
         </div>
       )}
 
       {neighbours.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-content-muted">Reported near you</p>
+          <p className="text-xs font-black uppercase tracking-widest text-content-muted">Reported near you</p>
           {neighbours.map(r => renderReport(r, false))}
         </div>
       )}

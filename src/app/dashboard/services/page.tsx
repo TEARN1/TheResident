@@ -292,12 +292,12 @@ export default function ServicesPage() {
                     <Lock size={18} className="text-accent shrink-0" />
                     <span>
                        <span className="block text-xs font-black text-content uppercase tracking-widest">Build trust to offer a lift</span>
-                       <span className="block text-[11px] text-content-muted mt-0.5">
+                       <span className="block text-xs text-content-muted mt-0.5">
                           {trustGate.status === 'building' ? 'Your next-of-kin circle is growing — almost there.' : 'Add people to your next-of-kin circle first — offering a ride to strangers needs a real safety trail.'}
                        </span>
                     </span>
                  </span>
-                 <span className="text-[10px] font-black text-accent uppercase tracking-widest shrink-0">Next of Kin →</span>
+                 <span className="text-xs font-black text-accent uppercase tracking-widest shrink-0">Next of Kin →</span>
               </a>
            ) : (
               <div className="flex justify-end">
@@ -323,11 +323,11 @@ export default function ServicesPage() {
                          <TrustBadge userId={lift.driverId} compact />
                       </div>
                       <div className="bg-accent/10 border border-accent/20 text-accent px-4 py-1 rounded-xl font-black text-sm tracking-tighter">
-                         {formatCurrency(lift.pricePerSeat, lift.currency)} <span className="text-[10px] opacity-60 ml-1">PER SEAT</span>
+                         {formatCurrency(lift.pricePerSeat, lift.currency)} <span className="text-xs opacity-60 ml-1">PER SEAT</span>
                       </div>
                    </div>
                    {lift.eventId && eventTitles[lift.eventId] && (
-                      <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest bg-accent/10 text-accent border border-accent/20 px-3 py-1.5 rounded-lg">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest bg-accent/10 text-accent border border-accent/20 px-3 py-1.5 rounded-lg">
                          🚗 For: {eventTitles[lift.eventId]}
                       </span>
                    )}
@@ -343,15 +343,15 @@ export default function ServicesPage() {
                         href={directionsUrlForAddress(lift.destination, lift.origin)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-[10px] font-black text-accent uppercase tracking-widest hover:underline"
+                        className="inline-flex items-center gap-1.5 text-xs font-black text-accent uppercase tracking-widest hover:underline"
                       >
                         Preview route
                       </a>
                    </div>
                    <div className="flex flex-wrap gap-3 pt-2">
-                      <span className="text-[9px] font-black uppercase tracking-widest bg-surface-sunken/40 px-3 py-1.5 rounded-lg text-content-muted border border-subtle flex items-center gap-2"><Clock size={12} className="text-accent" /> {lift.departureTime}</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest bg-surface-sunken/40 px-3 py-1.5 rounded-lg text-content-muted border border-subtle flex items-center gap-2"><Calendar size={12} className="text-accent" /> {lift.days}</span>
-                      <span className="text-[9px] font-black uppercase tracking-widest bg-surface-sunken/40 px-3 py-1.5 rounded-lg text-content-muted border border-subtle flex items-center gap-2"><Users size={12} className="text-accent" /> {lift.availableSeats} SEATS LEFT</span>
+                      <span className="text-xs font-black uppercase tracking-widest bg-surface-sunken/40 px-3 py-1.5 rounded-lg text-content-muted border border-subtle flex items-center gap-2"><Clock size={12} className="text-accent" /> {lift.departureTime}</span>
+                      <span className="text-xs font-black uppercase tracking-widest bg-surface-sunken/40 px-3 py-1.5 rounded-lg text-content-muted border border-subtle flex items-center gap-2"><Calendar size={12} className="text-accent" /> {lift.days}</span>
+                      <span className="text-xs font-black uppercase tracking-widest bg-surface-sunken/40 px-3 py-1.5 rounded-lg text-content-muted border border-subtle flex items-center gap-2"><Users size={12} className="text-accent" /> {lift.availableSeats} SEATS LEFT</span>
                    </div>
                 </div>
                 <div className="flex gap-2 w-full lg:w-auto">
@@ -371,7 +371,7 @@ export default function ServicesPage() {
                   </button>
                   <button
                     onClick={() => { dispatch(cancelSeat(lift.id)); setAlertNotification('Seat cancelled.') }}
-                    className="text-[10px] text-content-muted hover:text-danger uppercase font-bold tracking-widest px-3"
+                    className="text-xs text-content-muted hover:text-danger uppercase font-bold tracking-widest px-3"
                   >
                     Cancel
                   </button>
@@ -397,8 +397,8 @@ export default function ServicesPage() {
                  <a href="/dashboard/trust-circle" className="w-full lg:w-auto flex items-center gap-3 bg-accent/5 border border-accent/20 rounded-2xl px-6 py-4 hover:border-accent/40 transition-all">
                     <Lock size={16} className="text-accent shrink-0" />
                     <span className="text-left">
-                       <span className="block text-[11px] font-black text-content uppercase tracking-widest">Build trust to list</span>
-                       <span className="block text-[10px] text-content-muted mt-0.5">Grow your next-of-kin circle first →</span>
+                       <span className="block text-xs font-black text-content uppercase tracking-widest">Build trust to list</span>
+                       <span className="block text-xs text-content-muted mt-0.5">Grow your next-of-kin circle first →</span>
                     </span>
                  </a>
               ) : (
@@ -430,12 +430,12 @@ export default function ServicesPage() {
                      <div className="absolute top-4 right-4 bg-surface-sunken/60 backdrop-blur-xl border border-default px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-2xl">
                         <Star size={14} className="text-accent fill-gold-primary" />
                         <span className="text-xs font-black text-content">{srv.rating}</span>
-                        <span className="text-[10px] text-content-muted font-bold">({srv.reviewsCount})</span>
+                        <span className="text-xs text-content-muted font-bold">({srv.reviewsCount})</span>
                      </div>
                      <div className="absolute bottom-4 left-4 flex gap-2">
-                        <span className="bg-accent text-content-on-accent px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-xl">{srv.category}</span>
+                        <span className="bg-accent text-content-on-accent px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest shadow-xl">{srv.category}</span>
                         {providerTiers[srv.ownerId] && (
-                           <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-xl ${providerTiers[srv.ownerId] === 'premium' ? 'bg-info text-content' : 'bg-info text-content'}`}>
+                           <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest shadow-xl ${providerTiers[srv.ownerId] === 'premium' ? 'bg-info text-content' : 'bg-info text-content'}`}>
                               {providerTiers[srv.ownerId] === 'premium' ? 'Premium' : 'Priority'}
                            </span>
                         )}
@@ -445,7 +445,7 @@ export default function ServicesPage() {
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-content tracking-tight uppercase italic group-hover:text-accent transition-colors">{srv.businessName}</h3>
                         <div className="flex items-center justify-between gap-2">
-                           <div className="flex items-center text-[10px] text-content-muted font-black uppercase tracking-widest gap-2">
+                           <div className="flex items-center text-xs text-content-muted font-black uppercase tracking-widest gap-2">
                               <MapPin size={12} className="text-accent" /> {srv.suburb}
                            </div>
                            <OpenInMapsButton address={`${srv.location}, ${srv.suburb}`} lat={srv.lat} lon={srv.lon} label={srv.businessName} />
@@ -461,7 +461,7 @@ export default function ServicesPage() {
                      )}
 
                      <div className="bg-surface-raised/[0.02] border border-subtle rounded-xl p-3 flex justify-between items-center">
-                        <span className="text-[9px] font-black text-content-subtle uppercase tracking-widest">Rate Estimate</span>
+                        <span className="text-xs font-black text-content-subtle uppercase tracking-widest">Rate Estimate</span>
                         <span className="text-sm font-black text-content tracking-tighter">{srv.priceEstimate}</span>
                      </div>
 
@@ -475,7 +475,7 @@ export default function ServicesPage() {
                                  <Truck size={16} /> Request Move Assist
                               </button>
                               {trustGate && !trustGate.unlocked && (
-                                 <p className="text-[9px] text-content-muted font-bold uppercase tracking-widest text-center flex items-center justify-center gap-1.5">
+                                 <p className="text-xs text-content-muted font-bold uppercase tracking-widest text-center flex items-center justify-center gap-1.5">
                                     <Lock size={10} className="text-accent" /> {trustGate.status === 'building' ? 'Building your next-of-kin circle' : 'Build your next-of-kin circle to unlock'}
                                  </p>
                               )}
@@ -489,10 +489,10 @@ export default function ServicesPage() {
                         </button>
                         {srv.ownerId === currentUser?.id && !providerTiers[srv.ownerId] && (
                            <div className="space-y-2 pt-2 border-t border-subtle">
-                              <p className="text-[9px] text-content-muted font-bold uppercase tracking-widest text-center">Free listing — get seen first</p>
+                              <p className="text-xs text-content-muted font-bold uppercase tracking-widest text-center">Free listing — get seen first</p>
                               <div className="grid grid-cols-2 gap-2">
-                                 <UpgradeButton item="priority" className="w-full bg-info/10 hover:bg-info hover:text-content border border-info/30 text-info font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
-                                 <UpgradeButton item="premium" className="w-full bg-info/10 hover:bg-info hover:text-content border border-info/30 text-info font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95" />
+                                 <UpgradeButton item="priority" className="w-full bg-info/10 hover:bg-info hover:text-content border border-info/30 text-info font-black py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95" />
+                                 <UpgradeButton item="premium" className="w-full bg-info/10 hover:bg-info hover:text-content border border-info/30 text-info font-black py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95" />
                               </div>
                            </div>
                         )}
@@ -512,15 +512,15 @@ export default function ServicesPage() {
                        <div key={order.id} className="glass-panel p-5 bg-surface-sunken/40 border-subtle flex flex-col gap-4">
                           <div className="flex justify-between items-start">
                              <div className="space-y-0.5">
-                                <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">From: {order.senderName}</p>
+                                <p className="text-xs text-content-muted font-black uppercase tracking-widest">From: {order.senderName}</p>
                                 <p className="text-xs font-black text-content italic">{order.timestamp}</p>
                              </div>
-                             <span className={`text-[9px] font-black px-2 py-1 rounded border uppercase tracking-widest ${order.status === 'pending' ? 'bg-warning/10 text-warning border-warning/20' : order.status === 'accepted' ? 'bg-info/10 text-info border-info/20' : 'bg-success/10 text-success border-success/20'}`}>{order.status}</span>
+                             <span className={`text-xs font-black px-2 py-1 rounded border uppercase tracking-widest ${order.status === 'pending' ? 'bg-warning/10 text-warning border-warning/20' : order.status === 'accepted' ? 'bg-info/10 text-info border-info/20' : 'bg-success/10 text-success border-success/20'}`}>{order.status}</span>
                           </div>
                           <p className="text-sm text-content-muted bg-surface-raised/[0.02] p-3 rounded-xl border border-subtle font-medium leading-relaxed">&quot;{order.message}&quot;</p>
                           <div className="flex gap-2 pt-2">
-                             {order.status === 'pending' && <button onClick={() => dispatch(updateDispatchStatus({ dispatchId: order.id, status: 'accepted' }))} className="flex-1 bg-info text-content font-black py-2 rounded-lg text-[10px] uppercase tracking-widest shadow-xl shadow-info/20">Accept Job</button>}
-                             {order.status === 'accepted' && <button onClick={() => setShowProofModal(order)} className="flex-1 bg-accent text-content-on-accent font-black py-2 rounded-lg text-[10px] uppercase tracking-widest shadow-xl shadow-gold-primary/20">Mark Complete</button>}
+                             {order.status === 'pending' && <button onClick={() => dispatch(updateDispatchStatus({ dispatchId: order.id, status: 'accepted' }))} className="flex-1 bg-info text-content font-black py-2 rounded-lg text-xs uppercase tracking-widest shadow-xl shadow-info/20">Accept Job</button>}
+                             {order.status === 'accepted' && <button onClick={() => setShowProofModal(order)} className="flex-1 bg-accent text-content-on-accent font-black py-2 rounded-lg text-xs uppercase tracking-widest shadow-xl shadow-gold-primary/20">Mark Complete</button>}
                           </div>
                        </div>
                     ))}
@@ -557,10 +557,10 @@ export default function ServicesPage() {
                    <div className="space-y-4">
                       <div className="space-y-1">
                          <h4 className="font-black text-content text-lg tracking-tight uppercase opacity-80 italic">Electricity <span className="text-accent">Top-Up</span></h4>
-                         <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">Prepaid Sub-Meter Unit</p>
+                         <p className="text-xs text-content-muted font-black uppercase tracking-widest">Prepaid Sub-Meter Unit</p>
                       </div>
                       <div className="bg-surface-sunken/60 p-4 rounded-xl border border-subtle shadow-inner">
-                         <p className="text-[10px] text-content-subtle font-black uppercase tracking-widest mb-1">Target Meter</p>
+                         <p className="text-xs text-content-subtle font-black uppercase tracking-widest mb-1">Target Meter</p>
                          <p className="text-sm font-mono text-content font-bold tracking-widest group-hover:text-accent transition-colors">{token.meterNumber}</p>
                       </div>
                    </div>
@@ -583,11 +583,11 @@ export default function ServicesPage() {
                       <div key={token.id} className="glass-panel p-6 flex flex-col md:flex-row justify-between items-center bg-surface-sunken/60 border-subtle hover:border-accent/20 transition-all gap-6 shadow-2xl">
                          <div className="flex-1 flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
                             <div className="space-y-1">
-                               <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">Meter Label</p>
+                               <p className="text-xs text-content-muted font-black uppercase tracking-widest">Meter Label</p>
                                <p className="text-lg font-black text-content tracking-widest">{token.meterNumber}</p>
                             </div>
                             <div className="space-y-1 bg-surface-sunken/40 px-6 py-2 rounded-xl border border-subtle shadow-inner">
-                               <p className="text-[10px] text-accent/50 font-black uppercase tracking-widest">Claimed — arrange handover</p>
+                               <p className="text-xs text-accent/50 font-black uppercase tracking-widest">Claimed — arrange handover</p>
                                <div className="flex items-center gap-4 text-lg font-mono text-accent font-black tracking-widest">
                                   {token.meterNumber}
                                   <button onClick={() => { navigator.clipboard.writeText(token.meterNumber); setAlertNotification('Copied to Clipboard!') }} className="text-content-subtle hover:text-content active:scale-90 transition-all"><Copy size={16}/></button>
@@ -595,8 +595,8 @@ export default function ServicesPage() {
                             </div>
                          </div>
                          <div className="text-center md:text-right space-y-1">
-                            <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">Cost: {formatCurrency(token.price, token.currency)}</p>
-                            <span className="bg-success/10 text-success border border-success/20 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Secured</span>
+                            <p className="text-xs text-content-muted font-black uppercase tracking-widest">Cost: {formatCurrency(token.price, token.currency)}</p>
+                            <span className="bg-success/10 text-success border border-success/20 px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest">Secured</span>
                          </div>
                       </div>
                     ))}
@@ -619,12 +619,12 @@ export default function ServicesPage() {
                   <form onSubmit={handleRegisterBusiness} className="p-8 space-y-6">
                      <div className="space-y-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Business or Skill Name</label>
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">Business or Skill Name</label>
                            <input value={bizName} onChange={e => setBizName(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. Sipho's Rapid Plumbing" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                            <div className="space-y-2">
-                              <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Category</label>
+                              <label className="text-xs text-content-muted font-black uppercase tracking-widest">Category</label>
                               <select value={bizCategory} onChange={e => setBizCategory(e.target.value as HandymanService['category'])} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40">
                                  <option>Plumbing</option>
                                  <option>Electrical</option>
@@ -636,35 +636,35 @@ export default function ServicesPage() {
                               </select>
                            </div>
                            <div className="space-y-2">
-                              <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Contact Number</label>
+                              <label className="text-xs text-content-muted font-black uppercase tracking-widest">Contact Number</label>
                               <input value={bizPhone} onChange={e => setBizPhone(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. +1 555 010 1234" />
                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                            <div className="space-y-2">
-                              <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Location / City</label>
+                              <label className="text-xs text-content-muted font-black uppercase tracking-widest">Location / City</label>
                               <input value={bizLocation} onChange={e => setBizLocation(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. Berlin, Germany" />
                            </div>
                            <div className="space-y-2">
-                              <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Suburb / Neighbourhood</label>
+                              <label className="text-xs text-content-muted font-black uppercase tracking-widest">Suburb / Neighbourhood</label>
                               <input value={bizSuburb} onChange={e => setBizSuburb(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. Kreuzberg" />
                            </div>
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">
                               Pin the exact spot on the map <span className="normal-case font-normal text-content-subtle">(optional, but makes &quot;View on map&quot; point here for real)</span>
                            </label>
                            <MapSearchBox onSelect={(result: GeocodeResult) => { setBizLat(result.lat); setBizLon(result.lon) }} />
                            {bizLat != null && bizLon != null && (
-                              <p className="text-[10px] text-accent">Pinned — {bizLat.toFixed(4)}, {bizLon.toFixed(4)}</p>
+                              <p className="text-xs text-accent">Pinned — {bizLat.toFixed(4)}, {bizLon.toFixed(4)}</p>
                            )}
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Rate Estimate</label>
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">Rate Estimate</label>
                            <input value={bizPrice} onChange={e => setBizPrice(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. From 25/hour" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Full Description</label>
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">Full Description</label>
                            <textarea value={bizDesc} onChange={e => setBizDesc(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-medium h-24 resize-none outline-none focus:border-accent/40" placeholder="Describe your experience, tools, and availability..." />
                         </div>
                      </div>
@@ -683,18 +683,18 @@ export default function ServicesPage() {
                   <div className="flex justify-between items-center">
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">Hire <span className="text-accent">Contractor</span></h3>
-                        <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">Dispatch Request to: {selectedBiz.businessName}</p>
+                        <p className="text-xs text-content-muted font-black uppercase tracking-widest">Dispatch Request to: {selectedBiz.businessName}</p>
                      </div>
                      <button onClick={() => setSelectedBiz(null)} className="text-content-muted hover:text-content transition-colors"><X /></button>
                   </div>
                   <form onSubmit={handleDispatchContract} className="space-y-6">
                      <div className="space-y-2">
-                        <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Job Details & Scope</label>
+                        <label className="text-xs text-content-muted font-black uppercase tracking-widest">Job Details & Scope</label>
                         <textarea value={hireMessage} onChange={e => setHireMessage(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-4 text-sm text-content h-32 resize-none outline-none focus:border-accent/40" placeholder="Explain the problem or help you need, your address, and preferred date..." />
                      </div>
                      <div className="bg-accent/5 border border-accent/10 p-4 rounded-xl">
-                        <p className="text-[10px] text-accent font-black uppercase tracking-widest mb-1 flex items-center gap-2"><Info size={12}/> Security Tip</p>
-                        <p className="text-[10px] text-content-muted leading-relaxed font-bold">Payments are handled offline. Request a quote after the contractor inspects the site.</p>
+                        <p className="text-xs text-accent font-black uppercase tracking-widest mb-1 flex items-center gap-2"><Info size={12}/> Security Tip</p>
+                        <p className="text-xs text-content-muted leading-relaxed font-bold">Payments are handled offline. Request a quote after the contractor inspects the site.</p>
                      </div>
                      <button type="submit" className="w-full bg-accent hover:bg-accent text-content-on-accent font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all">
                         Dispatch Callout <Send size={14} />
@@ -718,40 +718,40 @@ export default function ServicesPage() {
                   <form onSubmit={handleCreateLift} className="p-8 space-y-6">
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Origin</label>
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">Origin</label>
                            <input value={liftOrigin} onChange={e => setLiftOrigin(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. Kreuzberg" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Destination</label>
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">Destination</label>
                            <input value={liftDestination} onChange={e => setLiftDestination(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. City Centre" />
                         </div>
                      </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Departure Time</label>
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">Departure Time</label>
                            <input value={liftDeparture} onChange={e => setLiftDeparture(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. 07:30" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Days</label>
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">Days</label>
                            <input value={liftDays} onChange={e => setLiftDays(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. Mon-Fri" />
                         </div>
                      </div>
                      <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Price / Seat</label>
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">Price / Seat</label>
                            <input type="number" min="0" value={liftPrice} onChange={e => setLiftPrice(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. 20" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Currency</label>
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">Currency</label>
                            <input value={liftCurrency} onChange={e => setLiftCurrency(e.target.value.toUpperCase())} maxLength={3} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="ZAR" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Total Seats</label>
+                           <label className="text-xs text-content-muted font-black uppercase tracking-widest">Total Seats</label>
                            <input type="number" min="1" value={liftSeats} onChange={e => setLiftSeats(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40" placeholder="e.g. 4" />
                         </div>
                      </div>
                      <div className="space-y-2">
-                        <label className="text-[10px] text-content-muted font-black uppercase tracking-widest flex items-center gap-2"><Link2 size={12} className="text-accent" /> Attach to an Event (optional)</label>
+                        <label className="text-xs text-content-muted font-black uppercase tracking-widest flex items-center gap-2"><Link2 size={12} className="text-accent" /> Attach to an Event (optional)</label>
                         <select value={liftEventId} onChange={e => setLiftEventId(e.target.value)} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content font-bold outline-none focus:border-accent/40">
                            <option value="">— No event —</option>
                            {upcomingEvents.map(ev => (
@@ -775,7 +775,7 @@ export default function ServicesPage() {
                   <div className="flex justify-between items-center">
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">Request <span className="text-accent">Move Assist</span></h3>
-                        <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">Dispatch Request to: {moveAssistTarget.businessName}</p>
+                        <p className="text-xs text-content-muted font-black uppercase tracking-widest">Dispatch Request to: {moveAssistTarget.businessName}</p>
                      </div>
                      <button onClick={() => setMoveAssistTarget(null)} className="text-content-muted hover:text-content transition-colors"><X /></button>
                   </div>
@@ -783,7 +783,7 @@ export default function ServicesPage() {
                   {trustGate && (
                      <div className={`p-4 rounded-xl border flex items-center gap-3 ${trustGate.unlocked ? 'bg-success/5 border-success/20' : 'bg-accent/5 border-accent/10'}`}>
                         {trustGate.unlocked ? <ShieldCheck size={20} className="text-success" /> : <Lock size={20} className="text-accent" />}
-                        <p className="text-[10px] text-content-muted font-bold uppercase tracking-widest leading-relaxed">
+                        <p className="text-xs text-content-muted font-bold uppercase tracking-widest leading-relaxed">
                            {trustGate.unlocked
                               ? 'Your next-of-kin circle is established — you can request move help.'
                               : trustGate.status === 'building'
@@ -795,12 +795,12 @@ export default function ServicesPage() {
 
                   <form onSubmit={submitMoveAssist} className="space-y-6">
                      <div className="space-y-2">
-                        <label className="text-[10px] text-content-muted font-black uppercase tracking-widest">Message (optional)</label>
+                        <label className="text-xs text-content-muted font-black uppercase tracking-widest">Message (optional)</label>
                         <textarea value={moveAssistMessage} onChange={e => setMoveAssistMessage(e.target.value)} className="w-full bg-surface border border-default rounded-xl p-4 text-sm text-content h-28 resize-none outline-none focus:border-accent/40" placeholder="Moving date, address, how much help you need..." />
                      </div>
                      {moveAssistError && (
                         <div className="bg-danger/5 border border-danger/20 p-4 rounded-xl">
-                           <p className="text-[10px] text-danger leading-relaxed font-bold">{moveAssistError}</p>
+                           <p className="text-xs text-danger leading-relaxed font-bold">{moveAssistError}</p>
                         </div>
                      )}
                      <button type="submit" disabled={moveAssistSubmitting} className="w-full bg-accent hover:bg-accent text-content-on-accent font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50">
@@ -832,7 +832,7 @@ export default function ServicesPage() {
                      >
                         Confirm & Complete
                      </button>
-                     <button onClick={() => setShowProofModal(null)} className="text-[10px] text-content-subtle font-black uppercase tracking-widest hover:text-content transition-colors">Not Yet Finished</button>
+                     <button onClick={() => setShowProofModal(null)} className="text-xs text-content-subtle font-black uppercase tracking-widest hover:text-content transition-colors">Not Yet Finished</button>
                   </div>
                </motion.div>
             </div>
@@ -850,7 +850,7 @@ export default function ServicesPage() {
             >
                <div className="p-2 bg-success/20 rounded-full text-success shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check size={24} /></div>
                <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Notification</p>
+                  <p className="text-xs font-black text-content-subtle uppercase tracking-[0.2em]">Notification</p>
                   <p className="text-sm font-black text-content italic tracking-tight uppercase">{alertNotification}</p>
                </div>
                <button onClick={() => setAlertNotification(null)} className="ml-auto text-content-subtle hover:text-content transition-colors"><X size={16} /></button>

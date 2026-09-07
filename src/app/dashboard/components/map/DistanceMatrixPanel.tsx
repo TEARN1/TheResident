@@ -39,7 +39,7 @@ export default function DistanceMatrixPanel({ points, onRemove }: Props) {
       <h4 className="text-sm font-bold text-content uppercase tracking-wide flex items-center gap-2 mb-1">
         <Ruler size={16} className="text-accent" /> Multi-Stop Distances
       </h4>
-      <p className="text-[11px] text-content-muted mb-4">
+      <p className="text-xs text-content-muted mb-4">
         Add 2 or more points to compare distances between every pair — handy for planning lift-club pickups.
       </p>
 
@@ -48,7 +48,7 @@ export default function DistanceMatrixPanel({ points, onRemove }: Props) {
           {points.map(p => (
             <span
               key={p.id}
-              className="flex items-center gap-1.5 bg-surface-raised/5 border border-default rounded-full pl-3 pr-1.5 py-1 text-[11px] text-content"
+              className="flex items-center gap-1.5 bg-surface-raised/5 border border-default rounded-full pl-3 pr-1.5 py-1 text-xs text-content"
             >
               {p.label}
               <button onClick={() => onRemove(p.id)} className="text-content-muted hover:text-danger">

@@ -13,7 +13,7 @@ export default function TermsPage() {
     <div className="min-h-screen bg-surface text-content px-4 py-12">
       <div className="max-w-2xl mx-auto space-y-8">
         <div>
-          <Link href="/" className="text-xs text-accent font-black uppercase tracking-widest hover:underline">← The Resident</Link>
+          <Link href="/" className="inline-flex items-center min-h-tap text-xs text-accent font-black uppercase tracking-widest hover:underline">← The Resident</Link>
           <h1 className="text-2xl font-black text-content mt-3">Terms of Service</h1>
         </div>
 
@@ -56,7 +56,7 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <p className="text-[11px] text-content-subtle pt-4 border-t border-subtle">
+        <p className="text-xs text-content-subtle pt-4 border-t border-subtle">
           Also see our <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>.
         </p>
       </div>

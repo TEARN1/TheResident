@@ -181,28 +181,28 @@ export default function MarketTab({
                       <span className="text-xs font-black text-accent group-hover:scale-110 transition-transform origin-left">{item.price ? formatCurrency(item.price, item.currency) : 'FREE'}</span>
                       <div className="flex items-center gap-1.5">
                          {isFeatured(item) && (
-                            <span className="bg-accent text-content-on-accent px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest">Featured</span>
+                            <span className="bg-accent text-content-on-accent px-1.5 py-0.5 rounded text-xs font-black uppercase tracking-widest">Featured</span>
                          )}
-                         <span className="text-[9px] bg-surface-raised/5 text-content-muted px-1.5 py-0.5 rounded uppercase font-bold">{item.category}</span>
+                         <span className="text-xs bg-surface-raised/5 text-content-muted px-1.5 py-0.5 rounded uppercase font-bold">{item.category}</span>
                       </div>
                    </div>
                    <h4 className="font-bold text-content text-sm group-hover:text-accent transition-colors">{item.title}</h4>
                    <p className="text-xs text-content-muted line-clamp-2 leading-relaxed">{item.description}</p>
                    <div className="mt-auto pt-3 border-t border-subtle flex justify-between items-center">
-                      <span className="text-[10px] text-content-subtle">In {item.suburb}</span>
+                      <span className="text-xs text-content-subtle">In {item.suburb}</span>
                       <div className="flex items-center gap-3">
                          <OpenInMapsButton
                            address={item.suburb}
                            lat={item.lat}
                            lon={item.lon}
                            label={item.title}
-                           className="inline-flex items-center gap-1 text-accent text-[10px] font-bold hover:underline"
+                           className="inline-flex items-center gap-1 text-accent text-xs font-bold hover:underline"
                          />
                          {item.createdBy === currentUserId && (
                            <UpgradeButton
                              item="market_boost"
                              targetId={item.id}
-                             className="text-accent text-[10px] font-bold hover:underline"
+                             className="text-accent text-xs font-bold hover:underline"
                            />
                          )}
                          {item.createdBy !== currentUserId && (
@@ -225,7 +225,7 @@ export default function MarketTab({
                            </>
                          )}
                          {item.createdBy !== currentUserId && (
-                           <Link href={`/dashboard/messages?to=${item.createdBy}`} className="text-accent text-[10px] font-bold hover:underline">Chat Seller</Link>
+                           <Link href={`/dashboard/messages?to=${item.createdBy}`} className="text-accent text-xs font-bold hover:underline">Chat Seller</Link>
                          )}
                       </div>
                    </div>
@@ -292,11 +292,11 @@ export default function MarketTab({
                  <div key={gb.id} className="glass-panel p-6 space-y-4 hover:border-accent/20 transition-all">
                     <div className="flex justify-between items-start">
                        <h4 className="text-lg font-bold text-content">{gb.title}</h4>
-                       <span className="text-[10px] font-bold text-accent bg-accent/5 px-2 py-1 rounded border border-accent/20 uppercase tracking-widest">Group Buy</span>
+                       <span className="text-xs font-bold text-accent bg-accent/5 px-2 py-1 rounded border border-accent/20 uppercase tracking-widest">Group Buy</span>
                     </div>
                     <p className="text-sm text-content-muted leading-relaxed">{gb.description}</p>
                     <div className="space-y-2 pt-2">
-                       <div className="flex justify-between text-[10px] uppercase font-bold">
+                       <div className="flex justify-between text-xs uppercase font-bold">
                           <span className="text-content-muted">Progress: {gb.currentPledges} / {gb.targetAmount}</span>
                           <span className="text-accent">{Math.round(pct)}%</span>
                        </div>
@@ -334,7 +334,7 @@ export default function MarketTab({
                      <div>
                         <div className="flex items-center gap-2">
                            <h4 className="font-bold text-content group-hover:text-accent transition-colors">{lf.title}</h4>
-                           <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${lf.type === 'lost' ? 'bg-danger/20 text-danger border-danger/30' : 'bg-success/20 text-success border-success/30'}`}>{lf.type.toUpperCase()}</span>
+                           <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${lf.type === 'lost' ? 'bg-danger/20 text-danger border-danger/30' : 'bg-success/20 text-success border-success/30'}`}>{lf.type.toUpperCase()}</span>
                         </div>
                         <p className="text-xs text-content-muted flex items-center gap-1 mt-1"><MapPin size={10} className="text-accent" /> {lf.location}</p>
                      </div>
@@ -379,7 +379,7 @@ export default function MarketTab({
                       <ImagePlus size={16} /> Add a photo (optional)
                     </label>
                   )}
-                  {imageError && <p className="text-[10px] text-danger mt-1.5">{imageError}</p>}
+                  {imageError && <p className="text-xs text-danger mt-1.5">{imageError}</p>}
                 </div>
 
                 <input value={postTitle} onChange={e => setPostTitle(e.target.value)} required placeholder="What is it?" className="w-full bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40" />
@@ -396,10 +396,10 @@ export default function MarketTab({
                    </select>
                 </div>
                 <div className="space-y-1.5">
-                   <label className="text-[10px] text-content-muted uppercase font-bold">Pickup spot on the map <span className="normal-case font-normal text-content-subtle">(optional)</span></label>
+                   <label className="text-xs text-content-muted uppercase font-bold">Pickup spot on the map <span className="normal-case font-normal text-content-subtle">(optional)</span></label>
                    <MapSearchBox onSelect={(result: GeocodeResult) => { setPostLat(result.lat); setPostLon(result.lon) }} />
                    {postLat != null && postLon != null && (
-                      <p className="text-[10px] text-accent">Pinned — {postLat.toFixed(4)}, {postLon.toFixed(4)}</p>
+                      <p className="text-xs text-accent">Pinned — {postLat.toFixed(4)}, {postLon.toFixed(4)}</p>
                    )}
                 </div>
                 <button type="submit" disabled={posting} className="w-full bg-accent text-content-on-accent font-black py-2.5 rounded-lg text-xs uppercase tracking-widest disabled:opacity-50">

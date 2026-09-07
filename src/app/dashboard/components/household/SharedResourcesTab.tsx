@@ -163,14 +163,14 @@ export default function SharedResourcesTab({ currentUserId, communityId }: Share
                   <div className="flex justify-between items-start">
                     <div className="p-2 bg-accent/10 rounded-lg text-accent"><Icon size={18} /></div>
                     {r.isFree ? (
-                      <span className="text-[9px] bg-success/10 text-success px-1.5 py-0.5 rounded uppercase font-bold border border-success/20 flex items-center gap-1"><Gift size={10} /> Free</span>
+                      <span className="text-xs bg-success/10 text-success px-1.5 py-0.5 rounded uppercase font-bold border border-success/20 flex items-center gap-1"><Gift size={10} /> Free</span>
                     ) : (
-                      <span className="text-[9px] bg-surface-raised/5 text-content-muted px-1.5 py-0.5 rounded uppercase font-bold">{r.priceNote || 'Paid'}</span>
+                      <span className="text-xs bg-surface-raised/5 text-content-muted px-1.5 py-0.5 rounded uppercase font-bold">{r.priceNote || 'Paid'}</span>
                     )}
                   </div>
                   <h4 className="font-bold text-content text-sm group-hover:text-accent transition-colors">{r.title}</h4>
                   {r.accessNote && <p className="text-xs text-content-muted line-clamp-2 leading-relaxed">{r.accessNote}</p>}
-                  <div className="mt-auto pt-3 border-t border-subtle flex items-center gap-1 text-[10px] text-content-subtle">
+                  <div className="mt-auto pt-3 border-t border-subtle flex items-center gap-1 text-xs text-content-subtle">
                     <MapPin size={10} className="text-accent" /> {r.suburb || 'Location unset'}
                   </div>
                 </div>

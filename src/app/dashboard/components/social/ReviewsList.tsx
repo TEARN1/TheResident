@@ -58,11 +58,11 @@ export default function ReviewsList({ userId }: { userId: string }) {
   }, [userId])
 
   if (reviews === null) {
-    return <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest">Loading reviews…</p>
+    return <p className="text-xs text-content-subtle font-bold uppercase tracking-widest">Loading reviews…</p>
   }
 
   if (reviews.length === 0) {
-    return <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest">No reviews yet.</p>
+    return <p className="text-xs text-content-subtle font-bold uppercase tracking-widest">No reviews yet.</p>
   }
 
   return (
@@ -75,7 +75,7 @@ export default function ReviewsList({ userId }: { userId: string }) {
                 <Star key={n} size={12} className={r.rating >= n ? 'text-accent fill-gold-primary' : 'text-content-subtle'} />
               ))}
             </div>
-            <span className="text-[9px] text-content-subtle font-black uppercase tracking-widest">{r.authorName}</span>
+            <span className="text-xs text-content-subtle font-black uppercase tracking-widest">{r.authorName}</span>
           </div>
           {r.body && <p className="text-xs text-content-muted leading-relaxed italic">&quot;{r.body}&quot;</p>}
         </div>

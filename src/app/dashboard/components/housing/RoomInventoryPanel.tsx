@@ -186,7 +186,7 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
     <div className="pt-2 border-t border-subtle">
       <button
         onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-content py-2"
+        className="w-full flex items-center justify-between text-xs font-black uppercase tracking-widest text-content-muted hover:text-content py-2"
       >
         <span>Room inventory (private to you)</span>
         {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -194,7 +194,7 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
 
       {expanded && (
         <div className="space-y-3 pt-1">
-          <p className="text-[10px] text-content-subtle flex items-center gap-1">
+          <p className="text-xs text-content-subtle flex items-center gap-1">
             <Lock size={10} /> Only you can see this — a room only becomes a public listing once you advertise it.
           </p>
 
@@ -205,7 +205,7 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-content truncate">{room.label}</p>
-                    <p className="text-[10px] text-content-muted flex items-center gap-1 flex-wrap">
+                    <p className="text-xs text-content-muted flex items-center gap-1 flex-wrap">
                       <button
                         onClick={() => handleToggleStatus(room)}
                         disabled={busyRoomId === room.id}
@@ -222,16 +222,16 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
                     <button
                       onClick={() => handleAdvertise(room.id)}
                       disabled={busyRoomId === room.id}
-                      className="text-[9px] font-black uppercase tracking-widest text-accent hover:underline shrink-0 flex items-center gap-1 disabled:opacity-50"
+                      className="text-xs font-black uppercase tracking-widest text-accent hover:underline shrink-0 flex items-center gap-1 disabled:opacity-50"
                     >
                       <Megaphone size={10} /> Advertise
                     </button>
                   )}
                 </div>
 
-                {room.priceNote && <p className="text-[10px] text-content-muted italic">&quot;{room.priceNote}&quot;</p>}
+                {room.priceNote && <p className="text-xs text-content-muted italic">&quot;{room.priceNote}&quot;</p>}
                 {(room.advantages || room.disadvantages) && (
-                  <div className="text-[10px] space-y-0.5">
+                  <div className="text-xs space-y-0.5">
                     {room.advantages && <p className="text-success/80">+ {room.advantages}</p>}
                     {room.disadvantages && <p className="text-danger/70">− {room.disadvantages}</p>}
                   </div>
@@ -247,7 +247,7 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
 
                 <div className="pt-1 space-y-1">
                   {roomOccupants.map(o => (
-                    <div key={o.id} className="flex items-center justify-between text-[10px] bg-surface-raised/5 rounded-lg px-2 py-1.5">
+                    <div key={o.id} className="flex items-center justify-between text-xs bg-surface-raised/5 rounded-lg px-2 py-1.5">
                       <span className="text-content flex items-center gap-1">
                         {o.visibility === 'shared_with_housemates' ? <Users2 size={10} className="text-accent" /> : <Lock size={10} className="text-content-subtle" />}
                         {occupantDisplayName(o, () => '')}
@@ -270,14 +270,14 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
                         value={occupantName}
                         onChange={e => setOccupantName(e.target.value)}
                         placeholder="Name"
-                        className="flex-1 bg-surface-sunken/40 border border-default rounded-lg px-2 py-1.5 text-[10px] text-content"
+                        className="flex-1 bg-surface-sunken/40 border border-default rounded-lg px-2 py-1.5 text-xs text-content"
                       />
                       <input
                         value={occupantRent}
                         onChange={e => setOccupantRent(e.target.value)}
                         placeholder="Rent"
                         type="number"
-                        className="w-16 bg-surface-sunken/40 border border-default rounded-lg px-2 py-1.5 text-[10px] text-content"
+                        className="w-16 bg-surface-sunken/40 border border-default rounded-lg px-2 py-1.5 text-xs text-content"
                       />
                       <button
                         onClick={() => handleAddOccupant(room.id)}
@@ -291,7 +291,7 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
                   ) : (
                     <button
                       onClick={() => setOccupantFormFor(room.id)}
-                      className="text-[9px] font-black uppercase tracking-widest text-content-muted hover:text-content flex items-center gap-1"
+                      className="text-xs font-black uppercase tracking-widest text-content-muted hover:text-content flex items-center gap-1"
                     >
                       <UserPlus size={10} /> Record who&apos;s living here
                     </button>
@@ -335,7 +335,7 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
                 placeholder="Disadvantages"
                 className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-xs text-content"
               />
-              <label className="flex items-center gap-2 text-[10px] text-content-muted cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-content-muted cursor-pointer">
                 <Camera size={12} />
                 {uploading ? 'Uploading…' : `Add photos (${photos.length}/${MAX_ROOM_PHOTOS})`}
                 <input
@@ -351,7 +351,7 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
                 <button
                   onClick={handleCreateRoom}
                   disabled={saving || !label.trim()}
-                  className={`${goldButtonClass({ size: 'sm' })} text-[10px] px-4 py-2 disabled:opacity-50`}
+                  className={`${goldButtonClass({ size: 'sm' })} text-xs px-4 py-2 disabled:opacity-50`}
                 >
                   {saving ? 'Saving…' : 'Save room'}
                 </button>
@@ -363,7 +363,7 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
           ) : (
             <button
               onClick={() => setShowAdd(true)}
-              className="w-full text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-content bg-surface-raised/5 hover:bg-surface-raised/10 rounded-lg py-2 flex items-center justify-center gap-1"
+              className="w-full text-xs font-black uppercase tracking-widest text-content-muted hover:text-content bg-surface-raised/5 hover:bg-surface-raised/10 rounded-lg py-2 flex items-center justify-center gap-1"
             >
               <Plus size={12} /> Add a room
             </button>

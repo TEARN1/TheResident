@@ -88,7 +88,7 @@ export default function ToolLibraryTab({
                  <input type="number" min={0} value={deposit} onChange={e => setDeposit(e.target.value)} placeholder="Deposit" className="bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40" />
                  <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Where to collect" className="bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40" />
               </div>
-              <p className="text-[10px] text-content-muted italic">Payments and condition checks happen directly between neighbors at collection — the app only lists it.</p>
+              <p className="text-xs text-content-muted italic">Payments and condition checks happen directly between neighbors at collection — the app only lists it.</p>
               <button type="submit" className="w-full bg-accent text-content-on-accent font-black py-3 rounded-xl text-xs uppercase tracking-widest">List it</button>
            </form>
         )}
@@ -116,10 +116,10 @@ export default function ToolLibraryTab({
                    <div className="space-y-1">
                       <h4 className="font-black text-content text-lg group-hover:text-accent transition-colors tracking-tight leading-tight">{tool.title}</h4>
                       <div className="flex items-center gap-1.5 text-xs text-accent font-black uppercase tracking-wider">
-                         {formatCurrency(tool.pricePerDay)} <span className="text-[10px] text-content-muted font-bold">/ DAY</span>
+                         {formatCurrency(tool.pricePerDay)} <span className="text-xs text-content-muted font-bold">/ DAY</span>
                       </div>
                    </div>
-                   <span className={`text-[9px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest ${tool.status === 'available' ? 'bg-success/10 text-success border-success/20' : tool.status === 'pending_return' ? 'bg-accent/10 text-accent border-accent/20' : 'bg-surface-sunken/10 text-content-muted border-default'}`}>
+                   <span className={`text-xs font-black px-2 py-1 rounded-lg border uppercase tracking-widest ${tool.status === 'available' ? 'bg-success/10 text-success border-success/20' : tool.status === 'pending_return' ? 'bg-accent/10 text-accent border-accent/20' : 'bg-surface-sunken/10 text-content-muted border-default'}`}>
                       {tool.status === 'pending_return' ? 'return pending' : tool.status}
                    </span>
                 </div>
@@ -141,10 +141,10 @@ export default function ToolLibraryTab({
                 <div className="mt-auto pt-4 border-t border-subtle flex flex-col gap-4 relative z-10">
                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                         <div className="w-6 h-6 bg-surface-raised rounded-full flex items-center justify-center text-[10px] font-black text-accent">
+                         <div className="w-6 h-6 bg-surface-raised rounded-full flex items-center justify-center text-xs font-black text-accent">
                             {tool.ownerName.charAt(0)}
                          </div>
-                         <span className="text-[10px] text-content-muted font-bold uppercase tracking-widest">{tool.ownerName}</span>
+                         <span className="text-xs text-content-muted font-bold uppercase tracking-widest">{tool.ownerName}</span>
                       </div>
                       <div className="flex gap-0.5">
                          {[1,2,3,4,5].map(s => <Star key={s} size={8} className="fill-gold-primary text-accent" />)}
@@ -176,7 +176,7 @@ export default function ToolLibraryTab({
                      </button>
                    )}
                    {tool.status === 'pending_return' && tool.rentedBy === currentUser?.id && (
-                     <p className="text-[10px] text-content-muted text-center uppercase tracking-widest font-bold">Waiting for owner to confirm</p>
+                     <p className="text-xs text-content-muted text-center uppercase tracking-widest font-bold">Waiting for owner to confirm</p>
                    )}
                 </div>
               </div>

@@ -325,7 +325,7 @@ export default function ProfilePage() {
         <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
           <UserIcon size={16} /> Account Mode / Role
         </h2>
-        <p className="text-[11px] text-content-muted">
+        <p className="text-xs text-content-muted">
           Switching to <strong>Landlord</strong> enables adding properties, listing empty rooms, and managing tenant applications. Switch to <strong>Tenant</strong> to set your room requirements.
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -340,7 +340,7 @@ export default function ProfilePage() {
             }`}
           >
             <span>Tenant Mode</span>
-            <span className="text-[9px] opacity-70 font-normal">Look for rooms & roommates</span>
+            <span className="text-xs opacity-70 font-normal">Look for rooms & roommates</span>
           </button>
           <button
             type="button"
@@ -353,7 +353,7 @@ export default function ProfilePage() {
             }`}
           >
             <span>Landlord Mode</span>
-            <span className="text-[9px] opacity-70 font-normal">List empty rooms & manage units</span>
+            <span className="text-xs opacity-70 font-normal">List empty rooms & manage units</span>
           </button>
         </div>
       </Card>
@@ -362,7 +362,7 @@ export default function ProfilePage() {
         <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
           <Camera size={16} /> Your Photo
         </h2>
-        <p className="text-[11px] text-content-muted">A real photo of yourself helps neighbours and landlords trust who they&apos;re dealing with. It&apos;s kept with your verification info.</p>
+        <p className="text-xs text-content-muted">A real photo of yourself helps neighbours and landlords trust who they&apos;re dealing with. It&apos;s kept with your verification info.</p>
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-surface border border-default overflow-hidden shrink-0 flex items-center justify-center">
             {photoUrl ? (
@@ -389,7 +389,7 @@ export default function ProfilePage() {
               {photoUploading ? <Loader size={14} className="animate-spin" /> : photoUrl ? <Check size={14} /> : <Camera size={14} />}
               {photoUploading ? 'Uploading…' : photoUrl ? 'Replace photo' : 'Upload a photo'}
             </button>
-            {photoError && <p className="text-[11px] text-danger">{photoError}</p>}
+            {photoError && <p className="text-xs text-danger">{photoError}</p>}
           </div>
         </div>
       </Card>
@@ -398,7 +398,7 @@ export default function ProfilePage() {
         <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
           <UserIcon size={16} /> Legal Name
         </h2>
-        <p className="text-[11px] text-content-muted">
+        <p className="text-xs text-content-muted">
           Separate from your Gruvs display name — used where formality matters, like verification and a landlord&apos;s view of your application. Leave blank to keep using your display name everywhere.
         </p>
         <form
@@ -427,7 +427,7 @@ export default function ProfilePage() {
         <div className="glass-panel p-4 flex items-center justify-between gap-4 border-accent/20">
           <div>
             <p className="text-sm font-bold text-content">Household Plus</p>
-            <p className="text-[11px] text-content-muted">Boosted listings, priority verification, and more for your household.</p>
+            <p className="text-xs text-content-muted">Boosted listings, priority verification, and more for your household.</p>
           </div>
           <UpgradeButton item="plus" className={`shrink-0 ${goldButtonClass()}`} />
         </div>
@@ -437,7 +437,7 @@ export default function ProfilePage() {
         <div className="p-2 bg-accent/10 rounded-lg text-accent"><ShieldCheck size={18} /></div>
         <div className="flex-1">
           <p className="text-sm font-bold text-content">Next of Kin</p>
-          <p className="text-[11px] text-content-muted">People to notify if something happens to you</p>
+          <p className="text-xs text-content-muted">People to notify if something happens to you</p>
         </div>
       </Link>
 
@@ -446,7 +446,7 @@ export default function ProfilePage() {
           <div className="p-2 bg-accent/10 rounded-lg text-accent"><Briefcase size={18} /></div>
           <div className="flex-1">
             <p className="text-sm font-bold text-content">Manage your business</p>
-            <p className="text-[11px] text-content-muted">Visibility tier, verification, listings performance</p>
+            <p className="text-xs text-content-muted">Visibility tier, verification, listings performance</p>
           </div>
         </Link>
       )}
@@ -457,13 +457,13 @@ export default function ProfilePage() {
             <UserIcon size={16} /> Tenant Requirement Profile
           </h2>
           <div className="space-y-2">
-            <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">About Yourself</label>
+            <label className="text-xs text-content-muted uppercase font-black tracking-widest">About Yourself</label>
             <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell landlords about yourself, your cleanliness habits, etc."
               className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content h-24 resize-none outline-none focus:border-accent/50" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Gender</label>
+              <label className="text-xs text-content-muted uppercase font-black tracking-widest">Gender</label>
               <select value={gender} onChange={e => setGender(e.target.value as typeof gender)}
                 className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50 cursor-pointer">
                 <option value="any">Any / Rather not say</option>
@@ -472,13 +472,13 @@ export default function ProfilePage() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Number of Children</label>
+              <label className="text-xs text-content-muted uppercase font-black tracking-widest">Number of Children</label>
               <input type="number" min={0} value={childrenCount} onChange={e => setChildrenCount(Math.max(0, Number(e.target.value)))}
                 className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50" />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Employment Status</label>
+            <label className="text-xs text-content-muted uppercase font-black tracking-widest">Employment Status</label>
             <select value={employmentStatus} onChange={e => setEmploymentStatus(e.target.value)}
               className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50 cursor-pointer">
               <option>Employed</option>
@@ -500,9 +500,9 @@ export default function ProfilePage() {
           <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
             <ShieldCheck size={16} /> Tenant Preferences
           </h2>
-          <p className="text-[11px] text-content-muted -mt-3">Applied as the default requirements on new listings — each listing can still override these.</p>
+          <p className="text-xs text-content-muted -mt-3">Applied as the default requirements on new listings — each listing can still override these.</p>
           <div className="space-y-2">
-            <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Preferred Tenant</label>
+            <label className="text-xs text-content-muted uppercase font-black tracking-widest">Preferred Tenant</label>
             <select value={genderPreference} onChange={e => setGenderPreference(e.target.value as typeof genderPreference)}
               className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50 cursor-pointer">
               <option value="any">Any</option>
@@ -518,7 +518,7 @@ export default function ProfilePage() {
             </label>
             {childrenAllowed && (
               <div className="space-y-2">
-                <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Max Children</label>
+                <label className="text-xs text-content-muted uppercase font-black tracking-widest">Max Children</label>
                 <input type="number" min={0} value={maxChildren} onChange={e => setMaxChildren(Math.max(0, Number(e.target.value)))}
                   className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50" />
               </div>
@@ -540,8 +540,8 @@ export default function ProfilePage() {
         <div className="glass-panel p-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-bold text-content">Verification</p>
-            <p className="text-[11px] text-content-muted">Verified residents get priority on requests and dispatches.</p>
-            <p className="text-[10px] text-content-subtle mt-1">Free verification always works and arrives regardless — paying only skips the queue, it&apos;s never required to be taken seriously.</p>
+            <p className="text-xs text-content-muted">Verified residents get priority on requests and dispatches.</p>
+            <p className="text-xs text-content-subtle mt-1">Free verification always works and arrives regardless — paying only skips the queue, it&apos;s never required to be taken seriously.</p>
           </div>
           <UpgradeButton item="verification_speedup" className={`shrink-0 ${goldButtonClass()}`} />
         </div>
@@ -584,7 +584,7 @@ export default function ProfilePage() {
                 placeholder="DELETE"
                 className="w-full bg-surface border border-danger/30 rounded-xl p-3 text-sm text-content outline-none focus:border-danger/60"
               />
-              {deleteError && <p className="text-[11px] text-danger">{deleteError}</p>}
+              {deleteError && <p className="text-xs text-danger">{deleteError}</p>}
               <div className="flex gap-2">
                 <button
                   type="button"

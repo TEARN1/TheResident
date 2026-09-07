@@ -126,7 +126,7 @@ export default function ThreadPage() {
           <div key={m.id} className={`flex ${m.sender_id === myId ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[70%] rounded-xl px-3.5 py-2.5 text-xs ${m.sender_id === myId ? 'bg-accent text-content-on-accent font-medium' : 'bg-surface-sunken/40 border border-subtle text-content'}`}>
               {m.is_request && m.sender_id === myId && (
-                <span className="flex items-center gap-1 text-[9px] opacity-70 mb-1 uppercase font-bold tracking-widest"><Clock size={9} /> Request</span>
+                <span className="flex items-center gap-1 text-xs opacity-70 mb-1 uppercase font-bold tracking-widest"><Clock size={9} /> Request</span>
               )}
               <p className="whitespace-pre-wrap">{m.body}</p>
             </div>
@@ -135,7 +135,7 @@ export default function ThreadPage() {
         <div ref={bottomRef} />
       </div>
 
-      {error && <p className="text-[11px] text-danger px-4">{error}</p>}
+      {error && <p className="text-xs text-danger px-4">{error}</p>}
 
       <div className="flex gap-2 p-4 border-t border-subtle">
         <input

@@ -122,8 +122,14 @@ const browser = await chromium.launch({
 })
 // Phone-sized on purpose: this app's users are on phones, and a desktop
 // viewport can hide a layout that collapses on a small screen.
-const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
-await ctx.addCookies([{ name: 'guest-mode', value: '1', url: BASE }])
+// Every route is checked at the narrowest phone still in real use here and
+// at the common modern size. The dashboard used to render IDENTICALLY at
+// 320px and 1024px — there was no responsive behaviour above phone at all —
+// so a single viewport proved very little.
+const VIEWPORTS = [
+  { w: 320, h: 568, label: 'iPhone SE / older Android' },
+  { w: 390, h: 844, label: 'iPhone 14/15' }
+]
 
 // --shots also saves a full-page PNG of every route. The smoke test proves a
 // route RENDERS; it cannot tell you the layout is a mess, that a heading is
@@ -140,7 +146,11 @@ if (SHOTS) {
 
 const failures = []
 const shots = []
-console.log(`→ loading ${ROUTES.length} routes in a 390x844 browser\n`)
+
+for (const vp of VIEWPORTS) {
+const ctx = await browser.newContext({ viewport: { width: vp.w, height: vp.h } })
+await ctx.addCookies([{ name: 'guest-mode', value: '1', url: BASE }])
+console.log(`→ ${ROUTES.length} routes at ${vp.w}x${vp.h} — ${vp.label}\n`)
 
 for (const route of ROUTES) {
   const page = await ctx.newPage()
@@ -196,12 +206,44 @@ for (const route of ROUTES) {
     }
   }
 
+  // Tap targets. Measured before this check existed: 19-22 controls under
+  // 44px on every dashboard screen, the smallest 11px. Apple's floor is 44,
+  // Google's 48. A control a thumb cannot reliably hit is most of what "the
+  // app feels broken" actually means, and nothing else in this pipeline can
+  // see it — tsc, the unit tests and the build all pass on an 11px button.
+  if (status && status < 400) {
+    const tiny = await page.evaluate(() => {
+      const out = []
+      for (const el of document.querySelectorAll('a,button,[role="button"],input,select,textarea')) {
+        const b = el.getBoundingClientRect()
+        if (b.width === 0 || b.height === 0) continue
+        if (Math.min(b.width, b.height) >= 44) continue
+        const cs = getComputedStyle(el)
+        if (cs.visibility === 'hidden' || cs.display === 'none') continue
+        // WCAG 2.2 SC 2.5.8 exempts a target "in a sentence or block of
+        // text" — an inline link inside a paragraph cannot be 44px tall
+        // without breaking the sentence around it, and enlarging it is not
+        // what the rule asks for. A link styled as a button is inline-flex,
+        // flex or block, so this exempts prose links only.
+        if (el.tagName === 'A' && cs.display === 'inline') continue
+        out.push(`${Math.round(b.width)}x${Math.round(b.height)} <${el.tagName.toLowerCase()}>` +
+          ` "${(el.textContent || '').trim().slice(0, 22)}"`)
+      }
+      return out
+    }).catch(() => [])
+    if (tiny.length) {
+      problems.push(`${tiny.length} tap target(s) under 44px: ${tiny.slice(0, 3).join(', ')}` +
+        (tiny.length > 3 ? ` (+${tiny.length - 3} more)` : ''))
+    }
+  }
+
   if (status >= 400) problems.push(`HTTP ${status}`)
   if (status && status < 400 && chars < MIN_TEXT) {
     problems.push(`rendered only ${chars} characters — blank or errored`)
   }
 
-  if (SHOTS && status && status < 400) {
+  // Screenshots only at the primary size; two sets of 14 is noise.
+  if (SHOTS && vp.w === 390 && status && status < 400) {
     const name = (route === '/' ? 'home' : route.replace(/^\//, '').replace(/\//g, '-')) + '.png'
     // Full page, not just the fold: a layout that breaks below the fold
     // breaks for a user who scrolls, which is every user.
@@ -212,9 +254,12 @@ for (const route of ROUTES) {
   const ok = problems.length === 0
   console.log(`   ${ok ? 'ok  ' : 'FAIL'}  ${String(status).padEnd(4)} ${route.padEnd(26)} ${String(chars).padStart(5)} chars`)
   for (const p of [...new Set(problems)].slice(0, 5)) console.log(`         ! ${p}`)
-  if (!ok) failures.push({ route, problems: [...new Set(problems)] })
+  if (!ok) failures.push({ route: `${route} @${vp.w}px`, problems: [...new Set(problems)] })
 
   await page.close()
+}
+await ctx.close()
+console.log()
 }
 
 // A folder of fourteen PNGs is not something anyone actually opens. One page
@@ -248,9 +293,9 @@ if (server) server.kill()
 
 console.log()
 if (failures.length) {
-  console.log(`SMOKE TEST FAILED — ${failures.length} of ${ROUTES.length} route(s) are broken:`)
+  console.log(`SMOKE TEST FAILED — ${failures.length} of ${ROUTES.length * VIEWPORTS.length} route/viewport checks are broken:`)
   for (const f of failures) console.log(`   ${f.route}: ${f.problems[0]}`)
   process.exit(1)
 }
 
-console.log(`SMOKE TEST PASSED — all ${ROUTES.length} routes render.`)
+console.log(`SMOKE TEST PASSED — ${ROUTES.length} routes \u00d7 ${VIEWPORTS.length} viewports.`)

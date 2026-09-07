@@ -133,7 +133,7 @@ export default function MessagesPage() {
         <p className="text-sm font-bold text-content">{nameOf(t.otherId)}</p>
         <p className="text-xs text-content-muted truncate">{t.lastMessage.body}</p>
       </div>
-      <span className="text-[10px] text-content-subtle flex-shrink-0">{new Date(t.lastMessage.created_at).toLocaleDateString()}</span>
+      <span className="text-xs text-content-subtle flex-shrink-0">{new Date(t.lastMessage.created_at).toLocaleDateString()}</span>
     </button>
   )
 
@@ -149,7 +149,7 @@ export default function MessagesPage() {
           <Loader size={16} className="animate-spin" /> Loading conversations…
         </div>
       ) : error && threads.length === 0 ? (
-        <p className="text-[11px] text-danger">{error}</p>
+        <p className="text-xs text-danger">{error}</p>
       ) : threads.length === 0 ? (
         <EmptyState icon={MessageCircle} title="No conversations yet" subtitle="Message a landlord, driver or neighbour to start one." />
       ) : (
@@ -160,7 +160,7 @@ export default function MessagesPage() {
               only notice mid-scroll in one flat list. */}
           {requests.length > 0 && (
             <div className="space-y-2">
-              <h3 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-accent">
+              <h3 className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-accent">
                 <Clock size={11} /> Requests ({requests.length})
               </h3>
               {requests.map(t => <ThreadRow key={t.otherId} t={t} />)}
@@ -170,7 +170,7 @@ export default function MessagesPage() {
           {chats.length > 0 && (
             <div className="space-y-2">
               {requests.length > 0 && (
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-content-muted">Chats</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-content-muted">Chats</h3>
               )}
               {chats.map(t => <ThreadRow key={t.otherId} t={t} />)}
             </div>

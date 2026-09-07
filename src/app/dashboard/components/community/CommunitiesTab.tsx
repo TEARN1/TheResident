@@ -64,7 +64,7 @@ export default function CommunitiesTab({
                             {community.name}
                             {isMember && <ShieldCheck size={16} className="text-accent" />}
                          </h4>
-                         <div className="flex items-center gap-3 text-[9px] text-content-muted font-black uppercase tracking-widest">
+                         <div className="flex items-center gap-3 text-xs text-content-muted font-black uppercase tracking-widest">
                             <span className="bg-surface-raised/5 px-2 py-0.5 rounded text-content-muted">{community.kind}</span>
                             <span className="text-accent/40">•</span>
                             <span>{community.suburb}</span>
@@ -75,7 +75,7 @@ export default function CommunitiesTab({
                    </div>
 
                    {isMember ? (
-                     <span className="flex items-center gap-1 text-[10px] text-accent font-black bg-accent/10 px-3 py-1.5 rounded-full border border-accent/20 uppercase tracking-widest">
+                     <span className="flex items-center gap-1 text-xs text-accent font-black bg-accent/10 px-3 py-1.5 rounded-full border border-accent/20 uppercase tracking-widest">
                         <Check size={12} /> Active Member
                      </span>
                    ) : (

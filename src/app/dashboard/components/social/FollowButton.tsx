@@ -57,7 +57,7 @@ export default function FollowButton({ targetUserId, currentUserId, className }:
       type="button"
       onClick={toggle}
       disabled={loading || !checked}
-      className={className || `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 ${
+      className={className || `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 ${
         following
           ? 'bg-surface-raised/5 text-content-muted border border-default hover:bg-danger/10 hover:text-danger hover:border-danger/20'
           : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-content-on-accent'

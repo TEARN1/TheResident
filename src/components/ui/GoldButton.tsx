@@ -10,7 +10,7 @@ import React from 'react'
 // only needs to happen here.
 export function goldButtonClass(opts: { size?: 'sm' | 'md'; fullWidth?: boolean } = {}): string {
   const { size = 'md', fullWidth = false } = opts
-  const padding = size === 'sm' ? 'px-3 py-2 text-[10px]' : 'px-4 py-2.5 text-xs'
+  const padding = size === 'sm' ? 'px-3 py-2 text-xs' : 'px-4 py-2.5 text-xs'
   return [
     fullWidth ? 'w-full' : '',
     'flex items-center justify-center gap-2',

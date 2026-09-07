@@ -253,7 +253,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
                   <div key={m.userId} className="flex items-center justify-between bg-surface-sunken/40 border border-subtle rounded-xl p-3">
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-bold text-content">{m.name}</span>
-                      <span className="text-[9px] bg-surface-raised/5 text-content-muted px-2 py-0.5 rounded uppercase font-bold">{m.role}</span>
+                      <span className="text-xs bg-surface-raised/5 text-content-muted px-2 py-0.5 rounded uppercase font-bold">{m.role}</span>
                     </div>
                     {m.userId !== currentUserId && (
                       <div className="flex items-center gap-2">
@@ -290,7 +290,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
                       <span className="text-content font-bold">{a.actorName}</span> {a.action.replace('_', ' ')} a {a.subjectType.replace('_', ' ')}
                       {a.reason ? ` — ${a.reason}` : ''}
                     </span>
-                    <span className="text-content-subtle font-mono text-[10px]">{new Date(a.createdAt).toLocaleString()}</span>
+                    <span className="text-content-subtle font-mono text-xs">{new Date(a.createdAt).toLocaleString()}</span>
                   </div>
                 ))}
               </div>

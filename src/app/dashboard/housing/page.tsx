@@ -426,7 +426,7 @@ export default function HousingPage() {
       rejected: 'bg-danger/10 text-danger border-danger/20'
     }
     return (
-      <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${styles[status] || styles.pending}`}>
+      <span className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-widest border ${styles[status] || styles.pending}`}>
         {status}
       </span>
     )
@@ -528,7 +528,7 @@ export default function HousingPage() {
                   <button
                     key={req.id}
                     onClick={() => setActiveAuditRequest(req)}
-                    className="bg-accent text-content-on-accent px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-accent transition-all flex items-center gap-2"
+                    className="bg-accent text-content-on-accent px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-accent transition-all flex items-center gap-2"
                   >
                      Audit {req.tenantName}
                      {req.status !== 'pending' && requestStatusBadge(req.status)}
@@ -587,7 +587,7 @@ export default function HousingPage() {
                             className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-content hover:bg-accent/10 hover:text-accent transition-colors text-left"
                          >
                             <span className="flex items-center gap-2"><MapPin size={13} className="text-content-subtle" /> {s.suburb}</span>
-                            <span className="text-[10px] text-content-muted font-bold">{s.count} room{s.count === 1 ? '' : 's'}</span>
+                            <span className="text-xs text-content-muted font-bold">{s.count} room{s.count === 1 ? '' : 's'}</span>
                          </button>
                       ))}
                    </div>
@@ -632,7 +632,7 @@ export default function HousingPage() {
                   <div className="glass-panel p-8 bg-surface-sunken/40 border-accent/10 grid grid-cols-1 md:grid-cols-3 gap-10">
                      <div className="space-y-4">
                         <div className="flex justify-between items-end gap-2">
-                           <label className="text-[10px] uppercase font-black tracking-[0.2em] text-content-muted">Price Ceiling</label>
+                           <label className="text-xs uppercase font-black tracking-[0.2em] text-content-muted">Price Ceiling</label>
                            <input
                               type="number" min={0} step={250}
                               placeholder="Any"
@@ -658,7 +658,7 @@ export default function HousingPage() {
                            }}
                            className="w-full h-1.5 bg-surface-raised rounded-lg appearance-none cursor-pointer accent-gold-primary"
                         />
-                        <p className="text-[10px] text-content-muted">
+                        <p className="text-xs text-content-muted">
                            {filterPrice === 0
                               ? 'Showing every room. Drag left to set a budget.'
                               : `Hiding rooms above ${formatCurrency(filterPrice)}.`}
@@ -666,7 +666,7 @@ export default function HousingPage() {
                      </div>
 
                      <div className="space-y-4">
-                        <label className="text-[10px] uppercase font-black tracking-[0.2em] text-content-muted block mb-6">Preferred Amenities</label>
+                        <label className="text-xs uppercase font-black tracking-[0.2em] text-content-muted block mb-6">Preferred Amenities</label>
                         <div className="flex flex-wrap gap-4">
                            <label className="flex items-center gap-3 cursor-pointer group">
                               <div className={`w-10 h-6 rounded-full p-1 transition-all border ${filterWifi ? 'bg-accent border-accent' : 'bg-surface-raised/5 border-default'}`}>
@@ -699,7 +699,7 @@ export default function HousingPage() {
                            onClick={() => {
                               setFilterPrice(0); setFilterWifi(false); setFilterParking(false); setSearchInputValue('');
                            }}
-                           className="text-[10px] font-black uppercase tracking-[0.3em] text-danger/50 hover:text-danger transition-colors"
+                           className="text-xs font-black uppercase tracking-[0.3em] text-danger/50 hover:text-danger transition-colors"
                         >
                            Reset All Filters
                         </button>
@@ -778,7 +778,7 @@ export default function HousingPage() {
                      </div>
                      <div className="bg-accent text-content-on-accent px-4 py-2 rounded-xl shadow-xl">
                         <span className="text-lg font-black tracking-tighter">{formatCurrency(item.price, item.currency)}</span>
-                        <span className="text-[10px] font-black ml-1 opacity-60">/ {item.listingType === 'guesthouse' ? 'NIGHT' : 'MO'}</span>
+                        <span className="text-xs font-black ml-1 opacity-60">/ {item.listingType === 'guesthouse' ? 'NIGHT' : 'MO'}</span>
                      </div>
                   </div>
                 </div>
@@ -788,7 +788,7 @@ export default function HousingPage() {
                      <div className="flex items-center gap-2">
                         <h3 className="text-xl font-black text-content tracking-tight leading-tight group-hover:text-accent transition-colors">{item.title}</h3>
                         {isFeatured(item) && (
-                           <span className="bg-accent text-content-on-accent px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">Featured</span>
+                           <span className="bg-accent text-content-on-accent px-2 py-0.5 rounded-lg text-xs font-black uppercase tracking-widest shrink-0">Featured</span>
                         )}
                         {item.landlordId === currentUser?.id && item.propertyId && (() => {
                            const prop = myProperties.find(p => p.id === item.propertyId)
@@ -798,20 +798,20 @@ export default function HousingPage() {
                               .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
                            const ordinal = siblings.findIndex(l => l.id === item.id) + 1
                            return (
-                              <span className="bg-surface-raised/5 border border-default text-content-muted px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">
+                              <span className="bg-surface-raised/5 border border-default text-content-muted px-2 py-0.5 rounded-lg text-xs font-black uppercase tracking-widest shrink-0">
                                  Room {ordinal} of {prop.total_rooms}
                               </span>
                            )
                         })()}
                      </div>
                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center text-[10px] text-content-muted font-black uppercase tracking-widest gap-2">
+                        <div className="flex items-center text-xs text-content-muted font-black uppercase tracking-widest gap-2">
                            <MapPin size={12} className="text-accent" /> {item.suburb}, {item.location}
                         </div>
                         <OpenInMapsButton address={`${item.location}, ${item.suburb}`} lat={item.lat} lon={item.lon} label={item.title} />
                      </div>
                      {item.listingType === 'guesthouse' && item.eventId && gruvsEventInfo[item.eventId] && (
-                        <div className="flex items-center gap-1.5 text-[10px] font-black text-info uppercase tracking-widest">
+                        <div className="flex items-center gap-1.5 text-xs font-black text-info uppercase tracking-widest">
                            <Building2 size={11} /> Near {gruvsEventInfo[item.eventId].title}
                         </div>
                      )}
@@ -826,7 +826,7 @@ export default function HousingPage() {
                      <button
                         onClick={() => handleToggleWatch(item.id)}
                         disabled={watchBusyId === item.id}
-                        className={`flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-2 rounded-xl border transition-colors disabled:opacity-50 ${
+                        className={`flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest py-2 rounded-xl border transition-colors disabled:opacity-50 ${
                            watchedListingIds.has(item.id)
                               ? 'bg-accent/10 border-accent/40 text-accent'
                               : 'bg-surface-raised/5 border-default text-content-muted hover:text-content hover:border-strong'
@@ -843,7 +843,7 @@ export default function HousingPage() {
                   <div className="flex items-center justify-between gap-2 -mt-1">
                      <button
                        onClick={() => setReviewsOpenFor(reviewsOpenFor === item.id ? null : item.id)}
-                       className="text-[10px] text-content-muted font-bold hover:text-accent transition-colors text-left"
+                       className="text-xs text-content-muted font-bold hover:text-accent transition-colors text-left"
                      >
                         Posted by <span className="text-content">{item.landlordName || 'Landlord'}</span>
                      </button>
@@ -870,9 +870,9 @@ export default function HousingPage() {
                   </AnimatePresence>
 
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {item.amenities.wifi && <span className="text-[9px] font-black bg-surface-raised/5 border border-default px-2 py-1 rounded-lg text-content-muted flex items-center gap-1.5">WiFi</span>}
-                    {item.amenities.parking && <span className="text-[9px] font-black bg-surface-raised/5 border border-default px-2 py-1 rounded-lg text-content-muted flex items-center gap-1.5">Parking</span>}
-                    <span className="text-[9px] font-black bg-surface-raised/5 border border-default px-2 py-1 rounded-lg text-content-muted">Bath: {item.amenities.bathroom}</span>
+                    {item.amenities.wifi && <span className="text-xs font-black bg-surface-raised/5 border border-default px-2 py-1 rounded-lg text-content-muted flex items-center gap-1.5">WiFi</span>}
+                    {item.amenities.parking && <span className="text-xs font-black bg-surface-raised/5 border border-default px-2 py-1 rounded-lg text-content-muted flex items-center gap-1.5">Parking</span>}
+                    <span className="text-xs font-black bg-surface-raised/5 border border-default px-2 py-1 rounded-lg text-content-muted">Bath: {item.amenities.bathroom}</span>
                   </div>
 
                   <div className="mt-auto pt-6 border-t border-subtle space-y-2">
@@ -883,13 +883,13 @@ export default function HousingPage() {
                              <div className="flex items-center gap-2">
                                 <button
                                    onClick={() => handleDeleteListing(item.id)}
-                                   className="flex-1 bg-danger/10 hover:bg-danger hover:text-content border border-danger/30 text-danger font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
+                                   className="flex-1 bg-danger/10 hover:bg-danger hover:text-content border border-danger/30 text-danger font-black py-2.5 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
                                 >
                                    Confirm delete
                                 </button>
                                 <button
                                    onClick={() => setConfirmDeleteListingId(null)}
-                                   className="px-4 bg-surface-raised/5 hover:bg-surface-raised/10 text-content-muted font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
+                                   className="px-4 bg-surface-raised/5 hover:bg-surface-raised/10 text-content-muted font-black py-2.5 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
                                 >
                                    Cancel
                                 </button>
@@ -897,7 +897,7 @@ export default function HousingPage() {
                           ) : (
                              <button
                                 onClick={() => setConfirmDeleteListingId(item.id)}
-                                className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-danger/5 border border-transparent hover:border-danger/20 text-content-subtle hover:text-danger font-bold py-2 rounded-xl transition-all text-[10px] uppercase tracking-widest"
+                                className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-danger/5 border border-transparent hover:border-danger/20 text-content-subtle hover:text-danger font-bold py-2 rounded-xl transition-all text-xs uppercase tracking-widest"
                              >
                                 <Trash2 size={12} /> Delete listing
                              </button>
@@ -932,7 +932,7 @@ export default function HousingPage() {
                 <div className="flex justify-between items-start">
                    <div className="space-y-1">
                       <h3 className="text-xl font-black text-content tracking-tighter uppercase italic">{rm.name}</h3>
-                      <div className="flex items-center text-[9px] text-content-subtle font-black uppercase tracking-widest gap-1.5">
+                      <div className="flex items-center text-xs text-content-subtle font-black uppercase tracking-widest gap-1.5">
                          <MapPin size={10} className="text-accent" /> {rm.suburb}
                       </div>
                    </div>
@@ -947,12 +947,12 @@ export default function HousingPage() {
                 <p className="text-sm text-content-muted italic leading-relaxed font-medium">&quot;{rm.bio}&quot;</p>
                 <div className="grid grid-cols-2 gap-3">
                    <div className="bg-surface-raised/[0.02] border border-subtle rounded-xl p-2.5">
-                      <span className="text-[8px] text-content-subtle font-black uppercase tracking-widest block">GENDER</span>
-                      <span className="text-[10px] text-content font-black uppercase tracking-widest">{rm.gender}</span>
+                      <span className="text-xs text-content-subtle font-black uppercase tracking-widest block">GENDER</span>
+                      <span className="text-xs text-content font-black uppercase tracking-widest">{rm.gender}</span>
                    </div>
                    <div className="bg-surface-raised/[0.02] border border-subtle rounded-xl p-2.5">
-                      <span className="text-[8px] text-content-subtle font-black uppercase tracking-widest block">DEPENDENTS</span>
-                      <span className="text-[10px] text-content font-black uppercase tracking-widest">{rm.childrenCount}</span>
+                      <span className="text-xs text-content-subtle font-black uppercase tracking-widest block">DEPENDENTS</span>
+                      <span className="text-xs text-content font-black uppercase tracking-widest">{rm.childrenCount}</span>
                    </div>
                 </div>
                 <Link
@@ -979,11 +979,11 @@ export default function HousingPage() {
                   <form onSubmit={handleCreateListing} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Listing Title</label>
+                           <label className="text-xs text-content-muted uppercase font-black tracking-widest">Listing Title</label>
                            <input value={newTitle} onChange={e => setNewTitle(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="e.g. Sunny en-suite near the station" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Monthly Rent</label>
+                           <label className="text-xs text-content-muted uppercase font-black tracking-widest">Monthly Rent</label>
                            <div className="flex gap-2">
                               <input type="number" value={newPrice} onChange={e => setNewPrice(Number(e.target.value))} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" />
                               <select value={newCurrency} onChange={e => setNewCurrency(e.target.value)} className="bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40">
@@ -999,34 +999,34 @@ export default function HousingPage() {
                            {/* What rooms actually go for nearby, in the same currency — suppressed
                                below a usable sample rather than quoting a median of two. */}
                            {newListingPriceStats && (
-                             <p className="text-[10px] text-content-muted mt-1.5">
+                             <p className="text-xs text-content-muted mt-1.5">
                                Typical range in {newSuburb}: {formatCurrency(newListingPriceStats.low, newCurrency)}–{formatCurrency(newListingPriceStats.high, newCurrency)}
                                {' '}({newListingPriceStats.sample} listings)
                              </p>
                            )}
                            {newListingLooksSuspicious && (
-                             <p className="text-[10px] text-danger mt-1.5 flex items-center gap-1">
+                             <p className="text-xs text-danger mt-1.5 flex items-center gap-1">
                                <AlertTriangle size={11} /> That&apos;s far below the going rate nearby — tenants will see a caution flag on this listing.
                              </p>
                            )}
                         </div>
                      </div>
                      <div className="space-y-2">
-                        <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Description</label>
+                        <label className="text-xs text-content-muted uppercase font-black tracking-widest">Description</label>
                         <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content h-24 resize-none outline-none focus:border-accent/40" placeholder="Describe the room, building rules, and environment..." />
                      </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">City / Location</label>
+                           <label className="text-xs text-content-muted uppercase font-black tracking-widest">City / Location</label>
                            <input value={newLocation} onChange={e => setNewLocation(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="e.g. Berlin, Germany" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Suburb / Area</label>
+                           <label className="text-xs text-content-muted uppercase font-black tracking-widest">Suburb / Area</label>
                            <input value={newSuburb} onChange={e => setNewSuburb(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="e.g. Kreuzberg" />
                         </div>
                      </div>
                      <div className="space-y-2">
-                        <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Listing Type</label>
+                        <label className="text-xs text-content-muted uppercase font-black tracking-widest">Listing Type</label>
                         <div className="flex bg-surface border border-default rounded-xl p-1 w-fit">
                            <button type="button" onClick={() => setNewListingType('rent')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'rent' ? 'bg-accent text-content-on-accent' : 'text-content-muted'}`}>Rent</button>
                            <button type="button" onClick={() => setNewListingType('sale')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'sale' ? 'bg-accent text-content-on-accent' : 'text-content-muted'}`}>Sell</button>
@@ -1034,9 +1034,9 @@ export default function HousingPage() {
                         </div>
                         {newListingType === 'guesthouse' && (
                            <div className="space-y-2 pt-1">
-                              <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Near Which Gruvs Event (optional)</label>
+                              <label className="text-xs text-content-muted uppercase font-black tracking-widest">Near Which Gruvs Event (optional)</label>
                               {upcomingGruvsEvents.length === 0 ? (
-                                 <p className="text-[11px] text-content-muted bg-surface-sunken/40 border border-default rounded-xl p-3 leading-relaxed">No upcoming events found on The Gruvs — you can still list without one.</p>
+                                 <p className="text-xs text-content-muted bg-surface-sunken/40 border border-default rounded-xl p-3 leading-relaxed">No upcoming events found on The Gruvs — you can still list without one.</p>
                               ) : (
                                  <select value={newEventId} onChange={e => setNewEventId(e.target.value)} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40 cursor-pointer">
                                     <option value="">No specific event</option>
@@ -1045,7 +1045,7 @@ export default function HousingPage() {
                                     ))}
                                  </select>
                               )}
-                              <p className="text-[10px] text-content-muted leading-relaxed">
+                              <p className="text-xs text-content-muted leading-relaxed">
                                  Guest houses are seasonal — this listing automatically stops showing after {new Date(GUESTHOUSE_SEASON_END).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.
                               </p>
                            </div>
@@ -1053,7 +1053,7 @@ export default function HousingPage() {
                      </div>
                      {myProperties.length > 0 && (
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Which Property Is This Room In?</label>
+                           <label className="text-xs text-content-muted uppercase font-black tracking-widest">Which Property Is This Room In?</label>
                            <select value={newPropertyId} onChange={e => setNewPropertyId(e.target.value)} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40">
                               <option value="">No property — standalone listing</option>
                               {myProperties.map(p => (
@@ -1064,7 +1064,7 @@ export default function HousingPage() {
                      )}
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Bathroom Style</label>
+                           <label className="text-xs text-content-muted uppercase font-black tracking-widest">Bathroom Style</label>
                            <select value={newBathroom} onChange={e => setNewBathroom(e.target.value as 'shared' | 'private' | 'ensuite')} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40">
                               <option value="shared">Shared</option>
                               <option value="private">Private</option>
@@ -1073,7 +1073,7 @@ export default function HousingPage() {
                         </div>
                      </div>
                      <div className="space-y-2">
-                        <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Photos</label>
+                        <label className="text-xs text-content-muted uppercase font-black tracking-widest">Photos</label>
                         <div className="flex flex-wrap gap-2">
                            {newPhotos.map((url, i) => (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -1091,7 +1091,7 @@ export default function HousingPage() {
                               />
                            </label>
                         </div>
-                        <p className="text-[10px] text-content-subtle">Up to {MAX_LISTING_PHOTOS} photos of the actual room — a real photo does more for an application than any description.</p>
+                        <p className="text-xs text-content-subtle">Up to {MAX_LISTING_PHOTOS} photos of the actual room — a real photo does more for an application than any description.</p>
                      </div>
                      <div className="flex flex-wrap gap-6 bg-surface-raised/5 p-4 rounded-2xl border border-subtle">
                         <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-content-muted uppercase tracking-widest">
@@ -1110,10 +1110,10 @@ export default function HousingPage() {
                      {/* Who this room suits — feeds roommateCompatibility's hard filters directly.
                          Every listing silently shared the same defaults until this existed. */}
                      <div className="space-y-3 bg-surface-raised/5 p-4 rounded-2xl border border-subtle">
-                        <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Who This Room Suits</label>
+                        <label className="text-xs text-content-muted uppercase font-black tracking-widest">Who This Room Suits</label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div className="space-y-2">
-                              <label className="text-[10px] text-content-subtle uppercase font-bold tracking-widest">Gender Preference</label>
+                              <label className="text-xs text-content-subtle uppercase font-bold tracking-widest">Gender Preference</label>
                               <select value={newGenderPref} onChange={e => setNewGenderPref(e.target.value as 'men' | 'women' | 'couple' | 'any')} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40">
                                  <option value="any">No preference</option>
                                  <option value="men">Men only</option>
@@ -1122,7 +1122,7 @@ export default function HousingPage() {
                               </select>
                            </div>
                            <div className="space-y-2">
-                              <label className="text-[10px] text-content-subtle uppercase font-bold tracking-widest">Max Children</label>
+                              <label className="text-xs text-content-subtle uppercase font-bold tracking-widest">Max Children</label>
                               <input
                                 type="number" min={0} value={newMaxChildren}
                                 onChange={e => setNewMaxChildren(Number(e.target.value))}
@@ -1154,13 +1154,13 @@ export default function HousingPage() {
                   <div className="flex justify-between items-center">
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">Apply for <span className="text-accent">Room</span></h3>
-                        <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">{activeListing.title}</p>
+                        <p className="text-xs text-content-muted font-black uppercase tracking-widest">{activeListing.title}</p>
                      </div>
                      <button onClick={() => setActiveListing(null)} className="text-content-muted hover:text-content"><X /></button>
                   </div>
                   <form onSubmit={handleApply} className="space-y-6">
                      <div className="space-y-2">
-                        <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Message to Landlord</label>
+                        <label className="text-xs text-content-muted uppercase font-black tracking-widest">Message to Landlord</label>
                         <textarea value={applyMessage} onChange={e => setApplyMessage(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-4 text-sm text-content h-32 resize-none outline-none focus:border-accent/40" placeholder="Introduce yourself, mentioned your move-in date and any questions..." />
                      </div>
                      <button type="submit" className="w-full bg-accent hover:bg-accent text-content-on-accent font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2">
@@ -1230,7 +1230,7 @@ export default function HousingPage() {
 
                      {activeAuditRequest.status === 'approved' && (
                         <div className="space-y-4 pt-4 border-t border-subtle">
-                           <h5 className="text-[10px] text-content-muted uppercase font-black tracking-widest">Review This Tenant</h5>
+                           <h5 className="text-xs text-content-muted uppercase font-black tracking-widest">Review This Tenant</h5>
                            <ReviewForm subjectId={activeAuditRequest.tenantId} />
                            <ReviewsList userId={activeAuditRequest.tenantId} />
                         </div>
@@ -1252,7 +1252,7 @@ export default function HousingPage() {
             >
                <div className="p-2 bg-success/20 rounded-full text-success shadow-[0_0_15px_rgba(34,197,94,0.3)]"><ShieldCheck size={24} /></div>
                <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Success</p>
+                  <p className="text-xs font-black text-content-subtle uppercase tracking-[0.2em]">Success</p>
                   <p className="text-sm font-black text-content italic tracking-tight uppercase">{alertNotification}</p>
                </div>
                <button onClick={() => setAlertNotification(null)} className="ml-auto text-content-subtle hover:text-content transition-colors"><X size={16} /></button>

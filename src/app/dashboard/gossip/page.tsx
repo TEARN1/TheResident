@@ -453,7 +453,7 @@ export default function GossipPage() {
             <MessageSquare size={18} className="text-accent" />
           </div>
           <h2 className="text-xl font-bold text-content">Gossip Feed</h2>
-          <span className="text-[10px] text-content-muted uppercase tracking-widest font-bold ml-auto hidden sm:inline">What&apos;s the word, neighbour?</span>
+          <span className="text-xs text-content-muted uppercase tracking-widest font-bold ml-auto hidden sm:inline">What&apos;s the word, neighbour?</span>
         </div>
         {!composerExpanded ? (
           <button
@@ -475,7 +475,7 @@ export default function GossipPage() {
           />
         )}
         {composerExpanded && composerBody.length > 0 && (
-          <p className="text-[10px] text-content-subtle text-right mt-1">{composerBody.length}/2000</p>
+          <p className="text-xs text-content-subtle text-right mt-1">{composerBody.length}/2000</p>
         )}
 
         {composerExpanded && mediaPreview && (
@@ -498,14 +498,14 @@ export default function GossipPage() {
 
         {composerExpanded && !mediaFile && (
           <div className="mt-3">
-            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-content-muted font-bold mb-2">
+            <div className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-content-muted font-bold mb-2">
               <Palette size={12} /> Or style your text post
             </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedBackground(null)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest border transition-all ${
                   selectedBackground === null
                     ? 'border-accent text-accent bg-accent/10'
                     : 'border-default text-content-muted hover:border-strong'
@@ -529,7 +529,7 @@ export default function GossipPage() {
           </div>
         )}
 
-        {composerExpanded && mediaError && <p className="text-[11px] text-danger mt-2">{mediaError}</p>}
+        {composerExpanded && mediaError && <p className="text-xs text-danger mt-2">{mediaError}</p>}
 
         {composerExpanded && (
         <div className="flex items-center justify-between mt-3">
@@ -545,12 +545,12 @@ export default function GossipPage() {
               />
               <label
                 htmlFor="gossip-media-input"
-                className="flex items-center gap-1.5 text-[11px] text-content-muted hover:text-accent border border-default hover:border-accent/40 rounded-lg px-2.5 py-1.5 cursor-pointer transition-all"
+                className="flex items-center gap-1.5 text-xs text-content-muted hover:text-accent border border-default hover:border-accent/40 rounded-lg px-2.5 py-1.5 cursor-pointer transition-all"
               >
                 <ImageIcon size={12} /> Photo / clip
               </label>
             </div>
-            <p className="text-[10px] text-content-subtle flex items-center gap-1.5">
+            <p className="text-xs text-content-subtle flex items-center gap-1.5">
               <Video size={12} /> Longer or public videos go on The Gruvs — quick clips are fine here.
             </p>
           </div>
@@ -564,7 +564,7 @@ export default function GossipPage() {
           </button>
         </div>
         )}
-        {error && <p className="text-[11px] text-danger mt-2">{error}</p>}
+        {error && <p className="text-xs text-danger mt-2">{error}</p>}
       </div>
 
       {loading ? (
@@ -595,22 +595,22 @@ export default function GossipPage() {
                       {post.body}
                     </p>
                     <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                      <span className="text-[11px] font-bold text-content/90">{nameOf(post.author_id)}</span>
-                      <span className="text-[10px] text-content/60">{new Date(post.created_at).toLocaleString()}</span>
+                      <span className="text-xs font-bold text-content/90">{nameOf(post.author_id)}</span>
+                      <span className="text-xs text-content/60">{new Date(post.created_at).toLocaleString()}</span>
                     </div>
                     <div className="absolute bottom-3 right-4 flex items-center gap-3">
                       <button
                         onClick={() => toggleReaction(post.id)}
                         disabled={reacting[post.id]}
                         aria-label={myReactions[post.id] ? 'Remove reaction' : 'React to this post'}
-                        className={`flex items-center gap-1.5 text-[11px] font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-danger' : 'text-content/90'}`}
+                        className={`flex items-center gap-1.5 text-xs font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-danger' : 'text-content/90'}`}
                       >
                         <Heart size={13} className={myReactions[post.id] ? 'fill-red-400' : ''} />
                         {reactionCounts[post.id] || ''}
                       </button>
                       <button
                         onClick={() => toggleExpand(post.id)}
-                        className="flex items-center gap-1.5 text-[11px] text-content/90 font-bold hover:underline"
+                        className="flex items-center gap-1.5 text-xs text-content/90 font-bold hover:underline"
                       >
                         {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                         {expanded[post.id] ? 'Hide' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
@@ -627,7 +627,7 @@ export default function GossipPage() {
                         </div>
                       ))}
                       {commentPreviews[post.id].length >= 2 && (
-                        <button onClick={() => toggleExpand(post.id)} className="text-[11px] text-accent font-bold hover:underline">
+                        <button onClick={() => toggleExpand(post.id)} className="text-xs text-accent font-bold hover:underline">
                           View all comments
                         </button>
                       )}
@@ -637,9 +637,9 @@ export default function GossipPage() {
                   {expanded[post.id] && (
                     <div className="p-5 space-y-3 border-t border-subtle">
                       {commentLoading[post.id] && !comments[post.id] ? (
-                        <p className="text-[11px] text-content-muted">Loading comments…</p>
+                        <p className="text-xs text-content-muted">Loading comments…</p>
                       ) : (comments[post.id] || []).length === 0 ? (
-                        <p className="text-[11px] text-content-subtle italic">No comments yet.</p>
+                        <p className="text-xs text-content-subtle italic">No comments yet.</p>
                       ) : (
                         (comments[post.id] || []).map(c => (
                           <div key={c.id} className="flex gap-2 text-xs">
@@ -682,7 +682,7 @@ export default function GossipPage() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-content">{nameOf(post.author_id)}</p>
-                      <p className="text-[10px] text-content-subtle">{new Date(post.created_at).toLocaleString()}</p>
+                      <p className="text-xs text-content-subtle">{new Date(post.created_at).toLocaleString()}</p>
                     </div>
                   </div>
                   {post.author_id === myId
@@ -704,14 +704,14 @@ export default function GossipPage() {
                     onClick={() => toggleReaction(post.id)}
                     disabled={reacting[post.id]}
                     aria-label={myReactions[post.id] ? 'Remove reaction' : 'React to this post'}
-                    className={`flex items-center gap-1.5 text-[11px] font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-danger' : 'text-content-muted'}`}
+                    className={`flex items-center gap-1.5 text-xs font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-danger' : 'text-content-muted'}`}
                   >
                     <Heart size={13} className={myReactions[post.id] ? 'fill-red-400' : ''} />
                     {reactionCounts[post.id] || ''}
                   </button>
                   <button
                     onClick={() => toggleExpand(post.id)}
-                    className="flex items-center gap-1.5 text-[11px] text-accent font-bold hover:underline"
+                    className="flex items-center gap-1.5 text-xs text-accent font-bold hover:underline"
                   >
                     {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                     {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
@@ -727,7 +727,7 @@ export default function GossipPage() {
                       </div>
                     ))}
                     {commentPreviews[post.id].length >= 2 && (
-                      <button onClick={() => toggleExpand(post.id)} className="text-[11px] text-accent font-bold hover:underline">
+                      <button onClick={() => toggleExpand(post.id)} className="text-xs text-accent font-bold hover:underline">
                         View all comments
                       </button>
                     )}
@@ -737,9 +737,9 @@ export default function GossipPage() {
                 {expanded[post.id] && (
                   <div className="mt-3 space-y-3 border-t border-subtle pt-3">
                     {commentLoading[post.id] && !comments[post.id] ? (
-                      <p className="text-[11px] text-content-muted">Loading comments…</p>
+                      <p className="text-xs text-content-muted">Loading comments…</p>
                     ) : (comments[post.id] || []).length === 0 ? (
-                      <p className="text-[11px] text-content-subtle italic">No comments yet.</p>
+                      <p className="text-xs text-content-subtle italic">No comments yet.</p>
                     ) : (
                       (comments[post.id] || []).map(c => (
                         <div key={c.id} className="flex gap-2 text-xs">
@@ -779,7 +779,7 @@ export default function GossipPage() {
             </div>
           )}
           {!hasMore && posts.length > 0 && (
-            <p className="text-center text-[10px] text-content-subtle uppercase tracking-widest py-2">You&apos;ve reached the end</p>
+            <p className="text-center text-xs text-content-subtle uppercase tracking-widest py-2">You&apos;ve reached the end</p>
           )}
         </div>
       )}

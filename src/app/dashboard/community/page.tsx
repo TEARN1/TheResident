@@ -460,7 +460,7 @@ export default function CommunityPage() {
           title="Exit map"
           className="absolute top-3 left-3 z-[1001] flex items-center gap-2 bg-surface-sunken/80 backdrop-blur-xl border border-default rounded-xl px-3 py-2.5 text-content hover:text-content shadow-2xl"
         >
-          <X size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Exit</span>
+          <X size={16} /> <span className="text-xs font-black uppercase tracking-widest">Exit</span>
         </button>
         <VibeMap fullscreen />
       </div>
@@ -497,7 +497,7 @@ export default function CommunityPage() {
         <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
           <button
             onClick={() => goToTab('overview')}
-            className={`px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'overview' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content bg-surface-raised/5'}`}
+            className={`px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'overview' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content bg-surface-raised/5'}`}
           >
             <LayoutGrid size={12} /> Overview
           </button>
@@ -508,7 +508,7 @@ export default function CommunityPage() {
               <button
                 key={cluster.id}
                 onClick={() => goToTab(cluster.tabs[0].id as typeof subTab)}
-                className={`px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${
+                className={`px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${
                   active ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content bg-surface-raised/5'
                 }`}
               >
@@ -521,7 +521,7 @@ export default function CommunityPage() {
           })}
           <button
             onClick={toggleVibeMap}
-            className={`md:hidden px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'vibemap' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content bg-surface-raised/5'}`}
+            className={`md:hidden px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'vibemap' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content bg-surface-raised/5'}`}
           >
             <MapIcon size={12} /> VibeMap
           </button>
@@ -536,7 +536,7 @@ export default function CommunityPage() {
               <button
                 key={t.id}
                 onClick={() => goToTab(t.id as typeof subTab)}
-                className={`px-3 py-1.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap border ${
+                className={`px-3 py-1.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap border ${
                   subTab === t.id
                     ? 'bg-accent text-content-on-accent border-accent shadow-lg shadow-gold-primary/20'
                     : 'text-content-muted border-subtle hover:text-content hover:border-strong'
@@ -568,21 +568,21 @@ export default function CommunityPage() {
                     <div className="p-2 bg-danger/10 rounded-xl w-fit text-danger"><AlertTriangle size={18} /></div>
                     <div>
                       <p className="text-2xl font-black text-content italic">{activeAlertsCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-content-muted">Active Alerts</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-content-muted">Active Alerts</p>
                     </div>
                   </div>
                   <div className="glass-panel p-5 bg-accent/5 border-accent/10 space-y-3">
                     <div className="p-2 bg-accent/10 rounded-xl w-fit text-accent"><ListChecks size={18} /></div>
                     <div>
                       <p className="text-2xl font-black text-content italic">{myPendingChoresCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-content-muted">Chores Assigned To You</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-content-muted">Chores Assigned To You</p>
                     </div>
                   </div>
                   <div className="glass-panel p-5 bg-success/5 border-success/10 space-y-3">
                     <div className="p-2 bg-success/10 rounded-xl w-fit text-success"><Sparkles size={18} /></div>
                     <div>
                       <p className="text-2xl font-black text-content italic">{newMarketItemsCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-content-muted">New Market Items (48h)</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-content-muted">New Market Items (48h)</p>
                     </div>
                   </div>
                   {isLandlord && (
@@ -590,7 +590,7 @@ export default function CommunityPage() {
                       <div className="p-2 bg-info/10 rounded-xl w-fit text-info"><DoorOpen size={18} /></div>
                       <div>
                         <p className="text-2xl font-black text-content italic">{openRoomRequestsCount}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-content-muted">Open Room Requests</p>
+                        <p className="text-xs font-bold uppercase tracking-widest text-content-muted">Open Room Requests</p>
                       </div>
                     </div>
                   )}
@@ -754,7 +754,7 @@ export default function CommunityPage() {
               <button
                 key={id}
                 onClick={() => dispatch(leaveCommunity(id))}
-                className="text-[10px] text-content-muted hover:text-danger uppercase font-bold tracking-widest bg-surface-raised/5 border border-default px-3 py-1.5 rounded-lg"
+                className="text-xs text-content-muted hover:text-danger uppercase font-bold tracking-widest bg-surface-raised/5 border border-default px-3 py-1.5 rounded-lg"
               >
                 Leave {communities.find(c => toUUID(c.id) === toUUID(id))?.name || 'community'}
               </button>
@@ -837,7 +837,7 @@ export default function CommunityPage() {
             >
                <div className="p-2 bg-success/20 rounded-full text-success shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Shield size={24} /></div>
                <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Update</p>
+                  <p className="text-xs font-black text-content-subtle uppercase tracking-[0.2em]">Update</p>
                   <p className="text-sm font-black text-content italic tracking-tight uppercase">{alertNotification}</p>
                </div>
                <button onClick={() => setAlertNotification(null)} className="ml-auto text-content-subtle hover:text-content transition-colors"><X size={16} /></button>

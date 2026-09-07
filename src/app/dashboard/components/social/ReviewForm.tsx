@@ -80,7 +80,7 @@ export default function ReviewForm({ subjectId, onSubmitted }: ReviewFormProps) 
         placeholder="How was your experience with them? (optional)"
         className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content h-20 resize-none outline-none focus:border-accent/40"
       />
-      {error && <p className="text-[11px] text-danger font-bold">{error}</p>}
+      {error && <p className="text-xs text-danger font-bold">{error}</p>}
       <button
         type="submit"
         disabled={submitting}

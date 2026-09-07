@@ -39,11 +39,11 @@ export default function ChoreSchedulerTab({
        <div className="flex justify-between items-start mb-6">
           <div className="space-y-1">
              <h4 className={`font-black text-lg tracking-tight ${chore.status === 'completed' ? 'text-content-muted line-through' : 'text-content'}`}>{chore.title}</h4>
-             <div className="flex items-center gap-2 text-[10px] text-content-muted font-black uppercase tracking-widest">
+             <div className="flex items-center gap-2 text-xs text-content-muted font-black uppercase tracking-widest">
                 <Calendar size={12} className="text-accent" /> DUE: <span className={chore.status === 'completed' ? 'text-content-subtle' : 'text-content'}>{chore.dueDate}</span>
              </div>
           </div>
-          <div className={`px-2 py-1 rounded-lg border font-black text-[10px] tracking-tighter transition-colors ${chore.status === 'completed' ? 'bg-success/10 text-success border-success/20' : 'bg-accent/10 text-accent border-accent/20 group-hover:bg-accent group-hover:text-content-on-accent'}`}>
+          <div className={`px-2 py-1 rounded-lg border font-black text-xs tracking-tighter transition-colors ${chore.status === 'completed' ? 'bg-success/10 text-success border-success/20' : 'bg-accent/10 text-accent border-accent/20 group-hover:bg-accent group-hover:text-content-on-accent'}`}>
              +{chore.points} XP
           </div>
        </div>
@@ -54,7 +54,7 @@ export default function ChoreSchedulerTab({
                 {chore.assignedTo === currentUser?.id ? 'ME' : 'HM'}
              </div>
              <div className="flex flex-col">
-                <span className="text-[10px] text-content-muted font-bold uppercase tracking-widest">Assignee</span>
+                <span className="text-xs text-content-muted font-bold uppercase tracking-widest">Assignee</span>
                 <span className="text-xs text-content font-black">{chore.assignedTo === currentUser?.id ? 'You' : 'Housemate'}</span>
              </div>
           </div>
@@ -62,14 +62,14 @@ export default function ChoreSchedulerTab({
           {chore.status === 'pending' && chore.assignedTo === currentUser?.id && (
             <button
                 onClick={() => handleCompleteChore?.(chore.id, chore.title)}
-                className="bg-surface-raised/5 hover:bg-success hover:text-content border border-default hover:border-success text-content font-black px-5 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-90 shadow-lg"
+                className="bg-surface-raised/5 hover:bg-success hover:text-content border border-default hover:border-success text-content font-black px-5 py-2 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-90 shadow-lg"
             >
                 Confirm Completion
             </button>
           )}
 
           {chore.status === 'completed' && (
-            <div className="flex items-center gap-2 text-success text-[10px] font-black uppercase tracking-widest bg-success/5 px-3 py-1.5 rounded-full border border-success/20">
+            <div className="flex items-center gap-2 text-success text-xs font-black uppercase tracking-widest bg-success/5 px-3 py-1.5 rounded-full border border-success/20">
                <CheckCircle2 size={14} /> Task Validated
             </div>
           )}
@@ -93,13 +93,13 @@ export default function ChoreSchedulerTab({
                   <div className="flex items-center gap-1.5 text-accent font-black text-lg">
                      <Star size={20} className="fill-gold-primary" /> {reputationScores[currentUser?.id || ''] || 0}
                   </div>
-                  <span className="text-[10px] text-content-muted uppercase font-black tracking-[0.2em] border-l border-default pl-3">Total Earned XP</span>
+                  <span className="text-xs text-content-muted uppercase font-black tracking-[0.2em] border-l border-default pl-3">Total Earned XP</span>
                </div>
             </div>
          </div>
 
          <div className="text-center md:text-right relative z-10 bg-surface-sunken/40 backdrop-blur-md p-4 rounded-2xl border border-subtle px-8">
-            <p className="text-[10px] text-content-muted uppercase tracking-[0.3em] font-black mb-1">Status Rank</p>
+            <p className="text-xs text-content-muted uppercase tracking-[0.3em] font-black mb-1">Status Rank</p>
             <p className="text-2xl font-black text-content italic tracking-tighter">ELITE RESIDENT</p>
             <div className="h-1 bg-surface-raised rounded-full mt-2 overflow-hidden w-32 ml-auto">
                <div className="h-full bg-accent w-4/5 shadow-[0_0_10px_var(--accent)]" />
@@ -114,7 +114,7 @@ export default function ChoreSchedulerTab({
                <h3 className="text-xl font-black text-content flex items-center gap-3 tracking-tight">
                   <User size={24} className="text-accent" /> My Active Chores
                </h3>
-               <span className="text-[10px] font-black text-content-muted bg-surface-raised/5 px-2 py-1 rounded-lg uppercase tracking-widest">{myChores.filter(c => c.status === 'pending').length} PENDING</span>
+               <span className="text-xs font-black text-content-muted bg-surface-raised/5 px-2 py-1 rounded-lg uppercase tracking-widest">{myChores.filter(c => c.status === 'pending').length} PENDING</span>
             </div>
 
             {myChores.filter(c => c.status === 'pending').length === 0 ? (

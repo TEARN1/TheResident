@@ -68,7 +68,7 @@ export default function AutomationControlPanel() {
       {/* Floating Automation Telemetry Launcher — bottom bar pill */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 z-[400] bg-surface-sunken/90 hover:bg-surface backdrop-blur-xl border border-accent/30 text-accent font-black px-3.5 py-2 rounded-2xl shadow-2xl flex items-center gap-2 text-[10px] uppercase tracking-widest transition-all active:scale-95 group"
+        className="fixed bottom-20 right-4 z-[400] bg-surface-sunken/90 hover:bg-surface backdrop-blur-xl border border-accent/30 text-accent font-black px-3.5 py-2 rounded-2xl shadow-2xl flex items-center gap-2 text-xs uppercase tracking-widest transition-all active:scale-95 group"
         title="View 15-Layer Automation Engine Telemetry"
       >
         <Cpu size={15} className="text-accent group-hover:rotate-90 transition-transform duration-500" />
@@ -99,7 +99,7 @@ export default function AutomationControlPanel() {
                   <h2 className="text-base font-black text-content uppercase tracking-wider flex items-center gap-2">
                     <Zap size={18} className="text-accent" /> 15-Layer Automation Hub
                   </h2>
-                  <p className="text-[10px] text-content-muted mt-0.5">Real-time system telemetry & operational connectors</p>
+                  <p className="text-xs text-content-muted mt-0.5">Real-time system telemetry & operational connectors</p>
                 </div>
                 <button onClick={() => setOpen(false)} className="text-content-muted hover:text-content p-1">
                   <X size={18} />
@@ -109,13 +109,13 @@ export default function AutomationControlPanel() {
               {/* Status Chips */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-surface-raised/[0.02] border border-subtle rounded-xl space-y-1">
-                  <span className="text-[9px] text-content-muted font-bold uppercase tracking-widest block">SECURITY & SCAM DEFENSE</span>
+                  <span className="text-xs text-content-muted font-bold uppercase tracking-widest block">SECURITY & SCAM DEFENSE</span>
                   <span className="text-xs font-black text-success flex items-center gap-1">
                     <ShieldCheck size={14} /> Active & Scanning
                   </span>
                 </div>
                 <div className="p-3 bg-surface-raised/[0.02] border border-subtle rounded-xl space-y-1">
-                  <span className="text-[9px] text-content-muted font-bold uppercase tracking-widest block">POPIA PRIVACY GUARD</span>
+                  <span className="text-xs text-content-muted font-bold uppercase tracking-widest block">POPIA PRIVACY GUARD</span>
                   <span className="text-xs font-black text-accent flex items-center gap-1">
                     <CheckCircle2 size={14} /> Compliant (Act 4)
                   </span>
@@ -124,7 +124,7 @@ export default function AutomationControlPanel() {
 
               {/* Trigger Actions */}
               <div className="space-y-3">
-                <p className="text-[10px] font-black text-content-muted uppercase tracking-widest">Manual Automation Triggers</p>
+                <p className="text-xs font-black text-content-muted uppercase tracking-widest">Manual Automation Triggers</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     onClick={handleRunScamScan}
@@ -134,7 +134,7 @@ export default function AutomationControlPanel() {
                     <div className="flex items-center gap-1.5 text-xs font-bold text-content">
                       <AlertTriangle size={13} className="text-accent" /> Scan Scams
                     </div>
-                    <p className="text-[9px] text-content-muted mt-0.5">Check pricing anomalies</p>
+                    <p className="text-xs text-content-muted mt-0.5">Check pricing anomalies</p>
                   </button>
 
                   <button
@@ -145,7 +145,7 @@ export default function AutomationControlPanel() {
                     <div className="flex items-center gap-1.5 text-xs font-bold text-content">
                       <ShieldCheck size={13} className="text-accent" /> POPIA Audit
                     </div>
-                    <p className="text-[9px] text-content-muted mt-0.5">Purge aged KYC docs</p>
+                    <p className="text-xs text-content-muted mt-0.5">Purge aged KYC docs</p>
                   </button>
 
                   <button
@@ -156,7 +156,7 @@ export default function AutomationControlPanel() {
                     <div className="flex items-center gap-1.5 text-xs font-bold text-content">
                       <CreditCard size={13} className="text-success" /> Ozow EFT
                     </div>
-                    <p className="text-[9px] text-content-muted mt-0.5">Test Instant EFT (R350)</p>
+                    <p className="text-xs text-content-muted mt-0.5">Test Instant EFT (R350)</p>
                   </button>
 
                   <button
@@ -166,7 +166,7 @@ export default function AutomationControlPanel() {
                     <div className="flex items-center gap-1.5 text-xs font-bold text-content">
                       <MessageSquare size={13} className="text-info" /> WhatsApp
                     </div>
-                    <p className="text-[9px] text-content-muted mt-0.5">Send test load-shedding SMS</p>
+                    <p className="text-xs text-content-muted mt-0.5">Send test load-shedding SMS</p>
                   </button>
                 </div>
 
@@ -180,24 +180,24 @@ export default function AutomationControlPanel() {
               {/* Real-time Telemetry Stream */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-black text-content-muted uppercase tracking-widest flex items-center gap-1.5">
+                  <p className="text-xs font-black text-content-muted uppercase tracking-widest flex items-center gap-1.5">
                     <Activity size={12} className="text-accent" /> System Telemetry Log
                   </p>
-                  <span className="text-[9px] text-content-subtle font-mono">{logs.length} events</span>
+                  <span className="text-xs text-content-subtle font-mono">{logs.length} events</span>
                 </div>
 
-                <div className="bg-surface border border-default rounded-xl p-3 h-64 overflow-y-auto space-y-2 font-mono text-[11px] custom-scrollbar">
+                <div className="bg-surface border border-default rounded-xl p-3 h-64 overflow-y-auto space-y-2 font-mono text-xs custom-scrollbar">
                   {logs.length === 0 ? (
-                    <p className="text-content-subtle text-[10px] italic">Awaiting automation events...</p>
+                    <p className="text-content-subtle text-xs italic">Awaiting automation events...</p>
                   ) : (
                     logs.map(log => (
                       <div key={log.id} className="p-2 rounded-lg bg-surface-raised/[0.02] border border-subtle space-y-0.5">
-                        <div className="flex items-center justify-between text-[9px]">
+                        <div className="flex items-center justify-between text-xs">
                           <span className="text-accent font-bold">{log.layer}</span>
                           <span className="text-content-subtle">{log.timestamp}</span>
                         </div>
-                        <p className="text-content font-bold text-[10px]">{log.action}</p>
-                        <p className="text-content-muted text-[9px] leading-relaxed">{log.details}</p>
+                        <p className="text-content font-bold text-xs">{log.action}</p>
+                        <p className="text-content-muted text-xs leading-relaxed">{log.details}</p>
                       </div>
                     ))
                   )}

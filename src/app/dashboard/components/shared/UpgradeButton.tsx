@@ -43,7 +43,7 @@ export default function UpgradeButton({ item, targetId, className }: { item: Sel
         {loading ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
         {loading ? 'Starting checkout…' : label}
       </button>
-      {error && <p className="text-[10px] text-danger text-center">{error}</p>}
+      {error && <p className="text-xs text-danger text-center">{error}</p>}
     </div>
   )
 }

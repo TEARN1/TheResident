@@ -16,7 +16,7 @@ export default function PrivacyPolicyPage() {
     <div className="min-h-screen bg-surface text-content px-4 py-12">
       <div className="max-w-2xl mx-auto space-y-8">
         <div>
-          <Link href="/" className="text-xs text-accent font-black uppercase tracking-widest hover:underline">← The Resident</Link>
+          <Link href="/" className="inline-flex items-center min-h-tap text-xs text-accent font-black uppercase tracking-widest hover:underline">← The Resident</Link>
           <h1 className="text-2xl font-black text-content mt-3">Privacy Policy</h1>
           <p className="text-xs text-content-muted mt-1">Last updated 7 September 2026. This describes what the app actually does today; it is revised whenever that changes.</p>
         </div>
@@ -88,7 +88,7 @@ export default function PrivacyPolicyPage() {
           <p className="text-sm leading-relaxed">Questions about this policy or your data — reach out through the contact details on our support channel listed in the app.</p>
         </Section>
 
-        <p className="text-[11px] text-content-subtle pt-4 border-t border-subtle">
+        <p className="text-xs text-content-subtle pt-4 border-t border-subtle">
           Also see our <Link href="/terms" className="text-accent hover:underline">Terms of Service</Link>.
         </p>
       </div>

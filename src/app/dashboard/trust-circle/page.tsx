@@ -239,7 +239,7 @@ export default function TrustCirclePage() {
 
         <div className="flex items-start gap-2 bg-info/5 border border-info/20 rounded-lg p-3 mb-6">
           <Info size={14} className="text-info mt-0.5 flex-shrink-0" />
-          <p className="text-[11px] text-content-muted leading-relaxed">
+          <p className="text-xs text-content-muted leading-relaxed">
             A real, established circle also quietly strengthens your standing
             in trusted community features — no need to track exact numbers,
             just keep confirming people who&apos;d genuinely vouch for you.
@@ -256,7 +256,7 @@ export default function TrustCirclePage() {
               <span className="text-xs font-bold text-content uppercase tracking-widest">
                 {STAGE_LABEL[status]}
               </span>
-              <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${unlocked ? 'bg-success/10 text-success border border-success/20' : 'bg-accent/10 text-accent border border-accent/20'}`}>
+              <span className={`text-xs font-black uppercase tracking-widest px-2 py-1 rounded ${unlocked ? 'bg-success/10 text-success border border-success/20' : 'bg-accent/10 text-accent border border-accent/20'}`}>
                 {unlocked ? 'Established' : 'Growing'}
               </span>
             </div>
@@ -268,7 +268,7 @@ export default function TrustCirclePage() {
                 />
               ))}
             </div>
-            <p className="text-[11px] text-content-muted">
+            <p className="text-xs text-content-muted">
               {unlocked
                 ? 'Your circle is established — trusted features like one-click move-assist are unlocked.'
                 : 'Keep confirming people who would genuinely vouch for you — your circle grows quietly in the background.'}
@@ -277,7 +277,7 @@ export default function TrustCirclePage() {
         )}
 
         {error && (
-          <p className="text-[11px] text-danger mt-3">{error}</p>
+          <p className="text-xs text-danger mt-3">{error}</p>
         )}
       </div>
 
@@ -291,7 +291,7 @@ export default function TrustCirclePage() {
           placeholder="Search by username or display name…"
           className="w-full bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40"
         />
-        {searching && <p className="text-[11px] text-content-muted mt-2">Searching…</p>}
+        {searching && <p className="text-xs text-content-muted mt-2">Searching…</p>}
         {results.length > 0 && (
           <div className="mt-4 space-y-2">
             {results.map(p => (
@@ -306,7 +306,7 @@ export default function TrustCirclePage() {
                 <button
                   onClick={() => sendRequest(p.id)}
                   disabled={!!sentTo[p.id]}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-content-on-accent transition-all disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-content-on-accent transition-all disabled:opacity-50"
                 >
                   {sentTo[p.id] ? <><Check size={12} /> Sent</> : <><UserPlus size={12} /> Request</>}
                 </button>
@@ -320,7 +320,7 @@ export default function TrustCirclePage() {
         <h3 className="text-sm font-bold text-content uppercase tracking-widest mb-1 flex items-center gap-2">
           <Link2 size={16} className="text-accent" /> Verify someone who isn&apos;t on the app
         </h3>
-        <p className="text-[11px] text-content-muted mb-4 leading-relaxed">
+        <p className="text-xs text-content-muted mb-4 leading-relaxed">
           Not everyone you&apos;d list as next of kin has Resident — a parent, a sibling. Create a link, send it to them yourself (WhatsApp, SMS, however), and they answer one question with no account needed: is this really your {relationship.toLowerCase()}?
         </p>
 
@@ -342,31 +342,31 @@ export default function TrustCirclePage() {
           <button
             type="submit"
             disabled={creatingLink || !claimedName.trim()}
-            className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest bg-accent text-content-on-accent hover:bg-accent transition-all disabled:opacity-50"
+            className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-xs font-black uppercase tracking-widest bg-accent text-content-on-accent hover:bg-accent transition-all disabled:opacity-50"
           >
             {creatingLink ? 'Creating…' : 'Create link'}
           </button>
         </form>
-        {kinError && <p className="text-[11px] text-danger mb-3">{kinError}</p>}
+        {kinError && <p className="text-xs text-danger mb-3">{kinError}</p>}
 
         {kinLinksLoading ? (
-          <p className="text-[11px] text-content-muted">Loading…</p>
+          <p className="text-xs text-content-muted">Loading…</p>
         ) : kinLinks.length === 0 ? (
-          <p className="text-[11px] text-content-muted italic">No verification links yet.</p>
+          <p className="text-xs text-content-muted italic">No verification links yet.</p>
         ) : (
           <div className="space-y-2">
             {kinLinks.map(link => (
               <div key={link.id} className="flex items-center justify-between gap-3 p-3 bg-surface-sunken/40 border border-subtle rounded-lg">
                 <div className="min-w-0">
                   <p className="text-sm text-content font-medium truncate">{link.claimedName} <span className="text-content-muted">· {link.claimedRelationship}</span></p>
-                  <p className={`text-[10px] font-bold uppercase tracking-widest ${link.status === 'confirmed' ? 'text-success' : link.status === 'denied' ? 'text-danger' : 'text-content-muted'}`}>
+                  <p className={`text-xs font-bold uppercase tracking-widest ${link.status === 'confirmed' ? 'text-success' : link.status === 'denied' ? 'text-danger' : 'text-content-muted'}`}>
                     {kinLinkStatusLabel(link.status)}
                   </p>
                 </div>
                 {link.status === 'pending' && (
                   <button
                     onClick={() => copyLink(link)}
-                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-surface-raised/5 text-content border border-default hover:bg-surface-raised/10 transition-all"
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest bg-surface-raised/5 text-content border border-default hover:bg-surface-raised/10 transition-all"
                   >
                     {copiedId === link.id ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy link</>}
                   </button>
@@ -382,9 +382,9 @@ export default function TrustCirclePage() {
           <Users size={16} className="text-accent" /> Pending requests
         </h3>
         {rowsLoading ? (
-          <p className="text-[11px] text-content-muted">Loading…</p>
+          <p className="text-xs text-content-muted">Loading…</p>
         ) : incoming.length === 0 ? (
-          <p className="text-[11px] text-content-muted italic">No pending requests.</p>
+          <p className="text-xs text-content-muted italic">No pending requests.</p>
         ) : (
           <div className="space-y-2">
             {incoming.map(row => (
@@ -393,7 +393,7 @@ export default function TrustCirclePage() {
                 <button
                   onClick={() => confirmRequest(row.requester_id)}
                   disabled={!!confirming[row.requester_id]}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-accent text-content-on-accent hover:bg-accent transition-all disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest bg-accent text-content-on-accent hover:bg-accent transition-all disabled:opacity-50"
                 >
                   <Check size={12} /> Confirm
                 </button>
@@ -408,9 +408,9 @@ export default function TrustCirclePage() {
           <ShieldCheck size={16} className="text-accent" /> Confirmed connections
         </h3>
         {rowsLoading ? (
-          <p className="text-[11px] text-content-muted">Loading…</p>
+          <p className="text-xs text-content-muted">Loading…</p>
         ) : confirmed.length === 0 ? (
-          <p className="text-[11px] text-content-muted italic">No confirmed connections yet.</p>
+          <p className="text-xs text-content-muted italic">No confirmed connections yet.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {confirmed.map(row => {

@@ -118,7 +118,7 @@ export default function NotificationPrefsPanel() {
       </div>
 
       <div>
-        <p className="text-[11px] text-content-muted mb-3">Mute specific notification types. Panic alerts always reach you.</p>
+        <p className="text-xs text-content-muted mb-3">Mute specific notification types. Panic alerts always reach you.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {MUTABLE_TYPES.map(t => (
             <label key={t.value} className="flex items-center gap-2 p-2.5 bg-surface-sunken/40 border border-subtle rounded-lg text-xs text-content cursor-pointer hover:border-default">
@@ -132,11 +132,11 @@ export default function NotificationPrefsPanel() {
             </label>
           ))}
         </div>
-        <p className="text-[10px] text-content-subtle mt-2">Panic alerts ({PANIC_TYPE}) can&apos;t be muted here.</p>
+        <p className="text-xs text-content-subtle mt-2">Panic alerts ({PANIC_TYPE}) can&apos;t be muted here.</p>
       </div>
 
       <div>
-        <p className="text-[11px] text-content-muted mb-3 flex items-center gap-1.5"><Moon size={12} className="text-accent" /> Quiet hours</p>
+        <p className="text-xs text-content-muted mb-3 flex items-center gap-1.5"><Moon size={12} className="text-accent" /> Quiet hours</p>
         <div className="flex items-center gap-3">
           <select
             value={prefs.quiet_hours_start ?? ''}
@@ -168,7 +168,7 @@ export default function NotificationPrefsPanel() {
         Send me a digest instead of individual notifications
       </label>
 
-      {error && <p className="text-[11px] text-danger">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
 
       <button
         onClick={save}

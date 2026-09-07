@@ -55,7 +55,7 @@ export default function AreaLicenceNotice({ unitId, licence }: Props) {
 
   return (
     <div className={`rounded-lg border p-3 space-y-2 ${tone}`}>
-      <p className="text-[10px] leading-relaxed flex items-start gap-1.5">
+      <p className="text-xs leading-relaxed flex items-start gap-1.5">
         <Icon size={12} className="mt-0.5 shrink-0" />
         <span>{describeLicence(licence)}</span>
       </p>
@@ -67,25 +67,25 @@ export default function AreaLicenceNotice({ unitId, licence }: Props) {
               type="button"
               onClick={handlePay}
               disabled={busy}
-              className={`${goldButtonClass()} text-[10px] px-3 py-2 flex items-center gap-1.5 disabled:opacity-50`}
+              className={`${goldButtonClass()} text-xs px-3 py-2 flex items-center gap-1.5 disabled:opacity-50`}
             >
               {busy ? <Loader size={11} className="animate-spin" /> : <CreditCard size={11} />}
               {busy ? 'Opening checkout…' : `${offer.label} — ${offer.price}`}
             </button>
-            <p className="text-[9px] text-content-subtle">
+            <p className="text-xs text-content-subtle">
               Billed to this office, not to you personally — it stays with the role if someone else takes over.
             </p>
           </div>
         ) : (
           // A metro or provincial licence goes through procurement. Showing a
           // Pay button here would be a lie about how that deal actually works.
-          <p className="text-[10px] text-content-muted">
+          <p className="text-xs text-content-muted">
             {offer.label} is arranged directly rather than online — get in touch and we will set it up.
           </p>
         )
       )}
 
-      {error && <p className="text-[10px] text-danger">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   )
 }

@@ -35,7 +35,7 @@ export default function OpenInMapsButton({ address, lat, lon, label, className }
     <Link
       href={href}
       onClick={e => e.stopPropagation()}
-      className={className || 'inline-flex items-center gap-1.5 text-[10px] font-black text-accent uppercase tracking-widest hover:underline'}
+      className={className || 'inline-flex items-center gap-1.5 text-xs font-black text-accent uppercase tracking-widest hover:underline'}
     >
       <Navigation size={11} /> View on map
     </Link>

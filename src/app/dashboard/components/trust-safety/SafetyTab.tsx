@@ -362,7 +362,7 @@ export default function SafetyTab({
                       )}
                       <div className="min-w-0">
                         <p className="text-sm text-content font-medium truncate">{p.display_name || p.username || 'Neighbour'}</p>
-                        {p.city && <p className="text-[10px] text-content-muted truncate">{p.city}</p>}
+                        {p.city && <p className="text-xs text-content-muted truncate">{p.city}</p>}
                       </div>
                     </button>
                   ))}
@@ -379,7 +379,7 @@ export default function SafetyTab({
                 )}
                 <div>
                   <p className="text-sm text-content font-medium">{selectedSubject.display_name || selectedSubject.username}</p>
-                  <p className="text-[10px] text-content-muted">You&apos;ll be their carer</p>
+                  <p className="text-xs text-content-muted">You&apos;ll be their carer</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -426,7 +426,7 @@ export default function SafetyTab({
                       <p className="text-sm text-content font-medium">
                         {row.carer?.display_name || row.carer?.username || 'A neighbour'} is checking on you
                       </p>
-                      <p className="text-[10px] text-content-muted">{row.cadence} · last OK {row.last_ok_at ? new Date(row.last_ok_at).toLocaleString() : 'never'}</p>
+                      <p className="text-xs text-content-muted">{row.cadence} · last OK {row.last_ok_at ? new Date(row.last_ok_at).toLocaleString() : 'never'}</p>
                     </div>
                     <button
                       onClick={() => checkIn(row.id)}
@@ -456,11 +456,11 @@ export default function SafetyTab({
                           <p className="text-sm text-content font-medium">
                             You&apos;re checking on {row.subject?.display_name || row.subject?.username || 'a neighbour'}
                           </p>
-                          <p className="text-[10px] text-content-muted">{row.cadence} · last OK {row.last_ok_at ? new Date(row.last_ok_at).toLocaleString() : 'never'}</p>
+                          <p className="text-xs text-content-muted">{row.cadence} · last OK {row.last_ok_at ? new Date(row.last_ok_at).toLocaleString() : 'never'}</p>
                         </div>
                       </div>
                       {overdue && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-danger uppercase tracking-widest">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-danger uppercase tracking-widest">
                           <AlertTriangle size={12} /> Overdue
                         </span>
                       )}
@@ -483,8 +483,8 @@ export default function SafetyTab({
           {!isVerified && (
             <div className="text-xs text-accent bg-accent/10 border border-accent/20 rounded-xl p-3 space-y-2">
               <p>Only verified neighbours can respond to alerts. Verification itself happens on The Gruvs&apos; review queue, which this app doesn&apos;t control — but you can flag your request as priority:</p>
-              <UpgradeButton item="verification_speedup" className="w-full sm:w-auto bg-accent/10 hover:bg-accent hover:text-content-on-accent border border-accent/30 text-accent font-black px-4 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all active:scale-95" />
-              <p className="text-[10px] text-content-muted normal-case">Free verification always works and gets you here eventually — this only skips the queue, it&apos;s never required.</p>
+              <UpgradeButton item="verification_speedup" className="w-full sm:w-auto bg-accent/10 hover:bg-accent hover:text-content-on-accent border border-accent/30 text-accent font-black px-4 py-2 rounded-lg text-xs uppercase tracking-widest transition-all active:scale-95" />
+              <p className="text-xs text-content-muted normal-case">Free verification always works and gets you here eventually — this only skips the queue, it&apos;s never required.</p>
             </div>
           )}
 
@@ -498,8 +498,8 @@ export default function SafetyTab({
               {activeAlerts.map(alert => (
                 <div key={alert.id} className="glass-panel p-5 border-l-4 border-l-red-500">
                   <div className="flex justify-between mb-2">
-                    <span className="text-[10px] font-bold text-danger uppercase tracking-widest">{alert.severity} SEVERITY</span>
-                    <span className="text-[10px] text-content-muted">{new Date(alert.createdAt).toLocaleTimeString()}</span>
+                    <span className="text-xs font-bold text-danger uppercase tracking-widest">{alert.severity} SEVERITY</span>
+                    <span className="text-xs text-content-muted">{new Date(alert.createdAt).toLocaleTimeString()}</span>
                   </div>
                   <h4 className="text-lg font-bold text-content">{alert.title}</h4>
                   <p className="text-sm text-content-muted my-2">{alert.description}</p>
@@ -511,7 +511,7 @@ export default function SafetyTab({
                     {alert.createdBy === currentUserId ? (
                       <button
                         onClick={() => onResolve?.(alert.id)}
-                        className="bg-accent/10 text-accent border border-accent/20 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-accent hover:text-content-on-accent transition-all"
+                        className="bg-accent/10 text-accent border border-accent/20 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-accent hover:text-content-on-accent transition-all"
                       >
                         <Check size={12} className="inline mr-1" /> Mark resolved
                       </button>
@@ -520,14 +520,14 @@ export default function SafetyTab({
                         <button
                           onClick={() => onRespond?.(alert.id, 'coming')}
                           disabled={!isVerified}
-                          className="bg-success/10 text-success border border-success/20 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed hover:bg-success hover:text-content transition-all"
+                          className="bg-success/10 text-success border border-success/20 px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed hover:bg-success hover:text-content transition-all"
                         >
                           I&apos;m coming
                         </button>
                         <button
                           onClick={() => onRespond?.(alert.id, 'arrived')}
                           disabled={!isVerified}
-                          className="bg-surface-raised/5 text-content border border-default px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="bg-surface-raised/5 text-content border border-default px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           I&apos;ve arrived
                         </button>
@@ -571,27 +571,27 @@ export default function SafetyTab({
                     <div className="flex flex-col items-end gap-1">
                        <div className="flex items-center gap-1">
                           {officialRow && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-accent/20 text-accent uppercase tracking-widest">
+                            <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-accent/20 text-accent uppercase tracking-widest">
                               Official{providerName ? ` · ${providerName}` : ''}
                             </span>
                           )}
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isDown ? 'bg-danger/20 text-danger' : 'bg-success/20 text-success'}`}>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${isDown ? 'bg-danger/20 text-danger' : 'bg-success/20 text-success'}`}>
                              {isDown ? (!officialRow && consensus.confirmed ? `OUTAGE (${consensus.reporters} reports)` : 'OUTAGE') : 'OPERATIONAL'}
                           </span>
                        </div>
-                       {expiry && <span className="text-[9px] text-content-muted">{expiry}</span>}
-                       {since && <span className="text-[9px] text-content-muted">{since}</span>}
+                       {expiry && <span className="text-xs text-content-muted">{expiry}</span>}
+                       {since && <span className="text-xs text-content-muted">{since}</span>}
                        <div className="flex items-center gap-1">
                           <button
                             onClick={() => onReportStatus?.(key, 'down', null)}
-                            className="text-[9px] text-danger hover:text-danger uppercase font-bold"
+                            className="text-xs text-danger hover:text-danger uppercase font-bold"
                           >
                             Report down
                           </button>
                           <span className="text-content-subtle">/</span>
                           <button
                             onClick={() => onReportStatus?.(key, 'up', null)}
-                            className="text-[9px] text-success hover:text-success uppercase font-bold"
+                            className="text-xs text-success hover:text-success uppercase font-bold"
                           >
                             It&apos;s back
                           </button>
@@ -602,10 +602,10 @@ export default function SafetyTab({
              })}
 
              <div className="pt-4 border-t border-subtle space-y-1">
-                <p className="text-[10px] text-content-muted uppercase font-bold">
+                <p className="text-xs text-content-muted uppercase font-bold">
                   Three neighbours reporting the same outage within 30 minutes confirms it.
                 </p>
-                <p className="text-[10px] text-content-subtle">
+                <p className="text-xs text-content-subtle">
                   This is a demo of the feature for now — reports here are crowd-sourced, not confirmed by the utility itself.
                 </p>
              </div>

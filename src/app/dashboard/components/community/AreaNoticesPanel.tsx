@@ -90,7 +90,7 @@ export default function AreaNoticesPanel() {
         </div>
         <div>
           <p className="text-xs font-black text-content uppercase tracking-widest">Area Notices</p>
-          <p className="text-[10px] text-content-muted">From your municipality, ward, library, clinic or station</p>
+          <p className="text-xs text-content-muted">From your municipality, ward, library, clinic or station</p>
         </div>
       </div>
 
@@ -100,7 +100,7 @@ export default function AreaNoticesPanel() {
             key={id}
             type="button"
             onClick={() => setView(id)}
-            className={`flex-1 text-[10px] font-black uppercase tracking-widest py-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors ${
+            className={`flex-1 text-xs font-black uppercase tracking-widest py-2 rounded-lg flex items-center justify-center gap-1.5 transition-colors ${
               view === id ? 'bg-accent/15 text-accent' : 'bg-surface-raised/5 text-content-muted hover:text-content'
             }`}
           >
@@ -110,7 +110,7 @@ export default function AreaNoticesPanel() {
       </div>
 
       {loading ? (
-        <p className="text-[11px] text-content-muted flex items-center gap-2">
+        <p className="text-xs text-content-muted flex items-center gap-2">
           <Loader size={13} className="animate-spin" /> Loading…
         </p>
       ) : view === 'mine' ? (
@@ -126,16 +126,16 @@ export default function AreaNoticesPanel() {
               <div key={n.id} className={`rounded-xl border p-3 space-y-2 ${PRIORITY_STYLE[n.priority] || PRIORITY_STYLE.normal}`}>
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-bold text-content">{n.title}</p>
-                  <span className="text-[9px] text-content-muted shrink-0">{when(n.sentAt)}</span>
+                  <span className="text-xs text-content-muted shrink-0">{when(n.sentAt)}</span>
                 </div>
-                <p className="text-[11px] text-content leading-relaxed">{n.body}</p>
+                <p className="text-xs text-content leading-relaxed">{n.body}</p>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <p className="text-[9px] text-content-muted flex items-center gap-1">
+                  <p className="text-xs text-content-muted flex items-center gap-1">
                     <MapPin size={10} /> {n.unitName} · {n.targetLabel}
                   </p>
                   {n.priority === 'critical' && (
                     n.acknowledgedAt ? (
-                      <span className="text-[9px] text-success flex items-center gap-1">
+                      <span className="text-xs text-success flex items-center gap-1">
                         <Check size={10} /> Acknowledged
                       </span>
                     ) : (
@@ -143,7 +143,7 @@ export default function AreaNoticesPanel() {
                         type="button"
                         onClick={() => acknowledge(n.id)}
                         disabled={acking === n.id}
-                        className="text-[9px] font-black uppercase tracking-widest bg-surface-raised/10 hover:bg-surface-raised/20 text-content px-2 py-1 rounded-md disabled:opacity-50"
+                        className="text-xs font-black uppercase tracking-widest bg-surface-raised/10 hover:bg-surface-raised/20 text-content px-2 py-1 rounded-md disabled:opacity-50"
                       >
                         {acking === n.id ? 'Saving…' : 'I have seen this'}
                       </button>
@@ -162,7 +162,7 @@ export default function AreaNoticesPanel() {
         />
       ) : (
         <div className="space-y-2">
-          <p className="text-[10px] text-content-muted leading-relaxed flex items-start gap-1.5">
+          <p className="text-xs text-content-muted leading-relaxed flex items-start gap-1.5">
             <AlertTriangle size={11} className="mt-0.5 shrink-0 text-content-subtle" />
             Every area notice ever sent, by anyone. Senders cannot edit or delete what they
             broadcast — this is the record of how often each office uses the channel.
@@ -170,11 +170,11 @@ export default function AreaNoticesPanel() {
           {record.map(b => (
             <div key={b.id} className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-1">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-[11px] font-bold text-content">{b.unitName}</p>
-                <span className="text-[9px] text-content-subtle shrink-0">{when(b.sentAt)}</span>
+                <p className="text-xs font-bold text-content">{b.unitName}</p>
+                <span className="text-xs text-content-subtle shrink-0">{when(b.sentAt)}</span>
               </div>
-              <p className="text-[11px] text-content">{b.title}</p>
-              <p className="text-[9px] text-content-subtle">
+              <p className="text-xs text-content">{b.title}</p>
+              <p className="text-xs text-content-subtle">
                 {b.targetLabel} · {b.priority}
                 {b.category ? ` · ${b.category}` : ''} · reached {b.recipientCount.toLocaleString()}
               </p>

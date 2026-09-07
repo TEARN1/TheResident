@@ -51,7 +51,7 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
           <p className="text-sm font-black text-content uppercase tracking-widest">
             This part didn&apos;t load
           </p>
-          <p className="text-[11px] text-content-muted mt-1 leading-relaxed max-w-sm mx-auto">
+          <p className="text-xs text-content-muted mt-1 leading-relaxed max-w-sm mx-auto">
             Something broke on our side, not yours. It has been reported automatically.
             The rest of the app still works.
           </p>
@@ -59,7 +59,7 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
         <button
           type="button"
           onClick={() => this.setState({ crashed: false })}
-          className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-accent transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-content-muted hover:text-accent transition-colors"
         >
           <RefreshCw size={12} /> Try again
         </button>

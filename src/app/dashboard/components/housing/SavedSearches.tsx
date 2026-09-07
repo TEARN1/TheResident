@@ -115,11 +115,11 @@ export default function SavedSearches({ currentFilters, onApply }: SavedSearches
               {saving ? <Loader size={14} className="animate-spin" /> : <Plus size={14} />}
             </button>
           </form>
-          {error && <p className="text-[10px] text-danger font-bold">{error}</p>}
+          {error && <p className="text-xs text-danger font-bold">{error}</p>}
 
           <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
-            {searches === null && <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest">Loading…</p>}
-            {searches?.length === 0 && <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest">No saved searches yet.</p>}
+            {searches === null && <p className="text-xs text-content-subtle font-bold uppercase tracking-widest">Loading…</p>}
+            {searches?.length === 0 && <p className="text-xs text-content-subtle font-bold uppercase tracking-widest">No saved searches yet.</p>}
             {searches?.map(s => (
               <div key={s.id} className="flex items-center justify-between gap-2 bg-surface-raised/5 border border-subtle rounded-lg px-3 py-2">
                 <button onClick={() => handleApply(s)} className="text-left flex-1 text-xs font-bold text-content hover:text-accent transition-colors truncate">

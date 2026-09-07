@@ -62,7 +62,7 @@ export default function PushAlertsPanel() {
         </div>
         <div>
           <h3 className="text-sm font-black text-content uppercase tracking-widest">Emergency Alerts</h3>
-          <p className="text-[11px] text-content-muted mt-1 leading-relaxed">
+          <p className="text-xs text-content-muted mt-1 leading-relaxed">
             Lets urgent notices — an evacuation, a water shutdown, a missing child — reach this
             device even when the app is closed. Without this, they only appear the next time you
             open the app.
@@ -71,14 +71,14 @@ export default function PushAlertsPanel() {
       </div>
 
       {loading ? (
-        <p className="text-[11px] text-content-muted flex items-center gap-2">
+        <p className="text-xs text-content-muted flex items-center gap-2">
           <Loader size={13} className="animate-spin" /> Checking…
         </p>
       ) : (
         <>
           <div className="bg-surface-sunken/40 border border-subtle rounded-xl p-4 space-y-1">
-            <p className="text-[9px] text-content-subtle font-black uppercase tracking-widest">Status</p>
-            <p className={`text-[11px] leading-relaxed ${on ? 'text-success' : blocked ? 'text-warning' : 'text-content-muted'}`}>
+            <p className="text-xs text-content-subtle font-black uppercase tracking-widest">Status</p>
+            <p className={`text-xs leading-relaxed ${on ? 'text-success' : blocked ? 'text-warning' : 'text-content-muted'}`}>
               {on && <Check size={12} className="inline mr-1 -mt-0.5" />}
               {blocked && <AlertTriangle size={12} className="inline mr-1 -mt-0.5" />}
               {describePushState(state)}
@@ -91,16 +91,16 @@ export default function PushAlertsPanel() {
               onClick={toggle}
               disabled={busy}
               className={on
-                ? 'flex items-center gap-1.5 text-[10px] text-content-muted hover:text-danger font-black uppercase tracking-widest transition-colors disabled:opacity-50'
+                ? 'flex items-center gap-1.5 text-xs text-content-muted hover:text-danger font-black uppercase tracking-widest transition-colors disabled:opacity-50'
                 : `${goldButtonClass()} disabled:opacity-50`}
             >
               {busy ? 'Working…' : on ? 'Turn off alerts on this device' : 'Turn on emergency alerts'}
             </button>
           )}
 
-          {error && <p className="text-[11px] text-danger">{error}</p>}
+          {error && <p className="text-xs text-danger">{error}</p>}
 
-          <p className="text-[10px] text-content-subtle leading-relaxed">
+          <p className="text-xs text-content-subtle leading-relaxed">
             This applies to this device only, and you can turn it off here at any time. Alerts carry
             only what the notice says — never your location.
           </p>

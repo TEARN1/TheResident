@@ -147,7 +147,7 @@ export default function NoticeBoardTab({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {type !== 'event' && (
                     <div className="space-y-2">
-                       <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Notice Title</label>
+                       <label className="text-xs text-content-muted uppercase font-black tracking-widest">Notice Title</label>
                        <input
                           value={title} onChange={e => setTitle(e.target.value)}
                           placeholder="e.g. Street Meeting Saturday"
@@ -156,7 +156,7 @@ export default function NoticeBoardTab({
                     </div>
                  )}
                  <div className="space-y-2">
-                    <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Announcement Type</label>
+                    <label className="text-xs text-content-muted uppercase font-black tracking-widest">Announcement Type</label>
                     <select
                        value={type} onChange={e => setType(e.target.value as 'notice' | 'event' | 'landlord_announcement')}
                        className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50 transition-all font-medium cursor-pointer"
@@ -169,9 +169,9 @@ export default function NoticeBoardTab({
               </div>
               {type === 'event' && (
                  <div className="space-y-2">
-                    <label className="text-[10px] text-content-muted uppercase font-black tracking-widest flex items-center gap-1"><Calendar size={12} /> Which Gruvs Event</label>
+                    <label className="text-xs text-content-muted uppercase font-black tracking-widest flex items-center gap-1"><Calendar size={12} /> Which Gruvs Event</label>
                     {upcomingGruvsEvents.length === 0 ? (
-                       <p className="text-[11px] text-content-muted bg-surface-sunken/40 border border-default rounded-xl p-3 leading-relaxed">
+                       <p className="text-xs text-content-muted bg-surface-sunken/40 border border-default rounded-xl p-3 leading-relaxed">
                           No upcoming events found on The Gruvs. Community Events always link to a real Gruvs event — create one there first, then post it here.
                        </p>
                     ) : (
@@ -187,12 +187,12 @@ export default function NoticeBoardTab({
                           ))}
                        </select>
                     )}
-                    <p className="text-[10px] text-content-muted leading-relaxed">Title and date come straight from The Gruvs, so the wall here never drifts from the real event.</p>
+                    <p className="text-xs text-content-muted leading-relaxed">Title and date come straight from The Gruvs, so the wall here never drifts from the real event.</p>
                  </div>
               )}
               {type !== 'event' && (
                  <div className="space-y-3">
-                    <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Who Should See This</label>
+                    <label className="text-xs text-content-muted uppercase font-black tracking-widest">Who Should See This</label>
                     <div className="flex flex-wrap gap-3">
                        <button
                           type="button"
@@ -219,7 +219,7 @@ export default function NoticeBoardTab({
                        )}
                     </div>
                     {audience === 'my_tenants' && (
-                       <p className="text-[10px] text-content-muted leading-relaxed">Only visible to residents with an approved room request against one of your listings — not the general community wall.</p>
+                       <p className="text-xs text-content-muted leading-relaxed">Only visible to residents with an approved room request against one of your listings — not the general community wall.</p>
                     )}
                     {audience === 'targeted' && (
                        <div className="space-y-1">
@@ -228,23 +228,23 @@ export default function NoticeBoardTab({
                              placeholder="e.g. Rosebank, Braamfontein"
                              className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50 transition-all font-medium"
                           />
-                          <p className="text-[10px] text-content-muted leading-relaxed">Comma-separated suburbs. Only reaches people with a listing, or an active room request, in one of these — leave blank to target nobody in particular (same as Whole Community).</p>
+                          <p className="text-xs text-content-muted leading-relaxed">Comma-separated suburbs. Only reaches people with a listing, or an active room request, in one of these — leave blank to target nobody in particular (same as Whole Community).</p>
                        </div>
                     )}
                     <div className="space-y-1">
-                       <label className="text-[10px] text-content-muted uppercase font-black tracking-widest flex items-center gap-1"><UserX size={12} /> Hide From (optional)</label>
+                       <label className="text-xs text-content-muted uppercase font-black tracking-widest flex items-center gap-1"><UserX size={12} /> Hide From (optional)</label>
                        <input
                           value={excludeInput} onChange={e => setExcludeInput(e.target.value)}
                           placeholder="Resident IDs, comma-separated"
                           className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50 transition-all font-medium"
                        />
-                       <p className="text-[10px] text-content-muted leading-relaxed">Applies on top of whatever audience you picked above — a way to exclude specific people even from a public post.</p>
+                       <p className="text-xs text-content-muted leading-relaxed">Applies on top of whatever audience you picked above — a way to exclude specific people even from a public post.</p>
                     </div>
-                    <p className="text-[10px] text-content-muted leading-relaxed flex items-center gap-1"><Clock size={12} /> Free for the first 8 hours — after that it needs a paid extension to stay visible to anyone but you.</p>
+                    <p className="text-xs text-content-muted leading-relaxed flex items-center gap-1"><Clock size={12} /> Free for the first 8 hours — after that it needs a paid extension to stay visible to anyone but you.</p>
                  </div>
               )}
               <div className="space-y-2">
-                 <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Message Body</label>
+                 <label className="text-xs text-content-muted uppercase font-black tracking-widest">Message Body</label>
                  <textarea
                     value={desc} onChange={e => setDesc(e.target.value)}
                     placeholder="Provide important details for your neighbors..."
@@ -267,35 +267,35 @@ export default function NoticeBoardTab({
               <div key={notice.id} className={`bg-surface-sunken/40 border rounded-2xl p-6 flex flex-col gap-5 transition-all group shadow-lg hover:shadow-gold-primary/5 ${isFeatured(notice) ? 'border-accent/40' : 'border-subtle hover:border-accent/20'}`}>
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border transition-all ${notice.type === 'event' ? 'bg-info/10 text-info border-info/20 group-hover:bg-info/20' : notice.type === 'landlord_announcement' ? 'bg-accent/10 text-accent border-accent/20' : 'bg-info/10 text-info border-info/20 group-hover:bg-info/20'}`}>
+                    <span className={`text-xs font-black px-2 py-1 rounded-lg uppercase tracking-widest border transition-all ${notice.type === 'event' ? 'bg-info/10 text-info border-info/20 group-hover:bg-info/20' : notice.type === 'landlord_announcement' ? 'bg-accent/10 text-accent border-accent/20' : 'bg-info/10 text-info border-info/20 group-hover:bg-info/20'}`}>
                       {notice.type === 'landlord_announcement' ? 'landlord announcement' : notice.type}
                     </span>
                     {notice.audience === 'my_tenants' && (
-                      <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-surface-raised/5 text-content-muted border-default">
+                      <span className="flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-surface-raised/5 text-content-muted border-default">
                         <Users size={10} /> Tenants only
                       </span>
                     )}
                     {notice.audience === 'targeted' && notice.targetSuburbs && notice.targetSuburbs.length > 0 && (
-                      <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-surface-raised/5 text-content-muted border-default" title={notice.targetSuburbs.join(', ')}>
+                      <span className="flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-surface-raised/5 text-content-muted border-default" title={notice.targetSuburbs.join(', ')}>
                         <MapPin size={10} /> {notice.targetSuburbs.length === 1 ? notice.targetSuburbs[0] : `${notice.targetSuburbs.length} areas`}
                       </span>
                     )}
                     {isFeatured(notice) && (
-                      <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-accent text-content-on-accent border-accent">
+                      <span className="flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-accent text-content-on-accent border-accent">
                         <Sparkles size={10} /> Boosted
                       </span>
                     )}
                     {notice.type !== 'event' && (
                       isExpired(notice) ? (
-                        <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-danger/10 text-danger border-danger/20" title="Only visible to you until it's renewed">
+                        <span className="flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-danger/10 text-danger border-danger/20" title="Only visible to you until it's renewed">
                           <Clock size={10} /> Expired
                         </span>
                       ) : isPastFreeWindow(notice) ? (
-                        <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-success/10 text-success border-success/20">
+                        <span className="flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-success/10 text-success border-success/20">
                           <Clock size={10} /> Paid visibility
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-surface-raised/5 text-content-muted border-default">
+                        <span className="flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-surface-raised/5 text-content-muted border-default">
                           <Clock size={10} /> Free · {hoursLeftInFreeWindow(notice)}h left
                         </span>
                       )
@@ -312,7 +312,7 @@ export default function NoticeBoardTab({
                         </button>
                       </>
                     )}
-                    <span className="text-[10px] text-content-subtle font-mono tracking-tighter opacity-60 font-bold">{new Date(notice.timestamp).toLocaleDateString()}</span>
+                    <span className="text-xs text-content-subtle font-mono tracking-tighter opacity-60 font-bold">{new Date(notice.timestamp).toLocaleDateString()}</span>
                   </div>
                 </div>
 
@@ -324,7 +324,7 @@ export default function NoticeBoardTab({
                 </div>
 
                 {notice.type === 'event' && (
-                  <div className="flex items-center gap-3 text-[10px] font-black text-accent bg-accent/5 p-3 rounded-xl border border-accent/10 uppercase tracking-widest shadow-inner">
+                  <div className="flex items-center gap-3 text-xs font-black text-accent bg-accent/5 p-3 rounded-xl border border-accent/10 uppercase tracking-widest shadow-inner">
                     <Calendar size={14} className="opacity-60" />
                     {notice.eventId && gruvsEventInfo[notice.eventId] ? (
                       <span>On The Gruvs: <span className="text-content ml-1">{formatGruvsEventWhen(gruvsEventInfo[notice.eventId].startsAt, { long: true })}</span></span>
@@ -338,10 +338,10 @@ export default function NoticeBoardTab({
 
                 <div className="mt-auto pt-6 border-t border-subtle flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                     <div className="w-7 h-7 bg-surface-raised rounded-xl flex items-center justify-center text-[10px] font-black text-accent transition-colors group-hover:bg-accent group-hover:text-content-on-accent">
+                     <div className="w-7 h-7 bg-surface-raised rounded-xl flex items-center justify-center text-xs font-black text-accent transition-colors group-hover:bg-accent group-hover:text-content-on-accent">
                         {notice.postedBy.charAt(0)}
                      </div>
-                     <span className="text-[10px] text-content-muted font-black uppercase tracking-widest opacity-80">{notice.postedBy}</span>
+                     <span className="text-xs text-content-muted font-black uppercase tracking-widest opacity-80">{notice.postedBy}</span>
                   </div>
                   <div className="flex gap-4">
                      <button onClick={() => handleVibeNotice?.(notice.id)} className="flex items-center gap-1.5 text-xs text-content-muted hover:text-danger transition-colors font-black active:scale-90">
@@ -351,7 +351,7 @@ export default function NoticeBoardTab({
                         <Share2 size={18} className="transition-transform group-hover:scale-110" /> <span>{notice.echos?.length || 0}</span>
                      </button>
                      {notice.type === 'event' && (
-                       <button onClick={() => handleRSVPToEvent?.(notice.id)} className="flex items-center gap-2 text-[10px] text-success bg-success/10 px-3 py-1.5 rounded-xl border border-success/20 hover:bg-success hover:text-content transition-all font-black uppercase tracking-widest shadow-lg active:scale-90 ml-1">
+                       <button onClick={() => handleRSVPToEvent?.(notice.id)} className="flex items-center gap-2 text-xs text-success bg-success/10 px-3 py-1.5 rounded-xl border border-success/20 hover:bg-success hover:text-content transition-all font-black uppercase tracking-widest shadow-lg active:scale-90 ml-1">
                           <Check size={14} /> RSVP <span className="opacity-40">({notice.rsvps.length})</span>
                        </button>
                      )}
@@ -364,7 +364,7 @@ export default function NoticeBoardTab({
                       <UpgradeButton
                         item="notice_extend_visibility"
                         targetId={notice.id}
-                        className="w-full flex items-center justify-center gap-2 bg-danger/10 hover:bg-danger hover:text-content border border-danger/30 text-danger font-black py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95"
+                        className="w-full flex items-center justify-center gap-2 bg-danger/10 hover:bg-danger hover:text-content border border-danger/30 text-danger font-black py-2 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95"
                       />
                     )}
                     {!isFeatured(notice) && (

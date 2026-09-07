@@ -23,7 +23,7 @@ export default function TrustBadge({ userId, compact = false }: { userId: string
   if (!info) return null
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-content-muted">
+    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-content-muted">
       {info.isVerified && (
         <span className="inline-flex items-center gap-0.5 text-accent" title="Verified resident">
           <ShieldCheck size={11} /> {!compact && 'Verified'}

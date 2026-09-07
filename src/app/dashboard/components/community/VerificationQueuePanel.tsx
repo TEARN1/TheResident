@@ -93,7 +93,7 @@ export default function VerificationQueuePanel() {
   }
 
   if (loading) {
-    return <p className="text-[11px] text-content-muted flex items-center gap-2">
+    return <p className="text-xs text-content-muted flex items-center gap-2">
       <Loader size={13} className="animate-spin" /> Loading the queue…
     </p>
   }
@@ -106,7 +106,7 @@ export default function VerificationQueuePanel() {
         </div>
         <div>
           <p className="text-xs font-black text-content uppercase tracking-widest">Verification Queue</p>
-          <p className="text-[10px] text-content-muted">
+          <p className="text-xs text-content-muted">
             Approving grants the power to message everyone in an area
           </p>
         </div>
@@ -125,18 +125,18 @@ export default function VerificationQueuePanel() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-bold text-content">{r.unitName}</p>
-                  <p className="text-[10px] text-content-muted">
+                  <p className="text-xs text-content-muted">
                     {r.officialTitle || 'No role given'} · {r.unitTier}
                   </p>
                 </div>
-                <span className="text-[9px] text-content-subtle shrink-0">
+                <span className="text-xs text-content-subtle shrink-0">
                   {new Date(r.requestedAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}
                 </span>
               </div>
 
-              {r.note && <p className="text-[11px] text-content-muted leading-relaxed">{r.note}</p>}
+              {r.note && <p className="text-xs text-content-muted leading-relaxed">{r.note}</p>}
 
-              <div className="flex flex-wrap gap-3 text-[10px]">
+              <div className="flex flex-wrap gap-3 text-xs">
                 {r.evidenceUrl && (
                   <a
                     href={r.evidenceUrl}
@@ -172,7 +172,7 @@ export default function VerificationQueuePanel() {
                         key={a.id}
                         type="button"
                         onClick={() => setChosenArea(a)}
-                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] transition-colors ${
+                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
                           chosenArea?.id === a.id
                             ? 'bg-accent/15 text-accent'
                             : 'bg-surface-raised/5 text-content hover:bg-surface-raised/10'
@@ -198,7 +198,7 @@ export default function VerificationQueuePanel() {
                       type="button"
                       onClick={() => approve(r.unitId)}
                       disabled={busy || !chosenArea}
-                      className={`${goldButtonClass()} text-[10px] px-3 py-2 flex items-center gap-1.5 disabled:opacity-40`}
+                      className={`${goldButtonClass()} text-xs px-3 py-2 flex items-center gap-1.5 disabled:opacity-40`}
                     >
                       <Check size={12} />
                       {chosenArea ? `Verify and bind to ${chosenArea.name}` : 'Choose an area first'}
@@ -207,25 +207,25 @@ export default function VerificationQueuePanel() {
                       type="button"
                       onClick={() => reject(r.unitId)}
                       disabled={busy}
-                      className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-danger px-3 py-2 bg-surface-raised/5 rounded-lg disabled:opacity-50"
+                      className="text-xs font-black uppercase tracking-widest text-content-muted hover:text-danger px-3 py-2 bg-surface-raised/5 rounded-lg disabled:opacity-50"
                     >
                       Reject
                     </button>
                     <button
                       type="button"
                       onClick={reset}
-                      className="text-[10px] font-black uppercase tracking-widest text-content-subtle hover:text-content px-2 py-2"
+                      className="text-xs font-black uppercase tracking-widest text-content-subtle hover:text-content px-2 py-2"
                     >
                       <X size={12} />
                     </button>
                   </div>
-                  {error && <p className="text-[11px] text-danger">{error}</p>}
+                  {error && <p className="text-xs text-danger">{error}</p>}
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => { reset(); setOpenId(r.requestId); setQuery(r.requestedJurisdictionName || '') }}
-                  className="text-[10px] font-black uppercase tracking-widest text-accent hover:text-content"
+                  className="text-xs font-black uppercase tracking-widest text-accent hover:text-content"
                 >
                   Review
                 </button>

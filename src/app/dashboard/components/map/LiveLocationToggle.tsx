@@ -111,8 +111,8 @@ export default function LiveLocationToggle({ userId, sharing, onSharingChange, o
         <Radio size={14} className={sharing ? 'text-accent animate-pulse' : 'text-content-muted'} />
         <div>
           <p className="text-xs text-content font-medium">Share my live location</p>
-          <p className="text-[10px] text-content-muted">Live sharing with your Care Circle — coming soon. This proves the mechanism on your own map for now.</p>
-          <p className="text-[10px] text-content-subtle mt-0.5">Shown with its real accuracy radius — a phone GPS is typically 5–20m outdoors, more indoors, never pinpoint.</p>
+          <p className="text-xs text-content-muted">Live sharing with your Care Circle — coming soon. This proves the mechanism on your own map for now.</p>
+          <p className="text-xs text-content-subtle mt-0.5">Shown with its real accuracy radius — a phone GPS is typically 5–20m outdoors, more indoors, never pinpoint.</p>
         </div>
       </div>
       <button

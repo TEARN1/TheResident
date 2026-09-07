@@ -581,11 +581,21 @@ body {
 /* Narrow phones: buy the width back from padding and letter-spacing before
    spending it on an ellipsis. At 390px this is what makes "Maintenance" fit
    whole rather than truncating. */
+/* Six labels do not fit legibly on a narrow phone. My first fix shrank them
+   to 0.55rem — 8.8px — which bought the layout at the cost of being readable,
+   which is the wrong trade. The honest options are fewer destinations or no
+   labels; this takes the second, because dropping a destination is a product
+   decision and not mine to make.
+
+   Above 380px: labels, at 11px, which is small but legible for a word the
+   user learns the position of within a day.
+   At or below 380px: icons only, with the label still present for screen
+   readers via aria-label on the link. */
 @media (max-width: 420px) {
   .bottom-nav-item {
     padding-left: 0.15rem;
     padding-right: 0.15rem;
-    font-size: 0.55rem;
+    font-size: 0.69rem;
     letter-spacing: 0;
   }
 }
@@ -655,4 +665,79 @@ body {
    icon — they just don't get the movement. */
 @media (prefers-reduced-motion: reduce) {
   .urgent-broadcast--pulse { animation: none; }
+}
+
+/* ── Touch targets ─────────────────────────────────────────────────────────
+   Measured before this rule: 19-22 tap targets under 44px on every dashboard
+   screen, the smallest 11px. Apple's floor is 44px, Google's is 48px. An
+   11px control is not "small", it is one a thumb cannot reliably hit, and
+   missing it repeatedly is most of what "the app feels broken" means.
+
+   Applied on coarse pointers and phone widths only, so a mouse-driven
+   desktop layout is not padded out for no reason.
+
+   Deliberately NOT applied to inline links inside prose (a bare <a>), which
+   would break text flow for no benefit — those are covered by giving the
+   whole row or card a tap target instead (docs/DESIGN-OVERHAUL.md item 110).
+   Checkboxes and radios keep their native size and gain their hit area from
+   the label instead (item 119). */
+@media (pointer: coarse), (max-width: 1023px) {
+  button,
+  [role='button'],
+  select,
+  textarea,
+  a[class*='btn'],
+  a[class*='Btn'],
+  /* Links that are buttons in everything but tag name — they carry layout
+     utilities, unlike a bare prose link. "View on map" measured 96x11. */
+  a[class*='flex'],
+  a[class*='w-full'],
+  .guest-summary-banner-cta,
+  .bottom-nav-item,
+  input:not([type='checkbox']):not([type='radio']):not([type='range']) {
+    min-height: var(--tap-min);
+  }
+
+  button,
+  [role='button'] {
+    min-width: var(--tap-min);
+  }
+
+  /* A control the user can hit but not read is only half fixed. 16px is also
+     the threshold below which iOS Safari zooms the page on focus. */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .bottom-nav-item span {
+    /* Hidden visually; the accessible name comes from aria-label on the
+       link, so screen-reader users lose nothing. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .bottom-nav-item {
+    gap: 0;
+  }
+}
+
+/* Removes the 300ms delay browsers historically added while waiting to see if
+   a tap was a double-tap. */
+button, [role='button'], a, input, select, textarea, label {
+  touch-action: manipulation;
+}
+
+/* Focus was inconsistent or absent, which is both an accessibility failure
+   and a polish failure. One ring, defined once in tokens.css. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
 }

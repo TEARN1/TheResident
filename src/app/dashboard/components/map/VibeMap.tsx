@@ -1162,7 +1162,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
             <button
               onClick={() => setActiveKinds(new Set(Object.keys(KIND_LABEL)))}
-              className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap ${
                 activeKinds.size === Object.keys(KIND_LABEL).length
                   ? 'bg-accent text-content-on-accent border-accent shadow-md'
                   : 'bg-surface-sunken/80 text-content border-default hover:text-content'
@@ -1176,7 +1176,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                 <button
                   key={kind}
                   onClick={() => toggleKind(kind)}
-                  className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  className={`px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap flex items-center gap-1.5 ${
                     active
                       ? 'bg-accent text-content-on-accent border-accent shadow-md'
                       : 'bg-surface-sunken/80 text-content border-default opacity-60 hover:opacity-100'
@@ -1208,13 +1208,13 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             // with the map at full width); the full labelled key otherwise —
             // the 190px fixed panel used to eat most of a phone-width map.
             <div className="bg-surface-sunken/80 backdrop-blur-xl border border-default rounded-xl p-3 shadow-2xl w-[52px] sm:w-[200px]">
-              <p className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-content-muted mb-2">Map key — tap to filter</p>
+              <p className="hidden sm:block text-xs font-black uppercase tracking-widest text-content-muted mb-2">Map key — tap to filter</p>
               <button
                 onClick={() => setShowHandymenLayer(v => !v)}
                 aria-pressed={showHandymenLayer}
                 aria-label={`${showHandymenLayer ? 'Hide' : 'Show'} handymen and services${handymen.length > 0 ? ` (${handymen.length} nearby)` : ''}`}
                 title="Handymen & services"
-                className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${showHandymenLayer ? 'text-content' : 'text-content-subtle opacity-50'} hover:opacity-100`}
+                className={`w-full flex items-center gap-2 text-xs py-1.5 rounded-lg transition-opacity ${showHandymenLayer ? 'text-content' : 'text-content-subtle opacity-50'} hover:opacity-100`}
               >
                 <div className="w-3 h-3 rounded-full shrink-0" style={{ background: 'var(--info)', boxShadow: showHandymenLayer ? '0 0 8px var(--info)' : 'none' }} />
                 <span className="hidden sm:inline flex-1 text-left">Handymen &amp; services</span>
@@ -1225,7 +1225,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                 aria-pressed={showMarketLayer}
                 aria-label={`${showMarketLayer ? 'Hide' : 'Show'} marketplace items${marketItemsNearby.length > 0 ? ` (${marketItemsNearby.length} nearby)` : ''}`}
                 title="Marketplace"
-                className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${showMarketLayer ? 'text-content' : 'text-content-subtle opacity-50'} hover:opacity-100`}
+                className={`w-full flex items-center gap-2 text-xs py-1.5 rounded-lg transition-opacity ${showMarketLayer ? 'text-content' : 'text-content-subtle opacity-50'} hover:opacity-100`}
               >
                 <div className="w-3 h-3 rounded-full shrink-0" style={{ background: 'var(--success)', boxShadow: showMarketLayer ? '0 0 8px var(--success)' : 'none' }} />
                 <span className="hidden sm:inline flex-1 text-left">Marketplace</span>
@@ -1236,7 +1236,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                 aria-pressed={showCommunitiesLayer}
                 aria-label={`${showCommunitiesLayer ? 'Hide' : 'Show'} communities${communities.length > 0 ? ` (${communities.length} nearby)` : ''}`}
                 title="Communities"
-                className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${showCommunitiesLayer ? 'text-content' : 'text-content-subtle opacity-50'} hover:opacity-100`}
+                className={`w-full flex items-center gap-2 text-xs py-1.5 rounded-lg transition-opacity ${showCommunitiesLayer ? 'text-content' : 'text-content-subtle opacity-50'} hover:opacity-100`}
               >
                 <div className="w-3 h-3 rounded-full shrink-0" style={{ background: 'var(--success)', boxShadow: showCommunitiesLayer ? '0 0 8px var(--success)' : 'none' }} />
                 <span className="hidden sm:inline flex-1 text-left">Communities</span>
@@ -1257,7 +1257,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                     aria-pressed={active}
                     aria-label={`${active ? 'Hide' : 'Show'} ${label} reports${count > 0 ? ` (${count} in view)` : ''}`}
                     title={label}
-                    className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${active ? 'text-content' : 'text-content-subtle opacity-50'} hover:opacity-100`}
+                    className={`w-full flex items-center gap-2 text-xs py-1.5 rounded-lg transition-opacity ${active ? 'text-content' : 'text-content-subtle opacity-50'} hover:opacity-100`}
                   >
                     <div
                       className="w-3 h-3 rounded-full shrink-0"
@@ -1268,7 +1268,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                   </button>
                 )
               })}
-              <label className="flex items-center gap-2 text-[10px] text-content-muted pt-2 mt-1 border-t border-subtle cursor-pointer py-1">
+              <label className="flex items-center gap-2 text-xs text-content-muted pt-2 mt-1 border-t border-subtle cursor-pointer py-1">
                 <input
                   type="checkbox"
                   checked={confirmedOnly}
@@ -1278,7 +1278,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                 />
                 <span className="hidden sm:inline">Confirmed only</span>
               </label>
-              <div className="hidden sm:flex items-center gap-2 text-[10px] text-content-muted pt-1">
+              <div className="hidden sm:flex items-center gap-2 text-xs text-content-muted pt-1">
                 <div className="w-3 h-3 rounded-full shrink-0 bg-surface-raised/80 border border-default" />
                 Confirmed / official
               </div>
@@ -1300,7 +1300,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                 <button
                   key={d}
                   onClick={() => { setDrawer(v => v === d ? 'none' : d); setShowToolsMenu(false) }}
-                  className={`text-left px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${drawer === d ? 'bg-accent text-content-on-accent' : 'text-content hover:bg-surface-raised/5 hover:text-content'}`}
+                  className={`text-left px-2.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${drawer === d ? 'bg-accent text-content-on-accent' : 'text-content hover:bg-surface-raised/5 hover:text-content'}`}
                 >
                   {d === 'pins' ? 'Saved places' : d === 'matrix' ? 'Distances' : 'Alerts'}
                 </button>
@@ -1374,7 +1374,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         {/* Stats chip — floating bottom-left. Counts the FILTERED set, not
             the raw fetch — otherwise "12 nearby" while a filter has hidden
             9 of them would just read as broken. */}
-        <div className="absolute bottom-3 left-3 z-[500] bg-surface-sunken/80 backdrop-blur-xl border border-default rounded-xl px-3 py-2 shadow-2xl flex items-center gap-3 text-[10px] text-content">
+        <div className="absolute bottom-3 left-3 z-[500] bg-surface-sunken/80 backdrop-blur-xl border border-default rounded-xl px-3 py-2 shadow-2xl flex items-center gap-3 text-xs text-content">
           <span>{filteredZones.length}{filteredZones.length !== zones.length ? ` of ${zones.length}` : ''} nearby</span>
           <span className="text-content-subtle">·</span>
           <span className="flex items-center gap-1"><Check size={10} className="text-success" /> {filteredZones.filter(z => z.status === 'confirmed' || z.status === 'official').length} confirmed</span>
@@ -1401,7 +1401,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
               </div>
               <button
                 onClick={dismissOrientationTip}
-                className="mt-2.5 w-full bg-accent/10 hover:bg-accent hover:text-content-on-accent border border-accent/30 text-accent font-black px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-widest transition-all"
+                className="mt-2.5 w-full bg-accent/10 hover:bg-accent hover:text-content-on-accent border border-accent/30 text-accent font-black px-3 py-1.5 rounded-lg text-xs uppercase tracking-widest transition-all"
               >
                 Got it
               </button>
@@ -1420,7 +1420,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[500] w-[92%] max-w-sm">
             <div className="bg-surface-sunken/80 backdrop-blur-xl border border-default rounded-2xl p-3 shadow-2xl text-center">
               <p className="text-xs text-content">Nothing reported near you yet.</p>
-              <p className="text-[10px] text-content-muted mt-0.5">Be the first — tap the map to report a closure, or list a room, service or item to put it here.</p>
+              <p className="text-xs text-content-muted mt-0.5">Be the first — tap the map to report a closure, or list a room, service or item to put it here.</p>
             </div>
           </div>
         )}
@@ -1445,21 +1445,21 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setShowReportForm(true)}
-                    className="flex-1 bg-danger/10 hover:bg-danger hover:text-content border border-danger/30 text-danger font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
+                    className="flex-1 bg-danger/10 hover:bg-danger hover:text-content border border-danger/30 text-danger font-black px-3 py-2 rounded-lg text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
                   >
                     <Ban size={12} /> Report closure
                   </button>
                   {currentUserId && (
                     <button
                       onClick={() => handleSavePin(pendingPoint.label)}
-                      className="flex-1 bg-accent/10 hover:bg-accent hover:text-content-on-accent border border-accent/30 text-accent font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all"
+                      className="flex-1 bg-accent/10 hover:bg-accent hover:text-content-on-accent border border-accent/30 text-accent font-black px-3 py-2 rounded-lg text-xs uppercase tracking-widest transition-all"
                     >
                       Save place
                     </button>
                   )}
                   <button
                     onClick={() => addMatrixPoint({ id: `pt-${pendingPoint.lat}-${pendingPoint.lon}`, label: pendingPoint.label, lat: pendingPoint.lat, lon: pendingPoint.lon })}
-                    className="flex-1 bg-surface-raised/5 hover:bg-surface-raised/10 border border-default text-content font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all"
+                    className="flex-1 bg-surface-raised/5 hover:bg-surface-raised/10 border border-default text-content font-black px-3 py-2 rounded-lg text-xs uppercase tracking-widest transition-all"
                   >
                     Add to distances
                   </button>
@@ -1496,7 +1496,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                     !segmentEnd ? (
                       <button
                         onClick={() => setPickingSegmentEnd(true)}
-                        className={`w-full flex items-center justify-center gap-1.5 font-black px-3 py-2.5 rounded-lg text-[10px] uppercase tracking-widest border transition-all ${
+                        className={`w-full flex items-center justify-center gap-1.5 font-black px-3 py-2.5 rounded-lg text-xs uppercase tracking-widest border transition-all ${
                           pickingSegmentEnd
                             ? 'bg-danger text-content border-danger animate-pulse'
                             : 'bg-danger/10 text-danger border-danger/30 hover:bg-danger/20'
@@ -1507,12 +1507,12 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                       </button>
                     ) : (
                       <div className="flex items-center justify-between gap-2 bg-surface-raised/5 border border-default rounded-lg px-3 py-2">
-                        <span className="text-[10px] text-content">
+                        <span className="text-xs text-content">
                           From <strong className="text-content">A</strong> to <strong className="text-content">B</strong> — {Math.round(distanceMetres(segmentEnd, pendingPoint))}m stretch
                         </span>
                         <button
                           onClick={() => { setSegmentEnd(null); setPickingSegmentEnd(true) }}
-                          className="text-[9px] text-accent font-black uppercase tracking-widest shrink-0 hover:underline"
+                          className="text-xs text-accent font-black uppercase tracking-widest shrink-0 hover:underline"
                         >
                           Change
                         </button>
@@ -1526,7 +1526,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                   <div className="flex gap-1.5">
                     <button
                       onClick={() => setScheduleLater(false)}
-                      className={`flex-1 text-[10px] font-black uppercase tracking-widest py-1.5 rounded-lg border transition-all ${!scheduleLater ? 'bg-accent text-content-on-accent border-accent' : 'bg-surface-raised/5 text-content-muted border-default'}`}
+                      className={`flex-1 text-xs font-black uppercase tracking-widest py-1.5 rounded-lg border transition-all ${!scheduleLater ? 'bg-accent text-content-on-accent border-accent' : 'bg-surface-raised/5 text-content-muted border-default'}`}
                     >
                       Starts now
                     </button>
@@ -1535,7 +1535,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                         setScheduleLater(true)
                         if (!scheduledAt) setScheduledAt(toDatetimeLocalValue(new Date(Date.now() + 60 * 60 * 1000)))
                       }}
-                      className={`flex-1 text-[10px] font-black uppercase tracking-widest py-1.5 rounded-lg border transition-all ${scheduleLater ? 'bg-accent text-content-on-accent border-accent' : 'bg-surface-raised/5 text-content-muted border-default'}`}
+                      className={`flex-1 text-xs font-black uppercase tracking-widest py-1.5 rounded-lg border transition-all ${scheduleLater ? 'bg-accent text-content-on-accent border-accent' : 'bg-surface-raised/5 text-content-muted border-default'}`}
                     >
                       Schedule for later
                     </button>
@@ -1558,17 +1558,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                     maxLength={500}
                     className="w-full bg-surface border border-default rounded-lg px-3 py-2 text-xs text-content outline-none focus:border-danger/40"
                   />
-                  {reportError && <p className="text-[10px] text-danger">{reportError}</p>}
+                  {reportError && <p className="text-xs text-danger">{reportError}</p>}
                   <div className="flex gap-2">
                     <button
                       onClick={submitClosureReport}
                       disabled={reportSubmitting || (isSegmentKind(reportKind) && !segmentEnd)}
-                      className="flex-1 bg-danger hover:bg-danger text-content font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      className="flex-1 bg-danger hover:bg-danger text-content font-black px-3 py-2 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                     >
                       {reportSubmitting ? <Loader size={12} className="animate-spin" /> : <Ban size={12} />}
                       {reportSubmitting ? 'Reporting…' : `Report for ${DURATION_OPTIONS.find(d => d.hours === reportDurationHours)?.label}`}
                     </button>
-                    <button onClick={() => { setShowReportForm(false); setSegmentEnd(null); setPickingSegmentEnd(false) }} className="text-content-muted hover:text-content text-[10px] font-bold uppercase tracking-widest px-2">Cancel</button>
+                    <button onClick={() => { setShowReportForm(false); setSegmentEnd(null); setPickingSegmentEnd(false) }} className="text-content-muted hover:text-content text-xs font-bold uppercase tracking-widest px-2">Cancel</button>
                   </div>
                 </div>
               )}
@@ -1619,10 +1619,10 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                 <h4 className="text-sm font-bold text-content uppercase tracking-wide flex items-center gap-2 mb-4">
                   <Bell size={16} className="text-accent" /> Geofenced Area Alerts
                 </h4>
-                <p className="text-[11px] text-content-muted mb-4">
+                <p className="text-xs text-content-muted mb-4">
                   Highlights shared zones within a radius of any of your saved places — client-side, refreshed with the map.
                 </p>
-                <label className="block text-[10px] text-content-muted uppercase font-bold mb-1">Alert radius (metres)</label>
+                <label className="block text-xs text-content-muted uppercase font-bold mb-1">Alert radius (metres)</label>
                 <input
                   type="number"
                   min={50}
@@ -1633,7 +1633,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                   className="w-full bg-surface-sunken/20 border border-default rounded-lg px-3 py-2 text-sm text-content outline-none focus:border-accent/50 mb-4"
                 />
                 <div className="p-3 bg-surface-raised/[0.02] border border-subtle rounded-xl mb-4">
-                  <p className="text-[10px] text-content-muted uppercase font-bold mb-1">Alerts near saved places</p>
+                  <p className="text-xs text-content-muted uppercase font-bold mb-1">Alerts near saved places</p>
                   <p className="text-lg font-bold text-content">{geofenceHits.length}</p>
                 </div>
                 <LiveLocationToggle userId={currentUserId} sharing={locationSharing} onSharingChange={setLocationSharing} onPosition={setLivePosition} />

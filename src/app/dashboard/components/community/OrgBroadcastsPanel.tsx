@@ -210,15 +210,15 @@ export default function OrgBroadcastsPanel() {
           </div>
           <div>
             <p className="text-xs font-black text-content uppercase tracking-widest">Org & Business Broadcasts</p>
-            <p className="text-[10px] text-content-muted">Free, in-app announcements — opt-in only, no spam</p>
+            <p className="text-xs text-content-muted">Free, in-app announcements — opt-in only, no spam</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowCreateUnit(v => !v)} className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-content px-3 py-2 rounded-lg bg-surface-raised/5 flex items-center gap-1">
+          <button onClick={() => setShowCreateUnit(v => !v)} className="text-xs font-black uppercase tracking-widest text-content-muted hover:text-content px-3 py-2 rounded-lg bg-surface-raised/5 flex items-center gap-1">
             <Building2 size={12} /> New unit
           </button>
           {canSendAnywhere && (
-            <button onClick={() => setShowCompose(v => !v)} className={`${goldButtonClass()} text-[10px] px-3 py-2 flex items-center gap-1`}>
+            <button onClick={() => setShowCompose(v => !v)} className={`${goldButtonClass()} text-xs px-3 py-2 flex items-center gap-1`}>
               <Plus size={12} /> Compose
             </button>
           )}
@@ -245,7 +245,7 @@ export default function OrgBroadcastsPanel() {
 
       {showCreateUnit && (
         <div className="bg-surface-sunken/40 border border-subtle rounded-xl p-4 space-y-3">
-          <p className="text-[10px] text-content-muted">Claim a unit to send from — a business, a school, or a department. Creating one makes you its first sender.</p>
+          <p className="text-xs text-content-muted">Claim a unit to send from — a business, a school, or a department. Creating one makes you its first sender.</p>
           <input
             value={newUnitName}
             onChange={e => setNewUnitName(e.target.value)}
@@ -265,7 +265,7 @@ export default function OrgBroadcastsPanel() {
               ))}
             </select>
           </div>
-          <button onClick={handleCreateUnit} disabled={submitting || !newUnitName.trim()} className={`${goldButtonClass()} text-[10px] px-4 py-2 disabled:opacity-50`}>
+          <button onClick={handleCreateUnit} disabled={submitting || !newUnitName.trim()} className={`${goldButtonClass()} text-xs px-4 py-2 disabled:opacity-50`}>
             {submitting ? 'Creating…' : 'Create unit'}
           </button>
         </div>
@@ -303,7 +303,7 @@ export default function OrgBroadcastsPanel() {
               </option>
             </select>
             {(priority === 'urgent' || priority === 'critical') && (
-              <p className="text-[10px] text-warning mt-1">
+              <p className="text-xs text-warning mt-1">
                 This interrupts everyone who follows this unit — use it only for something they need to act on now.
               </p>
             )}
@@ -317,7 +317,7 @@ export default function OrgBroadcastsPanel() {
                   onChange={e => setSendToArea(e.target.checked)}
                   className="accent-gold-primary mt-0.5"
                 />
-                <span className="text-[11px] text-content leading-relaxed">
+                <span className="text-xs text-content leading-relaxed">
                   <strong className="text-content">Send to an area instead</strong> — reaches everyone
                   who lives there, not only people who follow this account.
                   <span className="text-content-muted"> This is recorded publicly.</span>
@@ -336,7 +336,7 @@ export default function OrgBroadcastsPanel() {
                       <option key={c.value} value={c.value}>{c.label} — {c.hint}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-content-subtle leading-relaxed">
+                  <p className="text-xs text-content-subtle leading-relaxed">
                     Residents can mute a topic without muting your office. Emergencies always
                     reach them whatever they have muted.
                   </p>
@@ -353,10 +353,10 @@ export default function OrgBroadcastsPanel() {
             </div>
           )}
           <div className="flex gap-2">
-            <button onClick={handlePost} disabled={submitting || !targetUnitId || !title.trim() || !body.trim() || (sendToArea && (!category || !canSend(areaPreview) || !canSendAtPriority(licence, priority)))} className={`${goldButtonClass()} text-[10px] px-4 py-2 flex items-center gap-1 disabled:opacity-50`}>
+            <button onClick={handlePost} disabled={submitting || !targetUnitId || !title.trim() || !body.trim() || (sendToArea && (!category || !canSend(areaPreview) || !canSendAtPriority(licence, priority)))} className={`${goldButtonClass()} text-xs px-4 py-2 flex items-center gap-1 disabled:opacity-50`}>
               <Send size={12} /> {submitting ? 'Sending…' : sendToArea ? 'Send to this area' : 'Send'}
             </button>
-            <button onClick={() => setShowCompose(false)} className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-content px-3 py-2"><X size={12} /></button>
+            <button onClick={() => setShowCompose(false)} className="text-xs font-black uppercase tracking-widest text-content-muted hover:text-content px-3 py-2"><X size={12} /></button>
           </div>
         </div>
       )}
@@ -380,7 +380,7 @@ export default function OrgBroadcastsPanel() {
                   key={u.id}
                   onClick={() => toggleFollow(u.id)}
                   title={unitBreadcrumb(units, u.id).map(b => b.name).join(' › ')}
-                  className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border flex items-center gap-1 transition-all ${
+                  className={`text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border flex items-center gap-1 transition-all ${
                     following ? 'bg-accent/15 border-accent/40 text-accent' : 'bg-surface-raised/5 border-default text-content-muted hover:text-content'
                   }`}
                 >
@@ -390,7 +390,7 @@ export default function OrgBroadcastsPanel() {
               )
             })}
             {searchUnits(units, directoryQuery).length === 0 && (
-              <p className="text-[10px] text-content-subtle">Nothing matches — try a different name, or add a new unit above.</p>
+              <p className="text-xs text-content-subtle">Nothing matches — try a different name, or add a new unit above.</p>
             )}
           </div>
         </div>
@@ -412,14 +412,14 @@ export default function OrgBroadcastsPanel() {
                 }`}
               >
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-accent flex items-center gap-1">
+                  <span className="text-xs font-black uppercase tracking-widest text-accent flex items-center gap-1">
                     {unit ? unit.name : 'Unknown unit'}
                     {unit?.verified && <BadgeCheck size={10} className="text-info" aria-label="Verified" />}
                   </span>
-                  <span className="text-[9px] text-content-subtle">{new Date(b.createdAt).toLocaleDateString()}</span>
+                  <span className="text-xs text-content-subtle">{new Date(b.createdAt).toLocaleDateString()}</span>
                 </div>
                 {(b.priority === 'urgent' || b.priority === 'critical') && (
-                  <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded mb-1 ${
+                  <span className={`inline-block text-xs font-black uppercase tracking-widest px-1.5 py-0.5 rounded mb-1 ${
                     b.priority === 'critical' ? 'bg-danger/15 text-danger' : 'bg-warning/15 text-warning'
                   }`}>
                     {b.priority}
