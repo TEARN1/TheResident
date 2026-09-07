@@ -110,3 +110,22 @@ to read mid-fetch is a **local variable** (see `loadCareCircle` in
   updates, CI health, and anything in the audit log that looks like a real
   attack rather than the (expected, blocked) noise the fuzzer already
   covers.
+
+## Backups: what is automatic now, and what still is not
+
+`sql-tests/run.sh` and `scripts/restore-drill.sh` run in CI on every push, so
+the schema of record is proven to rebuild from nothing, and every
+authorisation assertion from the security review is enforced continuously
+rather than whenever someone remembers.
+
+**Tier 2 is still the gap, and it is the one holding your data.** The script
+is finished and tested in both directions; nothing runs it. One cron line on
+any machine that has the connection string closes it:
+
+```
+0 3 * * 0 DATABASE_URL=... /path/scripts/backup-export.sh --verify --quiet /var/backups/resident
+```
+
+Then move the output somewhere that survives losing the Supabase account.
+That last step is the one that makes it a backup, and no script can do it for
+you — it cannot know which storage you trust.

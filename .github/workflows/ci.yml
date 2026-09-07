@@ -51,3 +51,45 @@ jobs:
 
       - name: "Layer 2: High-Concurrency Scale Benchmark"
         run: npm run scale-test
+
+  database:
+    name: Schema Assertions & Restore Drill
+    runs-on: ubuntu-latest
+
+    # Deliberately a separate job. It needs a PostgreSQL with PostGIS and
+    # nothing from Node, and keeping it independent means a broken schema
+    # reports as a broken schema rather than hiding inside the Node job.
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL 16 and PostGIS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-16 postgresql-16-postgis-3
+
+      # WHY THIS EXISTS.
+      #
+      # sql-tests/ is where every authorisation finding from the security
+      # review is locked in: the res_moderate privilege escalation, the
+      # res_household_members IDOR, the trust-pair cross-user writes, the
+      # fail-open-on-NULL scanner, the grant/policy audit, the RLS sweep.
+      # Each one is written as the actual exploit, so a future rewrite that
+      # reintroduces the hole fails here however it is written.
+      #
+      # None of it ran in CI. The whole suite was enforced only by someone
+      # remembering to run it by hand — which is not enforcement, it is a
+      # habit, and habits do not survive a busy week. A regression in any of
+      # those functions would have reached production with every check on
+      # this pipeline green.
+      - name: "Layer 15: SQL Test Suite"
+        run: ./sql-tests/run.sh
+
+      # An untested backup is a hypothesis, not a backup. This proves the
+      # schema of record still rebuilds the database from nothing, and is
+      # still safe to apply twice — the thing you need to be true on the one
+      # day you are relying on it, which is the worst possible day to
+      # discover it is not. It found a 12-table RLS hole the first time it
+      # ran. It touches nothing outside its own throwaway PostgreSQL.
+      - name: "Layer 15: Tier 3 Restore Drill"
+        run: ./scripts/restore-drill.sh

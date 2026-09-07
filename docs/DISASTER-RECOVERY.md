@@ -54,8 +54,25 @@ somewhere that is **not Supabase and not the same credentials** — different
 vendor, different login. A copy on the same account you just lost is not a
 backup.
 
-**Status:** script exists; scheduling and off-platform storage are a human
-step. See "What only a human can do" at the bottom.
+**Verify it, don't just take it.** `--verify` restores the dump it just made
+into a throwaway PostgreSQL and counts what comes back, failing if fewer than
+60 `res_` tables load. Without it the script proves a *file* exists, which is
+not the same as proving a *backup* exists: a dump cut short by a dropped
+connection is still a plausible-looking gzip of the right rough size, and you
+find out on the day you can least afford to.
+
+**Scheduling it.** `--quiet` prints nothing on success, so cron mails you only
+when something is wrong — failures still print and the exit code is still the
+truth. A weekly line that actually tells you when it breaks:
+
+```
+0 3 * * 0 DATABASE_URL=... /path/scripts/backup-export.sh --verify --quiet /var/backups/resident
+```
+
+**Status:** script exists and both directions are proven — a good dump passes,
+a short one is rejected with a non-zero exit. Choosing the machine that runs
+that cron line, and the off-platform storage the file is moved to, are the
+human steps. See "What only a human can do" at the bottom.
 
 ### Tier 3 — Schema of record
 
@@ -98,8 +115,10 @@ without failing the build.
 
 **An untested backup is a hypothesis, not a backup.**
 
-Run this quarterly. It takes minutes and it is the only thing that converts
-"we have backups" from a belief into a fact:
+This now runs on **every push** (`.github/workflows/ci.yml`, the `database`
+job), alongside the full `sql-tests/` suite — which until then was enforced
+only by someone remembering to run it, and so was not enforced at all. Run it
+by hand as well when you are about to trust it:
 
 ```bash
 ./scripts/restore-drill.sh
@@ -190,7 +209,7 @@ These cannot be automated from this repository and are the gaps that remain:
 | Item | Where | Why it needs you |
 |---|---|---|
 | **Enable PITR** | Supabase → Settings → Database | Costs money; a billing decision |
-| **Schedule the Tier 2 dump** | Anywhere with cron + `DATABASE_URL` | Needs the connection string, which is a secret |
+| **Schedule the Tier 2 dump** | Anywhere with cron + `DATABASE_URL` | Needs the connection string, which is a secret. The cron line is written for you above — use `--verify --quiet`. |
 | **Choose off-platform storage** | Not Supabase, not the same login | A vendor/account decision |
 | **Run the quarterly drill** | `./scripts/restore-drill.sh` | Fifteen minutes, four times a year |
 | **Complete Tier 3** | `./scripts/sync-functions.sh` | Needs `DATABASE_URL`; captures the 75 functions that exist only in production |
