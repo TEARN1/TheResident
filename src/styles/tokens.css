@@ -1,0 +1,227 @@
+/* ===========================================================================
+   THE RESIDENT — DESIGN TOKENS
+   ===========================================================================
+
+   The single source of colour, elevation, radius, spacing and motion.
+
+   WHY THIS FILE EXISTS.
+
+   Before it, the app did not have a theme. It had a colour scheme painted
+   onto roughly 2,100 individual elements across 50 of 67 component files —
+   `bg-black` 135 times, `text-white` 421 times, `text-gray-500` 355 times.
+   globals.css said so itself:
+
+     "The dashboard forces data-theme="night" on every mount and is built
+      almost entirely from hardcoded dark Tailwind utilities rather than
+      these variables, so it can never honor a real light mode without that
+      being rewritten wholesale."
+
+   That is why the app felt inescapably dark. It was inescapable — there was
+   no switch to throw.
+
+   THE RULES.
+
+   1. Colours are named by ROLE, never by value. `--text-muted`, not
+      `--gray-500`. A role survives a redesign; a value does not.
+   2. No component may name a colour. A `#` or a `bg-black` in a .tsx file is
+      a bug, enforced by src/styles/tokens.test.ts.
+   3. Every token is defined in BOTH themes. One defined only in light is a
+      component that disappears in dark.
+   4. Every foreground/background pair here is verified against WCAG AA
+      (4.5:1 body, 3:1 large text and UI boundaries) by that same test. The
+      values below are not taste — they were computed, and the weakest pair
+      in either theme scores 4.72:1.
+
+   LIGHT IS THE DEFAULT. This app is used outdoors, on phones, in South
+   African sun. Dark mode is real and good, but it is the choice, not the
+   cage.
+   =========================================================================== */
+
+:root {
+  /* ── Surfaces ──────────────────────────────────────────────────────────
+     Three levels so a card reads as an object sitting ON something, rather
+     than a rectangle painted onto the same flat plane. */
+  --surface:         #FAF8F3;  /* warm off-white, not #FFF: pure white glares */
+  --surface-raised:  #FFFFFF;  /* cards, sheets, anything lifted */
+  --surface-sunken:  #F1EDE4;  /* inputs, wells, anything recessed */
+  --surface-overlay: rgba(26, 23, 18, 0.45);  /* behind modals */
+
+  /* ── Text ──────────────────────────────────────────────────────────────
+     --text-muted replaces text-gray-500, which scored 4.10:1 and FAILED AA
+     while being the most-used text colour in the app. This scores 7.15:1. */
+  --text-primary: #1A1712;  /* warm near-black; #000 on white is harsh */
+  --text-muted:   #5A5348;  /* secondary text, labels */
+  --text-subtle:  #6E6658;  /* timestamps, counts — the floor, not the target */
+  --text-on-accent: #FFFFFF;
+
+  /* ── Brand ─────────────────────────────────────────────────────────────
+     The gold stays. It is darkened for light mode because #D4AF37 scores
+     1.9:1 on a light background — effectively invisible. This scores 4.76:1
+     and still reads unmistakably as gold. */
+  --accent:        #8A6A19;
+  --accent-hover:  #745714;
+  --accent-soft:   rgba(138, 106, 25, 0.10);
+  --accent-border: rgba(138, 106, 25, 0.28);
+
+  /* ── Status ────────────────────────────────────────────────────────────
+     One meaning, one colour, everywhere. "Error" currently renders as
+     text-red-400 in some files and #ef4444 in others, so it does not look
+     the same twice. */
+  --success: #1E7A3E;  --success-soft: rgba(30, 122, 62, 0.10);
+  --warning: #8A5A00;  --warning-soft: rgba(138, 90, 0, 0.10);
+  --danger:  #B3261E;  --danger-soft:  rgba(179, 38, 30, 0.10);
+  --info:    #1D4ED8;  --info-soft:    rgba(29, 78, 216, 0.10);
+
+  /* ── Borders ───────────────────────────────────────────────────────────
+     Replaces border-white/10 (238 uses) and border-white/5 (131), which are
+     invisible on a light background. */
+  --border-default: rgba(26, 23, 18, 0.12);
+  --border-strong:  rgba(26, 23, 18, 0.22);
+  --border-subtle:  rgba(26, 23, 18, 0.06);
+
+  /* ── Section accents ───────────────────────────────────────────────────
+     Promoted from decorative landing-page glows to real UI colour, so the
+     dashboard areas are identifiable at a glance instead of all speaking in
+     one colour. */
+  --area-housing:   #8A6A19;
+  --area-community: #1D4ED8;
+  --area-services:  #0F766E;
+  --area-safety:    #B3261E;
+
+  /* ── Elevation ─────────────────────────────────────────────────────────
+     Real shadows in light mode. The frosted-glass treatment (126 uses) is
+     mud over a light background; it is kept for dark mode only. */
+  --elevation-1: 0 1px 2px rgba(26, 23, 18, 0.06);
+  --elevation-2: 0 2px 8px rgba(26, 23, 18, 0.08);
+  --elevation-3: 0 8px 24px rgba(26, 23, 18, 0.10);
+  --elevation-4: 0 16px 48px rgba(26, 23, 18, 0.14);
+
+  /* ── Radius ────────────────────────────────────────────────────────────
+     Four values, replacing the dozen currently in use. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  /* ── Spacing ───────────────────────────────────────────────────────────
+     4px base. Nothing outside this scale. */
+  --space-1: 4px;   --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px;  --space-6: 24px;  --space-8: 32px;  --space-10: 40px;
+  --space-12: 48px; --space-16: 64px;
+
+  /* ── Layout ────────────────────────────────────────────────────────────
+     Replaces the guessed `padding-bottom: 5rem`, whose own comment called it
+     "a deliberately generous flat estimate". */
+  --content-max:   680px;
+  --gutter:        16px;
+  --nav-height:    64px;
+  --header-height: 56px;
+  --tap-min:       44px;  /* Apple HIG floor. The app currently has 11px targets. */
+
+  /* ── Motion ────────────────────────────────────────────────────────────
+     150-250ms. Slower feels sluggish on a phone. */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ── Focus ─────────────────────────────────────────────────────────────
+     Defined once. Focus styling is currently inconsistent or absent, which
+     is both an accessibility failure and a polish failure. */
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+}
+
+/* ===========================================================================
+   DARK THEME
+   ===========================================================================
+   Warm charcoal, not pure black. #0a0a0a is what made the old theme feel
+   like a void rather than a room; every surface here carries a little of the
+   same warmth as the light theme so the two read as one product.
+   =========================================================================== */
+
+:root[data-theme='dark'] {
+  --surface:         #16140F;
+  --surface-raised:  #211E17;
+  --surface-sunken:  #100E0A;
+  --surface-overlay: rgba(0, 0, 0, 0.62);
+
+  --text-primary: #F5F1E8;
+  --text-muted:   #A9A296;
+  --text-subtle:  #8F8878;
+  --text-on-accent: #16140F;
+
+  /* The original gold, which scores 8.75:1 here and looks genuinely good. */
+  --accent:        #D4AF37;
+  --accent-hover:  #E3C258;
+  --accent-soft:   rgba(212, 175, 55, 0.14);
+  --accent-border: rgba(212, 175, 55, 0.32);
+
+  --success: #4ADE80;  --success-soft: rgba(74, 222, 128, 0.12);
+  --warning: #FBBF24;  --warning-soft: rgba(251, 191, 36, 0.12);
+  --danger:  #FF7A70;  --danger-soft:  rgba(255, 122, 112, 0.12);
+  --info:    #93C5FD;  --info-soft:    rgba(147, 197, 253, 0.12);
+
+  --border-default: rgba(245, 241, 232, 0.12);
+  --border-strong:  rgba(245, 241, 232, 0.24);
+  --border-subtle:  rgba(245, 241, 232, 0.06);
+
+  --area-housing:   #D4AF37;
+  --area-community: #93C5FD;
+  --area-services:  #5EEAD4;
+  --area-safety:    #FF7A70;
+
+  /* Shadows do almost nothing on a dark ground; elevation is carried by the
+     surface steps above, and these only deepen the separation. */
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.40);
+  --elevation-2: 0 2px 8px rgba(0, 0, 0, 0.48);
+  --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.56);
+  --elevation-4: 0 16px 48px rgba(0, 0, 0, 0.64);
+}
+
+/* Follow the phone when the user has not chosen. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface:         #16140F;
+    --surface-raised:  #211E17;
+    --surface-sunken:  #100E0A;
+    --surface-overlay: rgba(0, 0, 0, 0.62);
+
+    --text-primary: #F5F1E8;
+    --text-muted:   #A9A296;
+    --text-subtle:  #8F8878;
+    --text-on-accent: #16140F;
+
+    --accent:        #D4AF37;
+    --accent-hover:  #E3C258;
+    --accent-soft:   rgba(212, 175, 55, 0.14);
+    --accent-border: rgba(212, 175, 55, 0.32);
+
+    --success: #4ADE80;  --success-soft: rgba(74, 222, 128, 0.12);
+    --warning: #FBBF24;  --warning-soft: rgba(251, 191, 36, 0.12);
+    --danger:  #FF7A70;  --danger-soft:  rgba(255, 122, 112, 0.12);
+    --info:    #93C5FD;  --info-soft:    rgba(147, 197, 253, 0.12);
+
+    --border-default: rgba(245, 241, 232, 0.12);
+    --border-strong:  rgba(245, 241, 232, 0.24);
+    --border-subtle:  rgba(245, 241, 232, 0.06);
+
+    --area-housing:   #D4AF37;
+    --area-community: #93C5FD;
+    --area-services:  #5EEAD4;
+    --area-safety:    #FF7A70;
+
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.40);
+    --elevation-2: 0 2px 8px rgba(0, 0, 0, 0.48);
+    --elevation-3: 0 8px 24px rgba(0, 0, 0, 0.56);
+    --elevation-4: 0 16px 48px rgba(0, 0, 0, 0.64);
+  }
+}
+
+/* Native controls, scrollbars and browser chrome follow the theme too —
+   otherwise a select dropdown or date picker appears in the wrong one. */
+:root { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { color-scheme: dark; }
+}

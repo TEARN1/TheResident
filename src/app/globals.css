@@ -1,6 +1,17 @@
+@import '../styles/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Base reset. Tailwind's Preflight is deliberately OFF in tailwind.config.ts
+   (so it cannot restyle the older inline-styled screens), which means nothing
+   was resetting the browser's default 8px body margin — measured, in the
+   running app, as `margin: 8px`. Every page has been rendering inside an
+   unintended gutter, and on /auth a `width: 100vw` container ignored it and
+   pushed the document to 398px inside a 390px screen. */
+html, body { margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
 
 :root {
   --background: #0a0a0a;
