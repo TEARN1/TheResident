@@ -8112,3 +8112,57 @@ $$;
 
 revoke all on function public.res_client_error_summary_for_admin(integer) from public, anon;
 grant execute on function public.res_client_error_summary_for_admin(integer) to authenticated, service_role;
+
+
+-- ==========================================================================
+-- 38. RLS that production has and the rebuild did not
+-- ==========================================================================
+--
+-- Found by scripts/restore-drill.sh on its very first run: rebuilding this
+-- schema from zero produced a database where TWELVE res_ tables had row
+-- level security switched off entirely — among them res_saved_pins (where
+-- residents keep locations), res_subscriptions (billing), and
+-- res_properties (a landlord's private record of what they own).
+--
+-- Production is fine. Every one of those twelve has RLS enabled live. The
+-- bug was that nothing in this repo ever said so: the tables and most of
+-- their policies were versioned, but the `alter table ... enable row level
+-- security` was only ever issued out-of-band, so the policies sat in the
+-- rebuild inert — present, correct, and enforcing nothing.
+--
+-- That is the worst shape a DR bug can take. A restore during an outage
+-- would have looked completely healthy: right tables, right policies, app
+-- boots, sign-in works — while every resident's saved locations were
+-- readable by anyone holding the publishable key. Nobody would have looked,
+-- because nothing would have appeared wrong.
+--
+-- Enabling RLS is idempotent and is a no-op against production, where it is
+-- already on. It only changes the outcome of a rebuild — which is exactly
+-- the situation nobody would be in a position to debug carefully.
+
+alter table public.res_gossip_comments   enable row level security;
+alter table public.res_gossip_posts      enable row level security;
+alter table public.res_infra_providers   enable row level security;
+alter table public.res_moderation_actions enable row level security;
+alter table public.res_notification_prefs enable row level security;
+alter table public.res_properties        enable row level security;
+alter table public.res_reputation        enable row level security;
+alter table public.res_reviews           enable row level security;
+alter table public.res_saved_pins        enable row level security;
+alter table public.res_saved_searches    enable row level security;
+alter table public.res_subscriptions     enable row level security;
+alter table public.res_trust_connections enable row level security;
+
+-- Two policies existed only in production and in no file here. Transcribed
+-- from pg_policies rather than reinvented: both are deliberately open reads.
+-- Provider reference data (who to report a fault to) and reputation scores
+-- are public by design — the point of a public track record is that it is
+-- public. Writes remain closed: neither table grants insert/update/delete to
+-- anon or authenticated, and section 32's lockdown asserts that.
+drop policy if exists res_infra_providers_select on public.res_infra_providers;
+create policy res_infra_providers_select on public.res_infra_providers
+  for select to anon, authenticated using (true);
+
+drop policy if exists res_reputation_select on public.res_reputation;
+create policy res_reputation_select on public.res_reputation
+  for select to authenticated using (true);

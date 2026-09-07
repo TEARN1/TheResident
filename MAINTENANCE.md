@@ -30,6 +30,11 @@ to read mid-fetch is a **local variable** (see `loadCareCircle` in
 `SafetyTab.tsx`) or a ref — never a piece of state that the same chain sets.
 
 ## Weekly (~15 min)
+- **Take an off-platform backup: `./scripts/backup-export.sh`** (needs
+  `DATABASE_URL`). Tier 1 (Supabase PITR) protects the data while Supabase
+  is reachable; this is what survives losing the account itself. Move the
+  file somewhere that is not Supabase — a copy inside the thing you lost is
+  not a backup.
 - Check GitHub Actions CI status on the default branch.
 - Skim the security log for anything unexpected. Supabase dashboard →
   SQL Editor (the service role bypasses RLS; there is intentionally no
@@ -61,6 +66,12 @@ to read mid-fetch is a **local variable** (see `loadCareCircle` in
   its own outage).
 
 ## Quarterly (~half a day)
+- **Run the restore drill: `./scripts/restore-drill.sh`.** Fifteen minutes.
+  It proves the schema of record still rebuilds a complete, RLS-enforced
+  database from zero. An untested backup is a hypothesis, not a backup —
+  and the very first run of this drill found twelve tables that would have
+  come back with row level security switched off. See
+  `docs/DISASTER-RECOVERY.md`.
 - Full manual click-through of each dashboard tab (Housing, Community,
   Services, Business, Profile, VibeMap).
 - Review pricing/backlog priorities.
@@ -83,6 +94,11 @@ to read mid-fetch is a **local variable** (see `loadCareCircle` in
   photos, off-platform payment pressure, Next of Kin overdue flags — all
   surfaced for human review, never used to auto-ban or auto-restrict an
   account.
+- **Backups need a human in three places:** enabling PITR (a billing
+  decision, currently OFF — the single highest-value item on this page),
+  scheduling the weekly off-platform dump, and running the quarterly restore
+  drill. Only Tier 3, the schema of record, is automated and proven. Full
+  detail and the recovery order: `docs/DISASTER-RECOVERY.md`.
 - **Needs a human, on the cadence above:** RLS policy review, dependency
   updates, CI health, and anything in the audit log that looks like a real
   attack rather than the (expected, blocked) noise the fuzzer already

@@ -84,3 +84,26 @@ select 'every_policy_permitted_write_still_has_its_grant' as check,
         then has_table_privilege(pol.role, ('public.' || quote_ident(pol.tbl))::regclass, pol.act)
       else has_any_column_privilege(pol.role, ('public.' || quote_ident(pol.tbl))::regclass, pol.act)
     end) = 0 as pass;
+
+-- Every res_ table must actually have RLS switched on.
+--
+-- This looks redundant next to the two assertions above — they are about
+-- grants agreeing with policies — but it catches a different and worse bug,
+-- and it caught it for real. scripts/restore-drill.sh found twelve tables
+-- (res_saved_pins, res_subscriptions, res_properties among them) whose
+-- policies were correctly versioned in this repo while the
+-- `alter table ... enable row level security` was not, so a rebuild from
+-- source produced a database where those policies existed and enforced
+-- nothing at all.
+--
+-- Production was never affected — RLS was on there, switched on out-of-band.
+-- Which is precisely why nothing noticed: the only way to see it was to
+-- build the schema from scratch and look.
+--
+-- A policy on a table without RLS is not a weaker lock. It is no lock.
+select 'every_res_table_has_row_level_security_enabled' as check,
+  (select count(*) from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace and n.nspname = 'public'
+    where c.relkind = 'r'
+      and c.relname like 'res\_%'
+      and not c.relrowsecurity) = 0 as pass;
