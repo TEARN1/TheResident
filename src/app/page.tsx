@@ -69,15 +69,25 @@ export default function Home() {
           <Image src="/logo.png" alt="The Resident Logo" width={32} height={32} style={{ borderRadius: '4px' }} />
           THE RESIDENT
         </div>
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        {/* The logo, "Log In" and the join button were fighting for 390px:
+            "LOG IN" wrapped onto two lines and the gold button was cut off at
+            the screen edge. The fixes are all about giving each part only the
+            room it needs — no wrapping, no letter-spacing tax on a small
+            label, no shrinking of the button below its text, and a shorter
+            label on the narrowest phones. */}
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
           <button
             onClick={() => setShowLogin(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--surface-raised)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer' }}
+            className="min-h-tap"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer', whiteSpace: 'nowrap', padding: '0 4px' }}
           >
             <LogIn size={15} /> Log In
           </button>
-          <Link href="/auth" className="btn-gold">
-            Join Your Suburb
+          <Link href="/auth" className="btn-gold" style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {/* "Join Your Suburb" does not fit beside everything else on a
+                320-360px phone. The short form says the same thing. */}
+            <span className="hidden sm:inline">Join Your Suburb</span>
+            <span className="sm:hidden">Join</span>
           </Link>
         </div>
 
@@ -92,7 +102,7 @@ export default function Home() {
               className={`glass-panel ${styles.loginPopover}`}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--surface-raised)', margin: 0 }}>Log In</h3>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Log In</h3>
                 <button type="button" onClick={() => setShowLogin(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                   <X size={16} />
                 </button>
@@ -103,7 +113,7 @@ export default function Home() {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="name@domain.com"
                 required
-                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: 'var(--surface-raised)', fontSize: '0.85rem', marginBottom: '0.6rem', outline: 'none' }}
+                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: 'var(--text-primary)', fontSize: '0.85rem', marginBottom: '0.6rem', outline: 'none' }}
               />
               <input
                 type="password"
@@ -111,7 +121,7 @@ export default function Home() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="secure key..."
                 required
-                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: 'var(--surface-raised)', fontSize: '0.85rem', marginBottom: '0.8rem', outline: 'none' }}
+                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: 'var(--text-primary)', fontSize: '0.85rem', marginBottom: '0.8rem', outline: 'none' }}
               />
               {loginError && (
                 <p style={{ fontSize: '0.72rem', color: 'var(--danger)', marginBottom: '0.6rem', lineHeight: 1.4 }}>{loginError}</p>
@@ -136,7 +146,7 @@ export default function Home() {
                   type="button"
                   onClick={() => handleOAuth('facebook')}
                   disabled={oauthLoading !== null}
-                  style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.55rem', color: 'var(--surface-raised)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.55rem', color: 'var(--text-primary)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
                 >
                   {oauthLoading === 'facebook' ? '…' : 'Continue with Facebook'}
                 </button>
@@ -152,9 +162,9 @@ export default function Home() {
       {/* Hero */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '0 1rem' }}>
         <motion.h1
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: 'easeOut' }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
           className={styles.title}
         >
           Defined by <span className={styles.goldText}>Community</span>.<br />
@@ -164,7 +174,7 @@ export default function Home() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 1 }}
+          transition={{ delay: 0.08, duration: 0.35 }}
           className={styles.subtitle}
         >
           The community-powered ecosystem connecting neighbors.
@@ -172,16 +182,16 @@ export default function Home() {
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 0.8 }}
+          transition={{ delay: 0.14, duration: 0.35 }}
           className={styles.ctaGroup}
           style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}
         >
           <Link href="/auth" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             Enter Portal <ArrowRight size={16} />
           </Link>
-          <a href="/theresident.apk" download className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.08)', padding: '12px 24px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--surface-raised)', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer' }}>
+          <a href="/theresident.apk" download className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--surface-sunken)', padding: '12px 24px', borderRadius: '8px', border: '1px solid var(--border-strong)', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer' }}>
             <Download size={16} /> Download Android APK
           </a>
           <button
@@ -191,11 +201,11 @@ export default function Home() {
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              background: 'rgba(255,255,255,0.08)',
+              background: 'var(--surface-sunken)',
               padding: '12px 24px',
               borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: 'var(--surface-raised)',
+              border: '1px solid var(--border-strong)',
+              color: 'var(--text-primary)',
               fontSize: '0.95rem',
               fontWeight: 'bold',
               cursor: 'pointer'
@@ -215,9 +225,9 @@ export default function Home() {
         ].map((feature, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1 + (i * 0.2), duration: 0.8 }}
+            transition={{ delay: 0.2 + (i * 0.07), duration: 0.35 }}
             className={`glass-panel ${styles.featureCard}`}
             style={{ '--feature-accent': feature.accent, '--feature-glow': feature.glow, '--feature-icon-bg': feature.iconBg } as React.CSSProperties}
           >
@@ -239,7 +249,7 @@ export default function Home() {
         <div style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.85)',
+          backgroundColor: 'var(--surface-overlay)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -248,13 +258,13 @@ export default function Home() {
         }}>
           <div style={{
             backgroundColor: 'var(--surface)827',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid var(--border-default)',
             borderRadius: '12px',
             padding: '24px',
             maxWidth: '400px',
             width: '100%',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-            color: 'var(--surface-raised)'
+            boxShadow: '0 25px 50px -12px var(--surface-overlay)',
+            color: 'var(--text-primary)'
           }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '12px', color: 'var(--warning)' }}>
               Install on iPhone
@@ -283,7 +293,7 @@ export default function Home() {
               style={{
                 width: '100%',
                 background: 'var(--warning)',
-                color: 'var(--surface)',
+                color: 'var(--text-primary)',
                 border: 'none',
                 padding: '10px',
                 borderRadius: '6px',

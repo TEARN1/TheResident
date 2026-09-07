@@ -522,7 +522,7 @@ export default function AuthPage() {
                           flex: 1, height: '4px', borderRadius: '2px',
                           background: i < passwordStrength.score 
                             ? passwordStrength.score >= 4 ? '#4CAF50' : passwordStrength.score >= 2 ? 'var(--warning)' : '#F44336'
-                            : 'rgba(255,255,255,0.15)'
+                            : 'var(--border-strong)'
                         }} />
                       ))}
                     </div>

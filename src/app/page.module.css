@@ -17,38 +17,23 @@
   pointer-events: none;
 }
 
+/* Three blurred circles, each 40-55% of the viewport with a 120px blur, sat
+   partly off-screen (measured at x=-39 and x=437 in a 390px viewport) purely
+   for atmosphere. A 120px blur on an element that size is one of the most
+   expensive things a browser can be asked to composite, and this app's users
+   are not all on flagship phones.
+
+   One gradient does the same job: a warm wash that lifts the top of the page
+   and cools towards the bottom, carrying the same three accents. No blur, no
+   overflow, no compositing layers. */
 .glowBlob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  opacity: 0.55;
+  display: none;
 }
 
-.glowTop {
-  top: -20%;
-  left: -10%;
-  width: 55%;
-  height: 55%;
-  background: radial-gradient(circle, var(--gold-primary) 0%, transparent 70%);
-  opacity: 0.18;
-}
-
-.glowBottom {
-  bottom: -25%;
-  right: -12%;
-  width: 50%;
-  height: 50%;
-  background: radial-gradient(circle, var(--accent-violet) 0%, transparent 70%);
-  opacity: 0.14;
-}
-
-.glowMid {
-  top: 30%;
-  left: 45%;
-  width: 40%;
-  height: 40%;
-  background: radial-gradient(circle, var(--accent-teal) 0%, transparent 70%);
-  opacity: 0.1;
+.backgroundEffects {
+  background:
+    radial-gradient(120% 60% at 15% 0%, rgb(var(--accent-rgb) / 0.10) 0%, transparent 60%),
+    radial-gradient(100% 50% at 90% 100%, rgb(var(--area-community-rgb) / 0.08) 0%, transparent 65%);
 }
 
 .navbar {
@@ -132,7 +117,29 @@
   }
 
   .navbar {
-    padding: 1.5rem;
+    padding: 1rem var(--gutter);
+    gap: 8px;
+  }
+
+  /* THE RESIDENT at 1.5rem with 0.2em tracking is ~250px of the 390px
+     available before the buttons get any. Shrinking the wordmark is what
+     actually makes the row fit; everything else was symptom. */
+  .logo {
+    font-size: 1.05rem;
+    letter-spacing: 0.10em;
+    min-width: 0;
+  }
+}
+
+/* Narrowest phones still in real use here (iPhone SE, older Android). */
+@media (max-width: 380px) {
+  .logo {
+    font-size: 0.92rem;
+    letter-spacing: 0.06em;
+  }
+  .logo img {
+    width: 26px;
+    height: 26px;
   }
 }
 
@@ -161,9 +168,13 @@
 
 .featuresGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 2rem;
-  padding: 4rem 4rem 6rem 4rem;
+  /* min(320px, 100%), not 320px. A bare 320px minimum makes each track at
+     least 320px wide REGARDLESS of the container, so on a 320px phone the
+     cards were 320px wide inside a padded container and overhung the screen
+     by 64px. min() lets the track collapse to the space actually available. */
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 1.25rem;
+  padding: 2.5rem var(--gutter) 4rem;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -172,11 +183,22 @@
   position: relative;
 }
 
+@media (min-width: 768px) {
+  .featuresGrid {
+    gap: 2rem;
+    padding: 4rem 4rem 6rem;
+  }
+  .featureCard {
+    padding: 2.5rem;
+  }
+}
+
 .featureCard {
-  padding: 2.5rem;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  min-width: 0;
   transition: all 0.4s ease;
   border-top: 3px solid transparent;
   position: relative;
