@@ -207,6 +207,16 @@ export const containsCommandInjection = (input: string): boolean => {
     // is still "&cmd " (a space/argument) or "&cmd;" etc, never "&cmd=" or
     // "&cmd" as a lone token — that shape is what's excluded.
     new RegExp(`(?:&|\\|&)\\s*(${cmds})\\b(?!\\s*(?:=|&|$))`, 'gi'),
+    // 'id' and 'cmd' are excluded from `cmds` above because they collide with
+    // ordinary English ("ID verified residents only" is a listing, not an
+    // attack). Removing them from every pattern was an over-correction
+    // though: it also stopped "; id -la" and "| cmd /etc/passwd" being seen,
+    // and those are not English — a separator, the word, then a FLAG or an
+    // ABSOLUTE PATH is unambiguously an exec attempt.
+    //
+    // So they are matched here and only in that shape. "| ID verified" stays
+    // clean because "verified" is neither a flag nor a path.
+    new RegExp(`(?:;|\\||&&|\\|\\||&|\\|&|[\\r\\n]|%0[ad])\\s*(?:id|cmd)\\s+(?:-|/)`, 'gi'),
     />\s*\/dev\//gi,         // Redirect to devices
     />\s*\/tmp\//gi,         // Write to tmp
     /\beval\s*\(/gi,         // eval() calls

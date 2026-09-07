@@ -212,6 +212,34 @@ function generatePathTraversalPayloads(): string[] {
   return payloads
 }
 
+/**
+ * Payloads the scanner is DELIBERATELY expected not to flag.
+ *
+ * The generator below emits four shapes per (separator, command). Three of
+ * them are unambiguous exec attempts and must be caught. The fourth,
+ * `${sep}${cmd}` with no argument, is not an attack at all in this app — it
+ * is what an ordinary query string looks like. "?foo=1&ls" is a parameter
+ * named "ls"; "?x=a||id" is a value containing an English abbreviation.
+ * Flagging those returned 400 to real users, which is why
+ * src/utils/security.ts stopped matching them on purpose.
+ *
+ * This function is what stops that deliberate decision reading as 108
+ * security bypasses. It is narrow by design: the bare token only, nothing
+ * with a flag, a path, or a trailing separator. "; id -la" and "&ls;" are
+ * still required to be caught, and are.
+ *
+ * Worth stating plainly: nothing in this codebase passes user input to a
+ * shell — there is no child_process, exec or eval anywhere in src/ or
+ * supabase/functions/. Values reach Postgres as parameterized RPC arguments.
+ * So this scanning is defence in depth against a sink that does not exist
+ * here, and its false positives cost real users real requests. That
+ * asymmetry is why the bare-token shape is allowed through.
+ */
+export function isDeliberatelyNotFlagged(payload: string): boolean {
+  // A separator immediately followed by a bare word, and nothing else.
+  return /^(?:;|\||&&|\|\||&|\|&|[\r\n]|%0[ad])[a-z]+$/i.test(payload)
+}
+
 function generateCommandInjectionPayloads(): string[] {
   const payloads: string[] = []
   const commands = [
@@ -626,7 +654,7 @@ function runFuzzer(): FuzzerStats {
   const cmdPayloads = generateCommandInjectionPayloads()
   for (const p of cmdPayloads) {
     try {
-      recordResult('COMMAND_INJECTION', p, containsCommandInjection(p), true)
+      recordResult('COMMAND_INJECTION', p, containsCommandInjection(p), !isDeliberatelyNotFlagged(p))
     } catch { stats.errors++ }
   }
 
@@ -736,7 +764,7 @@ function runFuzzer(): FuzzerStats {
   for (const p of allPayloads) {
     try {
       const result = scanInput(p)
-      recordResult('MASTER_SCAN', p, !result.safe, true)
+      recordResult('MASTER_SCAN', p, !result.safe, !isDeliberatelyNotFlagged(p))
     } catch { stats.errors++ }
   }
 
