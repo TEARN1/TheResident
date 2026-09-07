@@ -53,9 +53,16 @@ export default function RootLayout({
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                    console.log('SW registration failed: ', err);
-                  });
+                  // The ?v= is load-bearing, not cosmetic. The browser only
+                  // reinstalls a service worker whose bytes changed, and
+                  // /sw.js is a static file that never does — so without a
+                  // changing query string a deploy never reaches anyone who
+                  // installed the app, and sw.js names its cache after this
+                  // value so activate() can purge the previous deploy's.
+                  navigator.serviceWorker.register('/sw.js?v=${process.env.NEXT_PUBLIC_BUILD_ID || 'dev'}')
+                    .catch(function(err) {
+                      console.log('SW registration failed: ', err);
+                    });
                 });
               }
             `

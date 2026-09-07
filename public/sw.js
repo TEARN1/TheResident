@@ -1,5 +1,18 @@
-// The Resident — Low-Bandwidth 2G/3G PWA Service Worker (Cache-First & Offline Resilience)
-const CACHE_NAME = 'resident-v1'
+// The Resident — Low-Bandwidth 2G/3G PWA Service Worker
+//
+// CACHE VERSIONING. The cache is named after the build that installed it.
+// This used to be a hard-coded 'resident-v1' that was never bumped, which
+// broke the activate() cleanup below in a way nobody would notice: "delete
+// every cache whose name isn't the current one" deletes nothing when the
+// name never changes. An installed PWA therefore kept serving the previous
+// deploy's HTML and JS — the "it's on the web but not on my app" gap.
+//
+// /sw.js is a static file that can't know the build id, so it is passed in
+// on registration as ?v=<build id> (see src/app/layout.tsx) and read back
+// off this worker's own URL.
+const BUILD = new URL(self.location).searchParams.get('v') || 'dev'
+const CACHE_NAME = `resident-${BUILD}`
+
 const STATIC_ASSETS = [
   '/',
   '/dashboard',
@@ -7,82 +20,100 @@ const STATIC_ASSETS = [
   '/logo.png'
 ]
 
-// 1. Install event: Cache core offline shell assets
+// 1. Install: warm the offline shell, then take over immediately rather than
+//    waiting for every old tab to close.
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS)
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      // Individually, so one 404 doesn't fail the whole install and leave
+      // the worker stuck on the previous version forever.
+      .then((cache) => Promise.all(
+        STATIC_ASSETS.map((url) => cache.add(url).catch(() => {/* skip */}))
+      ))
+      .then(() => self.skipWaiting())
   )
 })
 
-// 2. Activate event: Clean up old cache versions
+// 2. Activate: drop every cache from a previous build, then claim open pages.
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
+    caches.keys()
+      .then((keys) => Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      )
-    }).then(() => self.clients.claim())
+      ))
+      .then(() => self.clients.claim())
   )
 })
 
-// 3. Fetch event: Stale-While-Revalidate for static assets only.
-//    API calls (Supabase, third-party) are NEVER cached to prevent
-//    leaking authenticated data into the shared browser cache.
+// 3. Fetch.
+//
+// Two strategies, because the two kinds of request have opposite needs:
+//
+//   * HTML / navigations — NETWORK FIRST. A document is what points at the
+//     current build's JS, so serving a stale one is what made the installed
+//     app run a deploy behind. Falls back to cache the moment the network
+//     fails, which is what keeps this usable on 2G/3G and offline.
+//
+//   * Everything else — CACHE FIRST. Next.js content-hashes its assets, so
+//     a given URL's bytes never change; serving it from cache is free and
+//     correct, and a new build asks for new URLs anyway.
+//
+// API calls are never cached at all, so authenticated data cannot end up in
+// a shared browser cache.
 self.addEventListener('fetch', (event) => {
-  // Ignore non-GET or chrome-extension requests
   if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return
 
   const url = new URL(event.request.url)
 
-  // NEVER cache API responses (Supabase REST, auth, realtime, or any external API)
+  // Never cache API responses (Supabase REST, auth, realtime, any external API)
   if (url.hostname !== self.location.hostname) return
   if (url.pathname.startsWith('/api/')) return
   if (url.pathname.startsWith('/rest/')) return
   if (url.pathname.startsWith('/auth/')) return
 
+  const isNavigation = event.request.mode === 'navigate' ||
+    (event.request.headers.get('accept') || '').includes('text/html')
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+            const copy = networkResponse.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
+          }
+          return networkResponse
+        })
+        .catch(() =>
+          // Offline: the cached document, or the dashboard shell as a floor.
+          caches.match(event.request).then((hit) => hit || caches.match('/dashboard'))
+        )
+    )
+    return
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached version immediately while fetching update in background
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse))
-          }
-        }).catch(() => {/* Offline fallback active */})
+      if (cachedResponse) return cachedResponse
 
-        return cachedResponse
-      }
-
-      // If not in cache, fetch from network and cache only static assets for offline access
       return fetch(event.request).then((networkResponse) => {
         if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
           return networkResponse
         }
 
-        // Only cache navigations and static assets (HTML, CSS, JS, images)
         const contentType = networkResponse.headers.get('content-type') || ''
-        const isStaticAsset = contentType.includes('text/html') ||
-                              contentType.includes('text/css') ||
+        const isStaticAsset = contentType.includes('text/css') ||
                               contentType.includes('javascript') ||
                               contentType.includes('image/') ||
                               contentType.includes('font/')
 
         if (isStaticAsset) {
           const responseToCache = networkResponse.clone()
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache)
-          })
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache))
         }
 
         return networkResponse
-      }).catch(() => {
-        // Fallback for HTML page requests if completely offline
-        if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('/dashboard')
-        }
-      })
+      }).catch(() => undefined)
     })
   )
 })

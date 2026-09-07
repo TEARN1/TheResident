@@ -1,6 +1,34 @@
 import type { NextConfig } from "next";
+import { execSync } from "node:child_process";
+
+// A value that changes on every deploy, so the service worker can name its
+// cache after it.
+//
+// Why this exists: public/sw.js used a hard-coded CACHE_NAME that was never
+// bumped, so its activate() cleanup ("delete every cache that isn't the
+// current one") never deleted anything. An installed PWA therefore served
+// the previous deploy's HTML and JS on first open, every time — which is
+// exactly the "it works on the web but not on my app" gap. The cache name
+// has to change when the code changes, and nothing else in a static file
+// under public/ can know that it did.
+//
+// Vercel supplies the commit SHA at build time; git covers local builds; the
+// timestamp is a last resort that is wrong only in that it makes every build
+// look new (safe — it over-invalidates rather than under-invalidates).
+function buildId(): string {
+  if (process.env.VERCEL_GIT_COMMIT_SHA) return process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 12);
+  try {
+    return execSync("git rev-parse --short=12 HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString().trim();
+  } catch {
+    return `t${Date.now()}`;
+  }
+}
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_BUILD_ID: buildId(),
+  },
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
