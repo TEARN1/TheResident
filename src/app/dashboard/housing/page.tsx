@@ -752,11 +752,11 @@ export default function HousingPage() {
                   {item.images[0] ? (
                     <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-content-muted to-black">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface-sunken to-surface">
                       <Home size={40} className="text-accent/20" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
+                  <div className="absolute inset-0 opacity-70" style={{ background: 'linear-gradient(to top, var(--scrim), transparent 60%)' }} />
                   <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
                      <div className="flex items-center gap-1.5">
                         <div className="bg-surface-sunken/60 backdrop-blur-md border border-default px-3 py-1.5 rounded-xl">

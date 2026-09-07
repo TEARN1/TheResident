@@ -84,6 +84,11 @@
   --border-strong:   rgb(var(--border-rgb) / 0.24);
   --border-subtle:   rgb(var(--border-rgb) / 0.06);
   --surface-overlay: rgb(var(--surface-sunken-rgb) / 0.66);
+  /* A scrim laid over a PHOTOGRAPH, so that text on top of it stays readable
+     against an arbitrary image. It is dark in both themes on purpose: it is
+     darkening someone's photo, not matching one of our surfaces. */
+  --scrim: rgb(0 0 0 / 0.55);
+  --scrim-strong: rgb(0 0 0 / 0.75);
   --text-on-accent:  rgb(var(--text-on-accent-rgb));
   --success:         rgb(var(--success-rgb));
   --warning:         rgb(var(--warning-rgb));

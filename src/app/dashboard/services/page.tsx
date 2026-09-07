@@ -423,7 +423,7 @@ export default function ServicesPage() {
                      {srv.image ? (
                        <img src={srv.image} alt={srv.businessName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" />
                      ) : (
-                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-content-muted to-black">
+                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface-sunken to-surface">
                          <ImageIcon size={32} className="text-accent/20" />
                        </div>
                      )}

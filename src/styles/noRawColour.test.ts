@@ -25,6 +25,11 @@ const SRC = join(ROOT, 'src')
 const BANNED = [
   'bg-black', 'bg-white', 'text-white', 'text-black',
   'border-white', 'border-black',
+  // Gradient stops were missed by the first migration, which is how a dark
+  // `from-content-muted to-black` placeholder survived into the light theme
+  // as a black hole where a photo should be.
+  'from-black', 'to-black', 'via-black',
+  'from-white', 'to-white', 'via-white',
   ...['gray', 'red', 'green', 'blue', 'yellow', 'amber', 'emerald', 'rose',
       'teal', 'violet', 'purple', 'orange', 'indigo', 'sky', 'slate', 'zinc',
       'neutral', 'stone', 'lime', 'cyan', 'fuchsia', 'pink']

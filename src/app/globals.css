@@ -741,3 +741,96 @@ button, [role='button'], a, input, select, textarea, label {
   box-shadow: var(--focus-ring);
   border-radius: var(--radius-sm);
 }
+
+/* ── Layouts above phone ───────────────────────────────────────────────────
+   Measured before this: the dashboard rendered IDENTICALLY at 320px and
+   1024px. There was no responsive behaviour above phone at all — a tablet
+   or a laptop got one phone column stretched across the screen, with body
+   text running the full width and a bottom navigation bar built for thumbs
+   sitting at the bottom of a desktop browser window.
+
+   All of it is CSS. The markup is already a flex column with a nav at the
+   end, which is exactly the structure a sidebar layout needs. */
+
+/* Tablet portrait and up: stop text running the full width.
+   The padding trick centres the content and caps its effective measure
+   without needing a wrapper element in every page component. */
+@media (min-width: 768px) {
+  .dashboard-page-body {
+    padding-inline: max(var(--space-6), calc((100% - 900px) / 2));
+    padding-bottom: 6rem;
+  }
+
+  .dashboard-top-bar {
+    padding-inline: max(var(--space-6), calc((100% - 900px) / 2));
+  }
+}
+
+/* Desktop: the bottom bar becomes a sidebar.
+   A bottom navigation bar on a laptop is a phone app in a browser window —
+   it puts the primary navigation as far from the pointer as the screen
+   allows, and wastes the width it is sitting in. */
+@media (min-width: 1024px) {
+  .bottom-nav-bar {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: auto;
+    width: 232px;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 2px;
+    padding: var(--space-4) var(--space-3);
+    border-top: none;
+    border-right: 1px solid var(--border-default);
+    overflow-x: visible;
+    overflow-y: auto;
+    /* backdrop-filter is expensive and buys nothing against an opaque
+       sidebar that never has content scrolling under it. */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--surface-raised);
+  }
+
+  .bottom-nav-item {
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    min-height: var(--tap-min);
+    font-size: 0.875rem;
+    letter-spacing: 0;
+    text-transform: none;
+    text-align: left;
+    border-top: none;
+    border-left: 3px solid transparent;
+    border-radius: var(--radius-md);
+  }
+
+  .bottom-nav-item.active {
+    border-top-color: transparent;
+    border-left-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* Labels are hidden below 380px; a sidebar always has room for them. */
+  .bottom-nav-item span {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .dashboard-wrapper {
+    padding-left: 232px;
+  }
+
+  /* The bar is no longer at the bottom, so nothing needs clearing. */
+  .dashboard-page-body {
+    padding-bottom: var(--space-8);
+  }
+}

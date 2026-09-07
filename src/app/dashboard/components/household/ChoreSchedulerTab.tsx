@@ -80,7 +80,7 @@ export default function ChoreSchedulerTab({
   return (
     <div className="space-y-10">
       {/* XP Master Banner */}
-      <div className="glass-panel p-8 bg-gradient-to-br from-gold-primary/10 via-black/40 to-black/20 border-accent/30 flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl relative overflow-hidden group/banner">
+      <div className="glass-panel p-8 bg-gradient-to-br from-accent/10 via-surface-sunken/40 to-surface-sunken/20 border-accent/30 flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl relative overflow-hidden group/banner">
          <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover/banner:bg-accent/10 transition-all duration-1000" />
 
          <div className="flex items-center gap-6 relative z-10">
