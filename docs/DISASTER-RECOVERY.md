@@ -65,15 +65,32 @@ a fresh project, a new region, a local development copy, or a forensic
 
 **Recovery target:** the full schema, no data.
 
-**Status: WORKING AND TESTED.** `theresident_complete_schema.sql` is the
-whole database — every table, policy, function, trigger, index and grant, in
-dependency order, safe to re-run. `./scripts/restore-drill.sh` proves it
-rebuilds from zero on an empty PostgreSQL, and runs in CI-able form on
-demand.
+**Status: TABLES AND POLICIES PROVEN. FUNCTIONS INCOMPLETE.**
 
-This tier is the one most startups do not have, and this project does. It is
-why a total loss of the Supabase project would cost you *data*, but not the
-product.
+`theresident_complete_schema.sql` rebuilds every table, policy, trigger,
+index and grant, in dependency order, safe to re-run.
+`./scripts/restore-drill.sh` proves that from zero on an empty PostgreSQL.
+
+It does **not** currently rebuild every function. 75 of the database's 163
+functions exist in production and in no file here — created in the Supabase
+dashboard during broad feature work and never brought back. Among them are
+`res_notify`, `res_distance_m`, `res_check_rate_limit`, and every
+maintenance sweep, so a database rebuilt from source today would look
+healthy and then fail the moment anything tried to notify a user or expire a
+listing.
+
+Fixing it is one command, and it is deliberately a command rather than a
+hand-written file: `./scripts/sync-functions.sh` asks Postgres for the exact
+text of each definition and writes `theresident_functions.sql`. Almost all
+of these are SECURITY DEFINER — they run as their owner, so RLS does not
+constrain them and the body is the only thing deciding who gets what.
+Retyping code like that risks a one-character difference that is a security
+hole, not a typo.
+
+Until that has been run and committed, treat Tier 3 as covering the shape of
+the database but not all of its behaviour. `src/store/schemaDrift.test.ts`
+holds the line in the meantime: no NEW undocumented function can be added
+without failing the build.
 
 ---
 
@@ -132,9 +149,14 @@ performed against a healthy database is itself a data-loss event.
 3. Apply the schema of record: paste `theresident_complete_schema.sql` into
    the SQL editor. This is one file on purpose — there is no order to get
    right and nothing to forget.
-4. Restore data from the most recent Tier 2 dump:
+4. Apply `theresident_functions.sql` if it exists (see Tier 3 above — run
+   `scripts/sync-functions.sh` and commit it BEFORE you ever need this).
+   Without it the rebuilt database is missing `res_notify`,
+   `res_check_rate_limit` and every maintenance sweep, and will fail quietly
+   the first time anything tries to notify a resident.
+5. Restore data from the most recent Tier 2 dump:
    `psql "$NEW_DATABASE_URL" -f <the dump file>`
-5. Re-seed what lives outside the database:
+6. Re-seed what lives outside the database:
    - The platform admin row (`res_platform_admins`) — without it nobody can
      approve an official or see crash reports.
    - Edge function secrets (VAPID keys, Paystack keys, service role key in
@@ -142,8 +164,8 @@ performed against a healthy database is itself a data-loss event.
    - Storage buckets (`gossip-media`) and their policies.
    - The boundary import, if `res_jurisdictions` is empty:
      `theresident_import_boundaries.sql`.
-6. Point the app at the new project (Vercel environment variables), redeploy.
-7. Work the verification checklist below before telling anyone it is back.
+7. Point the app at the new project (Vercel environment variables), redeploy.
+8. Work the verification checklist below before telling anyone it is back.
 
 ### 4. Verify before declaring recovery
 
@@ -171,6 +193,7 @@ These cannot be automated from this repository and are the gaps that remain:
 | **Schedule the Tier 2 dump** | Anywhere with cron + `DATABASE_URL` | Needs the connection string, which is a secret |
 | **Choose off-platform storage** | Not Supabase, not the same login | A vendor/account decision |
 | **Run the quarterly drill** | `./scripts/restore-drill.sh` | Fifteen minutes, four times a year |
+| **Complete Tier 3** | `./scripts/sync-functions.sh` | Needs `DATABASE_URL`; captures the 75 functions that exist only in production |
 
 ---
 

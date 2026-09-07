@@ -109,7 +109,13 @@ select count(*) from gr where not exists (
 # produced 149 res_ policies, exactly matching production.
 check "res_ tables rebuilt"                 60  "$TABLES"   ge
 check "RLS policies rebuilt"               140  "$POLICIES" ge
-check "res_ functions rebuilt"              80  "$FUNCS"    ge
+# 163 live at the time of writing; a rebuild currently produces ~93 because
+# 75 functions exist only in production (see docs/DISASTER-RECOVERY.md and
+# scripts/sync-functions.sh). This floor is set at the CURRENT rebuild count
+# rather than the live count, so it holds the line without failing on debt
+# that predates it — raise it to 160 once sync-functions.sh has been run and
+# theresident_functions.sql is committed.
+check "res_ functions rebuilt"              90  "$FUNCS"    ge
 check "every res_ table has RLS enabled"     0  "$RLS_OFF"
 check "no write grant without a policy"      0  "$UNBACKED"
 
@@ -131,10 +137,17 @@ fi
 cat <<EOF
 RESTORE DRILL PASSED.
 
-The schema of record rebuilds a complete, RLS-enforced database from zero,
-and is safe to apply twice. Tier 3 is sound.
+The schema of record rebuilds every table, policy, index and grant from
+zero with RLS enforced, and is safe to apply twice.
 
-Reminder: this proves the STRUCTURE recovers. It says nothing about your
-DATA — that is Tier 1 (PITR, currently not enabled) and Tier 2 (an
-off-platform dump). See docs/DISASTER-RECOVERY.md.
+Two things this does NOT prove:
+
+  * Your DATA. That is Tier 1 (PITR, currently not enabled) and Tier 2 (an
+    off-platform dump).
+  * Every FUNCTION. 75 of 163 exist only in production, so a rebuild is
+    missing behaviour it will not complain about — including res_notify and
+    every maintenance sweep. One command fixes it:
+    ./scripts/sync-functions.sh
+
+See docs/DISASTER-RECOVERY.md.
 EOF
