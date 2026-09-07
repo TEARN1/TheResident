@@ -126,3 +126,23 @@ reasonable window to fix it first.
   `theresident_org_broadcast_schema.sql`) are the source of truth for what was *deployed*, but
   the live policy set should be exported and diffed against them quarterly
   (see `MAINTENANCE.md`) in case of an out-of-band dashboard change.
+
+## Reading the Supabase security advisor
+
+Supabase emails "security vulnerabilities detected in your projects" on a
+schedule. Most of what it reports is not ours and not a vulnerability, so the
+triage is recorded here rather than redone from scratch each time. Re-check
+with `get_advisors` after any DDL change; the shape below was current on
+7 September 2026 (356 findings).
+
+| Finding | Count | Verdict |
+|---|---|---|
+| `rls_disabled_in_public` on `spatial_ref_sys` | 1 (ERROR) | **Not actionable.** PostGIS's own coordinate-system reference table — public, read-only reference data, owned by the extension. Enabling RLS on it needs superuser and Supabase does not grant that. A permanent false positive. |
+| `authenticated_security_definer_function_executable` | 289 | Informational. It flags every SECURITY DEFINER function reachable by a signed-in user, which is what such a function is *for*. The Resident's are individually reviewed — see `sql-tests/94-definer-authorisation.test.sql` and `98-fail-open-on-null.test.sql`. |
+| `anon_security_definer_function_executable` | 27 | Only **4** are ours: `res_log_client_error` (must work before sign-in, or a crash on the login screen is never reported), the kin-verification pair (unguessable-UUID capability links), and `zones_near`. All reviewed. The other 23 are Gruvs-owned or PostGIS. |
+| `rls_enabled_no_policy` | 33 | Only **2** are ours: `res_client_errors` and `res_maintenance_runs`. Deny-all is deliberate — both are written by SECURITY DEFINER RPCs and read through `res_client_error_summary_for_admin`, which is itself gated on `res_is_platform_admin()`. A policy on either would widen access, not tighten it. |
+| `extension_in_public` | 4 | Supabase's own default placement of PostGIS et al. |
+| `materialized_view_in_api` | 1 | Not Resident-owned. |
+| `auth_leaked_password_protection` | 1 | **Real, and outstanding.** A dashboard toggle (Authentication → Policies) that checks new passwords against HaveIBeenPwned. Free, one click, and cannot be enabled from code. |
+
+The one line worth acting on is the last one.

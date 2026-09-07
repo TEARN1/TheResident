@@ -88,6 +88,13 @@ Play Console requires you to declare, inside its own UI, every category of
 data the app collects and why, matching what `src/app/privacy/page.tsx`
 already documents in prose:
 - **Location** (approximate + precise) — collected, user-initiated, not sold.
+  **Declare it as both "collected" AND "stored", not just ephemeral.** The map
+  and issue-reporting features use location once and keep nothing, but the
+  optional home area (`res_home_areas`) SAVES a single point per resident so
+  ward-level official announcements can reach them. Play treats "used but not
+  stored" and "collected and stored" as different answers, and the wrong one
+  is a policy violation rather than a mistake. `/privacy` describes both cases
+  separately so the form and the policy match.
 - **Personal info** (name, email) — collected for account creation.
 - **Photos/videos** — collected, user-submitted content.
 - **Messages** — collected (in-app DMs).
@@ -96,6 +103,11 @@ already documents in prose:
 - Whether data is encrypted in transit (yes — HTTPS via Vercel/Supabase) and
   whether users can request deletion (yes — see the account-deletion edge
   function referenced in `SECURITY.md`).
+- **Data residency:** the database is currently in Supabase's `eu-west-1`
+  (Ireland), so South African users' personal information is transferred
+  cross-border. `/privacy` now discloses this, which POPIA requires. See
+  `docs/REGION-DECISION.md` — moving to `af-south-1` before launch would
+  remove the question entirely and is cheapest right now.
 
 I've listed the categories above from what this codebase actually does, but
 Play's own form has to be filled in by you inside Play Console — it's tied
