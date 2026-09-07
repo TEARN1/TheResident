@@ -8489,3 +8489,72 @@ grant execute on function public.res_moderate(uuid,text,text,uuid,text) to authe
 grant execute on function public.res_household_members(uuid) to authenticated, service_role;
 grant execute on function public.res_property_occupancy(uuid) to authenticated, service_role;
 grant execute on function public.res_has_household_plus(uuid) to authenticated, service_role;
+
+
+-- ==========================================================================
+-- 41. Internal helpers and cron sweeps that residents could call
+-- ==========================================================================
+--
+-- Section 40 fixed functions that failed to check WHO was asking. This is the
+-- other half of the same review: functions whose bodies are fine, but which
+-- were never meant to be reachable from a browser at all and were granted to
+-- `authenticated` anyway by Supabase's defaults.
+--
+-- ── res_bump_reputation — an unbounded write into the trust signal ─────────
+--
+-- Signature: (p_user uuid, p_points integer, p_reason text). No auth.uid()
+-- anywhere in the body, granted to authenticated. Any signed-in person could
+-- call it with their own id and any number of points.
+--
+-- Reputation is not decorative here. res_can_sell gates selling on trust
+-- tier, TrustBadge renders it, and this function forwards to
+-- res_award_good_neighbour, which writes reputation shared with the other app
+-- (CONTRACT.md §8). So it was a free, unbounded write into the trust signal
+-- of BOTH products. (It refuses p_points <= 0, so it could inflate but not
+-- deflate — you could promote yourself, not punish a rival.)
+--
+-- It is an internal helper, not an API. The four paths that legitimately
+-- award points — res_complete_chore, res_confirm_tool_return,
+-- res_respond_to_alert, res_reunite_lost_found — are themselves SECURITY
+-- DEFINER owned by postgres, so they still reach it while running as their
+-- owner. The client never called it: zero call sites, checked.
+--
+-- Verified in a throwaway database: after this revoke a resident calling it
+-- directly gets insufficient_privilege, and res_complete_chore still awards
+-- exactly its 5 points. Blocked and still working, not blocked and broken.
+--
+-- ── The maintenance sweeps — platform-wide mutations on demand ─────────────
+--
+-- Cron jobs. res_run_maintenance() calls them on a schedule as a privileged
+-- role, nothing in the app calls them, and no resident has any business
+-- running a platform-wide UPDATE whenever they like — res_release_stale_claims
+-- releases other people's utility-token claims, res_expire_stale_listings
+-- pauses other people's listings. Their bodies are correct; only the grant
+-- was wrong.
+--
+-- Guarded by to_regprocedure because these are among the functions that live
+-- only in production (see scripts/sync-functions.sh). A bare REVOKE on a
+-- function that does not exist is an error, which would abort a rebuild in
+-- any environment that has not run sync-functions.sh yet. Absent here means
+-- there is nothing to lock down.
+do $$
+declare
+  sig text;
+begin
+  foreach sig in array array[
+    'public.res_bump_reputation(uuid,integer,text)',
+    'public.res_award_good_neighbour(uuid,integer)',
+    'public.res_auto_return_tools()',
+    'public.res_expire_market_items()',
+    'public.res_expire_stale_alerts()',
+    'public.res_expire_stale_listings()',
+    'public.res_release_stale_claims()'
+  ]
+  loop
+    if to_regprocedure(sig) is not null then
+      execute format('revoke all on function %s from public, anon, authenticated', sig);
+      execute format('grant execute on function %s to service_role', sig);
+    end if;
+  end loop;
+end
+$$;

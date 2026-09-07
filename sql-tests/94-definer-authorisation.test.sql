@@ -138,3 +138,30 @@ select 'none_of_these_are_reachable_signed_out' as check,
   and not has_function_privilege('anon', 'public.res_household_members(uuid)', 'execute')
   and not has_function_privilege('anon', 'public.res_property_occupancy(uuid)', 'execute')
   and not has_function_privilege('anon', 'public.res_has_household_plus(uuid)', 'execute') as pass;
+
+-- ── Internal helpers must not be reachable from a browser ──────────────────
+-- res_bump_reputation writes the trust signal that res_can_sell gates selling
+-- on and that is shared with the other app. It has no auth.uid() check
+-- because it is an internal helper — which is fine only for as long as a
+-- resident cannot call it directly. It was granted to authenticated.
+--
+-- Guarded by to_regprocedure so this file still runs in the local harness,
+-- which builds a subset of the schema. Absence reads as a pass ("not
+-- installed here, so nothing to reach"); on the live project every signature
+-- below resolves.
+select 'residents_cannot_write_reputation_directly' as check,
+  (to_regprocedure('public.res_bump_reputation(uuid,integer,text)') is null
+   or not has_function_privilege('authenticated', to_regprocedure('public.res_bump_reputation(uuid,integer,text)'), 'execute')) as pass;
+
+select 'residents_cannot_award_cross_app_reputation' as check,
+  (to_regprocedure('public.res_award_good_neighbour(uuid,integer)') is null
+   or not has_function_privilege('authenticated', to_regprocedure('public.res_award_good_neighbour(uuid,integer)'), 'execute')) as pass;
+
+-- The cron sweeps mutate everyone's rows. Nothing in the app calls them.
+select 'residents_cannot_run_the_maintenance_sweeps' as check,
+  (to_regprocedure('public.res_expire_stale_listings()') is null
+   or not has_function_privilege('authenticated', to_regprocedure('public.res_expire_stale_listings()'), 'execute'))
+  and (to_regprocedure('public.res_release_stale_claims()') is null
+   or not has_function_privilege('authenticated', to_regprocedure('public.res_release_stale_claims()'), 'execute'))
+  and (to_regprocedure('public.res_auto_return_tools()') is null
+   or not has_function_privilege('authenticated', to_regprocedure('public.res_auto_return_tools()'), 'execute')) as pass;
