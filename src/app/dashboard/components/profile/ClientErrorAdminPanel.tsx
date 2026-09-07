@@ -1,17 +1,29 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
-import { isPlatformAdmin, fetchClientErrorSummary, type ClientErrorSummaryRow } from '../../../../utils/officialVerification'
+import { AlertTriangle, RefreshCw, CheckCircle2, XCircle, MinusCircle } from 'lucide-react'
+import {
+  isPlatformAdmin, fetchClientErrorSummary, fetchPlatformHealth,
+  type ClientErrorSummaryRow, type PlatformHealthRow
+} from '../../../../utils/officialVerification'
 import Card from '../../../../components/ui/Card'
 import EmptyState from '../shared/EmptyState'
 
 /**
- * Founder-only view of real crashes real users hit. res_client_errors itself
- * stays exactly as locked down as it always was — no policy, no grant,
- * service_role only. This calls res_client_error_summary_for_admin(), which
- * checks res_is_platform_admin() again server-side; nothing here is the
- * actual security boundary, it just decides whether to render at all.
+ * Founder-only operational view: which subsystems are actually working, and
+ * what crashed for real users.
+ *
+ * The health half exists because a subsystem can be completely broken while
+ * everything around it looks healthy. Twelve residents had granted push
+ * permission on real devices and not one notification had ever been
+ * delivered — the dispatcher's vault key was never set, and nothing anywhere
+ * said so. That is the failure this panel is for.
+ *
+ * Both halves call admin-gated RPCs (res_platform_health,
+ * res_client_error_summary_for_admin) which check res_is_platform_admin()
+ * server-side. res_client_errors itself stays as locked down as it always
+ * was — no policy, no grant, service_role only. Nothing here is the security
+ * boundary; it only decides whether to render at all.
  *
  * Renders nothing for anyone but a platform admin — not a disabled state,
  * not an explanation, nothing. A resident should never learn this exists.
@@ -20,6 +32,7 @@ export default function ClientErrorAdminPanel() {
   const [admin, setAdmin] = useState(false)
   const [checked, setChecked] = useState(false)
   const [rows, setRows] = useState<ClientErrorSummaryRow[]>([])
+  const [health, setHealth] = useState<PlatformHealthRow[]>([])
   const [loading, setLoading] = useState(false)
   const [hours, setHours] = useState(24)
 
@@ -30,7 +43,9 @@ export default function ClientErrorAdminPanel() {
   const load = React.useCallback(async (h: number) => {
     setLoading(true)
     try {
-      setRows(await fetchClientErrorSummary(h))
+      const [errs, hp] = await Promise.all([fetchClientErrorSummary(h), fetchPlatformHealth()])
+      setRows(errs)
+      setHealth(hp)
     } finally {
       setLoading(false)
     }
@@ -47,7 +62,7 @@ export default function ClientErrorAdminPanel() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <AlertTriangle size={16} className="text-gold-primary" />
-          <h3 className="text-sm font-black uppercase tracking-widest text-white">Crash Reports</h3>
+          <h3 className="text-sm font-black uppercase tracking-widest text-white">System Health</h3>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -71,8 +86,37 @@ export default function ClientErrorAdminPanel() {
       </div>
 
       <p className="text-[10px] text-gray-600">
-        Real crashes from real users, grouped by kind. Founder-only — nobody else can see this,
-        and this list changes nothing on its own.
+        Founder-only. Nothing here changes anything on its own — it reports.
+      </p>
+
+      {/* Subsystems that can be broken while everything downstream still looks
+          fine. The one that prompted this: twelve people had granted push
+          permission on real devices and not one notification had ever been
+          delivered, because the dispatcher's vault key was never set. */}
+      {health.length > 0 && (
+        <div className="space-y-2">
+          {health.map(h => {
+            const tone =
+              h.status === 'broken'   ? { icon: XCircle,      cls: 'text-red-400',     border: 'border-red-500/30 bg-red-500/5' } :
+              h.status === 'degraded' ? { icon: AlertTriangle, cls: 'text-amber-400',  border: 'border-amber-500/30 bg-amber-500/5' } :
+              h.status === 'idle'     ? { icon: MinusCircle,   cls: 'text-gray-500',   border: 'border-white/5 bg-black/30' } :
+                                        { icon: CheckCircle2,  cls: 'text-emerald-400', border: 'border-white/5 bg-black/30' }
+            const Icon = tone.icon
+            return (
+              <div key={h.component} className={`border rounded-xl p-3 flex gap-2.5 ${tone.border}`}>
+                <Icon size={14} className={`${tone.cls} shrink-0 mt-0.5`} />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white">{h.component}</p>
+                  <p className="text-[10px] text-gray-400 leading-relaxed">{h.detail}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 pt-1">
+        Crashes
       </p>
 
       {rows.length === 0 ? (

@@ -323,12 +323,21 @@ export default function CommunityPage() {
     setTimeout(() => setAlertNotification(null), 4000)
   }
 
-  const handleCreateCommunity = (name: string, kind: 'street' | 'block' | 'complex' | 'estate' | 'suburb') => {
+  const handleCreateCommunity = async (name: string, kind: 'street' | 'block' | 'complex' | 'estate' | 'suburb') => {
     if (!name.trim()) return
-    dispatch(createCommunity({ name, kind, suburb }))
-    setShowCreateCommunity(false)
-    setAlertNotification('Community created — you are its founder.')
-    setTimeout(() => setAlertNotification(null), 4000)
+    // No success toast here on purpose. createCommunity's callRpc already
+    // dispatches "Community created / You are its founder" on success and a
+    // "That did not work" notification with the real reason on failure — so
+    // announcing success here duplicated it when the write worked, and
+    // contradicted it when it didn't. Awaiting also means the modal only
+    // closes once the community actually exists.
+    try {
+      await dispatch(createCommunity({ name, kind, suburb })).unwrap()
+      setShowCreateCommunity(false)
+    } catch {
+      // callRpc has already told the user what went wrong; keep the modal
+      // open with their input intact so they can retry.
+    }
   }
 
   // ── Adapters: the redesigned tab components use their own simplified local

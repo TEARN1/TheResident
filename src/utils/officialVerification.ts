@@ -258,3 +258,28 @@ export async function fetchClientErrorSummary(hours = 24): Promise<ClientErrorSu
     return []
   }
 }
+
+// ── Platform health (theresident_platform_health.sql) ─────────────────────
+// Subsystems that are broken but silent. Admin-gated server-side.
+
+export interface PlatformHealthRow {
+  component: string
+  status: 'ok' | 'degraded' | 'broken' | 'idle'
+  detail: string
+}
+
+export async function fetchPlatformHealth(): Promise<PlatformHealthRow[]> {
+  if (!supabase) return []
+  const client = supabase
+  try {
+    const { data, error } = await client.rpc('res_platform_health')
+    if (error) throw error
+    return ((data || []) as Array<Record<string, unknown>>).map(row => ({
+      component: row.component as string,
+      status: row.status as PlatformHealthRow['status'],
+      detail: row.detail as string
+    }))
+  } catch {
+    return []
+  }
+}

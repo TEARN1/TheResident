@@ -8166,3 +8166,129 @@ create policy res_infra_providers_select on public.res_infra_providers
 drop policy if exists res_reputation_select on public.res_reputation;
 create policy res_reputation_select on public.res_reputation
   for select to authenticated using (true);
+
+
+-- ==========================================================================
+-- 39. theresident_platform_health.sql
+-- ==========================================================================
+
+-- theresident_platform_health.sql
+--
+-- Subsystems that are broken but silent are the worst kind of broken,
+-- because everything downstream looks fine. This is the check that makes
+-- them loud, on the founder's own profile page, next to the crash reports.
+--
+-- THE ONE THAT PROMPTED IT. web_push_subscriptions holds twelve rows —
+-- twelve real people who were asked for notification permission on a real
+-- device and said yes. The vault secret the dispatcher needs to authenticate
+-- has never been set, so not one of those notifications has ever been
+-- delivered, and nothing anywhere said so. Twelve residents believe an
+-- evacuation notice would reach their lock screen. It would not.
+--
+-- Nothing here fixes anything. It reports. Every check answers one question:
+-- "is this subsystem actually able to do the thing users believe it does?"
+--
+-- Admin-gated by res_is_platform_admin(), same as the crash-report summary.
+--
+-- Paste into the Supabase SQL editor. Additive only.
+
+create or replace function public.res_platform_health()
+returns table (
+  component text,
+  status text,      -- 'ok' | 'degraded' | 'broken' | 'idle'
+  detail text
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_subs int;
+  v_vault int;
+  v_jurisdictions int;
+  v_last_maint timestamptz;
+  v_maint_failures int;
+  v_errors int;
+begin
+  if not public.res_is_platform_admin() then
+    raise exception 'not_a_platform_admin';
+  end if;
+
+  -- ── Push delivery ────────────────────────────────────────────────────────
+  -- Counted separately so "nobody subscribed" and "everybody subscribed and
+  -- it is broken" cannot be confused for each other.
+  select count(*) into v_subs from web_push_subscriptions;
+  begin
+    select count(*) into v_vault from vault.decrypted_secrets where name = 'service_role_key';
+  exception when others then
+    v_vault := 0;  -- no vault access at all counts as not configured
+  end;
+
+  if v_vault = 0 and v_subs > 0 then
+    return query select 'Push notifications'::text, 'broken'::text,
+      v_subs || ' people have granted notification permission, but the dispatcher '
+      || 'has no service_role_key in the vault — nothing has ever been delivered '
+      || 'to any of them. Set it in Supabase → Vault. See docs/PUSH-SETUP.md.';
+  elsif v_vault = 0 then
+    return query select 'Push notifications'::text, 'idle'::text,
+      'Not configured, and nobody has subscribed yet — so nothing is being missed.'::text;
+  elsif v_subs = 0 then
+    return query select 'Push notifications'::text, 'idle'::text,
+      'Configured, but nobody has granted permission yet.'::text;
+  else
+    return query select 'Push notifications'::text, 'ok'::text,
+      v_subs || ' subscribed devices, dispatcher configured.';
+  end if;
+
+  -- ── Area boundaries ──────────────────────────────────────────────────────
+  -- Without these no official has a jurisdiction, and the whole
+  -- officials/area-broadcast feature is inert regardless of how it looks.
+  select count(*) into v_jurisdictions from res_jurisdictions;
+  if v_jurisdictions = 0 then
+    return query select 'Area boundaries'::text, 'broken'::text,
+      'No jurisdictions loaded — no official can be bound to an area, so area '
+      || 'broadcasts cannot reach anyone. Run theresident_import_boundaries.sql.';
+  else
+    return query select 'Area boundaries'::text, 'ok'::text,
+      v_jurisdictions || ' areas loaded.';
+  end if;
+
+  -- ── Scheduled maintenance ────────────────────────────────────────────────
+  -- These functions existed for a long time and had never executed once.
+  -- Silence here means listings never expire and logs grow without bound.
+  select max(ran_at) into v_last_maint from res_maintenance_runs;
+  select count(*) into v_maint_failures from res_maintenance_runs
+   where ran_at > now() - interval '7 days' and not ok;
+
+  if v_last_maint is null then
+    return query select 'Scheduled maintenance'::text, 'broken'::text,
+      'Has never run. Listings will not expire, tools never return, logs grow '
+      || 'without bound.'::text;
+  elsif v_last_maint < now() - interval '48 hours' then
+    return query select 'Scheduled maintenance'::text, 'broken'::text,
+      'Last ran ' || to_char(v_last_maint, 'YYYY-MM-DD HH24:MI')
+      || ' — the daily job has stopped.';
+  elsif v_maint_failures > 0 then
+    return query select 'Scheduled maintenance'::text, 'degraded'::text,
+      v_maint_failures || ' task failure(s) in the last 7 days.';
+  else
+    return query select 'Scheduled maintenance'::text, 'ok'::text,
+      'Last ran ' || to_char(v_last_maint, 'YYYY-MM-DD HH24:MI') || '.';
+  end if;
+
+  -- ── Crash reports ────────────────────────────────────────────────────────
+  select count(*) into v_errors from res_client_errors
+   where created_at > now() - interval '24 hours';
+  if v_errors = 0 then
+    return query select 'Crash reports'::text, 'ok'::text,
+      'No crashes reported in the last 24 hours.'::text;
+  else
+    return query select 'Crash reports'::text, 'degraded'::text,
+      v_errors || ' crash(es) in the last 24 hours — see the list below.';
+  end if;
+end;
+$$;
+
+revoke all on function public.res_platform_health() from public, anon;
+grant execute on function public.res_platform_health() to authenticated, service_role;
