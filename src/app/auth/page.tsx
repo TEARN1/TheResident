@@ -703,7 +703,14 @@ export default function AuthPage() {
 // Styles
 export const containerStyle: React.CSSProperties = {
   position: 'relative',
-  width: '100vw',
+  // 100%, not 100vw. This page measured 398px wide in a 390px viewport, so
+  // the sign-in screen — the first thing every user sees — could be swiped
+  // sideways. 100vw is the viewport, ignoring whatever inset an ancestor
+  // applies, so a 100vw box sitting inside any padded parent overflows by
+  // exactly that padding. 100% inherits the containing block and cannot.
+  // scripts/smoke.mjs now fails the build on horizontal overflow, and was
+  // confirmed to catch this one before it was fixed.
+  width: '100%',
   minHeight: '100vh',
   display: 'flex',
   justifyContent: 'center',

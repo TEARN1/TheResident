@@ -601,8 +601,16 @@ body {
 }
 
 .bottom-nav-item {
-  flex: 1 0 auto;
-  min-width: 64px;
+  /* Shrink was disabled (`flex: 1 0 auto`), so six items whose labels total
+     461px could not compress into a 390px phone. The bar's overflow-x:auto
+     then quietly turned into a horizontal scroller with no affordance saying
+     so, and the last item — Messages — rendered as a 6px sliver at the right
+     edge. Reachable by swiping the bar, but it reads as a broken layout
+     rather than a scrollable one, which is worse than either.
+     Allowing shrink lets all six fit; the label rules below keep a long one
+     (Maintenance) from forcing the overflow back. */
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -617,6 +625,26 @@ body {
   text-align: center;
   border-top: 2px solid transparent;
   transition: color 0.2s, border-color 0.2s;
+}
+
+/* A label can never be the reason the bar overflows again. */
+.bottom-nav-item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Narrow phones: buy the width back from padding and letter-spacing before
+   spending it on an ellipsis. At 390px this is what makes "Maintenance" fit
+   whole rather than truncating. */
+@media (max-width: 420px) {
+  .bottom-nav-item {
+    padding-left: 0.15rem;
+    padding-right: 0.15rem;
+    font-size: 0.55rem;
+    letter-spacing: 0;
+  }
 }
 
 .bottom-nav-item:hover {
