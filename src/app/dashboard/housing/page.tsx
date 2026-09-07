@@ -709,12 +709,35 @@ export default function HousingPage() {
              )}
           </AnimatePresence>
 
-          {/* Listings Grid — previously if filters excluded everything this
-              area just rendered a blank grid with no explanation, reading as
-              a broken page rather than "your filters are too narrow". */}
+          {/* Listings Grid.
+              Two different empty states, because they are two different
+              situations and telling them apart matters most right at the
+              start. With nothing listed anywhere yet, "no rooms match your
+              filters — try widening your price ceiling" blames the person
+              for a choice they didn't make and sends them to fiddle with
+              controls that cannot possibly help. */}
           {filteredListings.length === 0 ? (
             <div className="glass-panel">
-              <EmptyState icon={Home} title="No rooms match your filters" subtitle="Try widening your price ceiling or clearing a filter." />
+              {allListings.length === 0 ? (
+                <EmptyState
+                  icon={Home}
+                  title="No rooms listed yet"
+                  subtitle={
+                    currentUser?.role === 'landlord'
+                      ? 'Nothing has been listed in your area yet. If you have a room, yours would be the first — list it and tenants searching here will find it.'
+                      : 'Nothing has been listed in your area yet. This fills up as landlords nearby post rooms — check back, or tell a landlord you know about it.'
+                  }
+                  action={
+                    currentUser?.role === 'landlord' && !isGuest ? (
+                      <button onClick={() => setShowCreateModal(true)} className={goldButtonClass()}>
+                        List your property
+                      </button>
+                    ) : undefined
+                  }
+                />
+              ) : (
+                <EmptyState icon={Home} title="No rooms match your filters" subtitle="Try widening your price ceiling or clearing a filter." />
+              )}
             </div>
           ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
