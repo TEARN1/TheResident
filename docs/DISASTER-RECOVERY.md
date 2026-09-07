@@ -228,3 +228,7 @@ Moving regions means downtime and a full dump/restore. Today, with almost no
 production data, that cost is close to zero. It will never be cheaper than
 it is right now, and a Tier 3 rebuild (step 3 above) is exactly the
 procedure that would do it.
+
+**This now has its own decision doc with the actual row counts behind it:
+`docs/REGION-DECISION.md`.** The recommendation is to move to `af-south-1`
+before launch.

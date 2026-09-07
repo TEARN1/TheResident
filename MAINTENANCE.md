@@ -87,8 +87,15 @@ to read mid-fetch is a **local variable** (see `loadCareCircle` in
   mirrored in this repo, so this is the one check that can't be automated
   from the codebase alone.
 - Prune stale `res_org_units` rows (no owner logged in for 6+ months, or no
-  broadcasts/followers) — the org broadcast tree (Batch 10) has no
-  self-cleanup, only human review.
+  broadcasts/followers) — the org broadcast tree has no self-cleanup, only
+  human review. **Nothing to do yet:** the table currently holds 0 rows.
+  This becomes real work only once officials and institutions are onboarded,
+  and it is listed now so it is not discovered later.
+
+- Export and diff the live RLS policy set (above) is no longer the only check
+  that cannot be automated: `sql-tests/` and the Tier 3 restore drill now run
+  in CI on every push, and `sql-tests/99f-grant-policy.test.sql` asserts the
+  grant/policy correspondence directly against a rebuilt database.
 
 ## What's automated vs. what needs a human
 - **Automated / self-healing:** transient network failures on writes retry
