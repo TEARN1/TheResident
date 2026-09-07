@@ -30,7 +30,7 @@ export default function NextOfKinFlag({ userId }: { userId: string }) {
 
   return (
     <span
-      className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400"
+      className="inline-flex items-center gap-1 text-[10px] font-bold text-danger"
       title="This applicant hasn't added a Next of Kin within their 6-month window"
     >
       <ShieldAlert size={11} /> Trust profile incomplete

@@ -61,14 +61,14 @@ export default function ClientErrorAdminPanel() {
     <Card className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <AlertTriangle size={16} className="text-gold-primary" />
-          <h3 className="text-sm font-black uppercase tracking-widest text-white">System Health</h3>
+          <AlertTriangle size={16} className="text-accent" />
+          <h3 className="text-sm font-black uppercase tracking-widest text-content">System Health</h3>
         </div>
         <div className="flex items-center gap-2">
           <select
             value={hours}
             onChange={e => setHours(Number(e.target.value))}
-            className="bg-black/40 border border-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest text-gray-300 px-2 py-1.5"
+            className="bg-surface-sunken/40 border border-default rounded-lg text-[10px] font-bold uppercase tracking-widest text-content px-2 py-1.5"
           >
             <option value={24}>24h</option>
             <option value={24 * 7}>7d</option>
@@ -77,7 +77,7 @@ export default function ClientErrorAdminPanel() {
           <button
             onClick={() => load(hours)}
             disabled={loading}
-            className="p-1.5 rounded-lg border border-white/10 text-gray-400 hover:text-white disabled:opacity-50"
+            className="p-1.5 rounded-lg border border-default text-content-muted hover:text-content disabled:opacity-50"
             title="Refresh"
           >
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
@@ -85,7 +85,7 @@ export default function ClientErrorAdminPanel() {
         </div>
       </div>
 
-      <p className="text-[10px] text-gray-600">
+      <p className="text-[10px] text-content-subtle">
         Founder-only. Nothing here changes anything on its own — it reports.
       </p>
 
@@ -97,17 +97,17 @@ export default function ClientErrorAdminPanel() {
         <div className="space-y-2">
           {health.map(h => {
             const tone =
-              h.status === 'broken'   ? { icon: XCircle,      cls: 'text-red-400',     border: 'border-red-500/30 bg-red-500/5' } :
-              h.status === 'degraded' ? { icon: AlertTriangle, cls: 'text-amber-400',  border: 'border-amber-500/30 bg-amber-500/5' } :
-              h.status === 'idle'     ? { icon: MinusCircle,   cls: 'text-gray-500',   border: 'border-white/5 bg-black/30' } :
-                                        { icon: CheckCircle2,  cls: 'text-emerald-400', border: 'border-white/5 bg-black/30' }
+              h.status === 'broken'   ? { icon: XCircle,      cls: 'text-danger',     border: 'border-danger/30 bg-danger/5' } :
+              h.status === 'degraded' ? { icon: AlertTriangle, cls: 'text-warning',  border: 'border-warning/30 bg-warning/5' } :
+              h.status === 'idle'     ? { icon: MinusCircle,   cls: 'text-content-muted',   border: 'border-subtle bg-surface-sunken/30' } :
+                                        { icon: CheckCircle2,  cls: 'text-success', border: 'border-subtle bg-surface-sunken/30' }
             const Icon = tone.icon
             return (
               <div key={h.component} className={`border rounded-xl p-3 flex gap-2.5 ${tone.border}`}>
                 <Icon size={14} className={`${tone.cls} shrink-0 mt-0.5`} />
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-white">{h.component}</p>
-                  <p className="text-[10px] text-gray-400 leading-relaxed">{h.detail}</p>
+                  <p className="text-xs font-bold text-content">{h.component}</p>
+                  <p className="text-[10px] text-content-muted leading-relaxed">{h.detail}</p>
                 </div>
               </div>
             )
@@ -115,7 +115,7 @@ export default function ClientErrorAdminPanel() {
         </div>
       )}
 
-      <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 pt-1">
+      <p className="text-[10px] font-black uppercase tracking-widest text-content-muted pt-1">
         Crashes
       </p>
 
@@ -124,17 +124,17 @@ export default function ClientErrorAdminPanel() {
       ) : (
         <div className="space-y-2">
           {rows.map(row => (
-            <div key={row.label} className="bg-black/30 border border-white/5 rounded-xl p-3 space-y-1">
+            <div key={row.label} className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-bold text-white">{row.label}</span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-red-400">
+                <span className="text-sm font-bold text-content">{row.label}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-danger">
                   {row.occurrences}× &middot; {row.affectedUsers} user{row.affectedUsers === 1 ? '' : 's'}
                 </span>
               </div>
               {row.sampleMessage && (
-                <p className="text-[10px] text-gray-500 font-mono truncate">{row.sampleMessage}</p>
+                <p className="text-[10px] text-content-muted font-mono truncate">{row.sampleMessage}</p>
               )}
-              <p className="text-[9px] text-gray-600">Last seen {new Date(row.lastSeen).toLocaleString()}</p>
+              <p className="text-[9px] text-content-subtle">Last seen {new Date(row.lastSeen).toLocaleString()}</p>
             </div>
           ))}
         </div>

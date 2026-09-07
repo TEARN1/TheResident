@@ -141,7 +141,7 @@ export default function AreaTargetPicker({ unitId, priority, category, onChange 
 
   if (loadingAreas) {
     return (
-      <p className="text-[11px] text-gray-500 flex items-center gap-2">
+      <p className="text-[11px] text-content-muted flex items-center gap-2">
         <Loader size={13} className="animate-spin" /> Checking which areas this account may reach…
       </p>
     )
@@ -149,9 +149,9 @@ export default function AreaTargetPicker({ unitId, priority, category, onChange 
 
   if (areas.length === 0) {
     return (
-      <div className="flex items-start gap-2 bg-white/5 border border-white/10 rounded-lg p-3">
-        <ShieldAlert size={13} className="text-gray-500 mt-0.5 shrink-0" />
-        <p className="text-[10px] text-gray-400 leading-relaxed">
+      <div className="flex items-start gap-2 bg-surface-raised/5 border border-default rounded-lg p-3">
+        <ShieldAlert size={13} className="text-content-muted mt-0.5 shrink-0" />
+        <p className="text-[10px] text-content-muted leading-relaxed">
           This account has no official area on file, so it can only post to people who follow it.
           Area messaging is for verified councillors, municipalities and institutions.
         </p>
@@ -160,10 +160,10 @@ export default function AreaTargetPicker({ unitId, priority, category, onChange 
   }
 
   return (
-    <div className="bg-black/30 border border-white/5 rounded-xl p-3 space-y-3">
+    <div className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-3">
       <div className="flex items-center gap-2">
-        <MapPin size={13} className="text-gold-primary" />
-        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Send to an area</p>
+        <MapPin size={13} className="text-accent" />
+        <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">Send to an area</p>
       </div>
 
       <div className="flex gap-1.5">
@@ -173,7 +173,7 @@ export default function AreaTargetPicker({ unitId, priority, category, onChange 
             type="button"
             onClick={() => setMode(m)}
             className={`flex-1 text-[10px] font-black uppercase tracking-widest py-2 rounded-lg transition-colors ${
-              mode === m ? 'bg-gold-primary/15 text-gold-primary' : 'bg-white/5 text-gray-500 hover:text-white'
+              mode === m ? 'bg-accent/15 text-accent' : 'bg-surface-raised/5 text-content-muted hover:text-content'
             }`}
           >
             {m === 'jurisdiction' ? 'A named area' : 'Around a place'}
@@ -185,7 +185,7 @@ export default function AreaTargetPicker({ unitId, priority, category, onChange 
         <select
           value={jurisdictionId}
           onChange={e => setJurisdictionId(e.target.value)}
-          className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+          className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
         >
           {areas.map(a => (
             <option key={a.id} value={a.id}>
@@ -199,17 +199,17 @@ export default function AreaTargetPicker({ unitId, priority, category, onChange 
             onSelect={(r: GeocodeResult) => setPoint({ lat: r.lat, lon: r.lon, label: r.label })}
           />
           {point && (
-            <p className="text-[10px] text-gray-400 flex items-center gap-1.5">
-              <Crosshair size={11} className="text-gold-primary shrink-0" />
+            <p className="text-[10px] text-content-muted flex items-center gap-1.5">
+              <Crosshair size={11} className="text-accent shrink-0" />
               <span className="truncate">{point.label}</span>
             </p>
           )}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label htmlFor="area-radius" className="text-[9px] text-gray-600 font-black uppercase tracking-widest">
+              <label htmlFor="area-radius" className="text-[9px] text-content-subtle font-black uppercase tracking-widest">
                 Radius
               </label>
-              <span className="text-[10px] text-white font-bold">{describeRadius(radius)}</span>
+              <span className="text-[10px] text-content font-bold">{describeRadius(radius)}</span>
             </div>
             <input
               id="area-radius"
@@ -228,7 +228,7 @@ export default function AreaTargetPicker({ unitId, priority, category, onChange 
                   type="button"
                   onClick={() => setRadius(step)}
                   className={`text-[9px] font-black px-2 py-1 rounded-md ${
-                    radius === step ? 'bg-gold-primary/15 text-gold-primary' : 'bg-white/5 text-gray-500'
+                    radius === step ? 'bg-accent/15 text-accent' : 'bg-surface-raised/5 text-content-muted'
                   }`}
                 >
                   {describeRadius(step)}
@@ -239,25 +239,25 @@ export default function AreaTargetPicker({ unitId, priority, category, onChange 
         </div>
       )}
 
-      <div className="border-t border-white/5 pt-3">
+      <div className="border-t border-subtle pt-3">
         {previewing ? (
-          <p className="text-[11px] text-gray-500 flex items-center gap-2">
+          <p className="text-[11px] text-content-muted flex items-center gap-2">
             <Loader size={13} className="animate-spin" /> Working out who this reaches…
           </p>
         ) : blocked ? (
-          <p className="text-[11px] text-yellow-500 flex items-start gap-1.5">
+          <p className="text-[11px] text-warning flex items-start gap-1.5">
             <ShieldAlert size={13} className="mt-0.5 shrink-0" /> {blocked}
           </p>
         ) : error ? (
-          <p className="text-[11px] text-red-400">{error}</p>
+          <p className="text-[11px] text-danger">{error}</p>
         ) : (
-          <p className={`text-[11px] flex items-start gap-1.5 ${canSend(preview) ? 'text-white' : 'text-gray-500'}`}>
-            <Users size={13} className="mt-0.5 shrink-0 text-gold-primary" />
+          <p className={`text-[11px] flex items-start gap-1.5 ${canSend(preview) ? 'text-content' : 'text-content-muted'}`}>
+            <Users size={13} className="mt-0.5 shrink-0 text-accent" />
             <span>{describeAudience(preview)}</span>
           </p>
         )}
         {canSend(preview) && (
-          <p className="text-[10px] text-gray-600 mt-1.5 leading-relaxed">
+          <p className="text-[10px] text-content-subtle mt-1.5 leading-relaxed">
             Everyone counted here will be notified, whether or not they follow this account. Residents
             can mute this category — except emergencies, which always land.
           </p>

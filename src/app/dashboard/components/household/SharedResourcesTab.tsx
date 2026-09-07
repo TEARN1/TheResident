@@ -102,16 +102,16 @@ export default function SharedResourcesTab({ currentUserId, communityId }: Share
       <div className="glass-panel p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <Droplets size={20} className="text-gold-primary" /> Shared Resources
+            <h3 className="text-xl font-bold text-content flex items-center gap-2">
+              <Droplets size={20} className="text-accent" /> Shared Resources
             </h3>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-content-muted mt-1">
               {communityId ? 'Boreholes, hotspots and water points shared within your community.' : 'Join a community to scope this list to your neighbours.'}
             </p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="bg-gold-primary text-black font-black px-4 py-2 rounded-lg text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-gold-primary/10 hover:bg-gold-secondary"
+            className="bg-accent text-content-on-accent font-black px-4 py-2 rounded-lg text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-gold-primary/10 hover:bg-accent"
           >
             {showForm ? <X size={16} /> : <Plus size={16} />}
             {showForm ? 'Cancel' : 'Share a Resource'}
@@ -119,38 +119,38 @@ export default function SharedResourcesTab({ currentUserId, communityId }: Share
         </div>
 
         {showForm && (
-          <form onSubmit={handleSubmit} className="bg-black/40 border border-gold-primary/20 rounded-2xl p-6 mb-8 space-y-4">
-            {error && <p className="text-xs text-red-400">{error}</p>}
+          <form onSubmit={handleSubmit} className="bg-surface-sunken/40 border border-accent/20 rounded-2xl p-6 mb-8 space-y-4">
+            {error && <p className="text-xs text-danger">{error}</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <select value={kind} onChange={e => setKind(e.target.value)} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50">
+              <select value={kind} onChange={e => setKind(e.target.value)} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50">
                 <option value="borehole">Borehole</option>
                 <option value="wifi_hotspot">Wifi hotspot</option>
                 <option value="water_point">Water point</option>
                 <option value="other">Other</option>
               </select>
-              <input value={title} onChange={e => setTitle(e.target.value)} required placeholder="e.g. Backup borehole, corner house" className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50" />
+              <input value={title} onChange={e => setTitle(e.target.value)} required placeholder="e.g. Backup borehole, corner house" className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50" />
             </div>
-            <input value={accessNote} onChange={e => setAccessNote(e.target.value)} placeholder="How to access it (hours, gate code, etc.)" className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50" />
-            <input value={suburb} onChange={e => setSuburb(e.target.value)} placeholder="Suburb" className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50" />
+            <input value={accessNote} onChange={e => setAccessNote(e.target.value)} placeholder="How to access it (hours, gate code, etc.)" className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50" />
+            <input value={suburb} onChange={e => setSuburb(e.target.value)} placeholder="Suburb" className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50" />
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-xs text-gray-400 font-bold">
+              <label className="flex items-center gap-2 text-xs text-content-muted font-bold">
                 <input type="checkbox" checked={isFree} onChange={e => setIsFree(e.target.checked)} className="accent-gold-primary" />
                 Free to use
               </label>
               {!isFree && (
-                <input value={priceNote} onChange={e => setPriceNote(e.target.value)} placeholder="Price note (e.g. R20/fill)" className="flex-1 bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50" />
+                <input value={priceNote} onChange={e => setPriceNote(e.target.value)} placeholder="Price note (e.g. R20/fill)" className="flex-1 bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50" />
               )}
             </div>
-            <button type="submit" disabled={submitting} className="w-full bg-gold-primary text-black font-black py-3 rounded-xl text-xs uppercase tracking-widest hover:bg-gold-secondary active:scale-95 transition-all disabled:opacity-50">
+            <button type="submit" disabled={submitting} className="w-full bg-accent text-content-on-accent font-black py-3 rounded-xl text-xs uppercase tracking-widest hover:bg-accent active:scale-95 transition-all disabled:opacity-50">
               {submitting ? 'Sharing...' : 'Share it'}
             </button>
           </form>
         )}
 
         {loading ? (
-          <div className="py-12 text-center text-gray-500 text-xs uppercase tracking-widest font-bold">Loading resources...</div>
+          <div className="py-12 text-center text-content-muted text-xs uppercase tracking-widest font-bold">Loading resources...</div>
         ) : resources.length === 0 ? (
-          <div className="py-12 text-center text-gray-500">
+          <div className="py-12 text-center text-content-muted">
             <Droplets size={48} className="mx-auto mb-4 opacity-10" />
             <p>No shared resources listed yet.</p>
           </div>
@@ -159,19 +159,19 @@ export default function SharedResourcesTab({ currentUserId, communityId }: Share
             {resources.map(r => {
               const Icon = iconFor(r.kind)
               return (
-                <div key={r.id} className="bg-black/40 border border-white/5 rounded-xl p-4 flex flex-col gap-3 hover:border-gold-primary/20 transition-all group">
+                <div key={r.id} className="bg-surface-sunken/40 border border-subtle rounded-xl p-4 flex flex-col gap-3 hover:border-accent/20 transition-all group">
                   <div className="flex justify-between items-start">
-                    <div className="p-2 bg-gold-primary/10 rounded-lg text-gold-primary"><Icon size={18} /></div>
+                    <div className="p-2 bg-accent/10 rounded-lg text-accent"><Icon size={18} /></div>
                     {r.isFree ? (
-                      <span className="text-[9px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded uppercase font-bold border border-green-500/20 flex items-center gap-1"><Gift size={10} /> Free</span>
+                      <span className="text-[9px] bg-success/10 text-success px-1.5 py-0.5 rounded uppercase font-bold border border-success/20 flex items-center gap-1"><Gift size={10} /> Free</span>
                     ) : (
-                      <span className="text-[9px] bg-white/5 text-gray-400 px-1.5 py-0.5 rounded uppercase font-bold">{r.priceNote || 'Paid'}</span>
+                      <span className="text-[9px] bg-surface-raised/5 text-content-muted px-1.5 py-0.5 rounded uppercase font-bold">{r.priceNote || 'Paid'}</span>
                     )}
                   </div>
-                  <h4 className="font-bold text-white text-sm group-hover:text-gold-primary transition-colors">{r.title}</h4>
-                  {r.accessNote && <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{r.accessNote}</p>}
-                  <div className="mt-auto pt-3 border-t border-white/5 flex items-center gap-1 text-[10px] text-gray-600">
-                    <MapPin size={10} className="text-gold-primary" /> {r.suburb || 'Location unset'}
+                  <h4 className="font-bold text-content text-sm group-hover:text-accent transition-colors">{r.title}</h4>
+                  {r.accessNote && <p className="text-xs text-content-muted line-clamp-2 leading-relaxed">{r.accessNote}</p>}
+                  <div className="mt-auto pt-3 border-t border-subtle flex items-center gap-1 text-[10px] text-content-subtle">
+                    <MapPin size={10} className="text-accent" /> {r.suburb || 'Location unset'}
                   </div>
                 </div>
               )

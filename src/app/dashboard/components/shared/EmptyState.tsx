@@ -17,10 +17,10 @@ interface Props {
 // several products stitched together rather than one.
 export default function EmptyState({ icon: Icon, title, subtitle, action, compact = false }: Props) {
   return (
-    <div className={`text-center text-gray-500 ${compact ? 'py-8' : 'py-12'}`}>
+    <div className={`text-center text-content-muted ${compact ? 'py-8' : 'py-12'}`}>
       <Icon size={compact ? 32 : 48} className="mx-auto mb-4 opacity-10" />
-      <p className="text-sm font-bold text-gray-400">{title}</p>
-      {subtitle && <p className="text-xs text-gray-600 mt-1">{subtitle}</p>}
+      <p className="text-sm font-bold text-content-muted">{title}</p>
+      {subtitle && <p className="text-xs text-content-subtle mt-1">{subtitle}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   )

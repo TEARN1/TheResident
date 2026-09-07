@@ -10,11 +10,11 @@ export const metadata = { title: 'Terms of Service — The Resident' }
  */
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-black text-gray-300 px-4 py-12">
+    <div className="min-h-screen bg-surface text-content px-4 py-12">
       <div className="max-w-2xl mx-auto space-y-8">
         <div>
-          <Link href="/" className="text-xs text-gold-primary font-black uppercase tracking-widest hover:underline">← The Resident</Link>
-          <h1 className="text-2xl font-black text-white mt-3">Terms of Service</h1>
+          <Link href="/" className="text-xs text-accent font-black uppercase tracking-widest hover:underline">← The Resident</Link>
+          <h1 className="text-2xl font-black text-content mt-3">Terms of Service</h1>
         </div>
 
         <Section title="What The Resident is">
@@ -56,8 +56,8 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <p className="text-[11px] text-gray-600 pt-4 border-t border-white/5">
-          Also see our <Link href="/privacy" className="text-gold-primary hover:underline">Privacy Policy</Link>.
+        <p className="text-[11px] text-content-subtle pt-4 border-t border-subtle">
+          Also see our <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>.
         </p>
       </div>
     </div>
@@ -67,7 +67,7 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="glass-panel p-5">
-      <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest mb-3">{title}</h2>
+      <h2 className="text-sm font-black text-accent uppercase tracking-widest mb-3">{title}</h2>
       {children}
     </div>
   )

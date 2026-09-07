@@ -105,7 +105,7 @@ export default function OnboardingPage() {
 
         {errorMessage && (
           <div style={errorContainerStyle}>
-            <AlertTriangle size={16} color="#ef4444" style={{ marginRight: 8 }} />
+            <AlertTriangle size={16} color="var(--danger)" style={{ marginRight: 8 }} />
             <span>{errorMessage}</span>
           </div>
         )}

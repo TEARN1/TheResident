@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, Trash2 } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, Trash2, Smartphone } from 'lucide-react'
+import { readTheme, applyTheme, type Theme } from '@/utils/theme'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
@@ -83,21 +84,13 @@ export default function ProfilePage() {
     }
   }
 
-  // Shared app-wide theme — 'residentTheme' in localStorage, the same key
-  // the root layout's pre-hydration script and the auth page now read/write
-  // too, so a choice made anywhere in the app applies everywhere. Persisted
-  // directly here since this page doesn't own the <html data-theme>
-  // attribute the layout does.
-  const [dashboardTheme, setDashboardThemeState] = useState<'night' | 'light'>('night')
-  useEffect(() => {
-    const stored = localStorage.getItem('residentTheme')
-    setDashboardThemeState(stored === 'light' ? 'light' : 'night')
-  }, [])
-  const setDashboardTheme = (theme: 'night' | 'light') => {
-    localStorage.setItem('residentTheme', theme)
-    document.documentElement.setAttribute('data-theme', theme)
-    setDashboardThemeState(theme)
-  }
+  // Theme, via src/utils/theme.ts — three states, not two. The old version
+  // defaulted to 'night' whenever storage held anything but the exact string
+  // 'light', so a resident who had never chosen was shown as having chosen
+  // Dark, and the control disagreed with what was on screen.
+  const [themeChoice, setThemeChoice] = useState<Theme>('system')
+  useEffect(() => { setThemeChoice(readTheme()) }, [])
+  const chooseTheme = (t: Theme) => { applyTheme(t); setThemeChoice(t) }
 
   const [hasPlus, setHasPlus] = useState<boolean | null>(null)
   useEffect(() => {
@@ -232,7 +225,7 @@ export default function ProfilePage() {
   // platform, not app chrome.
   const languageCard = (
     <div className="glass-panel p-6 space-y-3">
-      <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+      <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
         <Globe size={16} /> Language
       </h2>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -241,7 +234,7 @@ export default function ProfilePage() {
             key={l.code}
             onClick={() => dispatch(setLanguage(l.code))}
             aria-pressed={lang === l.code}
-            className={`p-3 rounded-xl border text-xs font-bold transition-all ${lang === l.code ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'}`}
+            className={`p-3 rounded-xl border text-xs font-bold transition-all ${lang === l.code ? 'bg-accent text-content-on-accent border-accent' : 'bg-surface border-default text-content hover:border-accent/40'}`}
           >
             {l.label}
           </button>
@@ -252,25 +245,30 @@ export default function ProfilePage() {
 
   const themeCard = (
     <div className="glass-panel p-6 space-y-3">
-      <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
-        {dashboardTheme === 'night' ? <Moon size={16} /> : <Sun size={16} />} Appearance
+      <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
+        <Sun size={16} /> Appearance
       </h2>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={() => setDashboardTheme('night')}
-          aria-pressed={dashboardTheme === 'night'}
-          className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${dashboardTheme === 'night' ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'}`}
-        >
-          <Moon size={14} /> Dark
-        </button>
-        <button
-          onClick={() => setDashboardTheme('light')}
-          aria-pressed={dashboardTheme === 'light'}
-          className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${dashboardTheme === 'light' ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'}`}
-        >
-          <Sun size={14} /> Light
-        </button>
+      <div className="grid grid-cols-3 gap-2">
+        {([
+          { id: 'light', label: 'Light', Icon: Sun },
+          { id: 'dark', label: 'Dark', Icon: Moon },
+          { id: 'system', label: 'System', Icon: Smartphone }
+        ] as const).map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            onClick={() => chooseTheme(id)}
+            aria-pressed={themeChoice === id}
+            className={`min-h-tap p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1.5 ${themeChoice === id ? 'bg-accent text-content-on-accent border-accent' : 'bg-surface border-default text-content hover:border-accent/40'}`}
+          >
+            <Icon size={15} /> {label}
+          </button>
+        ))}
       </div>
+      <p className="text-xs text-content-muted">
+        {themeChoice === 'system'
+          ? 'Following your phone\u2019s setting.'
+          : `Always ${themeChoice}, whatever your phone is set to.`}
+      </p>
     </div>
   )
 
@@ -278,10 +276,10 @@ export default function ProfilePage() {
     return (
       <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6 pb-24">
         <div className="glass-panel p-10 text-center space-y-4">
-          <UserIcon size={40} className="mx-auto text-gold-primary opacity-60" />
-          <h2 className="text-xl font-bold text-white">No profile to show yet</h2>
-          <p className="text-sm text-gray-400">Guests browse without an account, so there&apos;s nothing here to edit. Sign up to build a profile landlords and neighbours can actually see.</p>
-          <Link href="/auth" className="inline-flex items-center gap-2 bg-gold-primary text-black font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest">
+          <UserIcon size={40} className="mx-auto text-accent opacity-60" />
+          <h2 className="text-xl font-bold text-content">No profile to show yet</h2>
+          <p className="text-sm text-content-muted">Guests browse without an account, so there&apos;s nothing here to edit. Sign up to build a profile landlords and neighbours can actually see.</p>
+          <Link href="/auth" className="inline-flex items-center gap-2 bg-accent text-content-on-accent font-black px-6 py-3 rounded-xl text-xs uppercase tracking-widest">
             <LogIn size={14} /> Create an account
           </Link>
         </div>
@@ -312,22 +310,22 @@ export default function ProfilePage() {
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6 pb-24">
       <div className="glass-panel p-6 flex items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-gold-primary text-black flex items-center justify-center text-2xl font-black shrink-0">
+        <div className="w-16 h-16 rounded-2xl bg-accent text-content-on-accent flex items-center justify-center text-2xl font-black shrink-0">
           {currentUser.name.charAt(0)}
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-black text-white truncate">{currentUser.name}</h1>
-          <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">{currentUser.role}</p>
+          <h1 className="text-xl font-black text-content truncate">{currentUser.name}</h1>
+          <p className="text-xs text-content-muted uppercase tracking-widest font-bold">{currentUser.role}</p>
           <div className="mt-1"><TrustBadge userId={currentUser.id} /></div>
         </div>
       </div>
 
       {/* Account Mode / Role Switcher */}
       <Card className="space-y-3">
-        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+        <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
           <UserIcon size={16} /> Account Mode / Role
         </h2>
-        <p className="text-[11px] text-gray-500">
+        <p className="text-[11px] text-content-muted">
           Switching to <strong>Landlord</strong> enables adding properties, listing empty rooms, and managing tenant applications. Switch to <strong>Tenant</strong> to set your room requirements.
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -337,8 +335,8 @@ export default function ProfilePage() {
             disabled={roleSwitching || currentUser.role === 'tenant'}
             className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
               currentUser.role === 'tenant'
-                ? 'bg-gold-primary text-black border-gold-primary font-black shadow-lg shadow-gold-primary/20'
-                : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'
+                ? 'bg-accent text-content-on-accent border-accent font-black shadow-lg shadow-gold-primary/20'
+                : 'bg-surface border-default text-content hover:border-accent/40'
             }`}
           >
             <span>Tenant Mode</span>
@@ -350,8 +348,8 @@ export default function ProfilePage() {
             disabled={roleSwitching || currentUser.role === 'landlord'}
             className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
               currentUser.role === 'landlord'
-                ? 'bg-gold-primary text-black border-gold-primary font-black shadow-lg shadow-gold-primary/20'
-                : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'
+                ? 'bg-accent text-content-on-accent border-accent font-black shadow-lg shadow-gold-primary/20'
+                : 'bg-surface border-default text-content hover:border-accent/40'
             }`}
           >
             <span>Landlord Mode</span>
@@ -361,17 +359,17 @@ export default function ProfilePage() {
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+        <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
           <Camera size={16} /> Your Photo
         </h2>
-        <p className="text-[11px] text-gray-500">A real photo of yourself helps neighbours and landlords trust who they&apos;re dealing with. It&apos;s kept with your verification info.</p>
+        <p className="text-[11px] text-content-muted">A real photo of yourself helps neighbours and landlords trust who they&apos;re dealing with. It&apos;s kept with your verification info.</p>
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-black border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-surface border border-default overflow-hidden shrink-0 flex items-center justify-center">
             {photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photoUrl} alt="Your uploaded photo" className="w-full h-full object-cover" />
             ) : (
-              <UserIcon size={24} className="text-gray-600" />
+              <UserIcon size={24} className="text-content-subtle" />
             )}
           </div>
           <div className="flex-1 space-y-2">
@@ -391,16 +389,16 @@ export default function ProfilePage() {
               {photoUploading ? <Loader size={14} className="animate-spin" /> : photoUrl ? <Check size={14} /> : <Camera size={14} />}
               {photoUploading ? 'Uploading…' : photoUrl ? 'Replace photo' : 'Upload a photo'}
             </button>
-            {photoError && <p className="text-[11px] text-red-400">{photoError}</p>}
+            {photoError && <p className="text-[11px] text-danger">{photoError}</p>}
           </div>
         </div>
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+        <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
           <UserIcon size={16} /> Legal Name
         </h2>
-        <p className="text-[11px] text-gray-500">
+        <p className="text-[11px] text-content-muted">
           Separate from your Gruvs display name — used where formality matters, like verification and a landlord&apos;s view of your application. Leave blank to keep using your display name everywhere.
         </p>
         <form
@@ -416,7 +414,7 @@ export default function ProfilePage() {
             value={legalName}
             onChange={e => setLegalNameInput(e.target.value)}
             placeholder="e.g. Thandiwe Nkosi"
-            className="flex-1 bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50"
+            className="flex-1 bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50"
           />
           <button type="submit" className={goldButtonClass()}>
             {legalNameSaved ? <Check size={14} /> : null}
@@ -426,63 +424,63 @@ export default function ProfilePage() {
       </Card>
 
       {hasPlus === false && (
-        <div className="glass-panel p-4 flex items-center justify-between gap-4 border-gold-primary/20">
+        <div className="glass-panel p-4 flex items-center justify-between gap-4 border-accent/20">
           <div>
-            <p className="text-sm font-bold text-white">Household Plus</p>
-            <p className="text-[11px] text-gray-500">Boosted listings, priority verification, and more for your household.</p>
+            <p className="text-sm font-bold text-content">Household Plus</p>
+            <p className="text-[11px] text-content-muted">Boosted listings, priority verification, and more for your household.</p>
           </div>
           <UpgradeButton item="plus" className={`shrink-0 ${goldButtonClass()}`} />
         </div>
       )}
 
-      <Link href="/dashboard/trust-circle" className="glass-panel p-4 flex items-center gap-3 hover:border-gold-primary/30 transition-all">
-        <div className="p-2 bg-gold-primary/10 rounded-lg text-gold-primary"><ShieldCheck size={18} /></div>
+      <Link href="/dashboard/trust-circle" className="glass-panel p-4 flex items-center gap-3 hover:border-accent/30 transition-all">
+        <div className="p-2 bg-accent/10 rounded-lg text-accent"><ShieldCheck size={18} /></div>
         <div className="flex-1">
-          <p className="text-sm font-bold text-white">Next of Kin</p>
-          <p className="text-[11px] text-gray-500">People to notify if something happens to you</p>
+          <p className="text-sm font-bold text-content">Next of Kin</p>
+          <p className="text-[11px] text-content-muted">People to notify if something happens to you</p>
         </div>
       </Link>
 
       {(currentUser.role === 'landlord' || myServiceOwned) && (
-        <Link href="/dashboard/business" className="glass-panel p-4 flex items-center gap-3 hover:border-gold-primary/30 transition-all">
-          <div className="p-2 bg-gold-primary/10 rounded-lg text-gold-primary"><Briefcase size={18} /></div>
+        <Link href="/dashboard/business" className="glass-panel p-4 flex items-center gap-3 hover:border-accent/30 transition-all">
+          <div className="p-2 bg-accent/10 rounded-lg text-accent"><Briefcase size={18} /></div>
           <div className="flex-1">
-            <p className="text-sm font-bold text-white">Manage your business</p>
-            <p className="text-[11px] text-gray-500">Visibility tier, verification, listings performance</p>
+            <p className="text-sm font-bold text-content">Manage your business</p>
+            <p className="text-[11px] text-content-muted">Visibility tier, verification, listings performance</p>
           </div>
         </Link>
       )}
 
       {currentUser.role === 'tenant' && (
         <form onSubmit={onSaveTenant} className="glass-panel p-6 space-y-5">
-          <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+          <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
             <UserIcon size={16} /> Tenant Requirement Profile
           </h2>
           <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">About Yourself</label>
+            <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">About Yourself</label>
             <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell landlords about yourself, your cleanliness habits, etc."
-              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50" />
+              className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content h-24 resize-none outline-none focus:border-accent/50" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Gender</label>
+              <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Gender</label>
               <select value={gender} onChange={e => setGender(e.target.value as typeof gender)}
-                className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50 cursor-pointer">
+                className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50 cursor-pointer">
                 <option value="any">Any / Rather not say</option>
                 <option value="men">Male</option>
                 <option value="women">Female</option>
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Number of Children</label>
+              <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Number of Children</label>
               <input type="number" min={0} value={childrenCount} onChange={e => setChildrenCount(Math.max(0, Number(e.target.value)))}
-                className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50" />
+                className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50" />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Employment Status</label>
+            <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Employment Status</label>
             <select value={employmentStatus} onChange={e => setEmploymentStatus(e.target.value)}
-              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50 cursor-pointer">
+              className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50 cursor-pointer">
               <option>Employed</option>
               <option>Self-Employed</option>
               <option>Student</option>
@@ -491,7 +489,7 @@ export default function ProfilePage() {
           </div>
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={hasPets} onChange={e => setHasPets(e.target.checked)} className="accent-gold-primary w-4 h-4" />
-            <span className="text-sm text-gray-300">I have pets</span>
+            <span className="text-sm text-content">I have pets</span>
           </label>
           <SaveBar saving={saving} saved={saved} />
         </form>
@@ -499,14 +497,14 @@ export default function ProfilePage() {
 
       {currentUser.role === 'landlord' && (
         <form onSubmit={onSaveLandlord} className="glass-panel p-6 space-y-5">
-          <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+          <h2 className="text-sm font-black text-accent uppercase tracking-widest flex items-center gap-2">
             <ShieldCheck size={16} /> Tenant Preferences
           </h2>
-          <p className="text-[11px] text-gray-500 -mt-3">Applied as the default requirements on new listings — each listing can still override these.</p>
+          <p className="text-[11px] text-content-muted -mt-3">Applied as the default requirements on new listings — each listing can still override these.</p>
           <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Preferred Tenant</label>
+            <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Preferred Tenant</label>
             <select value={genderPreference} onChange={e => setGenderPreference(e.target.value as typeof genderPreference)}
-              className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50 cursor-pointer">
+              className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50 cursor-pointer">
               <option value="any">Any</option>
               <option value="men">Male</option>
               <option value="women">Female</option>
@@ -516,23 +514,23 @@ export default function ProfilePage() {
           <div className="grid grid-cols-2 gap-4 items-end">
             <label className="flex items-center gap-3 cursor-pointer">
               <input type="checkbox" checked={childrenAllowed} onChange={e => setChildrenAllowed(e.target.checked)} className="accent-gold-primary w-4 h-4" />
-              <span className="text-sm text-gray-300">Children allowed</span>
+              <span className="text-sm text-content">Children allowed</span>
             </label>
             {childrenAllowed && (
               <div className="space-y-2">
-                <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Max Children</label>
+                <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Max Children</label>
                 <input type="number" min={0} value={maxChildren} onChange={e => setMaxChildren(Math.max(0, Number(e.target.value)))}
-                  className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50" />
+                  className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50" />
               </div>
             )}
           </div>
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={smokingAllowed} onChange={e => setSmokingAllowed(e.target.checked)} className="accent-gold-primary w-4 h-4" />
-            <span className="text-sm text-gray-300">Smoking allowed</span>
+            <span className="text-sm text-content">Smoking allowed</span>
           </label>
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={petsAllowed} onChange={e => setPetsAllowed(e.target.checked)} className="accent-gold-primary w-4 h-4" />
-            <span className="text-sm text-gray-300">Pets allowed</span>
+            <span className="text-sm text-content">Pets allowed</span>
           </label>
           <SaveBar saving={saving} saved={saved} />
         </form>
@@ -541,9 +539,9 @@ export default function ProfilePage() {
       {!isGuestUser(currentUser) && (
         <div className="glass-panel p-4 flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-bold text-white">Verification</p>
-            <p className="text-[11px] text-gray-500">Verified residents get priority on requests and dispatches.</p>
-            <p className="text-[10px] text-gray-600 mt-1">Free verification always works and arrives regardless — paying only skips the queue, it&apos;s never required to be taken seriously.</p>
+            <p className="text-sm font-bold text-content">Verification</p>
+            <p className="text-[11px] text-content-muted">Verified residents get priority on requests and dispatches.</p>
+            <p className="text-[10px] text-content-subtle mt-1">Free verification always works and arrives regardless — paying only skips the queue, it&apos;s never required to be taken seriously.</p>
           </div>
           <UpgradeButton item="verification_speedup" className={`shrink-0 ${goldButtonClass()}`} />
         </div>
@@ -559,24 +557,24 @@ export default function ProfilePage() {
       <button
         type="button"
         onClick={handleLogout}
-        className="w-full flex items-center justify-center gap-2 bg-black border border-red-500/20 hover:border-red-500/50 text-red-400 font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95"
+        className="w-full flex items-center justify-center gap-2 bg-surface border border-danger/20 hover:border-danger/50 text-danger font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95"
       >
         <LogOut size={14} /> Log Out
       </button>
 
       {!guest && (
-        <div className="glass-panel p-4 space-y-3 border-red-500/10">
+        <div className="glass-panel p-4 space-y-3 border-danger/10">
           {!showDeleteConfirm ? (
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="w-full flex items-center justify-center gap-2 text-red-500/70 hover:text-red-400 font-bold py-2 text-xs uppercase tracking-widest transition-all"
+              className="w-full flex items-center justify-center gap-2 text-danger/70 hover:text-danger font-bold py-2 text-xs uppercase tracking-widest transition-all"
             >
               <Trash2 size={14} /> Delete Account
             </button>
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-red-400 leading-relaxed">
+              <p className="text-xs text-danger leading-relaxed">
                 This permanently deletes your profile, listings, posts, and messages, and cannot be undone.
                 Type <strong>DELETE</strong> to confirm.
               </p>
@@ -584,14 +582,14 @@ export default function ProfilePage() {
                 value={deleteConfirmText}
                 onChange={e => setDeleteConfirmText(e.target.value)}
                 placeholder="DELETE"
-                className="w-full bg-black border border-red-500/30 rounded-xl p-3 text-sm text-white outline-none focus:border-red-500/60"
+                className="w-full bg-surface border border-danger/30 rounded-xl p-3 text-sm text-content outline-none focus:border-danger/60"
               />
-              {deleteError && <p className="text-[11px] text-red-400">{deleteError}</p>}
+              {deleteError && <p className="text-[11px] text-danger">{deleteError}</p>}
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); setDeleteError(null) }}
-                  className="flex-1 bg-white/5 text-gray-300 font-black py-3 rounded-xl text-xs uppercase tracking-widest"
+                  className="flex-1 bg-surface-raised/5 text-content font-black py-3 rounded-xl text-xs uppercase tracking-widest"
                 >
                   Cancel
                 </button>
@@ -599,7 +597,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={handleDeleteAccount}
                   disabled={deleting || deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
-                  className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/40 text-red-400 font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 bg-danger/10 hover:bg-danger hover:text-content border border-danger/40 text-danger font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all disabled:opacity-50"
                 >
                   {deleting ? <Loader size={13} className="animate-spin" /> : <Trash2 size={13} />}
                   {deleting ? 'Deleting…' : 'Permanently Delete'}
@@ -616,7 +614,7 @@ export default function ProfilePage() {
 function SaveBar({ saving, saved }: { saving: boolean; saved: boolean }) {
   return (
     <button type="submit" disabled={saving}
-      className="w-full flex items-center justify-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50">
+      className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent text-content-on-accent font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50">
       {saving ? <Loader size={14} className="animate-spin" /> : <Save size={14} />}
       {saving ? 'Saving…' : saved ? 'Saved' : 'Save Changes'}
     </button>

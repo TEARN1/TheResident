@@ -419,11 +419,11 @@ export default function HousingPage() {
 
   const requestStatusBadge = (status: RoomRequest['status']) => {
     const styles: Record<string, string> = {
-      pending: 'bg-gold-primary/10 text-gold-primary border-gold-primary/20',
-      waitlisted: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-      saved: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-      approved: 'bg-green-500/10 text-green-400 border-green-500/20',
-      rejected: 'bg-red-500/10 text-red-400 border-red-500/20'
+      pending: 'bg-accent/10 text-accent border-accent/20',
+      waitlisted: 'bg-info/10 text-info border-info/20',
+      saved: 'bg-info/10 text-info border-info/20',
+      approved: 'bg-success/10 text-success border-success/20',
+      rejected: 'bg-danger/10 text-danger border-danger/20'
     }
     return (
       <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${styles[status] || styles.pending}`}>
@@ -465,23 +465,23 @@ export default function HousingPage() {
           space with no new information. The tab switcher is the only part
           of this header that actually does something. */}
       <header className="flex justify-end">
-        <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl w-full md:w-auto">
+        <div className="flex bg-surface-sunken/40 p-1.5 rounded-2xl border border-subtle shadow-2xl backdrop-blur-xl w-full md:w-auto">
           <button
             onClick={() => setActiveTab('rooms')}
-            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest ${activeTab === 'rooms' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white'}`}
+            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest ${activeTab === 'rooms' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content'}`}
           >
             Rooms
           </button>
           <button
             onClick={() => setActiveTab('roommates')}
-            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest ${activeTab === 'roommates' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white'}`}
+            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest ${activeTab === 'roommates' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content'}`}
           >
             Roommates
           </button>
           {currentUser?.role === 'landlord' && (
             <button
               onClick={() => setActiveTab('properties')}
-              className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 ${activeTab === 'properties' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white'}`}
+              className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 ${activeTab === 'properties' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content'}`}
             >
               <Building2 size={14} /> My Properties
             </button>
@@ -490,23 +490,23 @@ export default function HousingPage() {
       </header>
 
       {activeTab === 'rooms' && (
-        <div className="flex bg-black/20 p-1 rounded-xl border border-white/5 w-full sm:w-fit">
+        <div className="flex bg-surface-sunken/20 p-1 rounded-xl border border-subtle w-full sm:w-fit">
           <button
             onClick={() => setFilterListingType('rent')}
-            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'rent' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'rent' ? 'bg-surface-raised/10 text-content' : 'text-content-muted hover:text-content'}`}
           >
             Rent
           </button>
           <button
             onClick={() => setFilterListingType('sale')}
-            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'sale' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'sale' ? 'bg-surface-raised/10 text-content' : 'text-content-muted hover:text-content'}`}
           >
             Buy
           </button>
           <button
             onClick={() => setFilterListingType('guesthouse')}
             title="Short-stay guest houses, listed only through the current event season"
-            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'guesthouse' ? 'bg-gold-primary text-black' : 'text-gray-500 hover:text-white'}`}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'guesthouse' ? 'bg-accent text-content-on-accent' : 'text-content-muted hover:text-content'}`}
           >
             Guest Houses
           </button>
@@ -515,12 +515,12 @@ export default function HousingPage() {
 
       {/* Landlord Notifications for Applications */}
       {currentUser?.role === 'landlord' && landlordTrackedRequests.length > 0 && (
-         <div className="glass-panel p-6 border-gold-primary/30 bg-gold-primary/5 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-4 text-gold-primary">
+         <div className="glass-panel p-6 border-accent/30 bg-accent/5 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4 text-accent">
                <Info size={24} />
                <div>
                   <p className="font-black text-sm uppercase tracking-widest">Action Required</p>
-                  <p className="text-xs text-white">You have <strong>{landlordRequests.length}</strong> pending room applications awaiting your audit.</p>
+                  <p className="text-xs text-content">You have <strong>{landlordRequests.length}</strong> pending room applications awaiting your audit.</p>
                </div>
             </div>
             <div className="flex flex-wrap gap-2 justify-end">
@@ -528,7 +528,7 @@ export default function HousingPage() {
                   <button
                     key={req.id}
                     onClick={() => setActiveAuditRequest(req)}
-                    className="bg-gold-primary text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gold-secondary transition-all flex items-center gap-2"
+                    className="bg-accent text-content-on-accent px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-accent transition-all flex items-center gap-2"
                   >
                      Audit {req.tenantName}
                      {req.status !== 'pending' && requestStatusBadge(req.status)}
@@ -552,9 +552,9 @@ export default function HousingPage() {
         <div className="space-y-8">
           {/* Search & Action Bar */}
           <div className="flex flex-col lg:flex-row gap-4">
-             <div className="flex-1 glass-panel p-2 flex items-center gap-2 bg-black/60 shadow-inner relative">
-                <div className="flex-1 flex items-center bg-black/40 rounded-xl px-4 py-1.5 border border-white/5 focus-within:border-gold-primary/40 transition-colors">
-                   <Search size={18} className="text-gray-600" />
+             <div className="flex-1 glass-panel p-2 flex items-center gap-2 bg-surface-sunken/60 shadow-inner relative">
+                <div className="flex-1 flex items-center bg-surface-sunken/40 rounded-xl px-4 py-1.5 border border-subtle focus-within:border-accent/40 transition-colors">
+                   <Search size={18} className="text-content-subtle" />
                    <input
                       type="text"
                       value={searchInputValue}
@@ -562,12 +562,12 @@ export default function HousingPage() {
                       onFocus={() => setShowSuburbSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowSuburbSuggestions(false), 150)}
                       placeholder="Enter Suburb, City or Complex..."
-                      className="bg-transparent border-none text-white px-3 py-2 w-full outline-none text-sm font-bold placeholder:text-gray-700 placeholder:uppercase placeholder:tracking-widest"
+                      className="bg-transparent border-none text-content px-3 py-2 w-full outline-none text-sm font-bold placeholder:text-content-subtle placeholder:uppercase placeholder:tracking-widest"
                       autoComplete="off"
                    />
                    <button
                       onClick={() => handleGetLiveLocation(setSearchInputValue)}
-                      className={`p-2 transition-all rounded-lg ${locationLoading ? 'text-gold-primary' : 'text-gray-600 hover:text-gold-primary hover:bg-gold-primary/10'}`}
+                      className={`p-2 transition-all rounded-lg ${locationLoading ? 'text-accent' : 'text-content-subtle hover:text-accent hover:bg-accent/10'}`}
                    >
                       {locationLoading ? <Loader size={18} className="animate-spin" /> : <MapPin size={18} />}
                    </button>
@@ -578,16 +578,16 @@ export default function HousingPage() {
                     silently returns nothing. Sourced from allListings — real
                     data, zero extra network calls. */}
                 {showSuburbSuggestions && suburbSuggestions.length > 0 && (
-                   <div className="absolute top-full left-0 right-24 mt-1 z-20 bg-black border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                   <div className="absolute top-full left-0 right-24 mt-1 z-20 bg-surface border border-default rounded-xl shadow-2xl overflow-hidden">
                       {suburbSuggestions.map(s => (
                          <button
                             key={s.suburb}
                             type="button"
                             onMouseDown={() => { setSearchInputValue(s.suburb); setShowSuburbSuggestions(false) }}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-200 hover:bg-gold-primary/10 hover:text-gold-primary transition-colors text-left"
+                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-content hover:bg-accent/10 hover:text-accent transition-colors text-left"
                          >
-                            <span className="flex items-center gap-2"><MapPin size={13} className="text-gray-600" /> {s.suburb}</span>
-                            <span className="text-[10px] text-gray-500 font-bold">{s.count} room{s.count === 1 ? '' : 's'}</span>
+                            <span className="flex items-center gap-2"><MapPin size={13} className="text-content-subtle" /> {s.suburb}</span>
+                            <span className="text-[10px] text-content-muted font-bold">{s.count} room{s.count === 1 ? '' : 's'}</span>
                          </button>
                       ))}
                    </div>
@@ -595,7 +595,7 @@ export default function HousingPage() {
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`p-3 rounded-xl border transition-all ${showFilters ? 'bg-gold-primary border-gold-primary text-black' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                  className={`p-3 rounded-xl border transition-all ${showFilters ? 'bg-accent border-accent text-content-on-accent' : 'bg-surface-raised/5 border-default text-content-muted hover:bg-surface-raised/10'}`}
                 >
                   <Filter size={18} />
                 </button>
@@ -606,14 +606,14 @@ export default function HousingPage() {
              {currentUser?.role === 'landlord' ? (
                 <button
                    onClick={() => setShowCreateModal(true)}
-                   className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-8 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-gold-primary/10 uppercase tracking-widest text-xs"
+                   className="bg-accent hover:bg-accent text-content-on-accent font-black px-8 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-gold-primary/10 uppercase tracking-widest text-xs"
                 >
                    <Plus size={20} /> List Your Property
                 </button>
              ) : (
                 <Link
                    href="/dashboard/profile"
-                   className="bg-white/5 hover:bg-gold-primary/10 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary font-bold px-4 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all text-xs shrink-0"
+                   className="bg-surface-raised/5 hover:bg-accent/10 border border-default hover:border-accent/30 text-content hover:text-accent font-bold px-4 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all text-xs shrink-0"
                    title="Want to list a room? Switch to Landlord mode in your profile."
                 >
                    <Building2 size={16} /> Have a room to rent? Switch to Landlord Mode
@@ -629,10 +629,10 @@ export default function HousingPage() {
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                >
-                  <div className="glass-panel p-8 bg-black/40 border-gold-primary/10 grid grid-cols-1 md:grid-cols-3 gap-10">
+                  <div className="glass-panel p-8 bg-surface-sunken/40 border-accent/10 grid grid-cols-1 md:grid-cols-3 gap-10">
                      <div className="space-y-4">
                         <div className="flex justify-between items-end gap-2">
-                           <label className="text-[10px] uppercase font-black tracking-[0.2em] text-gray-500">Price Ceiling</label>
+                           <label className="text-[10px] uppercase font-black tracking-[0.2em] text-content-muted">Price Ceiling</label>
                            <input
                               type="number" min={0} step={250}
                               placeholder="Any"
@@ -642,7 +642,7 @@ export default function HousingPage() {
                                  if (raw === '') { setFilterPrice(0); return }
                                  setFilterPrice(Math.max(0, Number(raw)))
                               }}
-                              className="w-24 bg-black border border-white/10 rounded-lg px-2 py-1 text-right text-gold-primary font-black text-sm outline-none focus:border-gold-primary/50"
+                              className="w-24 bg-surface border border-default rounded-lg px-2 py-1 text-right text-accent font-black text-sm outline-none focus:border-accent/50"
                            />
                         </div>
                         {/* Full-right is "no ceiling", not "R20 000 exactly" — otherwise the
@@ -656,9 +656,9 @@ export default function HousingPage() {
                               const v = Number(e.target.value)
                               setFilterPrice(v >= PRICE_CEILING_MAX ? 0 : v)
                            }}
-                           className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-gold-primary"
+                           className="w-full h-1.5 bg-surface-raised rounded-lg appearance-none cursor-pointer accent-gold-primary"
                         />
-                        <p className="text-[10px] text-gray-500">
+                        <p className="text-[10px] text-content-muted">
                            {filterPrice === 0
                               ? 'Showing every room. Drag left to set a budget.'
                               : `Hiding rooms above ${formatCurrency(filterPrice)}.`}
@@ -666,30 +666,30 @@ export default function HousingPage() {
                      </div>
 
                      <div className="space-y-4">
-                        <label className="text-[10px] uppercase font-black tracking-[0.2em] text-gray-500 block mb-6">Preferred Amenities</label>
+                        <label className="text-[10px] uppercase font-black tracking-[0.2em] text-content-muted block mb-6">Preferred Amenities</label>
                         <div className="flex flex-wrap gap-4">
                            <label className="flex items-center gap-3 cursor-pointer group">
-                              <div className={`w-10 h-6 rounded-full p-1 transition-all border ${filterWifi ? 'bg-gold-primary border-gold-primary' : 'bg-white/5 border-white/10'}`}>
-                                 <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${filterWifi ? 'translate-x-4' : 'translate-x-0'}`} />
+                              <div className={`w-10 h-6 rounded-full p-1 transition-all border ${filterWifi ? 'bg-accent border-accent' : 'bg-surface-raised/5 border-default'}`}>
+                                 <div className={`w-4 h-4 bg-surface-raised rounded-full shadow-sm transition-transform ${filterWifi ? 'translate-x-4' : 'translate-x-0'}`} />
                               </div>
                               <input type="checkbox" className="hidden" checked={filterWifi} onChange={e => setFilterWifi(e.target.checked)} />
-                              <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${filterWifi ? 'text-white' : 'text-gray-600'}`}>WiFi</span>
+                              <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${filterWifi ? 'text-content' : 'text-content-subtle'}`}>WiFi</span>
                            </label>
 
                            <label className="flex items-center gap-3 cursor-pointer group">
-                              <div className={`w-10 h-6 rounded-full p-1 transition-all border ${filterQuickPostOnly ? 'bg-gold-primary border-gold-primary' : 'bg-white/5 border-white/10'}`}>
-                                 <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${filterQuickPostOnly ? 'translate-x-4' : 'translate-x-0'}`} />
+                              <div className={`w-10 h-6 rounded-full p-1 transition-all border ${filterQuickPostOnly ? 'bg-accent border-accent' : 'bg-surface-raised/5 border-default'}`}>
+                                 <div className={`w-4 h-4 bg-surface-raised rounded-full shadow-sm transition-transform ${filterQuickPostOnly ? 'translate-x-4' : 'translate-x-0'}`} />
                               </div>
                               <input type="checkbox" className="hidden" checked={filterQuickPostOnly} onChange={e => setFilterQuickPostOnly(e.target.checked)} />
-                              <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${filterQuickPostOnly ? 'text-white' : 'text-gray-600'}`}>Quick Posts Only</span>
+                              <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${filterQuickPostOnly ? 'text-content' : 'text-content-subtle'}`}>Quick Posts Only</span>
                            </label>
 
                            <label className="flex items-center gap-3 cursor-pointer group">
-                              <div className={`w-10 h-6 rounded-full p-1 transition-all border ${filterParking ? 'bg-gold-primary border-gold-primary' : 'bg-white/5 border-white/10'}`}>
-                                 <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${filterParking ? 'translate-x-4' : 'translate-x-0'}`} />
+                              <div className={`w-10 h-6 rounded-full p-1 transition-all border ${filterParking ? 'bg-accent border-accent' : 'bg-surface-raised/5 border-default'}`}>
+                                 <div className={`w-4 h-4 bg-surface-raised rounded-full shadow-sm transition-transform ${filterParking ? 'translate-x-4' : 'translate-x-0'}`} />
                               </div>
                               <input type="checkbox" className="hidden" checked={filterParking} onChange={e => setFilterParking(e.target.checked)} />
-                              <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${filterParking ? 'text-white' : 'text-gray-600'}`}>Parking</span>
+                              <span className={`text-xs font-bold uppercase tracking-widest transition-colors ${filterParking ? 'text-content' : 'text-content-subtle'}`}>Parking</span>
                            </label>
                         </div>
                      </div>
@@ -699,7 +699,7 @@ export default function HousingPage() {
                            onClick={() => {
                               setFilterPrice(0); setFilterWifi(false); setFilterParking(false); setSearchInputValue('');
                            }}
-                           className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500/50 hover:text-red-500 transition-colors"
+                           className="text-[10px] font-black uppercase tracking-[0.3em] text-danger/50 hover:text-danger transition-colors"
                         >
                            Reset All Filters
                         </button>
@@ -746,37 +746,37 @@ export default function HousingPage() {
                 key={item.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="glass-panel overflow-hidden flex flex-col hover:border-gold-primary/40 transition-all duration-500 group bg-black/40"
+                className="glass-panel overflow-hidden flex flex-col hover:border-accent/40 transition-all duration-500 group bg-surface-sunken/40"
               >
-                <div className="relative h-56 bg-gray-900 overflow-hidden">
+                <div className="relative h-56 bg-surface overflow-hidden">
                   {item.images[0] ? (
                     <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
-                      <Home size={40} className="text-gold-primary/20" />
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-content-muted to-black">
+                      <Home size={40} className="text-accent/20" />
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
                   <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
                      <div className="flex items-center gap-1.5">
-                        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl">
-                           <span className="text-xs font-black text-white tracking-tight uppercase">Verified</span>
+                        <div className="bg-surface-sunken/60 backdrop-blur-md border border-default px-3 py-1.5 rounded-xl">
+                           <span className="text-xs font-black text-content tracking-tight uppercase">Verified</span>
                         </div>
                         {item.quickPost && (
-                           <div className="bg-gold-primary/90 backdrop-blur-md px-3 py-1.5 rounded-xl" title="Posted fast with minimal details — same listing, just quicker to put up.">
-                              <span className="text-xs font-black text-black tracking-tight uppercase">Quick Post</span>
+                           <div className="bg-accent/90 backdrop-blur-md px-3 py-1.5 rounded-xl" title="Posted fast with minimal details — same listing, just quicker to put up.">
+                              <span className="text-xs font-black text-content-on-accent tracking-tight uppercase">Quick Post</span>
                            </div>
                         )}
                         {item.listingType === 'guesthouse' && (
                            <div
-                              className="bg-purple-500/90 backdrop-blur-md px-3 py-1.5 rounded-xl"
+                              className="bg-info/90 backdrop-blur-md px-3 py-1.5 rounded-xl"
                               title={item.visibleUntil ? `Listed through ${new Date(item.visibleUntil).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Guest house'}
                            >
-                              <span className="text-xs font-black text-white tracking-tight uppercase">Guest House</span>
+                              <span className="text-xs font-black text-content tracking-tight uppercase">Guest House</span>
                            </div>
                         )}
                      </div>
-                     <div className="bg-gold-primary text-black px-4 py-2 rounded-xl shadow-xl">
+                     <div className="bg-accent text-content-on-accent px-4 py-2 rounded-xl shadow-xl">
                         <span className="text-lg font-black tracking-tighter">{formatCurrency(item.price, item.currency)}</span>
                         <span className="text-[10px] font-black ml-1 opacity-60">/ {item.listingType === 'guesthouse' ? 'NIGHT' : 'MO'}</span>
                      </div>
@@ -786,9 +786,9 @@ export default function HousingPage() {
                 <div className="p-6 flex-1 flex flex-col gap-5">
                   <div className="space-y-1">
                      <div className="flex items-center gap-2">
-                        <h3 className="text-xl font-black text-white tracking-tight leading-tight group-hover:text-gold-primary transition-colors">{item.title}</h3>
+                        <h3 className="text-xl font-black text-content tracking-tight leading-tight group-hover:text-accent transition-colors">{item.title}</h3>
                         {isFeatured(item) && (
-                           <span className="bg-gold-primary text-black px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">Featured</span>
+                           <span className="bg-accent text-content-on-accent px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">Featured</span>
                         )}
                         {item.landlordId === currentUser?.id && item.propertyId && (() => {
                            const prop = myProperties.find(p => p.id === item.propertyId)
@@ -798,26 +798,26 @@ export default function HousingPage() {
                               .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
                            const ordinal = siblings.findIndex(l => l.id === item.id) + 1
                            return (
-                              <span className="bg-white/5 border border-white/10 text-gray-400 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">
+                              <span className="bg-surface-raised/5 border border-default text-content-muted px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">
                                  Room {ordinal} of {prop.total_rooms}
                               </span>
                            )
                         })()}
                      </div>
                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center text-[10px] text-gray-500 font-black uppercase tracking-widest gap-2">
-                           <MapPin size={12} className="text-gold-primary" /> {item.suburb}, {item.location}
+                        <div className="flex items-center text-[10px] text-content-muted font-black uppercase tracking-widest gap-2">
+                           <MapPin size={12} className="text-accent" /> {item.suburb}, {item.location}
                         </div>
                         <OpenInMapsButton address={`${item.location}, ${item.suburb}`} lat={item.lat} lon={item.lon} label={item.title} />
                      </div>
                      {item.listingType === 'guesthouse' && item.eventId && gruvsEventInfo[item.eventId] && (
-                        <div className="flex items-center gap-1.5 text-[10px] font-black text-purple-400 uppercase tracking-widest">
+                        <div className="flex items-center gap-1.5 text-[10px] font-black text-info uppercase tracking-widest">
                            <Building2 size={11} /> Near {gruvsEventInfo[item.eventId].title}
                         </div>
                      )}
                   </div>
 
-                  <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80">{item.description}</p>
+                  <p className="text-sm text-content-muted line-clamp-3 leading-relaxed opacity-80">{item.description}</p>
 
                   {/* Only shown for a room-inventory listing that's currently occupied —
                       a plain listing (no linked res_rooms row) or an already-vacant
@@ -828,8 +828,8 @@ export default function HousingPage() {
                         disabled={watchBusyId === item.id}
                         className={`flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-2 rounded-xl border transition-colors disabled:opacity-50 ${
                            watchedListingIds.has(item.id)
-                              ? 'bg-gold-primary/10 border-gold-primary/40 text-gold-primary'
-                              : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                              ? 'bg-accent/10 border-accent/40 text-accent'
+                              : 'bg-surface-raised/5 border-default text-content-muted hover:text-content hover:border-strong'
                         }`}
                      >
                         {watchedListingIds.has(item.id) ? (
@@ -843,9 +843,9 @@ export default function HousingPage() {
                   <div className="flex items-center justify-between gap-2 -mt-1">
                      <button
                        onClick={() => setReviewsOpenFor(reviewsOpenFor === item.id ? null : item.id)}
-                       className="text-[10px] text-gray-500 font-bold hover:text-gold-primary transition-colors text-left"
+                       className="text-[10px] text-content-muted font-bold hover:text-accent transition-colors text-left"
                      >
-                        Posted by <span className="text-gray-300">{item.landlordName || 'Landlord'}</span>
+                        Posted by <span className="text-content">{item.landlordName || 'Landlord'}</span>
                      </button>
                      <div className="flex items-center gap-2">
                         <TrustBadge userId={item.landlordId} compact />
@@ -870,26 +870,26 @@ export default function HousingPage() {
                   </AnimatePresence>
 
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {item.amenities.wifi && <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-gray-400 flex items-center gap-1.5">WiFi</span>}
-                    {item.amenities.parking && <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-gray-400 flex items-center gap-1.5">Parking</span>}
-                    <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-gray-400">Bath: {item.amenities.bathroom}</span>
+                    {item.amenities.wifi && <span className="text-[9px] font-black bg-surface-raised/5 border border-default px-2 py-1 rounded-lg text-content-muted flex items-center gap-1.5">WiFi</span>}
+                    {item.amenities.parking && <span className="text-[9px] font-black bg-surface-raised/5 border border-default px-2 py-1 rounded-lg text-content-muted flex items-center gap-1.5">Parking</span>}
+                    <span className="text-[9px] font-black bg-surface-raised/5 border border-default px-2 py-1 rounded-lg text-content-muted">Bath: {item.amenities.bathroom}</span>
                   </div>
 
-                  <div className="mt-auto pt-6 border-t border-white/5 space-y-2">
+                  <div className="mt-auto pt-6 border-t border-subtle space-y-2">
                      {item.landlordId === currentUser?.id ? (
                         <>
-                          <UpgradeButton item="room_boost" targetId={item.id} className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest" />
+                          <UpgradeButton item="room_boost" targetId={item.id} className="w-full bg-accent/10 hover:bg-accent hover:text-content-on-accent border border-accent/30 text-accent font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest" />
                           {confirmDeleteListingId === item.id ? (
                              <div className="flex items-center gap-2">
                                 <button
                                    onClick={() => handleDeleteListing(item.id)}
-                                   className="flex-1 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
+                                   className="flex-1 bg-danger/10 hover:bg-danger hover:text-content border border-danger/30 text-danger font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
                                 >
                                    Confirm delete
                                 </button>
                                 <button
                                    onClick={() => setConfirmDeleteListingId(null)}
-                                   className="px-4 bg-white/5 hover:bg-white/10 text-gray-400 font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
+                                   className="px-4 bg-surface-raised/5 hover:bg-surface-raised/10 text-content-muted font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
                                 >
                                    Cancel
                                 </button>
@@ -897,7 +897,7 @@ export default function HousingPage() {
                           ) : (
                              <button
                                 onClick={() => setConfirmDeleteListingId(item.id)}
-                                className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-red-500/5 border border-transparent hover:border-red-500/20 text-gray-600 hover:text-red-400 font-bold py-2 rounded-xl transition-all text-[10px] uppercase tracking-widest"
+                                className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-danger/5 border border-transparent hover:border-danger/20 text-content-subtle hover:text-danger font-bold py-2 rounded-xl transition-all text-[10px] uppercase tracking-widest"
                              >
                                 <Trash2 size={12} /> Delete listing
                              </button>
@@ -913,7 +913,7 @@ export default function HousingPage() {
                      ) : (
                         <button
                            onClick={() => setActiveListing(item)}
-                           className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                           className="w-full bg-accent hover:bg-accent text-content-on-accent font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
                         >
                            Request Room
                         </button>
@@ -928,36 +928,36 @@ export default function HousingPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
            {filteredRoommates.map(rm => (
-             <motion.div key={rm.id} whileHover={{ y: -5 }} className="glass-panel p-6 flex flex-col gap-6 bg-black/40">
+             <motion.div key={rm.id} whileHover={{ y: -5 }} className="glass-panel p-6 flex flex-col gap-6 bg-surface-sunken/40">
                 <div className="flex justify-between items-start">
                    <div className="space-y-1">
-                      <h3 className="text-xl font-black text-white tracking-tighter uppercase italic">{rm.name}</h3>
-                      <div className="flex items-center text-[9px] text-gray-600 font-black uppercase tracking-widest gap-1.5">
-                         <MapPin size={10} className="text-gold-primary" /> {rm.suburb}
+                      <h3 className="text-xl font-black text-content tracking-tighter uppercase italic">{rm.name}</h3>
+                      <div className="flex items-center text-[9px] text-content-subtle font-black uppercase tracking-widest gap-1.5">
+                         <MapPin size={10} className="text-accent" /> {rm.suburb}
                       </div>
                    </div>
                    <div className="flex flex-col items-end gap-2">
-                      <div className="bg-gold-primary/10 border border-gold-primary/20 text-gold-primary px-3 py-1 rounded-xl text-sm font-black tracking-tighter">
+                      <div className="bg-accent/10 border border-accent/20 text-accent px-3 py-1 rounded-xl text-sm font-black tracking-tighter">
                          {formatCurrency(rm.budget, rm.currency)}
                       </div>
                       <TrustBadge userId={rm.id} compact />
                       <FollowButton targetUserId={rm.id} currentUserId={currentUser?.id} />
                    </div>
                 </div>
-                <p className="text-sm text-gray-400 italic leading-relaxed font-medium">&quot;{rm.bio}&quot;</p>
+                <p className="text-sm text-content-muted italic leading-relaxed font-medium">&quot;{rm.bio}&quot;</p>
                 <div className="grid grid-cols-2 gap-3">
-                   <div className="bg-white/2 border border-white/5 rounded-xl p-2.5">
-                      <span className="text-[8px] text-gray-600 font-black uppercase tracking-widest block">GENDER</span>
-                      <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest">{rm.gender}</span>
+                   <div className="bg-surface-raised/[0.02] border border-subtle rounded-xl p-2.5">
+                      <span className="text-[8px] text-content-subtle font-black uppercase tracking-widest block">GENDER</span>
+                      <span className="text-[10px] text-content font-black uppercase tracking-widest">{rm.gender}</span>
                    </div>
-                   <div className="bg-white/2 border border-white/5 rounded-xl p-2.5">
-                      <span className="text-[8px] text-gray-600 font-black uppercase tracking-widest block">DEPENDENTS</span>
-                      <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest">{rm.childrenCount}</span>
+                   <div className="bg-surface-raised/[0.02] border border-subtle rounded-xl p-2.5">
+                      <span className="text-[8px] text-content-subtle font-black uppercase tracking-widest block">DEPENDENTS</span>
+                      <span className="text-[10px] text-content font-black uppercase tracking-widest">{rm.childrenCount}</span>
                    </div>
                 </div>
                 <Link
                   href={`/dashboard/messages?to=${rm.id}`}
-                  className="w-full mt-4 bg-gold-primary text-black font-black py-3 rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95 flex items-center justify-center"
+                  className="w-full mt-4 bg-accent text-content-on-accent font-black py-3 rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95 flex items-center justify-center"
                 >
                    Invite to Share
                 </Link>
@@ -970,23 +970,23 @@ export default function HousingPage() {
       <AnimatePresence>
          {showCreateModal && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCreateModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-3xl bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden">
-                  <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
-                     <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">List Your <span className="text-gold-primary">Property</span></h3>
-                     <button onClick={() => setShowCreateModal(false)} className="p-2 text-gray-500 hover:text-white transition-colors"><X /></button>
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCreateModal(false)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-3xl bg-surface border-accent/20 shadow-2xl relative z-10 overflow-hidden">
+                  <div className="bg-accent/5 p-6 border-b border-subtle flex justify-between items-center">
+                     <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">List Your <span className="text-accent">Property</span></h3>
+                     <button onClick={() => setShowCreateModal(false)} className="p-2 text-content-muted hover:text-content transition-colors"><X /></button>
                   </div>
                   <form onSubmit={handleCreateListing} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Listing Title</label>
-                           <input value={newTitle} onChange={e => setNewTitle(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="e.g. Sunny en-suite near the station" />
+                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Listing Title</label>
+                           <input value={newTitle} onChange={e => setNewTitle(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="e.g. Sunny en-suite near the station" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Monthly Rent</label>
+                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Monthly Rent</label>
                            <div className="flex gap-2">
-                              <input type="number" value={newPrice} onChange={e => setNewPrice(Number(e.target.value))} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
-                              <select value={newCurrency} onChange={e => setNewCurrency(e.target.value)} className="bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                              <input type="number" value={newPrice} onChange={e => setNewPrice(Number(e.target.value))} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" />
+                              <select value={newCurrency} onChange={e => setNewCurrency(e.target.value)} className="bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40">
                                  <option value="ZAR">ZAR</option>
                                  <option value="USD">USD</option>
                                  <option value="EUR">EUR</option>
@@ -999,53 +999,53 @@ export default function HousingPage() {
                            {/* What rooms actually go for nearby, in the same currency — suppressed
                                below a usable sample rather than quoting a median of two. */}
                            {newListingPriceStats && (
-                             <p className="text-[10px] text-gray-500 mt-1.5">
+                             <p className="text-[10px] text-content-muted mt-1.5">
                                Typical range in {newSuburb}: {formatCurrency(newListingPriceStats.low, newCurrency)}–{formatCurrency(newListingPriceStats.high, newCurrency)}
                                {' '}({newListingPriceStats.sample} listings)
                              </p>
                            )}
                            {newListingLooksSuspicious && (
-                             <p className="text-[10px] text-red-400 mt-1.5 flex items-center gap-1">
+                             <p className="text-[10px] text-danger mt-1.5 flex items-center gap-1">
                                <AlertTriangle size={11} /> That&apos;s far below the going rate nearby — tenants will see a caution flag on this listing.
                              </p>
                            )}
                         </div>
                      </div>
                      <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Description</label>
-                        <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/40" placeholder="Describe the room, building rules, and environment..." />
+                        <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Description</label>
+                        <textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content h-24 resize-none outline-none focus:border-accent/40" placeholder="Describe the room, building rules, and environment..." />
                      </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">City / Location</label>
-                           <input value={newLocation} onChange={e => setNewLocation(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="e.g. Berlin, Germany" />
+                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">City / Location</label>
+                           <input value={newLocation} onChange={e => setNewLocation(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="e.g. Berlin, Germany" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Suburb / Area</label>
-                           <input value={newSuburb} onChange={e => setNewSuburb(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="e.g. Kreuzberg" />
+                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Suburb / Area</label>
+                           <input value={newSuburb} onChange={e => setNewSuburb(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" placeholder="e.g. Kreuzberg" />
                         </div>
                      </div>
                      <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Listing Type</label>
-                        <div className="flex bg-black border border-white/10 rounded-xl p-1 w-fit">
-                           <button type="button" onClick={() => setNewListingType('rent')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'rent' ? 'bg-gold-primary text-black' : 'text-gray-500'}`}>Rent</button>
-                           <button type="button" onClick={() => setNewListingType('sale')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'sale' ? 'bg-gold-primary text-black' : 'text-gray-500'}`}>Sell</button>
-                           <button type="button" onClick={() => setNewListingType('guesthouse')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'guesthouse' ? 'bg-gold-primary text-black' : 'text-gray-500'}`}>Guest House</button>
+                        <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Listing Type</label>
+                        <div className="flex bg-surface border border-default rounded-xl p-1 w-fit">
+                           <button type="button" onClick={() => setNewListingType('rent')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'rent' ? 'bg-accent text-content-on-accent' : 'text-content-muted'}`}>Rent</button>
+                           <button type="button" onClick={() => setNewListingType('sale')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'sale' ? 'bg-accent text-content-on-accent' : 'text-content-muted'}`}>Sell</button>
+                           <button type="button" onClick={() => setNewListingType('guesthouse')} className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${newListingType === 'guesthouse' ? 'bg-accent text-content-on-accent' : 'text-content-muted'}`}>Guest House</button>
                         </div>
                         {newListingType === 'guesthouse' && (
                            <div className="space-y-2 pt-1">
-                              <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Near Which Gruvs Event (optional)</label>
+                              <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Near Which Gruvs Event (optional)</label>
                               {upcomingGruvsEvents.length === 0 ? (
-                                 <p className="text-[11px] text-gray-500 bg-black/40 border border-white/10 rounded-xl p-3 leading-relaxed">No upcoming events found on The Gruvs — you can still list without one.</p>
+                                 <p className="text-[11px] text-content-muted bg-surface-sunken/40 border border-default rounded-xl p-3 leading-relaxed">No upcoming events found on The Gruvs — you can still list without one.</p>
                               ) : (
-                                 <select value={newEventId} onChange={e => setNewEventId(e.target.value)} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40 cursor-pointer">
+                                 <select value={newEventId} onChange={e => setNewEventId(e.target.value)} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40 cursor-pointer">
                                     <option value="">No specific event</option>
                                     {upcomingGruvsEvents.map(ev => (
                                        <option key={ev.id} value={ev.id}>{ev.title} — {formatGruvsEventWhen(ev.startsAt)}</option>
                                     ))}
                                  </select>
                               )}
-                              <p className="text-[10px] text-gray-500 leading-relaxed">
+                              <p className="text-[10px] text-content-muted leading-relaxed">
                                  Guest houses are seasonal — this listing automatically stops showing after {new Date(GUESTHOUSE_SEASON_END).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}.
                               </p>
                            </div>
@@ -1053,8 +1053,8 @@ export default function HousingPage() {
                      </div>
                      {myProperties.length > 0 && (
                         <div className="space-y-2">
-                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Which Property Is This Room In?</label>
-                           <select value={newPropertyId} onChange={e => setNewPropertyId(e.target.value)} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Which Property Is This Room In?</label>
+                           <select value={newPropertyId} onChange={e => setNewPropertyId(e.target.value)} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40">
                               <option value="">No property — standalone listing</option>
                               {myProperties.map(p => (
                                  <option key={p.id} value={p.id}>{p.address}, {p.suburb}</option>
@@ -1064,8 +1064,8 @@ export default function HousingPage() {
                      )}
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                           <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Bathroom Style</label>
-                           <select value={newBathroom} onChange={e => setNewBathroom(e.target.value as 'shared' | 'private' | 'ensuite')} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                           <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Bathroom Style</label>
+                           <select value={newBathroom} onChange={e => setNewBathroom(e.target.value as 'shared' | 'private' | 'ensuite')} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40">
                               <option value="shared">Shared</option>
                               <option value="private">Private</option>
                               <option value="ensuite">En-suite</option>
@@ -1073,13 +1073,13 @@ export default function HousingPage() {
                         </div>
                      </div>
                      <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Photos</label>
+                        <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Photos</label>
                         <div className="flex flex-wrap gap-2">
                            {newPhotos.map((url, i) => (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img key={i} src={url} alt="" className="w-16 h-16 rounded-lg object-cover border border-white/10" />
+                              <img key={i} src={url} alt="" className="w-16 h-16 rounded-lg object-cover border border-default" />
                            ))}
-                           <label className="w-16 h-16 rounded-lg border border-dashed border-white/20 flex items-center justify-center cursor-pointer text-gray-500 hover:text-gold-primary hover:border-gold-primary/40 transition-colors">
+                           <label className="w-16 h-16 rounded-lg border border-dashed border-strong flex items-center justify-center cursor-pointer text-content-muted hover:text-accent hover:border-accent/40 transition-colors">
                               {uploadingPhotos ? <Loader size={16} className="animate-spin" /> : <Camera size={16} />}
                               <input
                                  type="file"
@@ -1091,30 +1091,30 @@ export default function HousingPage() {
                               />
                            </label>
                         </div>
-                        <p className="text-[10px] text-gray-600">Up to {MAX_LISTING_PHOTOS} photos of the actual room — a real photo does more for an application than any description.</p>
+                        <p className="text-[10px] text-content-subtle">Up to {MAX_LISTING_PHOTOS} photos of the actual room — a real photo does more for an application than any description.</p>
                      </div>
-                     <div className="flex flex-wrap gap-6 bg-white/5 p-4 rounded-2xl border border-white/5">
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-400 uppercase tracking-widest">
+                     <div className="flex flex-wrap gap-6 bg-surface-raised/5 p-4 rounded-2xl border border-subtle">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-content-muted uppercase tracking-widest">
                            <input type="checkbox" checked={newWifi} onChange={e => setNewWifi(e.target.checked)} className="accent-gold-primary" /> WiFi Included
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-content-muted uppercase tracking-widest">
                            <input type="checkbox" checked={newParking} onChange={e => setNewParking(e.target.checked)} className="accent-gold-primary" /> Parking Available
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-content-muted uppercase tracking-widest">
                            <input type="checkbox" checked={newLivesHere} onChange={e => setNewLivesHere(e.target.checked)} className="accent-gold-primary" /> I Live On-Site
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gold-primary uppercase tracking-widest" title="Marks this as a fast, low-friction post — shows a Quick Post badge and can be filtered separately, but it's the same listing as any other.">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-accent uppercase tracking-widest" title="Marks this as a fast, low-friction post — shows a Quick Post badge and can be filtered separately, but it's the same listing as any other.">
                            <input type="checkbox" checked={newQuickPost} onChange={e => setNewQuickPost(e.target.checked)} className="accent-gold-primary" /> Quick Post
                         </label>
                      </div>
                      {/* Who this room suits — feeds roommateCompatibility's hard filters directly.
                          Every listing silently shared the same defaults until this existed. */}
-                     <div className="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/5">
-                        <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Who This Room Suits</label>
+                     <div className="space-y-3 bg-surface-raised/5 p-4 rounded-2xl border border-subtle">
+                        <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Who This Room Suits</label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div className="space-y-2">
-                              <label className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">Gender Preference</label>
-                              <select value={newGenderPref} onChange={e => setNewGenderPref(e.target.value as 'men' | 'women' | 'couple' | 'any')} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                              <label className="text-[10px] text-content-subtle uppercase font-bold tracking-widest">Gender Preference</label>
+                              <select value={newGenderPref} onChange={e => setNewGenderPref(e.target.value as 'men' | 'women' | 'couple' | 'any')} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40">
                                  <option value="any">No preference</option>
                                  <option value="men">Men only</option>
                                  <option value="women">Women only</option>
@@ -1122,22 +1122,22 @@ export default function HousingPage() {
                               </select>
                            </div>
                            <div className="space-y-2">
-                              <label className="text-[10px] text-gray-600 uppercase font-bold tracking-widest">Max Children</label>
+                              <label className="text-[10px] text-content-subtle uppercase font-bold tracking-widest">Max Children</label>
                               <input
                                 type="number" min={0} value={newMaxChildren}
                                 onChange={e => setNewMaxChildren(Number(e.target.value))}
                                 disabled={!newChildrenAllowed}
-                                className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40 disabled:opacity-40"
+                                className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40 disabled:opacity-40"
                               />
                            </div>
                         </div>
-                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-content-muted uppercase tracking-widest">
                            <input type="checkbox" checked={newChildrenAllowed} onChange={e => setNewChildrenAllowed(e.target.checked)} className="accent-gold-primary" /> Children Allowed
                         </label>
                      </div>
-                     <div className="pt-4 border-t border-white/5 flex gap-4">
-                        <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 bg-white/5 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs">Cancel</button>
-                        <button type="submit" className="flex-1 bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20">Publish Listing</button>
+                     <div className="pt-4 border-t border-subtle flex gap-4">
+                        <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 bg-surface-raised/5 text-content font-black py-4 rounded-2xl uppercase tracking-widest text-xs">Cancel</button>
+                        <button type="submit" className="flex-1 bg-accent text-content-on-accent font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20">Publish Listing</button>
                      </div>
                   </form>
                </motion.div>
@@ -1149,21 +1149,21 @@ export default function HousingPage() {
       <AnimatePresence>
          {activeListing && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveListing(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-8">
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveListing(null)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-surface border-accent/20 shadow-2xl relative z-10 p-8 space-y-8">
                   <div className="flex justify-between items-center">
                      <div className="space-y-1">
-                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Apply for <span className="text-gold-primary">Room</span></h3>
-                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{activeListing.title}</p>
+                        <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">Apply for <span className="text-accent">Room</span></h3>
+                        <p className="text-[10px] text-content-muted font-black uppercase tracking-widest">{activeListing.title}</p>
                      </div>
-                     <button onClick={() => setActiveListing(null)} className="text-gray-500 hover:text-white"><X /></button>
+                     <button onClick={() => setActiveListing(null)} className="text-content-muted hover:text-content"><X /></button>
                   </div>
                   <form onSubmit={handleApply} className="space-y-6">
                      <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Message to Landlord</label>
-                        <textarea value={applyMessage} onChange={e => setApplyMessage(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-4 text-sm text-white h-32 resize-none outline-none focus:border-gold-primary/40" placeholder="Introduce yourself, mentioned your move-in date and any questions..." />
+                        <label className="text-[10px] text-content-muted uppercase font-black tracking-widest">Message to Landlord</label>
+                        <textarea value={applyMessage} onChange={e => setApplyMessage(e.target.value)} required className="w-full bg-surface border border-default rounded-xl p-4 text-sm text-content h-32 resize-none outline-none focus:border-accent/40" placeholder="Introduce yourself, mentioned your move-in date and any questions..." />
                      </div>
-                     <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2">
+                     <button type="submit" className="w-full bg-accent hover:bg-accent text-content-on-accent font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2">
                         Send Request <Send size={14} />
                      </button>
                   </form>
@@ -1176,18 +1176,18 @@ export default function HousingPage() {
       <AnimatePresence>
          {activeAuditRequest && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveAuditRequest(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden">
-                  <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
-                     <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Tenant <span className="text-gold-primary">Audit</span></h3>
-                     <button onClick={() => setActiveAuditRequest(null)} className="text-gray-500 hover:text-white"><X /></button>
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveAuditRequest(null)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-surface border-accent/20 shadow-2xl relative z-10 overflow-hidden">
+                  <div className="bg-accent/5 p-6 border-b border-subtle flex justify-between items-center">
+                     <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">Tenant <span className="text-accent">Audit</span></h3>
+                     <button onClick={() => setActiveAuditRequest(null)} className="text-content-muted hover:text-content"><X /></button>
                   </div>
                   <div className="p-8 space-y-8">
                      <div className="flex gap-6 items-start">
-                        <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center text-2xl font-black text-gold-primary border border-white/5 shadow-inner">{activeAuditRequest.tenantName.charAt(0)}</div>
+                        <div className="w-16 h-16 bg-surface-raised rounded-2xl flex items-center justify-center text-2xl font-black text-accent border border-subtle shadow-inner">{activeAuditRequest.tenantName.charAt(0)}</div>
                         <div className="space-y-1.5">
-                           <h4 className="text-2xl font-black text-white">{activeAuditRequest.tenantName}</h4>
-                           <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Applicant for: {activeAuditRequest.listingTitle}</p>
+                           <h4 className="text-2xl font-black text-content">{activeAuditRequest.tenantName}</h4>
+                           <p className="text-xs text-content-muted font-bold uppercase tracking-widest">Applicant for: {activeAuditRequest.listingTitle}</p>
                            <div className="flex items-center gap-2 pt-1 flex-wrap">
                               <TrustBadge userId={activeAuditRequest.tenantId} />
                               <NextOfKinFlag userId={activeAuditRequest.tenantId} />
@@ -1195,42 +1195,42 @@ export default function HousingPage() {
                            </div>
                         </div>
                      </div>
-                     <div className="bg-black/40 border border-white/5 rounded-2xl p-4 italic text-sm text-gray-400 leading-relaxed font-medium">&quot;{activeAuditRequest.message}&quot;</div>
+                     <div className="bg-surface-sunken/40 border border-subtle rounded-2xl p-4 italic text-sm text-content-muted leading-relaxed font-medium">&quot;{activeAuditRequest.message}&quot;</div>
 
                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <button
                           onClick={() => runAuditAction('approved')}
                           disabled={!!auditActionLoading}
-                          className="bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-black border border-green-500/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                          className="bg-success/10 hover:bg-success text-success hover:text-content border border-success/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                            <Check size={16} /> Approve
                         </button>
                         <button
                           onClick={() => runAuditAction('rejected')}
                           disabled={!!auditActionLoading}
-                          className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                          className="bg-danger/10 hover:bg-danger text-danger hover:text-content border border-danger/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                            <X size={16} /> Reject
                         </button>
                         <button
                           onClick={() => runAuditAction('waitlisted')}
                           disabled={!!auditActionLoading}
-                          className="bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-black border border-blue-500/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                          className="bg-info/10 hover:bg-info text-info hover:text-content border border-info/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                            Waitlist
                         </button>
                         <button
                           onClick={() => runAuditAction('saved')}
                           disabled={!!auditActionLoading}
-                          className="bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-black border border-purple-500/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                          className="bg-info/10 hover:bg-info text-info hover:text-content border border-info/20 font-black py-4 rounded-2xl uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                            Save for Later
                         </button>
                      </div>
 
                      {activeAuditRequest.status === 'approved' && (
-                        <div className="space-y-4 pt-4 border-t border-white/5">
-                           <h5 className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Review This Tenant</h5>
+                        <div className="space-y-4 pt-4 border-t border-subtle">
+                           <h5 className="text-[10px] text-content-muted uppercase font-black tracking-widest">Review This Tenant</h5>
                            <ReviewForm subjectId={activeAuditRequest.tenantId} />
                            <ReviewsList userId={activeAuditRequest.tenantId} />
                         </div>
@@ -1248,14 +1248,14 @@ export default function HousingPage() {
                initial={{ y: 100, opacity: 0 }}
                animate={{ y: 0, opacity: 1 }}
                exit={{ y: 100, opacity: 0 }}
-               className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
+               className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-surface border border-accent px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
             >
-               <div className="p-2 bg-green-500/20 rounded-full text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"><ShieldCheck size={24} /></div>
+               <div className="p-2 bg-success/20 rounded-full text-success shadow-[0_0_15px_rgba(34,197,94,0.3)]"><ShieldCheck size={24} /></div>
                <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">Success</p>
-                  <p className="text-sm font-black text-white italic tracking-tight uppercase">{alertNotification}</p>
+                  <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Success</p>
+                  <p className="text-sm font-black text-content italic tracking-tight uppercase">{alertNotification}</p>
                </div>
-               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-700 hover:text-white transition-colors"><X size={16} /></button>
+               <button onClick={() => setAlertNotification(null)} className="ml-auto text-content-subtle hover:text-content transition-colors"><X size={16} /></button>
             </motion.div>
          )}
       </AnimatePresence>

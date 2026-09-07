@@ -62,7 +62,7 @@ import { formatCurrency, type StatusReport } from '../../../utils/logic'
 
 const VibeMap = dynamic(() => import('../components/map/VibeMap'), {
   ssr: false,
-  loading: () => <div className="p-12 text-slate-400 font-bold text-center">Loading VibeMap client engine...</div>
+  loading: () => <div className="p-12 text-content-muted font-bold text-center">Loading VibeMap client engine...</div>
 })
 
 export default function CommunityPage() {
@@ -386,7 +386,7 @@ export default function CommunityPage() {
     {
       id: 'feed',
       label: 'Feed & Social',
-      accent: 'text-sky-400 bg-sky-400/10',
+      accent: 'text-info bg-info/10',
       tabs: [
         { id: 'notices', label: 'Notices', icon: Megaphone },
         { id: 'communities', label: 'Groups', icon: Users },
@@ -395,7 +395,7 @@ export default function CommunityPage() {
     {
       id: 'trade',
       label: 'Trade & Resources',
-      accent: 'text-emerald-400 bg-emerald-400/10',
+      accent: 'text-success bg-success/10',
       tabs: [
         { id: 'market', label: 'Market', icon: Briefcase },
         { id: 'resources', label: 'Resources', icon: Droplets },
@@ -405,7 +405,7 @@ export default function CommunityPage() {
     {
       id: 'safety',
       label: 'Safety & Household',
-      accent: 'text-rose-400 bg-rose-400/10',
+      accent: 'text-danger bg-danger/10',
       tabs: [
         { id: 'safety', label: 'Safety', icon: ShieldCheck },
         { id: 'servicedesk', label: 'Service Desk', icon: LifeBuoy },
@@ -417,7 +417,7 @@ export default function CommunityPage() {
     ...(isModerator ? [{
       id: 'admin',
       label: 'Admin',
-      accent: 'text-violet-400 bg-violet-400/10',
+      accent: 'text-info bg-info/10',
       tabs: [
         { id: 'admin', label: 'Admin', icon: Lock },
       ],
@@ -453,12 +453,12 @@ export default function CommunityPage() {
   // VibeMap alone, with its own exit control to get back.
   if (subTab === 'vibemap' && mapFullscreen) {
     return (
-      <div className="fixed inset-0 z-[1000] bg-black">
+      <div className="fixed inset-0 z-[1000] bg-surface">
         <button
           onClick={exitFullscreenMap}
           aria-label="Exit fullscreen map"
           title="Exit map"
-          className="absolute top-3 left-3 z-[1001] flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2.5 text-gray-200 hover:text-white shadow-2xl"
+          className="absolute top-3 left-3 z-[1001] flex items-center gap-2 bg-surface-sunken/80 backdrop-blur-xl border border-default rounded-xl px-3 py-2.5 text-content hover:text-content shadow-2xl"
         >
           <X size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Exit</span>
         </button>
@@ -478,7 +478,7 @@ export default function CommunityPage() {
           onClick={toggleVibeMap}
           title="VibeMap"
           aria-label="Toggle VibeMap"
-          className={`hidden md:inline-flex items-center justify-center w-11 h-11 rounded-2xl border shrink-0 transition-all ${subTab === 'vibemap' ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20' : 'bg-black/40 text-gray-500 border-white/5 hover:text-gold-primary hover:border-gold-primary/30'}`}
+          className={`hidden md:inline-flex items-center justify-center w-11 h-11 rounded-2xl border shrink-0 transition-all ${subTab === 'vibemap' ? 'bg-accent text-content-on-accent border-accent shadow-lg shadow-gold-primary/20' : 'bg-surface-sunken/40 text-content-muted border-subtle hover:text-accent hover:border-accent/30'}`}
         >
           <MapIcon size={18} />
         </button>
@@ -493,11 +493,11 @@ export default function CommunityPage() {
           its tabs (and only its tabs) appear below for a second tap to
           switch within it — turning one 10-item scroll into a two-step
           drill-down. */}
-      <div className="bg-black/40 p-3 md:p-4 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl space-y-3">
+      <div className="bg-surface-sunken/40 p-3 md:p-4 rounded-2xl border border-subtle shadow-2xl backdrop-blur-xl space-y-3">
         <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
           <button
             onClick={() => goToTab('overview')}
-            className={`px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'overview' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white bg-white/5'}`}
+            className={`px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'overview' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content bg-surface-raised/5'}`}
           >
             <LayoutGrid size={12} /> Overview
           </button>
@@ -509,7 +509,7 @@ export default function CommunityPage() {
                 key={cluster.id}
                 onClick={() => goToTab(cluster.tabs[0].id as typeof subTab)}
                 className={`px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${
-                  active ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white bg-white/5'
+                  active ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content bg-surface-raised/5'
                 }`}
               >
                 <span className={`p-0.5 rounded ${active ? '' : cluster.accent}`}>
@@ -521,7 +521,7 @@ export default function CommunityPage() {
           })}
           <button
             onClick={toggleVibeMap}
-            className={`md:hidden px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'vibemap' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white bg-white/5'}`}
+            className={`md:hidden px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'vibemap' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content bg-surface-raised/5'}`}
           >
             <MapIcon size={12} /> VibeMap
           </button>
@@ -538,11 +538,11 @@ export default function CommunityPage() {
                 onClick={() => goToTab(t.id as typeof subTab)}
                 className={`px-3 py-1.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap border ${
                   subTab === t.id
-                    ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20'
-                    : 'text-gray-400 border-white/5 hover:text-white hover:border-white/20'
+                    ? 'bg-accent text-content-on-accent border-accent shadow-lg shadow-gold-primary/20'
+                    : 'text-content-muted border-subtle hover:text-content hover:border-strong'
                 }`}
               >
-                <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-black/10' : activeCluster.accent}`}>
+                <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-surface/10' : activeCluster.accent}`}>
                   <t.icon size={11} />
                 </span>
                 {t.label}
@@ -564,33 +564,33 @@ export default function CommunityPage() {
             {subTab === 'overview' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="glass-panel p-5 bg-rose-400/5 border-rose-400/10 space-y-3">
-                    <div className="p-2 bg-rose-400/10 rounded-xl w-fit text-rose-400"><AlertTriangle size={18} /></div>
+                  <div className="glass-panel p-5 bg-danger/5 border-danger/10 space-y-3">
+                    <div className="p-2 bg-danger/10 rounded-xl w-fit text-danger"><AlertTriangle size={18} /></div>
                     <div>
-                      <p className="text-2xl font-black text-white italic">{activeAlertsCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active Alerts</p>
+                      <p className="text-2xl font-black text-content italic">{activeAlertsCount}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-content-muted">Active Alerts</p>
                     </div>
                   </div>
-                  <div className="glass-panel p-5 bg-gold-primary/5 border-gold-primary/10 space-y-3">
-                    <div className="p-2 bg-gold-primary/10 rounded-xl w-fit text-gold-primary"><ListChecks size={18} /></div>
+                  <div className="glass-panel p-5 bg-accent/5 border-accent/10 space-y-3">
+                    <div className="p-2 bg-accent/10 rounded-xl w-fit text-accent"><ListChecks size={18} /></div>
                     <div>
-                      <p className="text-2xl font-black text-white italic">{myPendingChoresCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Chores Assigned To You</p>
+                      <p className="text-2xl font-black text-content italic">{myPendingChoresCount}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-content-muted">Chores Assigned To You</p>
                     </div>
                   </div>
-                  <div className="glass-panel p-5 bg-emerald-400/5 border-emerald-400/10 space-y-3">
-                    <div className="p-2 bg-emerald-400/10 rounded-xl w-fit text-emerald-400"><Sparkles size={18} /></div>
+                  <div className="glass-panel p-5 bg-success/5 border-success/10 space-y-3">
+                    <div className="p-2 bg-success/10 rounded-xl w-fit text-success"><Sparkles size={18} /></div>
                     <div>
-                      <p className="text-2xl font-black text-white italic">{newMarketItemsCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">New Market Items (48h)</p>
+                      <p className="text-2xl font-black text-content italic">{newMarketItemsCount}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-content-muted">New Market Items (48h)</p>
                     </div>
                   </div>
                   {isLandlord && (
-                    <div className="glass-panel p-5 bg-sky-400/5 border-sky-400/10 space-y-3">
-                      <div className="p-2 bg-sky-400/10 rounded-xl w-fit text-sky-400"><DoorOpen size={18} /></div>
+                    <div className="glass-panel p-5 bg-info/5 border-info/10 space-y-3">
+                      <div className="p-2 bg-info/10 rounded-xl w-fit text-info"><DoorOpen size={18} /></div>
                       <div>
-                        <p className="text-2xl font-black text-white italic">{openRoomRequestsCount}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Open Room Requests</p>
+                        <p className="text-2xl font-black text-content italic">{openRoomRequestsCount}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-content-muted">Open Room Requests</p>
                       </div>
                     </div>
                   )}
@@ -754,7 +754,7 @@ export default function CommunityPage() {
               <button
                 key={id}
                 onClick={() => dispatch(leaveCommunity(id))}
-                className="text-[10px] text-gray-500 hover:text-red-400 uppercase font-bold tracking-widest bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg"
+                className="text-[10px] text-content-muted hover:text-danger uppercase font-bold tracking-widest bg-surface-raised/5 border border-default px-3 py-1.5 rounded-lg"
               >
                 Leave {communities.find(c => toUUID(c.id) === toUUID(id))?.name || 'community'}
               </button>
@@ -767,11 +767,11 @@ export default function CommunityPage() {
       <AnimatePresence>
         {showCreateCommunity && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCreateCommunity(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCreateCommunity(false)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-surface border-accent/20 shadow-2xl relative z-10 p-8 space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">New <span className="text-gold-primary">Community</span></h3>
-                <button onClick={() => setShowCreateCommunity(false)} className="text-gray-500 hover:text-white"><X /></button>
+                <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">New <span className="text-accent">Community</span></h3>
+                <button onClick={() => setShowCreateCommunity(false)} className="text-content-muted hover:text-content"><X /></button>
               </div>
               <form
                 onSubmit={e => {
@@ -783,15 +783,15 @@ export default function CommunityPage() {
                 }}
                 className="space-y-4"
               >
-                <input name="name" required placeholder="e.g. Maple Street Block" className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
-                <select name="kind" className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                <input name="name" required placeholder="e.g. Maple Street Block" className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" />
+                <select name="kind" className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40">
                   <option value="street">Street</option>
                   <option value="block">Block</option>
                   <option value="complex">Complex</option>
                   <option value="estate">Estate</option>
                   <option value="suburb">Suburb</option>
                 </select>
-                <button type="submit" className="w-full bg-gold-primary text-black font-black py-3 rounded-xl uppercase tracking-widest text-xs">Create</button>
+                <button type="submit" className="w-full bg-accent text-content-on-accent font-black py-3 rounded-xl uppercase tracking-widest text-xs">Create</button>
               </form>
             </motion.div>
           </div>
@@ -802,15 +802,15 @@ export default function CommunityPage() {
       <AnimatePresence>
         {showDisputeModal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowDisputeModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-6">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowDisputeModal(false)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-surface border-accent/20 shadow-2xl relative z-10 p-8 space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">File a <span className="text-gold-primary">Dispute</span></h3>
-                <button onClick={() => setShowDisputeModal(false)} className="text-gray-500 hover:text-white"><X /></button>
+                <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">File a <span className="text-accent">Dispute</span></h3>
+                <button onClick={() => setShowDisputeModal(false)} className="text-content-muted hover:text-content"><X /></button>
               </div>
               <form onSubmit={e => { e.preventDefault(); handleCreateDispute() }} className="space-y-4">
-                <input value={disputeTitle} onChange={e => setDisputeTitle(e.target.value)} required placeholder="Short summary" className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
-                <select value={disputeCategory} onChange={e => setDisputeCategory(e.target.value as typeof disputeCategory)} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                <input value={disputeTitle} onChange={e => setDisputeTitle(e.target.value)} required placeholder="Short summary" className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40" />
+                <select value={disputeCategory} onChange={e => setDisputeCategory(e.target.value as typeof disputeCategory)} className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/40">
                   <option>Noise</option>
                   <option>Messiness</option>
                   <option>Utility overuse</option>
@@ -818,8 +818,8 @@ export default function CommunityPage() {
                   <option>Security breach</option>
                   <option>Other</option>
                 </select>
-                <textarea value={disputeDesc} onChange={e => setDisputeDesc(e.target.value)} required placeholder="What happened?" className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/40" />
-                <button type="submit" className="w-full bg-gold-primary text-black font-black py-3 rounded-xl uppercase tracking-widest text-xs">File dispute</button>
+                <textarea value={disputeDesc} onChange={e => setDisputeDesc(e.target.value)} required placeholder="What happened?" className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content h-24 resize-none outline-none focus:border-accent/40" />
+                <button type="submit" className="w-full bg-accent text-content-on-accent font-black py-3 rounded-xl uppercase tracking-widest text-xs">File dispute</button>
               </form>
             </motion.div>
           </div>
@@ -833,14 +833,14 @@ export default function CommunityPage() {
                initial={{ y: 100, opacity: 0 }}
                animate={{ y: 0, opacity: 1 }}
                exit={{ y: 100, opacity: 0 }}
-               className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
+               className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-surface border border-accent px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
             >
-               <div className="p-2 bg-green-500/20 rounded-full text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Shield size={24} /></div>
+               <div className="p-2 bg-success/20 rounded-full text-success shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Shield size={24} /></div>
                <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">Update</p>
-                  <p className="text-sm font-black text-white italic tracking-tight uppercase">{alertNotification}</p>
+                  <p className="text-[10px] font-black text-content-subtle uppercase tracking-[0.2em]">Update</p>
+                  <p className="text-sm font-black text-content italic tracking-tight uppercase">{alertNotification}</p>
                </div>
-               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-700 hover:text-white transition-colors"><X size={16} /></button>
+               <button onClick={() => setAlertNotification(null)} className="ml-auto text-content-subtle hover:text-content transition-colors"><X size={16} /></button>
             </motion.div>
          )}
       </AnimatePresence>

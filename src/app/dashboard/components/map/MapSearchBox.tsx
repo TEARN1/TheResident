@@ -90,25 +90,25 @@ export default function MapSearchBox({ onSelect }: Props) {
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
-        <Search size={16} className="text-gold-primary shrink-0" />
+      <div className="flex items-center gap-2 bg-surface-raised/5 border border-default rounded-xl px-3 py-2">
+        <Search size={16} className="text-accent shrink-0" />
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => (visibleResults.length > 0 || showRecent) && setOpen(true)}
           placeholder="Search a place or address…"
-          className="bg-transparent outline-none text-sm text-white placeholder:text-gray-500 w-full"
+          className="bg-transparent outline-none text-sm text-content placeholder:text-content-muted w-full"
         />
-        {loading && <Loader2 size={14} className="animate-spin text-gray-500 shrink-0" />}
+        {loading && <Loader2 size={14} className="animate-spin text-content-muted shrink-0" />}
       </div>
 
       {open && visibleResults.length > 0 && (
-        <div className="absolute z-[500] mt-1 w-full glass-panel border border-white/10 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+        <div className="absolute z-[500] mt-1 w-full glass-panel border border-default rounded-xl overflow-hidden max-h-64 overflow-y-auto">
           {visibleResults.map(r => (
             <button
               key={r.id}
               onClick={() => selectResult(r)}
-              className="block w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-white/5 hover:text-white transition-colors border-b border-white/5 last:border-0"
+              className="block w-full text-left px-3 py-2 text-xs text-content hover:bg-surface-raised/5 hover:text-content transition-colors border-b border-subtle last:border-0"
             >
               {r.label}
             </button>
@@ -117,10 +117,10 @@ export default function MapSearchBox({ onSelect }: Props) {
       )}
 
       {open && visibleResults.length === 0 && showRecent && (
-        <div className="absolute z-[500] mt-1 w-full glass-panel border border-white/10 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
-          <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Recent</span>
-            <button onClick={clearRecent} className="text-gray-500 hover:text-white" aria-label="Clear recent searches">
+        <div className="absolute z-[500] mt-1 w-full glass-panel border border-default rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-subtle">
+            <span className="text-[9px] font-black uppercase tracking-widest text-content-muted">Recent</span>
+            <button onClick={clearRecent} className="text-content-muted hover:text-content" aria-label="Clear recent searches">
               <X size={11} />
             </button>
           </div>
@@ -128,9 +128,9 @@ export default function MapSearchBox({ onSelect }: Props) {
             <button
               key={r.id}
               onClick={() => selectResult(r)}
-              className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-white/5 hover:text-white transition-colors border-b border-white/5 last:border-0"
+              className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-content hover:bg-surface-raised/5 hover:text-content transition-colors border-b border-subtle last:border-0"
             >
-              <Clock size={11} className="text-gray-600 shrink-0" />
+              <Clock size={11} className="text-content-subtle shrink-0" />
               {r.label}
             </button>
           ))}

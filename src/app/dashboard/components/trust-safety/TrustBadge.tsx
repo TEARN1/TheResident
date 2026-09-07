@@ -23,23 +23,23 @@ export default function TrustBadge({ userId, compact = false }: { userId: string
   if (!info) return null
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-gray-400">
+    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-content-muted">
       {info.isVerified && (
-        <span className="inline-flex items-center gap-0.5 text-gold-primary" title="Verified resident">
+        <span className="inline-flex items-center gap-0.5 text-accent" title="Verified resident">
           <ShieldCheck size={11} /> {!compact && 'Verified'}
         </span>
       )}
       <span className="inline-flex items-center gap-0.5" title={`${info.reputationScore} reputation points`}>
-        <Star size={11} className="text-gold-primary" /> {info.reputationTier}
+        <Star size={11} className="text-accent" /> {info.reputationTier}
       </span>
       {typeof info.vibeScore === 'number' && (
-        <span className="inline-flex items-center gap-0.5 text-purple-400" title={`${info.vibeScore} Gruvs vibe score`}>
+        <span className="inline-flex items-center gap-0.5 text-info" title={`${info.vibeScore} Gruvs vibe score`}>
           <Sparkles size={11} /> {info.vibeScore}{!compact && ' vibe'}
         </span>
       )}
       {info.badges.length > 0 && !compact && (
-        <span className="inline-flex items-center gap-0.5 text-gray-400" title={info.badges.join(', ')}>
-          <Award size={11} className="text-gold-primary" /> {info.badges.length}
+        <span className="inline-flex items-center gap-0.5 text-content-muted" title={info.badges.join(', ')}>
+          <Award size={11} className="text-accent" /> {info.badges.length}
         </span>
       )}
     </span>

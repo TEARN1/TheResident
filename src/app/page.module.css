@@ -105,8 +105,8 @@
   gap: 0.5rem;
   padding: 0.4rem 0.9rem;
   border-radius: 999px;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  background: linear-gradient(90deg, rgba(212, 175, 55, 0.12), rgba(167, 139, 250, 0.08));
+  border: 1px solid var(--accent-border);
+  background: linear-gradient(90deg, var(--accent-soft), rgb(var(--area-community-rgb) / 0.08));
   color: var(--gold-primary);
   font-size: 0.7rem;
   font-weight: 800;
@@ -120,7 +120,7 @@
   margin-bottom: 1.5rem;
   line-height: 1.1;
   font-family: var(--font-heading);
-  background: linear-gradient(120deg, #ffffff 30%, var(--gold-primary) 65%, var(--accent-violet) 100%);
+  background: linear-gradient(120deg, var(--text-primary) 30%, var(--gold-primary) 65%, var(--accent-violet) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -147,7 +147,7 @@
 
 .subtitle {
   font-size: 1.25rem;
-  color: #a0a0a0;
+  color: var(--text-muted);
   max-width: 600px;
   margin-bottom: 3rem;
   line-height: 1.6;
@@ -206,7 +206,7 @@
   margin-bottom: 1.5rem;
   display: inline-flex;
   padding: 12px;
-  background: var(--feature-icon-bg, rgba(212, 175, 55, 0.08));
+  background: var(--feature-icon-bg, var(--accent-soft));
   border-radius: 50%;
   position: relative;
   z-index: 1;
@@ -220,14 +220,14 @@
   font-size: 1.5rem;
   margin-bottom: 0.75rem;
   font-family: var(--font-heading);
-  color: #fff;
+  color: var(--text-primary);
   position: relative;
   z-index: 1;
 }
 
 .featureDesc {
   font-size: 0.95rem;
-  color: #888;
+  color: var(--text-muted);
   line-height: 1.6;
   position: relative;
   z-index: 1;

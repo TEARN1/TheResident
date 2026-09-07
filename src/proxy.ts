@@ -85,14 +85,14 @@ export async function proxy(request: NextRequest) {
           `<!doctype html><meta charset="utf-8">` +
           `<meta name="viewport" content="width=device-width,initial-scale=1">` +
           `<title>One moment</title>` +
-          `<body style="margin:0;background:#0a0a0a;color:#fff;font-family:system-ui,sans-serif;` +
+          `<body style="margin:0;background:var(--surface);color:var(--surface-raised);font-family:system-ui,sans-serif;` +
           `display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px">` +
           `<div style="max-width:22rem;text-align:center">` +
-          `<h1 style="color:#D4AF37;font-size:1.1rem;margin:0 0 .75rem">Just a moment</h1>` +
-          `<p style="color:#9ca3af;font-size:.85rem;line-height:1.6;margin:0 0 1.25rem">` +
+          `<h1 style="color:var(--accent);font-size:1.1rem;margin:0 0 .75rem">Just a moment</h1>` +
+          `<p style="color:var(--text-muted);font-size:.85rem;line-height:1.6;margin:0 0 1.25rem">` +
           `That was a lot of requests at once. Give it a minute and try again — ` +
           `nothing is wrong with your account.</p>` +
-          `<a href="/dashboard" style="color:#D4AF37;font-size:.8rem;font-weight:700">Back to the app</a>` +
+          `<a href="/dashboard" style="color:var(--accent);font-size:.8rem;font-weight:700">Back to the app</a>` +
           `</div></body>`,
           { status: 429, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '60' } }
         )

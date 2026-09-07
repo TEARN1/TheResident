@@ -49,7 +49,7 @@ function SlaBadge({ report, now }: { report: ServiceReport; now: number }) {
 
   if (state === 'done') {
     return (
-      <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-1">
+      <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/20 flex items-center gap-1">
         <CheckCircle2 size={10} /> {describeDuration(elapsed)} total
       </span>
     )
@@ -57,7 +57,7 @@ function SlaBadge({ report, now }: { report: ServiceReport; now: number }) {
   if (state === 'overdue') {
     const over = elapsed - report.targetHours
     return (
-      <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1">
+      <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-danger/10 text-danger border border-danger/20 flex items-center gap-1">
         <AlertTriangle size={10} /> {describeDuration(over)} overdue
       </span>
     )
@@ -66,8 +66,8 @@ function SlaBadge({ report, now }: { report: ServiceReport; now: number }) {
   return (
     <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex items-center gap-1 ${
       state === 'due_soon'
-        ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-        : 'bg-white/5 text-gray-400 border-white/10'
+        ? 'bg-warning/10 text-warning border-warning/20'
+        : 'bg-surface-raised/5 text-content-muted border-default'
     }`}>
       <Clock size={10} /> {describeDuration(left)} left
     </span>
@@ -246,18 +246,18 @@ export default function ServiceDeskPanel() {
     const expanded = expandedId === r.id
 
     return (
-      <div key={r.id} className="bg-black/30 border border-white/5 rounded-xl p-3 space-y-2">
+      <div key={r.id} className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[9px] font-mono text-gray-500">{r.reference}</span>
-              <span className="text-[9px] font-black uppercase tracking-widest text-gold-primary">
+              <span className="text-[9px] font-mono text-content-muted">{r.reference}</span>
+              <span className="text-[9px] font-black uppercase tracking-widest text-accent">
                 {CATEGORY_LABEL[r.category]}
               </span>
               <SlaBadge report={r} now={now} />
             </div>
-            <p className="text-sm font-bold text-white mt-1 break-words">{r.title}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">
+            <p className="text-sm font-bold text-content mt-1 break-words">{r.title}</p>
+            <p className="text-[10px] text-content-muted mt-0.5">
               {STATUS_LABEL[r.status] || r.status}
               {provider ? ` · ${provider.name}` : r.providerNameRaw ? ` · ${r.providerNameRaw}` : ''}
               {r.suburb ? ` · ${r.suburb}` : ''}
@@ -266,21 +266,21 @@ export default function ServiceDeskPanel() {
           <button
             onClick={() => toggleExpand(r.id)}
             aria-label={expanded ? 'Hide history' : 'Show history'}
-            className="text-gray-500 hover:text-white shrink-0"
+            className="text-content-muted hover:text-content shrink-0"
           >
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] text-gray-500 flex items-center gap-1">
+          <span className="text-[10px] text-content-muted flex items-center gap-1">
             <Users size={10} /> {confirmations} {confirmations === 1 ? 'neighbour' : 'neighbours'} confirmed
           </span>
           {!isMine && !isSettled(r.status) && (
             <button
               onClick={() => handleConfirm(r.id)}
               disabled={busyId === r.id}
-              className="text-[10px] font-black uppercase tracking-widest text-gold-primary hover:underline disabled:opacity-50"
+              className="text-[10px] font-black uppercase tracking-widest text-accent hover:underline disabled:opacity-50"
             >
               This is happening to me too
             </button>
@@ -289,7 +289,7 @@ export default function ServiceDeskPanel() {
             <button
               onClick={() => handleClose(r.id)}
               disabled={busyId === r.id}
-              className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white disabled:opacity-50"
+              className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-content disabled:opacity-50"
             >
               Mark sorted
             </button>
@@ -297,9 +297,9 @@ export default function ServiceDeskPanel() {
         </div>
 
         {expanded && (
-          <div className="border-t border-white/5 pt-2 space-y-2">
-            {r.detail && <p className="text-xs text-gray-400">{r.detail}</p>}
-            <p className="text-[10px] text-gray-600">
+          <div className="border-t border-subtle pt-2 space-y-2">
+            {r.detail && <p className="text-xs text-content-muted">{r.detail}</p>}
+            <p className="text-[10px] text-content-subtle">
               Expected within {describeDuration(r.targetHours)} of filing
               {' '}(by {new Date(targetDeadline(r)).toLocaleDateString()})
               {r.acknowledgedAt && ` · acknowledged after ${describeDuration(hoursBetween(r.createdAt, r.acknowledgedAt))}`}
@@ -307,8 +307,8 @@ export default function ServiceDeskPanel() {
             </p>
             <div className="space-y-1">
               {timeline.map(u => (
-                <div key={u.id} className="text-[10px] text-gray-500 flex gap-2">
-                  <span className="text-gray-600 shrink-0">
+                <div key={u.id} className="text-[10px] text-content-muted flex gap-2">
+                  <span className="text-content-subtle shrink-0">
                     {new Date(u.createdAt).toLocaleDateString()}
                   </span>
                   <span className="break-words">
@@ -325,13 +325,13 @@ export default function ServiceDeskPanel() {
                   value={commentDraft}
                   onChange={e => setCommentDraft(e.target.value)}
                   placeholder="Add what you're seeing…"
-                  className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+                  className="flex-1 bg-surface-sunken/40 border border-default rounded-lg px-3 py-1.5 text-xs text-content"
                 />
                 <button
                   onClick={() => handleComment(r.id)}
                   disabled={busyId === r.id || !commentDraft.trim()}
                   aria-label="Post update"
-                  className="text-gold-primary disabled:opacity-40"
+                  className="text-accent disabled:opacity-40"
                 >
                   <Send size={14} />
                 </button>
@@ -347,12 +347,12 @@ export default function ServiceDeskPanel() {
     <div className="glass-panel p-5 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-gold-primary/10 rounded-xl">
-            <Wrench size={18} className="text-gold-primary" />
+          <div className="p-2 bg-accent/10 rounded-xl">
+            <Wrench size={18} className="text-accent" />
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-widest">Service Desk</p>
-            <p className="text-[10px] text-gray-500">Report a fault — and track how long the fix takes</p>
+            <p className="text-xs font-black text-content uppercase tracking-widest">Service Desk</p>
+            <p className="text-[10px] text-content-muted">Report a fault — and track how long the fix takes</p>
           </div>
         </div>
         <button
@@ -364,17 +364,17 @@ export default function ServiceDeskPanel() {
       </div>
 
       {error && (
-        <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{error}</div>
+        <div className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg p-2">{error}</div>
       )}
 
       {showForm && (
-        <div className="bg-black/40 border border-white/5 rounded-xl p-4 space-y-3">
+        <div className="bg-surface-sunken/40 border border-subtle rounded-xl p-4 space-y-3">
           <div className="flex gap-2">
             <select
               value={category}
               onChange={e => setCategory(e.target.value as ServiceCategory)}
               aria-label="What kind of problem"
-              className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+              className="flex-1 bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
             >
               {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
             </select>
@@ -382,7 +382,7 @@ export default function ServiceDeskPanel() {
               value={severity}
               onChange={e => setSeverity(e.target.value as ServiceSeverity)}
               aria-label="How serious"
-              className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+              className="flex-1 bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
             >
               {SEVERITIES.map(s => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
             </select>
@@ -392,14 +392,14 @@ export default function ServiceDeskPanel() {
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="What's wrong? (e.g. Sewer overflowing into Mahlangu Street)"
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
           />
           <textarea
             value={detail}
             onChange={e => setDetail(e.target.value)}
             rows={2}
             placeholder="Any detail that helps — how long it's been, what's affected…"
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white resize-none"
+            className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content resize-none"
           />
 
           <div className="flex gap-2">
@@ -407,13 +407,13 @@ export default function ServiceDeskPanel() {
               value={suburb}
               onChange={e => setSuburb(e.target.value)}
               placeholder="Suburb"
-              className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+              className="flex-1 bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
             />
             <input
               value={city}
               onChange={e => setCity(e.target.value)}
               placeholder="City"
-              className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+              className="flex-1 bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
             />
           </div>
 
@@ -422,7 +422,7 @@ export default function ServiceDeskPanel() {
               value={providerId}
               onChange={e => setProviderId(e.target.value)}
               aria-label="Who is responsible"
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+              className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
             >
               <option value="">I don&apos;t know who&apos;s responsible</option>
               {relevantProviders.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -432,11 +432,11 @@ export default function ServiceDeskPanel() {
               value={providerNameRaw}
               onChange={e => setProviderNameRaw(e.target.value)}
               placeholder="Who should fix it? (optional — e.g. City of Joburg)"
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+              className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
             />
           )}
 
-          <p className="text-[10px] text-gray-500">
+          <p className="text-[10px] text-content-muted">
             A {severity} {CATEGORY_LABEL[category].toLowerCase()} problem is expected to be
             dealt with within {describeDuration(expectedHours)}. You&apos;ll get a reference
             number, and your neighbours can confirm they&apos;re affected too.
@@ -453,7 +453,7 @@ export default function ServiceDeskPanel() {
             <button
               onClick={() => setShowForm(false)}
               aria-label="Cancel"
-              className="text-gray-500 hover:text-white px-3 py-2"
+              className="text-content-muted hover:text-content px-3 py-2"
             >
               <X size={14} />
             </button>
@@ -462,14 +462,14 @@ export default function ServiceDeskPanel() {
       )}
 
       {performance.length > 0 && (
-        <div className="bg-black/20 border border-white/5 rounded-xl p-3 space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex items-center gap-1">
+        <div className="bg-surface-sunken/20 border border-subtle rounded-xl p-3 space-y-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-content-muted flex items-center gap-1">
             <Gauge size={12} /> How long they actually take
           </p>
           {performance.map(p => (
             <div key={p.providerId} className="flex items-center justify-between gap-2 text-[10px]">
-              <span className="text-white font-bold truncate">{p.providerName}</span>
-              <span className="text-gray-500 shrink-0">
+              <span className="text-content font-bold truncate">{p.providerName}</span>
+              <span className="text-content-muted shrink-0">
                 {p.resolvedCount > 0
                   ? `typically ${describeDuration(p.medianResolveHours)} to fix`
                   : 'nothing resolved yet'}
@@ -483,14 +483,14 @@ export default function ServiceDeskPanel() {
 
       {mine.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Your reports</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-content-muted">Your reports</p>
           {mine.map(r => renderReport(r, true))}
         </div>
       )}
 
       {neighbours.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Reported near you</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-content-muted">Reported near you</p>
           {neighbours.map(r => renderReport(r, false))}
         </div>
       )}

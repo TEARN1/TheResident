@@ -46,48 +46,48 @@ export default function GruvsConnectionsWidget() {
   const visible = connections.slice(scrollIndex, scrollIndex + 4)
 
   return (
-    <div className="glass-panel p-5 bg-gold-primary/5 border-gold-primary/10 flex flex-col md:flex-row items-start md:items-center gap-4">
+    <div className="glass-panel p-5 bg-accent/5 border-accent/10 flex flex-col md:flex-row items-start md:items-center gap-4">
       <div className="flex items-center gap-3 shrink-0">
-        <div className="p-2 bg-gold-primary/10 rounded-xl">
-          <Users size={18} className="text-gold-primary" />
+        <div className="p-2 bg-accent/10 rounded-xl">
+          <Users size={18} className="text-accent" />
         </div>
         <div>
-          <p className="text-xs font-black text-white uppercase tracking-widest">
+          <p className="text-xs font-black text-content uppercase tracking-widest">
             {connections.length} cross-app connection{connections.length === 1 ? '' : 's'}
           </p>
-          <p className="text-[10px] text-gray-500">People you already know are here too — visible only to you</p>
+          <p className="text-[10px] text-content-muted">People you already know are here too — visible only to you</p>
         </div>
       </div>
 
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {scrollIndex > 0 && (
-          <button onClick={() => setScrollIndex(i => Math.max(0, i - 4))} className="text-gray-500 hover:text-white shrink-0" aria-label="Previous">
+          <button onClick={() => setScrollIndex(i => Math.max(0, i - 4))} className="text-content-muted hover:text-content shrink-0" aria-label="Previous">
             <ChevronLeft size={16} />
           </button>
         )}
         <div className="flex gap-3 overflow-x-auto no-scrollbar">
           {visible.map(person => (
-            <div key={person.id} className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-xl px-3 py-2 shrink-0">
+            <div key={person.id} className="flex items-center gap-2 bg-surface-sunken/40 border border-subtle rounded-xl px-3 py-2 shrink-0">
               {person.avatarUrl ? (
                 <Image src={person.avatarUrl} alt={person.displayName} width={28} height={28} className="w-7 h-7 rounded-full object-cover" />
               ) : (
-                <div className="w-7 h-7 rounded-full bg-gold-primary/20 flex items-center justify-center text-[10px] font-black text-gold-primary">
+                <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-[10px] font-black text-accent">
                   {person.displayName.charAt(0)}
                 </div>
               )}
-              <span className="text-xs font-bold text-white whitespace-nowrap">{person.displayName}</span>
-              {person.isVerified && <ShieldCheck size={12} className="text-gold-primary shrink-0" />}
+              <span className="text-xs font-bold text-content whitespace-nowrap">{person.displayName}</span>
+              {person.isVerified && <ShieldCheck size={12} className="text-accent shrink-0" />}
             </div>
           ))}
         </div>
         {scrollIndex + 4 < connections.length && (
-          <button onClick={() => setScrollIndex(i => i + 4)} className="text-gray-500 hover:text-white shrink-0" aria-label="More">
+          <button onClick={() => setScrollIndex(i => i + 4)} className="text-content-muted hover:text-content shrink-0" aria-label="More">
             <ChevronRight size={16} />
           </button>
         )}
       </div>
 
-      <button onClick={hide} className="text-gray-500 hover:text-white shrink-0" title="Hide this — you can always follow people directly instead" aria-label="Hide cross-app connections">
+      <button onClick={hide} className="text-content-muted hover:text-content shrink-0" title="Hide this — you can always follow people directly instead" aria-label="Hide cross-app connections">
         <EyeOff size={16} />
       </button>
     </div>

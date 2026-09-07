@@ -13,22 +13,22 @@ export const metadata = { title: 'Privacy Policy — The Resident' }
  */
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-black text-gray-300 px-4 py-12">
+    <div className="min-h-screen bg-surface text-content px-4 py-12">
       <div className="max-w-2xl mx-auto space-y-8">
         <div>
-          <Link href="/" className="text-xs text-gold-primary font-black uppercase tracking-widest hover:underline">← The Resident</Link>
-          <h1 className="text-2xl font-black text-white mt-3">Privacy Policy</h1>
-          <p className="text-xs text-gray-500 mt-1">Last updated 7 September 2026. This describes what the app actually does today; it is revised whenever that changes.</p>
+          <Link href="/" className="text-xs text-accent font-black uppercase tracking-widest hover:underline">← The Resident</Link>
+          <h1 className="text-2xl font-black text-content mt-3">Privacy Policy</h1>
+          <p className="text-xs text-content-muted mt-1">Last updated 7 September 2026. This describes what the app actually does today; it is revised whenever that changes.</p>
         </div>
 
         <Section title="What we collect">
           <ul className="list-disc pl-5 space-y-1.5 text-sm">
-            <li><strong className="text-white">Account info:</strong> name, username, email, and role (tenant, landlord, or visitor) when you sign up.</li>
-            <li><strong className="text-white">Profile content:</strong> bio, photos, verification documents (e.g. a lease or utility bill), and preferences you choose to add.</li>
-            <li><strong className="text-white">Location, used once:</strong> when you search the map, report an issue, or share your live location with people you choose. This is used at the moment you use the feature and is not kept as a location history. We never collect location in the background.</li>
-            <li><strong className="text-white">Location, saved: your home area.</strong> If you choose to set one, we save a single point for where you live, so that official announcements for your ward or suburb can reach you. You pick whether it is saved <em>approximately</em> (rounded before it is stored, so we never hold your precise address) or exactly. It is stored once, not tracked over time, it is never shown to other residents, and you can remove it at any time from your Profile.</li>
-            <li><strong className="text-white">Content you post:</strong> gossip posts, comments, service reports, marketplace listings, messages, and any photos or short videos attached to them.</li>
-            <li><strong className="text-white">Usage &amp; device info:</strong> basic error/session logs needed to keep the app working, and a push notification token if you enable notifications.</li>
+            <li><strong className="text-content">Account info:</strong> name, username, email, and role (tenant, landlord, or visitor) when you sign up.</li>
+            <li><strong className="text-content">Profile content:</strong> bio, photos, verification documents (e.g. a lease or utility bill), and preferences you choose to add.</li>
+            <li><strong className="text-content">Location, used once:</strong> when you search the map, report an issue, or share your live location with people you choose. This is used at the moment you use the feature and is not kept as a location history. We never collect location in the background.</li>
+            <li><strong className="text-content">Location, saved: your home area.</strong> If you choose to set one, we save a single point for where you live, so that official announcements for your ward or suburb can reach you. You pick whether it is saved <em>approximately</em> (rounded before it is stored, so we never hold your precise address) or exactly. It is stored once, not tracked over time, it is never shown to other residents, and you can remove it at any time from your Profile.</li>
+            <li><strong className="text-content">Content you post:</strong> gossip posts, comments, service reports, marketplace listings, messages, and any photos or short videos attached to them.</li>
+            <li><strong className="text-content">Usage &amp; device info:</strong> basic error/session logs needed to keep the app working, and a push notification token if you enable notifications.</li>
           </ul>
         </Section>
 
@@ -43,10 +43,10 @@ export default function PrivacyPolicyPage() {
         <Section title="Who we share data with">
           <p className="text-sm leading-relaxed mb-2">The Resident runs on a small number of services that process data on our behalf, strictly to run the app:</p>
           <ul className="list-disc pl-5 space-y-1.5 text-sm">
-            <li><strong className="text-white">Supabase</strong> — hosts our database, authentication, file storage, and realtime features.</li>
-            <li><strong className="text-white">OpenStreetMap / Nominatim</strong> — turns a place you search or a location you drop a pin on into a real address, and back.</li>
-            <li><strong className="text-white">Paystack</strong> — processes payments if you choose to pay for a visibility tier or a verification speed-up. We never see or store your card details ourselves.</li>
-            <li><strong className="text-white">The Gruvs</strong> — a connected community app sharing the same account system (one login for both). See §5 of <code className="text-gold-primary">CONTRACT.md</code> in our public repository for exactly which fields are shared and which are never shared.</li>
+            <li><strong className="text-content">Supabase</strong> — hosts our database, authentication, file storage, and realtime features.</li>
+            <li><strong className="text-content">OpenStreetMap / Nominatim</strong> — turns a place you search or a location you drop a pin on into a real address, and back.</li>
+            <li><strong className="text-content">Paystack</strong> — processes payments if you choose to pay for a visibility tier or a verification speed-up. We never see or store your card details ourselves.</li>
+            <li><strong className="text-content">The Gruvs</strong> — a connected community app sharing the same account system (one login for both). See §5 of <code className="text-accent">CONTRACT.md</code> in our public repository for exactly which fields are shared and which are never shared.</li>
           </ul>
         </Section>
 
@@ -88,8 +88,8 @@ export default function PrivacyPolicyPage() {
           <p className="text-sm leading-relaxed">Questions about this policy or your data — reach out through the contact details on our support channel listed in the app.</p>
         </Section>
 
-        <p className="text-[11px] text-gray-600 pt-4 border-t border-white/5">
-          Also see our <Link href="/terms" className="text-gold-primary hover:underline">Terms of Service</Link>.
+        <p className="text-[11px] text-content-subtle pt-4 border-t border-subtle">
+          Also see our <Link href="/terms" className="text-accent hover:underline">Terms of Service</Link>.
         </p>
       </div>
     </div>
@@ -99,7 +99,7 @@ export default function PrivacyPolicyPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="glass-panel p-5">
-      <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest mb-3">{title}</h2>
+      <h2 className="text-sm font-black text-accent uppercase tracking-widest mb-3">{title}</h2>
       {children}
     </div>
   )

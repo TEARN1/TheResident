@@ -46,54 +46,54 @@ export default function SavedPinsPanel({ pending, pins, loading, onSave, onDelet
 
   return (
     <div className="glass-panel p-6">
-      <h4 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2 mb-4">
-        <Bookmark size={16} className="text-gold-primary" /> Saved Places
+      <h4 className="text-sm font-bold text-content uppercase tracking-wide flex items-center gap-2 mb-4">
+        <Bookmark size={16} className="text-accent" /> Saved Places
       </h4>
 
       {pending && (
-        <div className="mb-4 p-3 bg-white/5 border border-white/10 rounded-xl space-y-2">
-          <p className="text-[11px] text-gray-500 uppercase font-bold">Save this location</p>
-          <p className="text-xs text-gray-300 truncate">{pending.label}</p>
+        <div className="mb-4 p-3 bg-surface-raised/5 border border-default rounded-xl space-y-2">
+          <p className="text-[11px] text-content-muted uppercase font-bold">Save this location</p>
+          <p className="text-xs text-content truncate">{pending.label}</p>
           <div className="flex gap-2">
             <input
               value={label}
               onChange={e => setLabel(e.target.value)}
               placeholder="Label (e.g. Mom's house)"
-              className="flex-1 bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-gold-primary/50"
+              className="flex-1 bg-surface-sunken/20 border border-default rounded-lg px-2 py-1.5 text-xs text-content placeholder:text-content-subtle outline-none focus:border-accent/50"
             />
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-gold-primary/90 hover:bg-gold-primary text-black text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+              className="bg-accent/90 hover:bg-accent text-content-on-accent text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
             >
               Save
             </button>
           </div>
-          {error && <p className="text-[11px] text-red-400">{error}</p>}
+          {error && <p className="text-[11px] text-danger">{error}</p>}
         </div>
       )}
 
       <div className="space-y-2 max-h-56 overflow-y-auto">
-        {loading && <p className="text-xs text-gray-500">Loading saved places…</p>}
+        {loading && <p className="text-xs text-content-muted">Loading saved places…</p>}
         {!loading && pins.length === 0 && (
-          <p className="text-xs text-gray-500">No saved places yet — search or tap the map to add one.</p>
+          <p className="text-xs text-content-muted">No saved places yet — search or tap the map to add one.</p>
         )}
         {pins.map(pin => (
           <div
             key={pin.id}
-            className="flex items-center justify-between gap-2 p-2 bg-white/2 border border-white/5 rounded-lg"
+            className="flex items-center justify-between gap-2 p-2 bg-surface-raised/[0.02] border border-subtle rounded-lg"
           >
             <button
               onClick={() => onJump(pin)}
-              className="flex items-center gap-2 text-left flex-1 min-w-0 text-gray-300 hover:text-white transition-colors"
+              className="flex items-center gap-2 text-left flex-1 min-w-0 text-content hover:text-content transition-colors"
             >
-              <MapPin size={13} className="text-gold-primary shrink-0" />
+              <MapPin size={13} className="text-accent shrink-0" />
               <span className="text-xs truncate">{pin.label}</span>
             </button>
             <button
               onClick={() => onJump(pin)}
               title="Centre map here"
-              className="text-gray-500 hover:text-gold-primary transition-colors shrink-0"
+              className="text-content-muted hover:text-accent transition-colors shrink-0"
             >
               <Navigation2 size={13} />
             </button>
@@ -101,7 +101,7 @@ export default function SavedPinsPanel({ pending, pins, loading, onSave, onDelet
               <button
                 onClick={() => onAddToMatrix(pin)}
                 title="Add to distance matrix"
-                className="text-gray-500 hover:text-gold-primary transition-colors shrink-0"
+                className="text-content-muted hover:text-accent transition-colors shrink-0"
               >
                 <Ruler size={13} />
               </button>
@@ -109,7 +109,7 @@ export default function SavedPinsPanel({ pending, pins, loading, onSave, onDelet
             <button
               onClick={() => onDelete(pin.id)}
               title="Delete"
-              className="text-gray-500 hover:text-red-400 transition-colors shrink-0"
+              className="text-content-muted hover:text-danger transition-colors shrink-0"
             >
               <Trash2 size={13} />
             </button>

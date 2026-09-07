@@ -93,7 +93,7 @@ export default function VerificationQueuePanel() {
   }
 
   if (loading) {
-    return <p className="text-[11px] text-gray-500 flex items-center gap-2">
+    return <p className="text-[11px] text-content-muted flex items-center gap-2">
       <Loader size={13} className="animate-spin" /> Loading the queue…
     </p>
   }
@@ -101,12 +101,12 @@ export default function VerificationQueuePanel() {
   return (
     <div className="glass-panel p-5 space-y-4">
       <div className="flex items-center gap-2">
-        <div className="p-2 bg-gold-primary/10 rounded-xl">
-          <ShieldCheck size={18} className="text-gold-primary" />
+        <div className="p-2 bg-accent/10 rounded-xl">
+          <ShieldCheck size={18} className="text-accent" />
         </div>
         <div>
-          <p className="text-xs font-black text-white uppercase tracking-widest">Verification Queue</p>
-          <p className="text-[10px] text-gray-500">
+          <p className="text-xs font-black text-content uppercase tracking-widest">Verification Queue</p>
+          <p className="text-[10px] text-content-muted">
             Approving grants the power to message everyone in an area
           </p>
         </div>
@@ -121,20 +121,20 @@ export default function VerificationQueuePanel() {
       ) : (
         <div className="space-y-2">
           {requests.map(r => (
-            <div key={r.requestId} className="bg-black/30 border border-white/5 rounded-xl p-3 space-y-2">
+            <div key={r.requestId} className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-sm font-bold text-white">{r.unitName}</p>
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-sm font-bold text-content">{r.unitName}</p>
+                  <p className="text-[10px] text-content-muted">
                     {r.officialTitle || 'No role given'} · {r.unitTier}
                   </p>
                 </div>
-                <span className="text-[9px] text-gray-600 shrink-0">
+                <span className="text-[9px] text-content-subtle shrink-0">
                   {new Date(r.requestedAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}
                 </span>
               </div>
 
-              {r.note && <p className="text-[11px] text-gray-400 leading-relaxed">{r.note}</p>}
+              {r.note && <p className="text-[11px] text-content-muted leading-relaxed">{r.note}</p>}
 
               <div className="flex flex-wrap gap-3 text-[10px]">
                 {r.evidenceUrl && (
@@ -142,26 +142,26 @@ export default function VerificationQueuePanel() {
                     href={r.evidenceUrl}
                     target="_blank"
                     rel="noopener noreferrer nofollow"
-                    className="text-gold-primary hover:underline flex items-center gap-1"
+                    className="text-accent hover:underline flex items-center gap-1"
                   >
                     <ExternalLink size={10} /> Evidence
                   </a>
                 )}
-                {r.contactEmail && <span className="text-gray-500">{r.contactEmail}</span>}
+                {r.contactEmail && <span className="text-content-muted">{r.contactEmail}</span>}
                 {r.requestedJurisdictionName && (
-                  <span className="text-gray-500">Asked for: {r.requestedJurisdictionName}</span>
+                  <span className="text-content-muted">Asked for: {r.requestedJurisdictionName}</span>
                 )}
               </div>
 
               {openId === r.requestId ? (
-                <div className="space-y-2 pt-2 border-t border-white/5">
+                <div className="space-y-2 pt-2 border-t border-subtle">
                   <div className="relative">
-                    <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+                    <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle" />
                     <input
                       value={query}
                       onChange={e => setQuery(e.target.value)}
                       placeholder="Find the area to bind — type a municipality or ward name"
-                      className="w-full bg-black/40 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-xs text-white"
+                      className="w-full bg-surface-sunken/40 border border-default rounded-lg pl-8 pr-3 py-2 text-xs text-content"
                     />
                   </div>
 
@@ -174,13 +174,13 @@ export default function VerificationQueuePanel() {
                         onClick={() => setChosenArea(a)}
                         className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] transition-colors ${
                           chosenArea?.id === a.id
-                            ? 'bg-gold-primary/15 text-gold-primary'
-                            : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                            ? 'bg-accent/15 text-accent'
+                            : 'bg-surface-raised/5 text-content hover:bg-surface-raised/10'
                         }`}
                       >
                         {a.name}
-                        <span className="text-gray-500"> · {LEVEL_LABEL[a.level]}</span>
-                        {a.parentName && <span className="text-gray-600"> · in {a.parentName}</span>}
+                        <span className="text-content-muted"> · {LEVEL_LABEL[a.level]}</span>
+                        {a.parentName && <span className="text-content-subtle"> · in {a.parentName}</span>}
                       </button>
                     ))}
                   </div>
@@ -190,7 +190,7 @@ export default function VerificationQueuePanel() {
                     onChange={e => setNote(e.target.value)}
                     rows={2}
                     placeholder="What you checked, or why you are refusing"
-                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white resize-none"
+                    className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-xs text-content resize-none"
                   />
 
                   <div className="flex flex-wrap gap-2">
@@ -207,25 +207,25 @@ export default function VerificationQueuePanel() {
                       type="button"
                       onClick={() => reject(r.unitId)}
                       disabled={busy}
-                      className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-400 px-3 py-2 bg-white/5 rounded-lg disabled:opacity-50"
+                      className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-danger px-3 py-2 bg-surface-raised/5 rounded-lg disabled:opacity-50"
                     >
                       Reject
                     </button>
                     <button
                       type="button"
                       onClick={reset}
-                      className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white px-2 py-2"
+                      className="text-[10px] font-black uppercase tracking-widest text-content-subtle hover:text-content px-2 py-2"
                     >
                       <X size={12} />
                     </button>
                   </div>
-                  {error && <p className="text-[11px] text-red-400">{error}</p>}
+                  {error && <p className="text-[11px] text-danger">{error}</p>}
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => { reset(); setOpenId(r.requestId); setQuery(r.requestedJurisdictionName || '') }}
-                  className="text-[10px] font-black uppercase tracking-widest text-gold-primary hover:text-white"
+                  className="text-[10px] font-black uppercase tracking-widest text-accent hover:text-content"
                 >
                   Review
                 </button>

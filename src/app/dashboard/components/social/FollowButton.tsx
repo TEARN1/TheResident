@@ -59,8 +59,8 @@ export default function FollowButton({ targetUserId, currentUserId, className }:
       disabled={loading || !checked}
       className={className || `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 ${
         following
-          ? 'bg-white/5 text-gray-400 border border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20'
-          : 'bg-gold-primary/10 text-gold-primary border border-gold-primary/20 hover:bg-gold-primary hover:text-black'
+          ? 'bg-surface-raised/5 text-content-muted border border-default hover:bg-danger/10 hover:text-danger hover:border-danger/20'
+          : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-content-on-accent'
       }`}
     >
       {following ? <UserCheck size={12} /> : <UserPlus size={12} />}

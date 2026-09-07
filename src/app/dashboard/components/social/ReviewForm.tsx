@@ -49,14 +49,14 @@ export default function ReviewForm({ subjectId, onSubmitted }: ReviewFormProps) 
 
   if (success) {
     return (
-      <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-xs font-bold text-green-400 uppercase tracking-widest">
+      <div className="bg-success/10 border border-success/20 rounded-xl p-4 text-xs font-bold text-success uppercase tracking-widest">
         Review posted — thanks.
       </div>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-black/40 border border-white/5 rounded-2xl p-5">
+    <form onSubmit={handleSubmit} className="space-y-4 bg-surface-sunken/40 border border-subtle rounded-2xl p-5">
       <div className="flex items-center gap-1.5">
         {[1, 2, 3, 4, 5].map(n => (
           <button
@@ -69,7 +69,7 @@ export default function ReviewForm({ subjectId, onSubmitted }: ReviewFormProps) 
           >
             <Star
               size={22}
-              className={(hoverRating || rating) >= n ? 'text-gold-primary fill-gold-primary' : 'text-gray-700'}
+              className={(hoverRating || rating) >= n ? 'text-accent fill-gold-primary' : 'text-content-subtle'}
             />
           </button>
         ))}
@@ -78,13 +78,13 @@ export default function ReviewForm({ subjectId, onSubmitted }: ReviewFormProps) 
         value={body}
         onChange={e => setBody(e.target.value)}
         placeholder="How was your experience with them? (optional)"
-        className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white h-20 resize-none outline-none focus:border-gold-primary/40"
+        className="w-full bg-surface border border-default rounded-xl p-3 text-sm text-content h-20 resize-none outline-none focus:border-accent/40"
       />
-      {error && <p className="text-[11px] text-red-400 font-bold">{error}</p>}
+      {error && <p className="text-[11px] text-danger font-bold">{error}</p>}
       <button
         type="submit"
         disabled={submitting}
-        className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
+        className="w-full bg-accent hover:bg-accent text-content-on-accent font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
       >
         {submitting ? <Loader size={14} className="animate-spin" /> : <Send size={14} />}
         Post Review

@@ -38,12 +38,12 @@ export default function UpgradeButton({ item, targetId, className }: { item: Sel
       <button
         onClick={handleClick}
         disabled={loading}
-        className={className || 'w-full flex items-center justify-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50'}
+        className={className || 'w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent text-content-on-accent font-black py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50'}
       >
         {loading ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
         {loading ? 'Starting checkout…' : label}
       </button>
-      {error && <p className="text-[10px] text-red-400 text-center">{error}</p>}
+      {error && <p className="text-[10px] text-danger text-center">{error}</p>}
     </div>
   )
 }

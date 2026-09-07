@@ -176,7 +176,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
 
   if (myCommunities.length === 0) {
     return (
-      <div className="glass-panel p-12 text-center text-gray-500">
+      <div className="glass-panel p-12 text-center text-content-muted">
         <Users size={48} className="mx-auto mb-4 opacity-10" />
         <p>Join a community to manage invites and moderation.</p>
       </div>
@@ -189,7 +189,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
         <select
           value={selectedId}
           onChange={e => setSelectedId(e.target.value)}
-          className="bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50"
+          className="bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50"
         >
           {myCommunities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
@@ -197,26 +197,26 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
 
       {/* INVITES */}
       <div className="glass-panel p-6 space-y-5">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2">
-          <KeyRound size={20} className="text-gold-primary" /> Private Invites
+        <h3 className="text-xl font-bold text-content flex items-center gap-2">
+          <KeyRound size={20} className="text-accent" /> Private Invites
         </h3>
 
         {isAdmin && (
-          <div className="bg-black/40 border border-white/5 rounded-xl p-4 space-y-3">
-            <p className="text-xs text-gray-500">Generate a one-time invite code for this community.</p>
+          <div className="bg-surface-sunken/40 border border-subtle rounded-xl p-4 space-y-3">
+            <p className="text-xs text-content-muted">Generate a one-time invite code for this community.</p>
             <button
               onClick={handleGenerateInvite}
               disabled={generating}
-              className="bg-gold-primary text-black font-black px-4 py-2 rounded-lg text-xs uppercase tracking-widest hover:bg-gold-secondary transition-all disabled:opacity-50"
+              className="bg-accent text-content-on-accent font-black px-4 py-2 rounded-lg text-xs uppercase tracking-widest hover:bg-accent transition-all disabled:opacity-50"
             >
               {generating ? 'Generating...' : 'Generate invite code'}
             </button>
-            {inviteError && <p className="text-xs text-red-400">{inviteError}</p>}
+            {inviteError && <p className="text-xs text-danger">{inviteError}</p>}
             {inviteCode && (
-              <div className="flex items-center gap-3 bg-black border border-gold-primary/30 rounded-lg p-3">
-                <span className="font-mono text-gold-primary text-sm tracking-widest flex-1">{inviteCode}</span>
-                <button onClick={copyCode} className="text-gray-400 hover:text-white">
-                  {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+              <div className="flex items-center gap-3 bg-surface border border-accent/30 rounded-lg p-3">
+                <span className="font-mono text-accent text-sm tracking-widest flex-1">{inviteCode}</span>
+                <button onClick={copyCode} className="text-content-muted hover:text-content">
+                  {copied ? <Check size={16} className="text-success" /> : <Copy size={16} />}
                 </button>
               </div>
             )}
@@ -228,45 +228,45 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
             value={redeemInput}
             onChange={e => setRedeemInput(e.target.value)}
             placeholder="Have an invite code?"
-            className="flex-1 bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/50"
+            className="flex-1 bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50"
           />
-          <button type="submit" disabled={redeeming} className="bg-white/5 hover:bg-white/10 text-gold-primary border border-gold-primary/20 px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
+          <button type="submit" disabled={redeeming} className="bg-surface-raised/5 hover:bg-surface-raised/10 text-accent border border-accent/20 px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
             {redeeming ? 'Redeeming...' : 'Redeem'}
           </button>
         </form>
-        {redeemStatus && <p className="text-xs text-gray-400">{redeemStatus}</p>}
+        {redeemStatus && <p className="text-xs text-content-muted">{redeemStatus}</p>}
       </div>
 
       {/* MODERATION */}
       {isAdmin && (
         <>
           <div className="glass-panel p-6 space-y-4">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <ShieldCheck size={20} className="text-gold-primary" /> Members
+            <h3 className="text-xl font-bold text-content flex items-center gap-2">
+              <ShieldCheck size={20} className="text-accent" /> Members
             </h3>
-            {moderateError && <p className="text-xs text-red-400">{moderateError}</p>}
+            {moderateError && <p className="text-xs text-danger">{moderateError}</p>}
             {loading ? (
-              <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">Loading...</p>
+              <p className="text-xs text-content-muted uppercase tracking-widest font-bold">Loading...</p>
             ) : (
               <div className="space-y-2">
                 {members.map(m => (
-                  <div key={m.userId} className="flex items-center justify-between bg-black/40 border border-white/5 rounded-xl p-3">
+                  <div key={m.userId} className="flex items-center justify-between bg-surface-sunken/40 border border-subtle rounded-xl p-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-white">{m.name}</span>
-                      <span className="text-[9px] bg-white/5 text-gray-400 px-2 py-0.5 rounded uppercase font-bold">{m.role}</span>
+                      <span className="text-sm font-bold text-content">{m.name}</span>
+                      <span className="text-[9px] bg-surface-raised/5 text-content-muted px-2 py-0.5 rounded uppercase font-bold">{m.role}</span>
                     </div>
                     {m.userId !== currentUserId && (
                       <div className="flex items-center gap-2">
                         {m.role !== 'admin' && m.role !== 'founder' && (
-                          <button onClick={() => handleModerate('promote', m.userId)} title="Promote to admin" className="text-gray-500 hover:text-gold-primary transition-colors"><ArrowUp size={16} /></button>
+                          <button onClick={() => handleModerate('promote', m.userId)} title="Promote to admin" className="text-content-muted hover:text-accent transition-colors"><ArrowUp size={16} /></button>
                         )}
                         {role === 'founder' && m.role === 'admin' && (
-                          <button onClick={() => handleModerate('demote', m.userId)} title="Demote to member" className="text-gray-500 hover:text-gold-primary transition-colors"><ArrowDown size={16} /></button>
+                          <button onClick={() => handleModerate('demote', m.userId)} title="Demote to member" className="text-content-muted hover:text-accent transition-colors"><ArrowDown size={16} /></button>
                         )}
                         {/* A plain admin may only remove ordinary members — removing another
                             admin or the founder is a founder-only action, same gating as demote. */}
                         {(role === 'founder' || (m.role !== 'admin' && m.role !== 'founder')) && (
-                          <button onClick={() => handleModerate('remove_member', m.userId)} title="Remove from community" className="text-gray-500 hover:text-red-400 transition-colors"><UserMinus size={16} /></button>
+                          <button onClick={() => handleModerate('remove_member', m.userId)} title="Remove from community" className="text-content-muted hover:text-danger transition-colors"><UserMinus size={16} /></button>
                         )}
                       </div>
                     )}
@@ -277,20 +277,20 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
           </div>
 
           <div className="glass-panel p-6 space-y-4">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <ScrollText size={20} className="text-gold-primary" /> Recent Moderation Actions
+            <h3 className="text-xl font-bold text-content flex items-center gap-2">
+              <ScrollText size={20} className="text-accent" /> Recent Moderation Actions
             </h3>
             {actions.length === 0 ? (
-              <p className="text-xs text-gray-500">No moderation actions logged yet.</p>
+              <p className="text-xs text-content-muted">No moderation actions logged yet.</p>
             ) : (
               <div className="space-y-2">
                 {actions.map(a => (
-                  <div key={a.id} className="flex items-center justify-between text-xs bg-black/40 border border-white/5 rounded-lg p-3">
-                    <span className="text-gray-400">
-                      <span className="text-white font-bold">{a.actorName}</span> {a.action.replace('_', ' ')} a {a.subjectType.replace('_', ' ')}
+                  <div key={a.id} className="flex items-center justify-between text-xs bg-surface-sunken/40 border border-subtle rounded-lg p-3">
+                    <span className="text-content-muted">
+                      <span className="text-content font-bold">{a.actorName}</span> {a.action.replace('_', ' ')} a {a.subjectType.replace('_', ' ')}
                       {a.reason ? ` — ${a.reason}` : ''}
                     </span>
-                    <span className="text-gray-600 font-mono text-[10px]">{new Date(a.createdAt).toLocaleString()}</span>
+                    <span className="text-content-subtle font-mono text-[10px]">{new Date(a.createdAt).toLocaleString()}</span>
                   </div>
                 ))}
               </div>

@@ -72,7 +72,7 @@ export default function Home() {
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           <button
             onClick={() => setShowLogin(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: '#fff', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--surface-raised)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer' }}
           >
             <LogIn size={15} /> Log In
           </button>
@@ -92,8 +92,8 @@ export default function Home() {
               className={`glass-panel ${styles.loginPopover}`}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', margin: 0 }}>Log In</h3>
-                <button type="button" onClick={() => setShowLogin(false)} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--surface-raised)', margin: 0 }}>Log In</h3>
+                <button type="button" onClick={() => setShowLogin(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                   <X size={16} />
                 </button>
               </div>
@@ -103,7 +103,7 @@ export default function Home() {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="name@domain.com"
                 required
-                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: '#fff', fontSize: '0.85rem', marginBottom: '0.6rem', outline: 'none' }}
+                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: 'var(--surface-raised)', fontSize: '0.85rem', marginBottom: '0.6rem', outline: 'none' }}
               />
               <input
                 type="password"
@@ -111,10 +111,10 @@ export default function Home() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="secure key..."
                 required
-                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: '#fff', fontSize: '0.85rem', marginBottom: '0.8rem', outline: 'none' }}
+                style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: 'var(--surface-raised)', fontSize: '0.85rem', marginBottom: '0.8rem', outline: 'none' }}
               />
               {loginError && (
-                <p style={{ fontSize: '0.72rem', color: '#f87171', marginBottom: '0.6rem', lineHeight: 1.4 }}>{loginError}</p>
+                <p style={{ fontSize: '0.72rem', color: 'var(--danger)', marginBottom: '0.6rem', lineHeight: 1.4 }}>{loginError}</p>
               )}
               <button
                 type="submit"
@@ -127,7 +127,7 @@ export default function Home() {
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0.7rem 0' }}>
                 <span style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }} />
-                <span style={{ fontSize: '0.65rem', color: '#666', letterSpacing: '1px' }}>OR</span>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-subtle)', letterSpacing: '1px' }}>OR</span>
                 <span style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }} />
               </div>
               {/* Google temporarily pulled — Supabase provider isn't configured yet. */}
@@ -136,12 +136,12 @@ export default function Home() {
                   type="button"
                   onClick={() => handleOAuth('facebook')}
                   disabled={oauthLoading !== null}
-                  style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.55rem', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.55rem', color: 'var(--surface-raised)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
                 >
                   {oauthLoading === 'facebook' ? '…' : 'Continue with Facebook'}
                 </button>
               </div>
-              <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.8rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-subtle)', marginTop: '0.8rem', textAlign: 'center' }}>
                 New here? <Link href="/auth" style={{ color: 'var(--gold-primary)' }}>Create an account</Link>
               </p>
             </motion.form>
@@ -181,7 +181,7 @@ export default function Home() {
           <Link href="/auth" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             Enter Portal <ArrowRight size={16} />
           </Link>
-          <a href="/theresident.apk" download className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.08)', padding: '12px 24px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer' }}>
+          <a href="/theresident.apk" download className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.08)', padding: '12px 24px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--surface-raised)', fontSize: '0.95rem', fontWeight: 'bold', cursor: 'pointer' }}>
             <Download size={16} /> Download Android APK
           </a>
           <button
@@ -195,7 +195,7 @@ export default function Home() {
               padding: '12px 24px',
               borderRadius: '8px',
               border: '1px solid rgba(255,255,255,0.2)',
-              color: '#fff',
+              color: 'var(--surface-raised)',
               fontSize: '0.95rem',
               fontWeight: 'bold',
               cursor: 'pointer'
@@ -230,7 +230,7 @@ export default function Home() {
         ))}
       </div>
 
-      <footer style={{ display: 'flex', justifyContent: 'center', gap: '20px', padding: '32px 16px', fontSize: '0.75rem', color: '#6b7280' }}>
+      <footer style={{ display: 'flex', justifyContent: 'center', gap: '20px', padding: '32px 16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
         <Link href="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy Policy</Link>
         <Link href="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Terms of Service</Link>
       </footer>
@@ -247,34 +247,34 @@ export default function Home() {
           padding: '16px'
         }}>
           <div style={{
-            backgroundColor: '#111827',
+            backgroundColor: 'var(--surface)827',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '12px',
             padding: '24px',
             maxWidth: '400px',
             width: '100%',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-            color: '#fff'
+            color: 'var(--surface-raised)'
           }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '12px', color: '#fbbf24' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '12px', color: 'var(--warning)' }}>
               Install on iPhone
             </h3>
-            <p style={{ fontSize: '0.85rem', color: '#9ca3af', marginBottom: '16px', lineHeight: '1.4' }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.4' }}>
               To run The Resident on your iPhone like a native mobile app, follow these simple Safari steps:
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <span style={{ background: '#312e81', color: '#c7d2fe', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>1</span>
-                <p style={{ fontSize: '0.85rem', color: '#d1d5db', margin: 0 }}>Open Safari and visit this website.</p>
+                <span style={{ background: 'var(--info)', color: 'var(--info)', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>1</span>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Open Safari and visit this website.</p>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <span style={{ background: '#312e81', color: '#c7d2fe', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>2</span>
-                <p style={{ fontSize: '0.85rem', color: '#d1d5db', margin: 0 }}>Tap the <strong>Share</strong> button (the square icon with an arrow pointing up at the bottom screen menu).</p>
+                <span style={{ background: 'var(--info)', color: 'var(--info)', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>2</span>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Tap the <strong>Share</strong> button (the square icon with an arrow pointing up at the bottom screen menu).</p>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <span style={{ background: '#312e81', color: '#c7d2fe', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>3</span>
-                <p style={{ fontSize: '0.85rem', color: '#d1d5db', margin: 0 }}>Scroll down and select <strong>&quot;Add to Home Screen&quot;</strong>.</p>
+                <span style={{ background: 'var(--info)', color: 'var(--info)', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold' }}>3</span>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Scroll down and select <strong>&quot;Add to Home Screen&quot;</strong>.</p>
               </div>
             </div>
 
@@ -282,8 +282,8 @@ export default function Home() {
               onClick={() => setShowIosModal(false)}
               style={{
                 width: '100%',
-                background: '#fbbf24',
-                color: '#000',
+                background: 'var(--warning)',
+                color: 'var(--surface)',
                 border: 'none',
                 padding: '10px',
                 borderRadius: '6px',

@@ -98,7 +98,7 @@ export default function LiveLocationToggle({ userId, sharing, onSharingChange, o
         aria-label={sharing ? 'Stop sharing my live location' : 'Show my live location'}
         aria-pressed={sharing}
         title={sharing ? 'Live location on — tap to stop' : 'Show my live location'}
-        className={`bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 shadow-2xl transition-all ${sharing ? 'text-gold-primary' : 'text-gray-300 hover:text-white'}`}
+        className={`bg-surface-sunken/80 backdrop-blur-xl border border-default rounded-lg p-2.5 shadow-2xl transition-all ${sharing ? 'text-accent' : 'text-content hover:text-content'}`}
       >
         <Radio size={16} className={sharing ? 'animate-pulse' : ''} />
       </button>
@@ -106,22 +106,22 @@ export default function LiveLocationToggle({ userId, sharing, onSharingChange, o
   }
 
   return (
-    <div className="flex items-center justify-between p-3 bg-white/2 border border-white/5 rounded-xl">
+    <div className="flex items-center justify-between p-3 bg-surface-raised/[0.02] border border-subtle rounded-xl">
       <div className="flex items-center gap-2">
-        <Radio size={14} className={sharing ? 'text-gold-primary animate-pulse' : 'text-gray-500'} />
+        <Radio size={14} className={sharing ? 'text-accent animate-pulse' : 'text-content-muted'} />
         <div>
-          <p className="text-xs text-white font-medium">Share my live location</p>
-          <p className="text-[10px] text-gray-500">Live sharing with your Care Circle — coming soon. This proves the mechanism on your own map for now.</p>
-          <p className="text-[10px] text-gray-600 mt-0.5">Shown with its real accuracy radius — a phone GPS is typically 5–20m outdoors, more indoors, never pinpoint.</p>
+          <p className="text-xs text-content font-medium">Share my live location</p>
+          <p className="text-[10px] text-content-muted">Live sharing with your Care Circle — coming soon. This proves the mechanism on your own map for now.</p>
+          <p className="text-[10px] text-content-subtle mt-0.5">Shown with its real accuracy radius — a phone GPS is typically 5–20m outdoors, more indoors, never pinpoint.</p>
         </div>
       </div>
       <button
         onClick={() => onSharingChange(!sharing)}
-        className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ${sharing ? 'bg-gold-primary' : 'bg-white/10'}`}
+        className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ${sharing ? 'bg-accent' : 'bg-surface-raised/10'}`}
         style={{ height: '22px' }}
       >
         <span
-          className="absolute top-0.5 w-4.5 h-4.5 rounded-full bg-black transition-transform"
+          className="absolute top-0.5 w-4.5 h-4.5 rounded-full bg-surface transition-transform"
           style={{ width: '18px', height: '18px', transform: sharing ? 'translateX(20px)' : 'translateX(2px)' }}
         />
       </button>

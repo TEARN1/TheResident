@@ -249,22 +249,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="top-alert-banner-stack">
         {dataStatus === 'error' && failedTables.length > 0 ? (
           <div className="top-alert-banner">
-            <AlertTriangle size={18} color="#ef4444" />
+            <AlertTriangle size={18} color="var(--danger)" />
             <span>Some data couldn&apos;t load ({failedTables.join(', ')}). Retrying automatically.</span>
           </div>
         ) : dataStatus === 'loading' ? (
           <div className="top-alert-banner">
-            <Loader size={18} color="#D4AF37" className="animate-spin" />
+            <Loader size={18} color="var(--accent)" className="animate-spin" />
             <span>Loading your community data…</span>
           </div>
         ) : pendingWrites > 0 ? (
           <div className="top-alert-banner">
-            <Wifi size={18} color="#D4AF37" />
+            <Wifi size={18} color="var(--accent)" />
             <span>{pendingWrites} change{pendingWrites === 1 ? '' : 's'} waiting to sync — you&apos;re offline.</span>
           </div>
         ) : alertNotification ? (
           <div className="top-alert-banner">
-            <CheckCircle2 size={18} color="#22c55e" />
+            <CheckCircle2 size={18} color="var(--success)" />
             <span>{alertNotification}</span>
           </div>
         ) : null}
@@ -288,7 +288,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {currentUser && isGuestUser(currentUser) && !guestBannerDismissed ? (
         <div className="guest-summary-banner">
-          <Sparkles size={16} className="shrink-0" style={{ color: '#D4AF37' }} />
+          <Sparkles size={16} className="shrink-0" style={{ color: 'var(--accent)' }} />
           <span>
             <strong>You&apos;re browsing as a guest.</strong> Sign up free to save listings, message neighbours, post to the feed, and build the trust circle other residents can see.
           </span>
@@ -299,7 +299,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       ) : nokStatus && !nokStatus.hasNextOfKin && !nokBannerDismissed ? (
         <div className="guest-summary-banner">
-          <ShieldCheck size={16} className="shrink-0" style={{ color: nokStatus.overdue ? '#ef4444' : '#D4AF37' }} />
+          <ShieldCheck size={16} className="shrink-0" style={{ color: nokStatus.overdue ? 'var(--danger)' : 'var(--accent)' }} />
           <span>
             {nokStatus.overdue ? (
               <><strong>Your trust profile is incomplete.</strong> You haven&apos;t added a Next of Kin yet — your landlord can see this.</>
@@ -351,14 +351,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               page-agnostic: notifications. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto' }}>
              <div ref={notifMenuRef} style={{ position: 'relative' }}>
-                <button onClick={() => setShowNotifMenu(!showNotifMenu)} style={{ background: 'transparent', border: 'none', color: '#D4AF37', position: 'relative', cursor: 'pointer' }}>
+                <button onClick={() => setShowNotifMenu(!showNotifMenu)} style={{ background: 'transparent', border: 'none', color: 'var(--accent)', position: 'relative', cursor: 'pointer' }}>
                    <Megaphone size={20} />
                    {notifications.items.filter(n => !n.read).length > 0 && <span className="notif-badge">!</span>}
                 </button>
                 {showNotifMenu && (
                    <div className="glass-panel" style={{ position: 'absolute', top: '100%', right: 0, width: '300px', maxHeight: '400px', overflowY: 'auto', zIndex: 100, marginTop: '1rem', padding: '1rem' }}>
-                      <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-                         <span className="text-xs font-black text-white uppercase tracking-widest">{t('alerts', lang)}</span>
+                      <div className="flex justify-between items-center mb-4 border-b border-subtle pb-2">
+                         <span className="text-xs font-black text-content uppercase tracking-widest">{t('alerts', lang)}</span>
                          <button
                            onClick={() => {
                              dispatch(markAllNotificationsRead())
@@ -366,21 +366,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                              setAlertNotification('All notifications marked as read')
                              setTimeout(() => setAlertNotification(null), 3000)
                            }}
-                           className="text-[10px] text-gold-primary font-bold hover:underline"
+                           className="text-[10px] text-accent font-bold hover:underline"
                          >
                            {t('markAllRead', lang)}
                          </button>
                       </div>
                       <div className="space-y-3">
                          {notifications.items.length === 0 ? (
-                            <p className="text-[10px] text-gray-600 italic text-center py-4">{t('noRecentAlerts', lang)}</p>
+                            <p className="text-[10px] text-content-subtle italic text-center py-4">{t('noRecentAlerts', lang)}</p>
                          ) : (
                             notifications.items.map(item => {
-                               const rowClasses = `p-3 rounded-lg border w-full text-left ${item.read ? 'bg-black/20 border-white/5 opacity-60' : 'bg-gold-primary/5 border-gold-primary/20'} ${item.actionUrl ? 'cursor-pointer hover:border-gold-primary/40 transition-colors' : ''}`
+                               const rowClasses = `p-3 rounded-lg border w-full text-left ${item.read ? 'bg-surface-sunken/20 border-subtle opacity-60' : 'bg-accent/5 border-accent/20'} ${item.actionUrl ? 'cursor-pointer hover:border-accent/40 transition-colors' : ''}`
                                const body = (
                                   <>
-                                     <p className="text-[10px] font-black text-white uppercase tracking-tight">{item.title}</p>
-                                     <p className="text-[10px] text-gray-400 mt-1">{item.message}</p>
+                                     <p className="text-[10px] font-black text-content uppercase tracking-tight">{item.title}</p>
+                                     <p className="text-[10px] text-content-muted mt-1">{item.message}</p>
                                   </>
                                )
                                if (!item.actionUrl) {

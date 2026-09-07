@@ -13,55 +13,37 @@
 html, body { margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; }
 
+/* ── Legacy variable bridge ───────────────────────────────────────────────
+   The older screens (auth, landing, and every inline-styled component) read
+   colours through these names. They used to be a SECOND, parallel palette
+   with its own dark-first defaults and its own per-theme overrides — which
+   is why tokenising the Tailwind utilities alone left those pages dark: the
+   tokens never reached them.
+
+   They are now aliases. One palette, in src/styles/tokens.css, resolved once
+   per theme; these names simply point at it. Nothing here defines a colour,
+   so nothing here can disagree with the tokens.
+
+   New code should use the tokens or the Tailwind utilities directly. This
+   block exists so the migration did not have to touch every inline style in
+   the same commit, and it shrinks as those are converted. */
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --gold-primary: #D4AF37;
-  --gold-secondary: #B8860B;
-  --gold-dim: rgba(212, 175, 55, 0.16);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --card-bg: rgba(20, 20, 20, 0.6);
-  --input-bg: rgba(0, 0, 0, 0.3);
-  /* Referenced throughout auth/page.tsx's inline styles but never actually
-     defined anywhere — an undefined custom property makes the property that
-     reads it compute to nothing, so the "glass" card had no background tint
-     at all, only whatever backdrop-filter: blur happened to produce.
-     Defining them here (dark defaults) fixes that regardless of theme. */
-  --glass-bg: rgba(15, 15, 15, 0.55);
-  --shadow-color: rgba(0, 0, 0, 0.45);
-  /* Landing-page accent palette — used sparingly (background glow, hover
-     accents) to break up what was an all-gold-on-black page; the gold
-     stays the dominant brand color everywhere else. */
-  --accent-teal: #2dd4bf;
-  --accent-violet: #a78bfa;
-  --accent-rose: #fb7185;
-}
+  --background:      var(--surface);
+  --foreground:      var(--text-primary);
+  --gold-primary:    var(--accent);
+  --gold-secondary:  var(--accent-hover);
+  --gold-dim:        var(--accent-soft);
+  --glass-border:    var(--border-default);
+  --card-bg:         var(--surface-raised);
+  --input-bg:        var(--surface-sunken);
+  --glass-bg:        var(--surface-raised);
+  --shadow-color:    rgb(var(--border-rgb) / 0.16);
 
-[data-theme='night'] {
-  --background: #050505;
-  --foreground: #ffffff;
-}
-
-/* A genuine light theme — deliberately its OWN value ('light'), not a
-   redefinition of 'day'. The dashboard forces data-theme="night" on every
-   mount and is built almost entirely from hardcoded dark Tailwind utilities
-   (text-white, bg-black, …) rather than these variables, so it can never
-   honor a real light mode without that being rewritten wholesale (see the
-   removed dashboard theme toggle). Scoping light mode to its own attribute
-   value means the public auth/landing pages — which DO read every color
-   through these variables — can have a real, working toggle without any
-   risk of the dashboard flashing an unstyled, half-light page. */
-[data-theme='light'] {
-  --background: #f7f5f0;
-  --foreground: #1a1712;
-  --gold-primary: #a67c1f;
-  --gold-secondary: #8a6a19;
-  --gold-dim: rgba(166, 124, 31, 0.14);
-  --glass-border: rgba(0, 0, 0, 0.1);
-  --card-bg: rgba(255, 255, 255, 0.7);
-  --input-bg: rgba(0, 0, 0, 0.04);
-  --glass-bg: rgba(255, 255, 255, 0.6);
-  --shadow-color: rgba(30, 25, 15, 0.12);
+  /* Section accents, now carrying meaning rather than decorating the landing
+     page. See docs/DESIGN-OVERHAUL.md items 33-34. */
+  --accent-teal:   var(--area-services);
+  --accent-violet: var(--area-community);
+  --accent-rose:   var(--area-safety);
 }
 
 body {
@@ -71,64 +53,14 @@ body {
   overflow-x: hidden;
 }
 
-/* Dashboard light-mode override layer.
-   Every dashboard page is written with hardcoded dark Tailwind utilities
-   (bg-black, text-white, border-white/10, …) rather than the CSS variables
-   above — rewriting every page to use variables instead is a much bigger
-   job than this pass. This block remaps the small set of utility classes
-   that account for the vast majority of dashboard surfaces, scoped to
-   `.dashboard-wrapper` under `[data-theme='light']` so it can never leak
-   into the (already-correct) dark dashboard or the auth/landing pages.
-   Anything NOT covered here (a one-off inline style, a rare utility class)
-   will still render dark-on-light in a few spots — this is a real, usable
-   light dashboard, not a pixel-perfect one yet. */
-[data-theme='light'] .dashboard-wrapper {
-  background: var(--background);
-}
-[data-theme='light'] .dashboard-wrapper .bg-black,
-[data-theme='light'] .dashboard-wrapper .bg-black\/80,
-[data-theme='light'] .dashboard-wrapper .bg-black\/70,
-[data-theme='light'] .dashboard-wrapper .bg-black\/60,
-[data-theme='light'] .dashboard-wrapper .bg-black\/40,
-[data-theme='light'] .dashboard-wrapper .bg-black\/20 {
-  background-color: #ffffff !important;
-}
-[data-theme='light'] .dashboard-wrapper .bg-black\/2,
-[data-theme='light'] .dashboard-wrapper .bg-white\/2,
-[data-theme='light'] .dashboard-wrapper .bg-white\/5,
-[data-theme='light'] .dashboard-wrapper .bg-white\/10 {
-  background-color: rgba(20, 17, 10, 0.04) !important;
-}
-[data-theme='light'] .dashboard-wrapper .text-white {
-  color: #1a1712 !important;
-}
-[data-theme='light'] .dashboard-wrapper .text-gray-300,
-[data-theme='light'] .dashboard-wrapper .text-gray-400 {
-  color: #4a463d !important;
-}
-[data-theme='light'] .dashboard-wrapper .text-gray-500,
-[data-theme='light'] .dashboard-wrapper .text-gray-600,
-[data-theme='light'] .dashboard-wrapper .text-gray-700 {
-  color: #7a7568 !important;
-}
-[data-theme='light'] .dashboard-wrapper .border-white\/5,
-[data-theme='light'] .dashboard-wrapper .border-white\/10,
-[data-theme='light'] .dashboard-wrapper .border-white\/20 {
-  border-color: rgba(20, 17, 10, 0.12) !important;
-}
-[data-theme='light'] .dashboard-wrapper input,
-[data-theme='light'] .dashboard-wrapper textarea,
-[data-theme='light'] .dashboard-wrapper select {
-  color: #1a1712 !important;
-}
-[data-theme='light'] .dashboard-wrapper .bottom-nav-bar {
-  background: #ffffff;
-  border-top-color: rgba(20, 17, 10, 0.1);
-}
-[data-theme='light'] .dashboard-wrapper .dashboard-top-bar {
-  background: rgba(255, 255, 255, 0.85) !important;
-  border-bottom-color: rgba(20, 17, 10, 0.1);
-}
+/* The dashboard light-mode override layer that used to live here has been
+   deleted. It remapped hardcoded utilities (bg-black, text-white,
+   border-white/10) to light values, scoped under [data-theme='light']
+   .dashboard-wrapper, because rewriting every page to use variables was
+   "a much bigger job than this pass".
+
+   That job is now done: those utilities are tokens, so they resolve per
+   theme on their own and this layer would only fight them. (58 lines removed.) */
 
 /* Dashboard Specific Layout */
 /* Primary navigation lives in .bottom-nav-bar, fixed to the viewport bottom
@@ -146,7 +78,7 @@ body {
 .more-panel {
   width: 280px;
   max-width: 85vw;
-  background: #0d0d0d;
+  background: var(--surface-raised);
   border-right: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
@@ -172,7 +104,7 @@ body {
 
 .dashboard-top-bar {
   height: 64px;
-  background: rgba(10, 10, 10, 0.8);
+  background: var(--surface-raised);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--glass-border);
@@ -206,7 +138,7 @@ body {
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
   border: 1px solid var(--glass-border);
-  background: rgba(212, 175, 55, 0.08);
+  background: var(--accent-soft);
   color: var(--gold-primary);
   font-size: 0.65rem;
   font-weight: 800;
@@ -217,8 +149,8 @@ body {
 }
 
 .dashboard-role-chip:hover {
-  background: rgba(212, 175, 55, 0.16);
-  border-color: rgba(212, 175, 55, 0.4);
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
 }
 
 .dashboard-page-body {
@@ -284,7 +216,7 @@ body {
 
 .sidebar-profile-role {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--text-subtle);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -303,7 +235,7 @@ body {
   font-weight: 800;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: #555;
+  color: var(--text-subtle);
 }
 
 .sidebar-nav-item {
@@ -311,7 +243,7 @@ body {
   align-items: center;
   gap: 0.8rem;
   padding: 0.8rem 1rem;
-  color: #888;
+  color: var(--text-subtle);
   border-radius: 8px;
   border-left: 3px solid transparent;
   transition: all 0.2s;
@@ -321,13 +253,13 @@ body {
 }
 
 .sidebar-nav-item:hover {
-  color: #ccc;
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  background: var(--surface-sunken);
 }
 
 .sidebar-nav-item.active {
   color: var(--gold-primary);
-  background: rgba(212, 175, 55, 0.08);
+  background: var(--accent-soft);
   border-left-color: var(--gold-primary);
 }
 
@@ -343,9 +275,9 @@ body {
   display: flex;
   gap: 4px;
   padding: 0.4rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-sunken);
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
   margin-bottom: 0.4rem;
 }
 
@@ -353,7 +285,7 @@ body {
   flex: 1;
   padding: 0.35rem 0;
   background: transparent;
-  color: #888;
+  color: var(--text-subtle);
   border: none;
   border-radius: 8px;
   font-size: 0.65rem;
@@ -364,12 +296,12 @@ body {
 
 .lang-switcher-btn.active {
   background: var(--gold-primary);
-  color: #000;
+  color: var(--text-on-accent);
 }
 
 .lang-switcher-btn:not(.active):hover {
-  color: #ccc;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  background: var(--border-subtle);
 }
 
 /* Dashboard loading gate (pre-auth / session bootstrap) */
@@ -381,14 +313,14 @@ body {
   gap: 1rem;
   height: 100vh;
   background: var(--background);
-  color: #666;
+  color: var(--text-subtle);
 }
 
 .dashboard-loading-spinner {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 2px solid rgba(212, 175, 55, 0.2);
+  border: 2px solid var(--accent-border);
   border-top-color: var(--gold-primary);
   animation: dashboard-spin 0.8s linear infinite;
 }
@@ -421,7 +353,7 @@ body {
 }
 
 .top-alert-banner {
-  background: rgba(0,0,0,0.9);
+  background: var(--surface-overlay);
   border: 1px solid var(--gold-primary);
   padding: 0.75rem 1.5rem;
   border-radius: 12px;
@@ -429,31 +361,31 @@ body {
   align-items: center;
   gap: 0.75rem;
   font-size: 0.85rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgb(var(--border-rgb) / 0.28);
 }
 
 .guest-summary-banner {
   margin: 0 1rem 0.75rem;
   padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.02));
-  border: 1px solid rgba(212,175,55,0.2);
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft));
+  border: 1px solid var(--accent-border);
   border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.75);
+  color: var(--text-muted);
   line-height: 1.4;
 }
 
 .guest-summary-banner strong {
-  color: #fff;
+  color: var(--surface-raised);
 }
 
 .guest-summary-banner-cta {
   flex-shrink: 0;
   background: var(--gold-primary);
-  color: #000;
+  color: var(--text-on-accent);
   font-weight: 900;
   font-size: 0.65rem;
   text-transform: uppercase;
@@ -467,23 +399,23 @@ body {
   flex-shrink: 0;
   background: transparent;
   border: none;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-subtle);
   cursor: pointer;
   padding: 0.25rem;
 }
 .guest-summary-banner-dismiss:hover {
-  color: rgba(255,255,255,0.8);
+  color: var(--text-muted);
 }
 
 .notif-badge {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #ef4444;
+  background: var(--danger);
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid #0a0a0a;
+  border: 2px solid var(--surface);
 }
 
 /* Utilities */
@@ -521,8 +453,8 @@ body {
 .btn-gold {
   background: var(--gold-primary);
   border: 1px solid var(--gold-primary);
-  color: #0a0a0a;
-  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.18);
+  color: var(--surface);
+  box-shadow: 0 4px 14px var(--accent-soft);
 }
 
 .btn-primary:hover,
@@ -549,13 +481,13 @@ body {
    primary gold button, but never so faint it disappears (0.05-opacity fills
    with a dashed border, as this used to be, read as "disabled"). */
 .btn-outline {
-  background: rgba(212, 175, 55, 0.1);
+  background: var(--accent-soft);
   border: 1.5px solid var(--gold-primary);
   color: var(--gold-primary);
 }
 
 .btn-outline:hover {
-  background: rgba(212, 175, 55, 0.18);
+  background: var(--accent-soft);
 }
 
 /* The hamburger is now the ONLY entry point to .more-panel (profile,
@@ -568,7 +500,7 @@ body {
   justify-content: center;
   background: transparent;
   border: none;
-  color: #aaa;
+  color: var(--text-muted);
   padding: 0.4rem;
   border-radius: 8px;
   cursor: pointer;
@@ -577,7 +509,7 @@ body {
 
 .mobile-menu-btn:hover {
   color: var(--gold-primary);
-  background: rgba(212, 175, 55, 0.08);
+  background: var(--accent-soft);
 }
 
 .sidebar-logo .mobile-menu-btn {
@@ -587,7 +519,7 @@ body {
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: var(--surface-overlay);
   backdrop-filter: blur(4px);
   z-index: 65;
 }
@@ -603,7 +535,7 @@ body {
   right: 0;
   display: flex;
   overflow-x: auto;
-  background: rgba(10, 10, 10, 0.92);
+  background: var(--surface-raised);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--glass-border);
@@ -628,7 +560,7 @@ body {
   justify-content: center;
   gap: 0.2rem;
   padding: 0.5rem 0.4rem 0.6rem;
-  color: #888;
+  color: var(--text-subtle);
   text-decoration: none;
   font-size: 0.6rem;
   font-weight: 700;
@@ -659,7 +591,7 @@ body {
 }
 
 .bottom-nav-item:hover {
-  color: #ccc;
+  color: var(--text-muted);
 }
 
 .bottom-nav-item.active {
@@ -686,10 +618,10 @@ body {
   width: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255,255,255,0.02);
+  background: var(--surface-sunken);
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.1);
+  background: var(--border-default);
   border-radius: 10px;
 }
 
@@ -711,8 +643,8 @@ body {
    flash: it has to be noticeable at a glance without making the text under it
    hard to read, and it may sit on screen for a while. */
 @keyframes urgent-broadcast-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35); }
-  50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--danger-rgb) / 0.35); }
+  50%      { box-shadow: 0 0 0 6px rgb(var(--danger-rgb) / 0); }
 }
 
 .urgent-broadcast--pulse {

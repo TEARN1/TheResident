@@ -83,42 +83,42 @@ export default function UrgentBroadcastBanner() {
       aria-live="assertive"
       className={`urgent-broadcast rounded-xl border p-4 space-y-2 ${
         critical
-          ? 'bg-red-500/10 border-red-500/40 urgent-broadcast--pulse'
-          : 'bg-yellow-500/10 border-yellow-500/40'
+          ? 'bg-danger/10 border-danger/40 urgent-broadcast--pulse'
+          : 'bg-warning/10 border-warning/40'
       }`}
     >
       <div className="flex items-start gap-3">
-        <AlertTriangle size={18} className={critical ? 'text-red-400 shrink-0 mt-0.5' : 'text-yellow-400 shrink-0 mt-0.5'} />
+        <AlertTriangle size={18} className={critical ? 'text-danger shrink-0 mt-0.5' : 'text-warning shrink-0 mt-0.5'} />
         <div className="min-w-0 flex-1">
-          <p className={`text-[9px] font-black uppercase tracking-widest ${critical ? 'text-red-400' : 'text-yellow-400'}`}>
+          <p className={`text-[9px] font-black uppercase tracking-widest ${critical ? 'text-danger' : 'text-warning'}`}>
             {notice.unitName}
           </p>
-          <p className="text-sm font-bold text-white mt-0.5 break-words">{notice.title}</p>
-          <p className="text-xs text-gray-300 mt-1 break-words">{notice.body}</p>
+          <p className="text-sm font-bold text-content mt-0.5 break-words">{notice.title}</p>
+          <p className="text-xs text-content mt-1 break-words">{notice.body}</p>
           {/* An area notice arrives without being followed, so saying which
               area it covered is the only thing that explains why it is here. */}
           {notice.source === 'area' && notice.targetLabel && (
-            <p className="text-[10px] text-gray-500 mt-1">
+            <p className="text-[10px] text-content-muted mt-1">
               Sent to everyone in {notice.targetLabel}
             </p>
           )}
           {pending.length > 1 && (
-            <p className="text-[10px] text-gray-500 mt-1">
+            <p className="text-[10px] text-content-muted mt-1">
               {pending.length - 1} more {pending.length - 1 === 1 ? 'notice' : 'notices'} after this
             </p>
           )}
         </div>
       </div>
 
-      {error && <p className="text-[10px] text-red-400">{error}</p>}
+      {error && <p className="text-[10px] text-danger">{error}</p>}
 
       <button
         onClick={() => handleAck(notice)}
         disabled={busy}
         className={`w-full flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg transition-colors disabled:opacity-50 ${
           critical
-            ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
-            : 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30'
+            ? 'bg-danger/20 text-danger hover:bg-danger/30'
+            : 'bg-warning/20 text-warning hover:bg-warning/30'
         }`}
       >
         <Check size={12} /> {busy ? 'Saving…' : 'Got it'}

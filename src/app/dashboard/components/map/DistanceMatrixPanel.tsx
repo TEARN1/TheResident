@@ -36,10 +36,10 @@ export default function DistanceMatrixPanel({ points, onRemove }: Props) {
 
   return (
     <div className="glass-panel p-6">
-      <h4 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2 mb-1">
-        <Ruler size={16} className="text-gold-primary" /> Multi-Stop Distances
+      <h4 className="text-sm font-bold text-content uppercase tracking-wide flex items-center gap-2 mb-1">
+        <Ruler size={16} className="text-accent" /> Multi-Stop Distances
       </h4>
-      <p className="text-[11px] text-gray-500 mb-4">
+      <p className="text-[11px] text-content-muted mb-4">
         Add 2 or more points to compare distances between every pair — handy for planning lift-club pickups.
       </p>
 
@@ -48,10 +48,10 @@ export default function DistanceMatrixPanel({ points, onRemove }: Props) {
           {points.map(p => (
             <span
               key={p.id}
-              className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full pl-3 pr-1.5 py-1 text-[11px] text-gray-300"
+              className="flex items-center gap-1.5 bg-surface-raised/5 border border-default rounded-full pl-3 pr-1.5 py-1 text-[11px] text-content"
             >
               {p.label}
-              <button onClick={() => onRemove(p.id)} className="text-gray-500 hover:text-red-400">
+              <button onClick={() => onRemove(p.id)} className="text-content-muted hover:text-danger">
                 <X size={11} />
               </button>
             </span>
@@ -60,16 +60,16 @@ export default function DistanceMatrixPanel({ points, onRemove }: Props) {
       )}
 
       {points.length < 2 ? (
-        <p className="text-xs text-gray-500">Add at least 2 points (from search, saved places, or map markers) to see distances.</p>
+        <p className="text-xs text-content-muted">Add at least 2 points (from search, saved places, or map markers) to see distances.</p>
       ) : (
         <div className="space-y-2">
           {pairs.map(({ a, b, metres }) => (
             <div
               key={`${a.id}-${b.id}`}
-              className="flex items-center justify-between p-2.5 bg-white/2 border border-white/5 rounded-lg text-xs"
+              className="flex items-center justify-between p-2.5 bg-surface-raised/[0.02] border border-subtle rounded-lg text-xs"
             >
-              <span className="text-gray-300 truncate pr-2">{a.label} ↔ {b.label}</span>
-              <span className="text-gold-primary font-bold shrink-0">{distanceBand(metres)}</span>
+              <span className="text-content truncate pr-2">{a.label} ↔ {b.label}</span>
+              <span className="text-accent font-bold shrink-0">{distanceBand(metres)}</span>
             </div>
           ))}
         </div>

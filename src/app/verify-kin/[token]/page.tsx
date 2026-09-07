@@ -49,55 +49,55 @@ export default function VerifyKinPage({ params }: { params: Promise<{ token: str
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
       <div className="glass-panel w-full max-w-md p-8 space-y-6 text-center">
-        <div className="w-12 h-12 mx-auto rounded-full bg-gold-primary/10 flex items-center justify-center">
-          <ShieldCheck size={24} className="text-gold-primary" />
+        <div className="w-12 h-12 mx-auto rounded-full bg-accent/10 flex items-center justify-center">
+          <ShieldCheck size={24} className="text-accent" />
         </div>
-        <h1 className="text-lg font-black text-white uppercase tracking-tight">Confirm a relationship</h1>
+        <h1 className="text-lg font-black text-content uppercase tracking-tight">Confirm a relationship</h1>
 
         {loading && (
-          <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+          <div className="flex items-center justify-center gap-2 text-content-muted text-sm">
             <Loader size={16} className="animate-spin" /> Loading…
           </div>
         )}
 
         {!loading && loadError && (
-          <p className="text-sm text-red-400">{loadError}</p>
+          <p className="text-sm text-danger">{loadError}</p>
         )}
 
         {!loading && claim && answered === null && (
           <>
-            <p className="text-sm text-gray-300 leading-relaxed">
-              <strong className="text-white">{claim.requesterName}</strong> listed <strong className="text-white">{claim.claimedName}</strong> as their <strong className="text-gold-primary">{claim.claimedRelationship.toLowerCase()}</strong> on The Resident.
+            <p className="text-sm text-content leading-relaxed">
+              <strong className="text-content">{claim.requesterName}</strong> listed <strong className="text-content">{claim.claimedName}</strong> as their <strong className="text-accent">{claim.claimedRelationship.toLowerCase()}</strong> on The Resident.
             </p>
-            <p className="text-xs text-gray-500">If you&apos;re {claim.claimedName}, is that true?</p>
-            {submitError && <p className="text-[11px] text-red-400">{submitError}</p>}
+            <p className="text-xs text-content-muted">If you&apos;re {claim.claimedName}, is that true?</p>
+            {submitError && <p className="text-[11px] text-danger">{submitError}</p>}
             <div className="flex gap-3">
               <button
                 onClick={() => respond(true)}
                 disabled={submitting}
-                className="flex-1 flex items-center justify-center gap-2 bg-gold-primary text-black font-black py-3 rounded-xl text-xs uppercase tracking-widest disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 bg-accent text-content-on-accent font-black py-3 rounded-xl text-xs uppercase tracking-widest disabled:opacity-50"
               >
                 <Check size={14} /> Yes, that&apos;s true
               </button>
               <button
                 onClick={() => respond(false)}
                 disabled={submitting}
-                className="flex-1 flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-gray-300 font-black py-3 rounded-xl text-xs uppercase tracking-widest disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 bg-surface-raised/5 border border-default text-content font-black py-3 rounded-xl text-xs uppercase tracking-widest disabled:opacity-50"
               >
                 <X size={14} /> No
               </button>
             </div>
-            <p className="text-[10px] text-gray-600">You don&apos;t need a Resident account to answer this.</p>
+            <p className="text-[10px] text-content-subtle">You don&apos;t need a Resident account to answer this.</p>
           </>
         )}
 
         {!loading && answered === 'confirmed' && (
-          <p className="text-sm text-green-400">Thanks — you&apos;ve confirmed this relationship. You can close this page.</p>
+          <p className="text-sm text-success">Thanks — you&apos;ve confirmed this relationship. You can close this page.</p>
         )}
         {!loading && answered === 'denied' && (
-          <p className="text-sm text-gray-400">Thanks for letting us know. You can close this page.</p>
+          <p className="text-sm text-content-muted">Thanks for letting us know. You can close this page.</p>
         )}
       </div>
     </div>

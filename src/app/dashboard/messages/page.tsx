@@ -122,34 +122,34 @@ export default function MessagesPage() {
   const ThreadRow = ({ t }: { t: Thread }) => (
     <button
       onClick={() => router.push(`/dashboard/messages/${t.otherId}`)}
-      className="w-full flex items-center gap-3 p-3 bg-black/40 border border-white/5 rounded-xl hover:border-gold-primary/20 transition-all text-left"
+      className="w-full flex items-center gap-3 p-3 bg-surface-sunken/40 border border-subtle rounded-xl hover:border-accent/20 transition-all text-left"
     >
-      <div className="w-9 h-9 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden flex-shrink-0">
+      <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center text-accent text-xs font-black overflow-hidden flex-shrink-0">
         {profileMap[t.otherId]?.avatar_url
           ? <img src={profileMap[t.otherId].avatar_url as string} alt="" className="w-full h-full object-cover" />
           : nameOf(t.otherId).charAt(0).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-white">{nameOf(t.otherId)}</p>
-        <p className="text-xs text-gray-500 truncate">{t.lastMessage.body}</p>
+        <p className="text-sm font-bold text-content">{nameOf(t.otherId)}</p>
+        <p className="text-xs text-content-muted truncate">{t.lastMessage.body}</p>
       </div>
-      <span className="text-[10px] text-gray-600 flex-shrink-0">{new Date(t.lastMessage.created_at).toLocaleDateString()}</span>
+      <span className="text-[10px] text-content-subtle flex-shrink-0">{new Date(t.lastMessage.created_at).toLocaleDateString()}</span>
     </button>
   )
 
   return (
     <div className="glass-panel p-6">
       <div className="flex items-center gap-2 mb-6">
-        <MessageCircle size={20} className="text-gold-primary" />
-        <h2 className="text-xl font-bold text-white">Messages</h2>
+        <MessageCircle size={20} className="text-accent" />
+        <h2 className="text-xl font-bold text-content">Messages</h2>
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-gray-500 flex items-center justify-center gap-2">
+        <div className="py-12 text-center text-content-muted flex items-center justify-center gap-2">
           <Loader size={16} className="animate-spin" /> Loading conversations…
         </div>
       ) : error && threads.length === 0 ? (
-        <p className="text-[11px] text-red-400">{error}</p>
+        <p className="text-[11px] text-danger">{error}</p>
       ) : threads.length === 0 ? (
         <EmptyState icon={MessageCircle} title="No conversations yet" subtitle="Message a landlord, driver or neighbour to start one." />
       ) : (
@@ -160,7 +160,7 @@ export default function MessagesPage() {
               only notice mid-scroll in one flat list. */}
           {requests.length > 0 && (
             <div className="space-y-2">
-              <h3 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gold-primary">
+              <h3 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-accent">
                 <Clock size={11} /> Requests ({requests.length})
               </h3>
               {requests.map(t => <ThreadRow key={t.otherId} t={t} />)}
@@ -170,7 +170,7 @@ export default function MessagesPage() {
           {chats.length > 0 && (
             <div className="space-y-2">
               {requests.length > 0 && (
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Chats</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-content-muted">Chats</h3>
               )}
               {chats.map(t => <ThreadRow key={t.otherId} t={t} />)}
             </div>

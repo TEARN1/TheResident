@@ -2,8 +2,8 @@
 
 import React from 'react'
 
-// The gold-outline CTA ("bg-gold-primary/10 hover:bg-gold-primary
-// hover:text-black border border-gold-primary/30 …") was hand-copied across
+// The gold-outline CTA ("bg-accent/10 hover:bg-accent
+// hover:text-content-on-accent border border-accent/30 …") was hand-copied across
 // 8+ call sites (Profile, Housing, NoticeBoardTab, VibeMap, SafetyTab) with
 // only padding/width drifting between them — this is that button, extracted
 // once so future call sites stop re-typing it and any future style tweak
@@ -14,8 +14,8 @@ export function goldButtonClass(opts: { size?: 'sm' | 'md'; fullWidth?: boolean 
   return [
     fullWidth ? 'w-full' : '',
     'flex items-center justify-center gap-2',
-    'bg-gold-primary/10 hover:bg-gold-primary hover:text-black',
-    'border border-gold-primary/30 text-gold-primary',
+    'bg-accent/10 hover:bg-accent hover:text-content-on-accent',
+    'border border-accent/30 text-accent',
     'font-black rounded-xl uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50',
     padding
   ].filter(Boolean).join(' ')

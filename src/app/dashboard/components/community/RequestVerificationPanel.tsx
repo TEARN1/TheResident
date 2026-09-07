@@ -94,29 +94,29 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
   }
 
   if (loading) {
-    return <p className="text-[11px] text-gray-500 flex items-center gap-2">
+    return <p className="text-[11px] text-content-muted flex items-center gap-2">
       <Loader size={13} className="animate-spin" /> Checking verification…
     </p>
   }
 
   if (unitVerified) {
     return (
-      <p className="text-[11px] text-green-400 flex items-center gap-1.5">
+      <p className="text-[11px] text-success flex items-center gap-1.5">
         <BadgeCheck size={13} /> {unitName} is verified and can send to its area.
       </p>
     )
   }
 
   return (
-    <div className="bg-black/30 border border-white/5 rounded-xl p-3 space-y-2.5">
-      <p className="text-[11px] text-gray-300 leading-relaxed">{describeVerification(state)}</p>
+    <div className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-2.5">
+      <p className="text-[11px] text-content leading-relaxed">{describeVerification(state)}</p>
 
       {state?.status === 'pending' && (
         <button
           type="button"
           onClick={withdraw}
           disabled={busy}
-          className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-red-400 disabled:opacity-50"
+          className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-danger disabled:opacity-50"
         >
           Withdraw application
         </button>
@@ -134,10 +134,10 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
 
       {open && (
         <div className="space-y-2.5">
-          <div className="flex items-start gap-2 bg-blue-500/5 border border-blue-500/20 rounded-lg p-2.5">
-            <Info size={12} className="text-blue-400 mt-0.5 shrink-0" />
-            <p className="text-[10px] text-gray-400 leading-relaxed">
-              Verification lets this office send notices to <strong className="text-gray-300">everyone living in
+          <div className="flex items-start gap-2 bg-info/5 border border-info/20 rounded-lg p-2.5">
+            <Info size={12} className="text-info mt-0.5 shrink-0" />
+            <p className="text-[10px] text-content-muted leading-relaxed">
+              Verification lets this office send notices to <strong className="text-content">everyone living in
               a specific area</strong>, whether or not they follow you. Someone reviews the evidence before that
               is granted, and it can be withdrawn if the channel is misused.
             </p>
@@ -147,26 +147,26 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Your role — e.g. Ward 12 Councillor, Branch Librarian"
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
           />
           <input
             value={evidence}
             onChange={e => setEvidence(e.target.value)}
             placeholder="Link to something that shows this — an official page, a directory listing"
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
           />
           <input
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="A contact address at the office (not a personal one)"
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
           />
           <textarea
             value={note}
             onChange={e => setNote(e.target.value)}
             rows={2}
             placeholder="Which area do you serve, and anything else the reviewer should know?"
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white resize-none"
+            className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content resize-none"
           />
 
           <div className="flex gap-2">
@@ -181,7 +181,7 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
             <button
               type="button"
               onClick={() => { setOpen(false); setError(null) }}
-              className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white px-3 py-2"
+              className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-content px-3 py-2"
             >
               <X size={12} />
             </button>
@@ -189,7 +189,7 @@ export default function RequestVerificationPanel({ unitId, unitName, unitVerifie
         </div>
       )}
 
-      {error && <p className="text-[11px] text-red-400">{error}</p>}
+      {error && <p className="text-[11px] text-danger">{error}</p>}
     </div>
   )
 }

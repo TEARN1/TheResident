@@ -18,17 +18,17 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: '#0a0a0a', color: '#e5e5e5', fontFamily: 'system-ui, sans-serif' }}>
+      <body style={{ margin: 0, background: 'var(--surface)', color: 'var(--text-muted)', fontFamily: 'system-ui, sans-serif' }}>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <div style={{ maxWidth: '360px', textAlign: 'center' }}>
             <h1 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>The app hit a problem</h1>
-            <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '20px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '20px' }}>
               Something went wrong loading The Resident. Your account and data are fine.
             </p>
             <button
               onClick={reset}
               style={{
-                background: '#D4AF37', color: '#000', fontWeight: 700, border: 'none',
+                background: 'var(--accent)', color: 'var(--surface)', fontWeight: 700, border: 'none',
                 borderRadius: '10px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer'
               }}
             >

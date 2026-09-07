@@ -1,5 +1,6 @@
 'use client'
 
+import { readTheme, applyTheme, resolveTheme, prefersDark, type Theme } from '@/utils/theme'
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
@@ -40,21 +41,28 @@ export default function AuthPage() {
   // persisted), so a theme choice made on this page silently reverted the
   // next time any page reloaded, and never touched the dashboard's own
   // separate 'dashboardTheme' key at all.
-  const [theme, setTheme] = useState<'light' | 'night'>('night')
+  // Resolved through src/utils/theme.ts. `theme` is the stored CHOICE, which
+  // may be 'system'; `isDark` is what the viewer is actually looking at, and
+  // the two are not the same thing — the icon has to reflect what is on
+  // screen, not what was chosen.
+  const [theme, setTheme] = useState<Theme>('system')
+  const [isDark, setIsDark] = useState(false)
 
   useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('residentTheme') : null
+    const choice = readTheme()
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage/DOM on mount
-    setTheme(stored === 'light' ? 'light' : 'night')
+    setTheme(choice)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage/DOM on mount
+    setIsDark(resolveTheme(choice, prefersDark()) === 'dark')
   }, [])
 
+  // Toggling from 'system' picks the OPPOSITE of what is currently shown,
+  // which is what someone reaching for the control actually wants.
   const toggleTheme = () => {
-    const nextTheme = theme === 'night' ? 'light' : 'night'
-    setTheme(nextTheme)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('residentTheme', nextTheme)
-      document.documentElement.setAttribute('data-theme', nextTheme)
-    }
+    const next: Theme = isDark ? 'light' : 'dark'
+    applyTheme(next)
+    setTheme(next)
+    setIsDark(next === 'dark')
   }
 
   const failedAttempts = useSelector((state: RootState) => state.auth.failedAttempts)
@@ -305,16 +313,16 @@ export default function AuthPage() {
       <button
         onClick={toggleTheme}
         style={themeToggleStyle}
-        title={theme === 'night' ? 'Switch to light theme' : 'Switch to dark theme'}
-        aria-label={theme === 'night' ? 'Switch to light theme' : 'Switch to dark theme'}
+        title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+        aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
         aria-pressed={theme === 'light'}
       >
-        {theme === 'night' ? <Sun size={16} /> : <Moon size={16} />}
+        {isDark ? <Sun size={16} /> : <Moon size={16} />}
       </button>
       
       {securityMessage && (
         <div style={alertStyle}>
-          <Shield size={20} color="#D4AF37" />
+          <Shield size={20} color="var(--accent)" />
           <span>{securityMessage}</span>
         </div>
       )}
@@ -350,7 +358,7 @@ export default function AuthPage() {
 
         {errorMessage && (
           <div style={errorContainerStyle}>
-            <AlertTriangle size={16} color="#ef4444" style={{ marginRight: 8 }} />
+            <AlertTriangle size={16} color="var(--danger)" style={{ marginRight: 8 }} />
             <span>{errorMessage}</span>
           </div>
         )}
@@ -396,7 +404,7 @@ export default function AuthPage() {
                 <option value="tenant">I am a Tenant looking for a Room</option>
                 <option value="landlord">I am a Landlord renting out Rooms</option>
               </select>
-              <p style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+              <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
                 Only used to set up your account the very first time you sign in — ignored after that.
                 Got the wrong one? Fix it any time from Profile → Switch role.
               </p>
@@ -513,12 +521,12 @@ export default function AuthPage() {
                         <div key={i} style={{
                           flex: 1, height: '4px', borderRadius: '2px',
                           background: i < passwordStrength.score 
-                            ? passwordStrength.score >= 4 ? '#4CAF50' : passwordStrength.score >= 2 ? '#FFC107' : '#F44336'
+                            ? passwordStrength.score >= 4 ? '#4CAF50' : passwordStrength.score >= 2 ? 'var(--warning)' : '#F44336'
                             : 'rgba(255,255,255,0.15)'
                         }} />
                       ))}
                     </div>
-                    <span style={{fontSize: '11px', color: passwordStrength.strong ? '#4CAF50' : '#FFC107'}}>
+                    <span style={{fontSize: '11px', color: passwordStrength.strong ? '#4CAF50' : 'var(--warning)'}}>
                       {passwordStrength.strong ? '✅ Strong password' : `⚠️ ${passwordStrength.feedback[0] || 'Weak password'}`}
                     </span>
                   </div>
@@ -841,7 +849,7 @@ const inactiveTabStyle: React.CSSProperties = {
 
 export const errorContainerStyle: React.CSSProperties = {
   background: 'rgba(239, 68, 68, 0.15)',
-  border: '1px solid #ef4444',
+  border: '1px solid var(--danger)',
   borderRadius: '6px',
   padding: '0.8rem',
   color: 'var(--foreground)',
@@ -1003,7 +1011,7 @@ const gruvsBannerStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: '10px',
   background: 'var(--gold-dim, rgba(212,175,55,0.10))',
-  border: '1px solid var(--gold-primary, #D4AF37)',
+  border: '1px solid var(--gold-primary, var(--accent))',
   borderRadius: '10px',
   padding: '12px 14px',
   marginBottom: '16px',

@@ -58,26 +58,26 @@ export default function ReviewsList({ userId }: { userId: string }) {
   }, [userId])
 
   if (reviews === null) {
-    return <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Loading reviews…</p>
+    return <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest">Loading reviews…</p>
   }
 
   if (reviews.length === 0) {
-    return <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">No reviews yet.</p>
+    return <p className="text-[10px] text-content-subtle font-bold uppercase tracking-widest">No reviews yet.</p>
   }
 
   return (
     <div className="space-y-3">
       {reviews.map(r => (
-        <div key={r.id} className="bg-black/40 border border-white/5 rounded-xl p-4 space-y-2">
+        <div key={r.id} className="bg-surface-sunken/40 border border-subtle rounded-xl p-4 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map(n => (
-                <Star key={n} size={12} className={r.rating >= n ? 'text-gold-primary fill-gold-primary' : 'text-gray-700'} />
+                <Star key={n} size={12} className={r.rating >= n ? 'text-accent fill-gold-primary' : 'text-content-subtle'} />
               ))}
             </div>
-            <span className="text-[9px] text-gray-600 font-black uppercase tracking-widest">{r.authorName}</span>
+            <span className="text-[9px] text-content-subtle font-black uppercase tracking-widest">{r.authorName}</span>
           </div>
-          {r.body && <p className="text-xs text-gray-400 leading-relaxed italic">&quot;{r.body}&quot;</p>}
+          {r.body && <p className="text-xs text-content-muted leading-relaxed italic">&quot;{r.body}&quot;</p>}
         </div>
       ))}
     </div>

@@ -24,9 +24,9 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--background)' }}>
       <Card padding="lg" className="max-w-sm w-full text-center space-y-4">
-        <AlertTriangle size={36} className="mx-auto text-gold-primary opacity-70" />
-        <h1 className="text-lg font-bold text-white">Something went wrong</h1>
-        <p className="text-sm text-gray-400">
+        <AlertTriangle size={36} className="mx-auto text-accent opacity-70" />
+        <h1 className="text-lg font-bold text-content">Something went wrong</h1>
+        <p className="text-sm text-content-muted">
           This page hit an unexpected error. Your account and data are fine — try again, or head back to the dashboard.
         </p>
         <div className="flex flex-col gap-2 pt-2">
@@ -35,7 +35,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           </GoldButton>
           <Link
             href="/dashboard"
-            className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-black px-4 py-2.5 rounded-xl transition-all text-xs uppercase tracking-widest"
+            className="w-full bg-surface-raised/5 hover:bg-surface-raised/10 border border-default text-content font-black px-4 py-2.5 rounded-xl transition-all text-xs uppercase tracking-widest"
           >
             Back to dashboard
           </Link>

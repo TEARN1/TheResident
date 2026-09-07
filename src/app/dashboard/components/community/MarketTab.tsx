@@ -69,7 +69,7 @@ export default function MarketTab({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const tabClass = (id: Section) =>
-    `px-4 py-2 rounded-lg text-sm font-medium transition-all ${section === id ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`
+    `px-4 py-2 rounded-lg text-sm font-medium transition-all ${section === id ? 'bg-accent text-content-on-accent' : 'text-content-muted hover:text-content hover:bg-surface-raised/5'}`
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -142,7 +142,7 @@ export default function MarketTab({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 mb-4 bg-gray-900/30 p-1 rounded-xl border border-white/5 inline-flex">
+      <div className="flex flex-wrap gap-2 mb-4 bg-surface/30 p-1 rounded-xl border border-subtle inline-flex">
         <button onClick={() => setSection('market')} className={tabClass('market')}>Local Market</button>
         <button onClick={() => setSection('vendors')} className={tabClass('vendors')}>Vendors</button>
         <button onClick={() => setSection('groupbuys')} className={tabClass('groupbuys')}>Group Buys</button>
@@ -153,79 +153,79 @@ export default function MarketTab({
         <div className="glass-panel p-6">
           <div className="flex justify-between items-center mb-6">
              <div>
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                   <ShoppingBag size={20} className="text-gold-primary" /> Spaza Marketplace
+                <h3 className="text-xl font-bold text-content flex items-center gap-2">
+                   <ShoppingBag size={20} className="text-accent" /> Spaza Marketplace
                 </h3>
-                <p className="text-xs text-gray-500 mt-1">Direct trading between neighbors. No platform fees.</p>
+                <p className="text-xs text-content-muted mt-1">Direct trading between neighbors. No platform fees.</p>
              </div>
-             <button onClick={() => setShowForm(true)} className="bg-white/5 hover:bg-white/10 text-gold-primary border border-gold-primary/20 px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+             <button onClick={() => setShowForm(true)} className="bg-surface-raised/5 hover:bg-surface-raised/10 text-accent border border-accent/20 px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
                 <Plus size={14}/> Post Item
              </button>
           </div>
 
           {marketItems.length === 0 ? (
-            <div className="py-12 text-center text-gray-500">
+            <div className="py-12 text-center text-content-muted">
                <ShoppingBag size={48} className="mx-auto mb-4 opacity-10" />
                <p>No items for sale in your area.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[...marketItems].sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a))).map(item => (
-                <div key={item.id} className={`bg-black/40 border rounded-xl p-4 flex flex-col gap-3 transition-all group ${isFeatured(item) ? 'border-gold-primary/40' : 'border-white/5 hover:border-white/10'}`}>
+                <div key={item.id} className={`bg-surface-sunken/40 border rounded-xl p-4 flex flex-col gap-3 transition-all group ${isFeatured(item) ? 'border-accent/40' : 'border-subtle hover:border-default'}`}>
                    {item.imageUrl && (
                      <div className="relative w-full h-32 rounded-lg overflow-hidden -mt-1">
                        <Image src={item.imageUrl} alt={item.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 25vw" />
                      </div>
                    )}
                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-black text-gold-primary group-hover:scale-110 transition-transform origin-left">{item.price ? formatCurrency(item.price, item.currency) : 'FREE'}</span>
+                      <span className="text-xs font-black text-accent group-hover:scale-110 transition-transform origin-left">{item.price ? formatCurrency(item.price, item.currency) : 'FREE'}</span>
                       <div className="flex items-center gap-1.5">
                          {isFeatured(item) && (
-                            <span className="bg-gold-primary text-black px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest">Featured</span>
+                            <span className="bg-accent text-content-on-accent px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest">Featured</span>
                          )}
-                         <span className="text-[9px] bg-white/5 text-gray-500 px-1.5 py-0.5 rounded uppercase font-bold">{item.category}</span>
+                         <span className="text-[9px] bg-surface-raised/5 text-content-muted px-1.5 py-0.5 rounded uppercase font-bold">{item.category}</span>
                       </div>
                    </div>
-                   <h4 className="font-bold text-white text-sm group-hover:text-gold-primary transition-colors">{item.title}</h4>
-                   <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{item.description}</p>
-                   <div className="mt-auto pt-3 border-t border-white/5 flex justify-between items-center">
-                      <span className="text-[10px] text-gray-600">In {item.suburb}</span>
+                   <h4 className="font-bold text-content text-sm group-hover:text-accent transition-colors">{item.title}</h4>
+                   <p className="text-xs text-content-muted line-clamp-2 leading-relaxed">{item.description}</p>
+                   <div className="mt-auto pt-3 border-t border-subtle flex justify-between items-center">
+                      <span className="text-[10px] text-content-subtle">In {item.suburb}</span>
                       <div className="flex items-center gap-3">
                          <OpenInMapsButton
                            address={item.suburb}
                            lat={item.lat}
                            lon={item.lon}
                            label={item.title}
-                           className="inline-flex items-center gap-1 text-gold-primary text-[10px] font-bold hover:underline"
+                           className="inline-flex items-center gap-1 text-accent text-[10px] font-bold hover:underline"
                          />
                          {item.createdBy === currentUserId && (
                            <UpgradeButton
                              item="market_boost"
                              targetId={item.id}
-                             className="text-gold-primary text-[10px] font-bold hover:underline"
+                             className="text-accent text-[10px] font-bold hover:underline"
                            />
                          )}
                          {item.createdBy !== currentUserId && (
                            <button
                              onClick={() => onReport?.('market_item', item.id)}
                              title="Report this listing"
-                             className="text-gray-600 hover:text-red-400 transition-colors"
+                             className="text-content-subtle hover:text-danger transition-colors"
                            >
                              <ShieldAlert size={14} />
                            </button>
                          )}
                          {isModerator && (
                            <>
-                             <button onClick={() => onModerate?.('market_item', item.id, 'hide')} title="Hide listing" className="text-gray-600 hover:text-red-400 transition-colors">
+                             <button onClick={() => onModerate?.('market_item', item.id, 'hide')} title="Hide listing" className="text-content-subtle hover:text-danger transition-colors">
                                <EyeOff size={14} />
                              </button>
-                             <button onClick={() => onModerate?.('market_item', item.id, 'unhide')} title="Unhide listing" className="text-gray-600 hover:text-green-400 transition-colors">
+                             <button onClick={() => onModerate?.('market_item', item.id, 'unhide')} title="Unhide listing" className="text-content-subtle hover:text-success transition-colors">
                                <Eye size={14} />
                              </button>
                            </>
                          )}
                          {item.createdBy !== currentUserId && (
-                           <Link href={`/dashboard/messages?to=${item.createdBy}`} className="text-gold-primary text-[10px] font-bold hover:underline">Chat Seller</Link>
+                           <Link href={`/dashboard/messages?to=${item.createdBy}`} className="text-accent text-[10px] font-bold hover:underline">Chat Seller</Link>
                          )}
                       </div>
                    </div>
@@ -239,34 +239,34 @@ export default function MarketTab({
       {section === 'vendors' && (
         <div className="glass-panel p-6 space-y-4">
            {vendors.length === 0 ? (
-              <div className="py-12 text-center text-gray-500">
+              <div className="py-12 text-center text-content-muted">
                 <Store size={48} className="mx-auto mb-4 opacity-10" />
                 <p>No registered vendors in this area.</p>
               </div>
            ) : (
              vendors.map(v => (
-               <div key={v.id} className="bg-black/40 border border-white/5 rounded-xl hover:border-gold-primary/20 transition-all group overflow-hidden">
+               <div key={v.id} className="bg-surface-sunken/40 border border-subtle rounded-xl hover:border-accent/20 transition-all group overflow-hidden">
                   <div className="flex items-center justify-between p-4">
                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gold-primary/10 rounded-xl group-hover:bg-gold-primary group-hover:text-black transition-colors">
-                           <Store size={24} className="text-gold-primary group-hover:text-inherit" />
+                        <div className="p-3 bg-accent/10 rounded-xl group-hover:bg-accent group-hover:text-content-on-accent transition-colors">
+                           <Store size={24} className="text-accent group-hover:text-inherit" />
                         </div>
                         <div>
-                           <h4 className="font-bold text-white group-hover:text-gold-primary transition-colors">{v.name}</h4>
-                           <p className="text-xs text-gray-500">{v.category}</p>
+                           <h4 className="font-bold text-content group-hover:text-accent transition-colors">{v.name}</h4>
+                           <p className="text-xs text-content-muted">{v.category}</p>
                         </div>
                      </div>
                      <button
                        onClick={() => setExpandedVendor(expandedVendor === v.id ? null : v.id)}
-                       className="bg-white/5 text-gray-400 border border-white/10 px-4 py-2 rounded-lg text-xs hover:text-white hover:bg-white/10 transition-all font-bold"
+                       className="bg-surface-raised/5 text-content-muted border border-default px-4 py-2 rounded-lg text-xs hover:text-content hover:bg-surface-raised/10 transition-all font-bold"
                      >
                        {expandedVendor === v.id ? 'Hide' : 'View Details'}
                      </button>
                   </div>
                   {expandedVendor === v.id && (
-                    <div className="px-4 pb-4 pt-1 space-y-2 border-t border-white/5">
-                       <p className="text-sm text-gray-400 leading-relaxed">{v.description || 'No description added yet.'}</p>
-                       <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="px-4 pb-4 pt-1 space-y-2 border-t border-subtle">
+                       <p className="text-sm text-content-muted leading-relaxed">{v.description || 'No description added yet.'}</p>
+                       <div className="flex items-center gap-4 text-xs text-content-muted">
                           {v.contactNumber && <span>📞 {v.contactNumber}</span>}
                           <span>⭐ {v.rating.toFixed(1)} ({v.reviewsCount} reviews)</span>
                        </div>
@@ -281,7 +281,7 @@ export default function MarketTab({
       {section === 'groupbuys' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            {groupBuys.length === 0 ? (
-              <div className="glass-panel col-span-full p-12 text-center text-gray-500">
+              <div className="glass-panel col-span-full p-12 text-center text-content-muted">
                 <Users size={48} className="mx-auto mb-4 opacity-10" />
                 <p>No active group buys in your area.</p>
               </div>
@@ -289,24 +289,24 @@ export default function MarketTab({
              groupBuys.map(gb => {
                const pct = Math.min(100, (gb.currentPledges / gb.targetAmount) * 100)
                return (
-                 <div key={gb.id} className="glass-panel p-6 space-y-4 hover:border-gold-primary/20 transition-all">
+                 <div key={gb.id} className="glass-panel p-6 space-y-4 hover:border-accent/20 transition-all">
                     <div className="flex justify-between items-start">
-                       <h4 className="text-lg font-bold text-white">{gb.title}</h4>
-                       <span className="text-[10px] font-bold text-gold-primary bg-gold-primary/5 px-2 py-1 rounded border border-gold-primary/20 uppercase tracking-widest">Group Buy</span>
+                       <h4 className="text-lg font-bold text-content">{gb.title}</h4>
+                       <span className="text-[10px] font-bold text-accent bg-accent/5 px-2 py-1 rounded border border-accent/20 uppercase tracking-widest">Group Buy</span>
                     </div>
-                    <p className="text-sm text-gray-400 leading-relaxed">{gb.description}</p>
+                    <p className="text-sm text-content-muted leading-relaxed">{gb.description}</p>
                     <div className="space-y-2 pt-2">
                        <div className="flex justify-between text-[10px] uppercase font-bold">
-                          <span className="text-gray-500">Progress: {gb.currentPledges} / {gb.targetAmount}</span>
-                          <span className="text-gold-primary">{Math.round(pct)}%</span>
+                          <span className="text-content-muted">Progress: {gb.currentPledges} / {gb.targetAmount}</span>
+                          <span className="text-accent">{Math.round(pct)}%</span>
                        </div>
-                       <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden border border-white/5">
-                          <div className="h-full bg-gold-primary transition-all duration-1000 shadow-[0_0_10px_#D4AF37]" style={{ width: `${pct}%` }}></div>
+                       <div className="h-1.5 bg-surface-raised rounded-full overflow-hidden border border-subtle">
+                          <div className="h-full bg-accent transition-all duration-1000 shadow-[0_0_10px_var(--accent)]" style={{ width: `${pct}%` }}></div>
                        </div>
                     </div>
                     <button
                       onClick={() => onPledge?.(gb.id, 1)}
-                      className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-bold py-2.5 rounded-lg text-xs active:scale-95 transition-all mt-4"
+                      className="w-full bg-accent hover:bg-accent text-content-on-accent font-bold py-2.5 rounded-lg text-xs active:scale-95 transition-all mt-4"
                     >
                       Pledge Support
                     </button>
@@ -320,27 +320,27 @@ export default function MarketTab({
       {section === 'lostfound' && (
         <div className="glass-panel p-6 space-y-4">
            {lostFound.length === 0 ? (
-              <div className="py-12 text-center text-gray-500">
+              <div className="py-12 text-center text-content-muted">
                 <Search size={48} className="mx-auto mb-4 opacity-10" />
                 <p>Nothing lost, nothing found.</p>
               </div>
            ) : (
              lostFound.map(lf => (
-               <div key={lf.id} className="flex items-center justify-between p-4 bg-black/40 border border-white/5 rounded-xl hover:border-white/10 transition-all group">
+               <div key={lf.id} className="flex items-center justify-between p-4 bg-surface-sunken/40 border border-subtle rounded-xl hover:border-default transition-all group">
                   <div className="flex gap-4">
-                     <div className={`p-3 rounded-xl transition-colors ${lf.type === 'lost' ? 'bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white' : 'bg-green-500/10 text-green-500 group-hover:bg-green-500 group-hover:text-white'}`}>
+                     <div className={`p-3 rounded-xl transition-colors ${lf.type === 'lost' ? 'bg-danger/10 text-danger group-hover:bg-danger group-hover:text-content' : 'bg-success/10 text-success group-hover:bg-success group-hover:text-content'}`}>
                         {lf.type === 'lost' ? <AlertTriangle size={24} /> : <Check size={24} />}
                      </div>
                      <div>
                         <div className="flex items-center gap-2">
-                           <h4 className="font-bold text-white group-hover:text-gold-primary transition-colors">{lf.title}</h4>
-                           <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${lf.type === 'lost' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'}`}>{lf.type.toUpperCase()}</span>
+                           <h4 className="font-bold text-content group-hover:text-accent transition-colors">{lf.title}</h4>
+                           <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${lf.type === 'lost' ? 'bg-danger/20 text-danger border-danger/30' : 'bg-success/20 text-success border-success/30'}`}>{lf.type.toUpperCase()}</span>
                         </div>
-                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1"><MapPin size={10} className="text-gold-primary" /> {lf.location}</p>
+                        <p className="text-xs text-content-muted flex items-center gap-1 mt-1"><MapPin size={10} className="text-accent" /> {lf.location}</p>
                      </div>
                   </div>
                   {lf.status === 'active' && (
-                     <button onClick={() => onReunite?.(lf.id)} className="bg-gold-primary/10 text-gold-primary border border-gold-primary/20 px-4 py-2 rounded-lg text-xs font-bold hover:bg-gold-primary hover:text-black transition-all">Mark Reunited</button>
+                     <button onClick={() => onReunite?.(lf.id)} className="bg-accent/10 text-accent border border-accent/20 px-4 py-2 rounded-lg text-xs font-bold hover:bg-accent hover:text-content-on-accent transition-all">Mark Reunited</button>
                   )}
                </div>
              ))
@@ -356,37 +356,37 @@ export default function MarketTab({
       <AnimatePresence>
         {showForm && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={resetForm} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden">
-              <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
-                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Post an <span className="text-gold-primary">Item</span></h3>
-                <button onClick={resetForm} className="p-2 text-gray-500 hover:text-white transition-colors"><X /></button>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={resetForm} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-surface border-accent/20 shadow-2xl relative z-10 overflow-hidden">
+              <div className="bg-accent/5 p-6 border-b border-subtle flex justify-between items-center">
+                <h3 className="text-xl font-black text-content italic uppercase tracking-tighter">Post an <span className="text-accent">Item</span></h3>
+                <button onClick={resetForm} className="p-2 text-content-muted hover:text-content transition-colors"><X /></button>
               </div>
               <form onSubmit={handleSubmitItem} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                <p className="text-xs text-gray-500">Leave the price blank to give it away. Payment happens between you and the buyer — never through the app.</p>
+                <p className="text-xs text-content-muted">Leave the price blank to give it away. Payment happens between you and the buyer — never through the app.</p>
 
                 <div>
                   <input accept="image/*" ref={fileInputRef} className="hidden" id="market-image-input" type="file" onChange={handleImageSelect} />
                   {postImagePreview ? (
-                    <div className="relative w-full h-40 rounded-lg overflow-hidden border border-white/10">
+                    <div className="relative w-full h-40 rounded-lg overflow-hidden border border-default">
                       {/* Local object URL preview — next/image can't optimize a blob:, a plain img is correct here. */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={postImagePreview} alt="Selected item" className="w-full h-full object-cover" />
-                      <button type="button" onClick={clearPostImage} className="absolute top-2 right-2 bg-black/80 text-white p-1.5 rounded-full hover:bg-red-500/80 transition-colors"><X size={14} /></button>
+                      <button type="button" onClick={clearPostImage} className="absolute top-2 right-2 bg-surface-sunken/80 text-content p-1.5 rounded-full hover:bg-danger/80 transition-colors"><X size={14} /></button>
                     </div>
                   ) : (
-                    <label htmlFor="market-image-input" className="flex items-center justify-center gap-2 w-full h-24 border border-dashed border-white/15 rounded-lg text-xs text-gray-400 hover:border-gold-primary/40 hover:text-gold-primary cursor-pointer transition-all">
+                    <label htmlFor="market-image-input" className="flex items-center justify-center gap-2 w-full h-24 border border-dashed border-default/15 rounded-lg text-xs text-content-muted hover:border-accent/40 hover:text-accent cursor-pointer transition-all">
                       <ImagePlus size={16} /> Add a photo (optional)
                     </label>
                   )}
-                  {imageError && <p className="text-[10px] text-red-400 mt-1.5">{imageError}</p>}
+                  {imageError && <p className="text-[10px] text-danger mt-1.5">{imageError}</p>}
                 </div>
 
-                <input value={postTitle} onChange={e => setPostTitle(e.target.value)} required placeholder="What is it?" className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
-                <textarea value={postDesc} onChange={e => setPostDesc(e.target.value)} placeholder="Condition, why you're selling" className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white h-20 resize-none outline-none focus:border-gold-primary/40" />
+                <input value={postTitle} onChange={e => setPostTitle(e.target.value)} required placeholder="What is it?" className="w-full bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40" />
+                <textarea value={postDesc} onChange={e => setPostDesc(e.target.value)} placeholder="Condition, why you're selling" className="w-full bg-surface border border-default rounded-lg p-3 text-sm text-content h-20 resize-none outline-none focus:border-accent/40" />
                 <div className="flex gap-3">
-                   <input type="number" min={0} value={postPrice} onChange={e => setPostPrice(e.target.value)} placeholder="Price (blank = free)" className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40" />
-                   <select value={postCategory} onChange={e => setPostCategory(e.target.value)} className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40">
+                   <input type="number" min={0} value={postPrice} onChange={e => setPostPrice(e.target.value)} placeholder="Price (blank = free)" className="flex-1 bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40" />
+                   <select value={postCategory} onChange={e => setPostCategory(e.target.value)} className="flex-1 bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40">
                       <option>Household</option>
                       <option>Furniture</option>
                       <option>Electronics</option>
@@ -396,13 +396,13 @@ export default function MarketTab({
                    </select>
                 </div>
                 <div className="space-y-1.5">
-                   <label className="text-[10px] text-gray-500 uppercase font-bold">Pickup spot on the map <span className="normal-case font-normal text-gray-600">(optional)</span></label>
+                   <label className="text-[10px] text-content-muted uppercase font-bold">Pickup spot on the map <span className="normal-case font-normal text-content-subtle">(optional)</span></label>
                    <MapSearchBox onSelect={(result: GeocodeResult) => { setPostLat(result.lat); setPostLon(result.lon) }} />
                    {postLat != null && postLon != null && (
-                      <p className="text-[10px] text-gold-primary">Pinned — {postLat.toFixed(4)}, {postLon.toFixed(4)}</p>
+                      <p className="text-[10px] text-accent">Pinned — {postLat.toFixed(4)}, {postLon.toFixed(4)}</p>
                    )}
                 </div>
-                <button type="submit" disabled={posting} className="w-full bg-gold-primary text-black font-black py-2.5 rounded-lg text-xs uppercase tracking-widest disabled:opacity-50">
+                <button type="submit" disabled={posting} className="w-full bg-accent text-content-on-accent font-black py-2.5 rounded-lg text-xs uppercase tracking-widest disabled:opacity-50">
                   {posting ? 'Posting…' : 'Post it'}
                 </button>
               </form>

@@ -205,16 +205,16 @@ export default function OrgBroadcastsPanel() {
     <div className="glass-panel p-5 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-gold-primary/10 rounded-xl">
-            <Megaphone size={18} className="text-gold-primary" />
+          <div className="p-2 bg-accent/10 rounded-xl">
+            <Megaphone size={18} className="text-accent" />
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-widest">Org & Business Broadcasts</p>
-            <p className="text-[10px] text-gray-500">Free, in-app announcements — opt-in only, no spam</p>
+            <p className="text-xs font-black text-content uppercase tracking-widest">Org & Business Broadcasts</p>
+            <p className="text-[10px] text-content-muted">Free, in-app announcements — opt-in only, no spam</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowCreateUnit(v => !v)} className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white px-3 py-2 rounded-lg bg-white/5 flex items-center gap-1">
+          <button onClick={() => setShowCreateUnit(v => !v)} className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-content px-3 py-2 rounded-lg bg-surface-raised/5 flex items-center gap-1">
             <Building2 size={12} /> New unit
           </button>
           {canSendAnywhere && (
@@ -226,7 +226,7 @@ export default function OrgBroadcastsPanel() {
       </div>
 
       {error && (
-        <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2">{error}</div>
+        <div className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg p-2">{error}</div>
       )}
 
       {admin && <VerificationQueuePanel />}
@@ -244,21 +244,21 @@ export default function OrgBroadcastsPanel() {
       ))}
 
       {showCreateUnit && (
-        <div className="bg-black/40 border border-white/5 rounded-xl p-4 space-y-3">
-          <p className="text-[10px] text-gray-500">Claim a unit to send from — a business, a school, or a department. Creating one makes you its first sender.</p>
+        <div className="bg-surface-sunken/40 border border-subtle rounded-xl p-4 space-y-3">
+          <p className="text-[10px] text-content-muted">Claim a unit to send from — a business, a school, or a department. Creating one makes you its first sender.</p>
           <input
             value={newUnitName}
             onChange={e => setNewUnitName(e.target.value)}
             placeholder="Unit name (e.g. Sunnyside Spaza Shop)"
-            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
           />
           <div className="flex gap-2">
-            <select value={newUnitTier} onChange={e => setNewUnitTier(e.target.value as OrgUnit['tier'])} className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white">
+            <select value={newUnitTier} onChange={e => setNewUnitTier(e.target.value as OrgUnit['tier'])} className="flex-1 bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content">
               {(Object.keys(TIER_LABEL) as OrgUnit['tier'][]).map(t => (
                 <option key={t} value={t}>{TIER_LABEL[t]}</option>
               ))}
             </select>
-            <select value={newUnitParentId} onChange={e => setNewUnitParentId(e.target.value)} className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white">
+            <select value={newUnitParentId} onChange={e => setNewUnitParentId(e.target.value)} className="flex-1 bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content">
               <option value="">No parent (top-level)</option>
               {postableUnits.map(u => (
                 <option key={u.id} value={u.id}>{unitBreadcrumb(units, u.id).map(b => b.name).join(' › ')}</option>
@@ -272,20 +272,20 @@ export default function OrgBroadcastsPanel() {
       )}
 
       {showCompose && canSendAnywhere && (
-        <div className="bg-black/40 border border-white/5 rounded-xl p-4 space-y-3">
-          <select value={targetUnitId} onChange={e => setTargetUnitId(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white">
+        <div className="bg-surface-sunken/40 border border-subtle rounded-xl p-4 space-y-3">
+          <select value={targetUnitId} onChange={e => setTargetUnitId(e.target.value)} className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content">
             <option value="" disabled>Post as…</option>
             {postableUnits.map(u => (
               <option key={u.id} value={u.id}>{unitBreadcrumb(units, u.id).map(b => b.name).join(' › ')} ({TIER_LABEL[u.tier]})</option>
             ))}
           </select>
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white" />
-          <textarea value={body} onChange={e => setBody(e.target.value)} rows={3} placeholder="Announcement…" className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white resize-none" />
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content" />
+          <textarea value={body} onChange={e => setBody(e.target.value)} rows={3} placeholder="Announcement…" className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content resize-none" />
           <div>
             <select
               value={priority}
               onChange={e => setPriority(e.target.value as BroadcastPriority)}
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+              className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
             >
               <option value="normal">Normal — appears in the feed</option>
               <option value="important">Important — appears in the feed, highlighted</option>
@@ -303,7 +303,7 @@ export default function OrgBroadcastsPanel() {
               </option>
             </select>
             {(priority === 'urgent' || priority === 'critical') && (
-              <p className="text-[10px] text-yellow-500 mt-1">
+              <p className="text-[10px] text-warning mt-1">
                 This interrupts everyone who follows this unit — use it only for something they need to act on now.
               </p>
             )}
@@ -317,10 +317,10 @@ export default function OrgBroadcastsPanel() {
                   onChange={e => setSendToArea(e.target.checked)}
                   className="accent-gold-primary mt-0.5"
                 />
-                <span className="text-[11px] text-gray-300 leading-relaxed">
-                  <strong className="text-white">Send to an area instead</strong> — reaches everyone
+                <span className="text-[11px] text-content leading-relaxed">
+                  <strong className="text-content">Send to an area instead</strong> — reaches everyone
                   who lives there, not only people who follow this account.
-                  <span className="text-gray-500"> This is recorded publicly.</span>
+                  <span className="text-content-muted"> This is recorded publicly.</span>
                 </span>
               </label>
               {sendToArea && <AreaLicenceNotice unitId={targetUnitId} licence={licence} />}
@@ -329,14 +329,14 @@ export default function OrgBroadcastsPanel() {
                   <select
                     value={category}
                     onChange={e => setCategory(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+                    className="w-full bg-surface-sunken/40 border border-default rounded-lg px-3 py-2 text-sm text-content"
                   >
                     <option value="">Choose a topic…</option>
                     {AREA_CATEGORIES.map(c => (
                       <option key={c.value} value={c.value}>{c.label} — {c.hint}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                  <p className="text-[10px] text-content-subtle leading-relaxed">
                     Residents can mute a topic without muting your office. Emergencies always
                     reach them whatever they have muted.
                   </p>
@@ -356,7 +356,7 @@ export default function OrgBroadcastsPanel() {
             <button onClick={handlePost} disabled={submitting || !targetUnitId || !title.trim() || !body.trim() || (sendToArea && (!category || !canSend(areaPreview) || !canSendAtPriority(licence, priority)))} className={`${goldButtonClass()} text-[10px] px-4 py-2 flex items-center gap-1 disabled:opacity-50`}>
               <Send size={12} /> {submitting ? 'Sending…' : sendToArea ? 'Send to this area' : 'Send'}
             </button>
-            <button onClick={() => setShowCompose(false)} className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white px-3 py-2"><X size={12} /></button>
+            <button onClick={() => setShowCompose(false)} className="text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-content px-3 py-2"><X size={12} /></button>
           </div>
         </div>
       )}
@@ -364,12 +364,12 @@ export default function OrgBroadcastsPanel() {
       {units.length > 0 && (
         <div className="space-y-2">
           <div className="relative">
-            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle" />
             <input
               value={directoryQuery}
               onChange={e => setDirectoryQuery(e.target.value)}
               placeholder="Search the directory — a school, a utility, a class…"
-              className="w-full bg-black/40 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-xs text-white"
+              className="w-full bg-surface-sunken/40 border border-default rounded-lg pl-8 pr-3 py-2 text-xs text-content"
             />
           </div>
           <div className="flex flex-wrap gap-2">
@@ -381,16 +381,16 @@ export default function OrgBroadcastsPanel() {
                   onClick={() => toggleFollow(u.id)}
                   title={unitBreadcrumb(units, u.id).map(b => b.name).join(' › ')}
                   className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border flex items-center gap-1 transition-all ${
-                    following ? 'bg-gold-primary/15 border-gold-primary/40 text-gold-primary' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+                    following ? 'bg-accent/15 border-accent/40 text-accent' : 'bg-surface-raised/5 border-default text-content-muted hover:text-content'
                   }`}
                 >
                   {following ? <Bell size={10} /> : <BellOff size={10} />} {u.name}
-                  {u.verified && <BadgeCheck size={10} className="text-sky-400" aria-label="Verified" />}
+                  {u.verified && <BadgeCheck size={10} className="text-info" aria-label="Verified" />}
                 </button>
               )
             })}
             {searchUnits(units, directoryQuery).length === 0 && (
-              <p className="text-[10px] text-gray-600">Nothing matches — try a different name, or add a new unit above.</p>
+              <p className="text-[10px] text-content-subtle">Nothing matches — try a different name, or add a new unit above.</p>
             )}
           </div>
         </div>
@@ -405,28 +405,28 @@ export default function OrgBroadcastsPanel() {
             return (
               <div
                 key={b.id}
-                className={`bg-black/30 border rounded-xl p-3 ${
-                  b.priority === 'critical' ? 'border-red-500/30'
-                    : b.priority === 'urgent' ? 'border-yellow-500/30'
-                    : 'border-white/5'
+                className={`bg-surface-sunken/30 border rounded-xl p-3 ${
+                  b.priority === 'critical' ? 'border-danger/30'
+                    : b.priority === 'urgent' ? 'border-warning/30'
+                    : 'border-subtle'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-gold-primary flex items-center gap-1">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-accent flex items-center gap-1">
                     {unit ? unit.name : 'Unknown unit'}
-                    {unit?.verified && <BadgeCheck size={10} className="text-sky-400" aria-label="Verified" />}
+                    {unit?.verified && <BadgeCheck size={10} className="text-info" aria-label="Verified" />}
                   </span>
-                  <span className="text-[9px] text-gray-600">{new Date(b.createdAt).toLocaleDateString()}</span>
+                  <span className="text-[9px] text-content-subtle">{new Date(b.createdAt).toLocaleDateString()}</span>
                 </div>
                 {(b.priority === 'urgent' || b.priority === 'critical') && (
                   <span className={`inline-block text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded mb-1 ${
-                    b.priority === 'critical' ? 'bg-red-500/15 text-red-400' : 'bg-yellow-500/15 text-yellow-400'
+                    b.priority === 'critical' ? 'bg-danger/15 text-danger' : 'bg-warning/15 text-warning'
                   }`}>
                     {b.priority}
                   </span>
                 )}
-                <p className="text-sm font-bold text-white">{b.title}</p>
-                <p className="text-xs text-gray-400 mt-1">{b.body}</p>
+                <p className="text-sm font-bold text-content">{b.title}</p>
+                <p className="text-xs text-content-muted mt-1">{b.body}</p>
               </div>
             )
           })}

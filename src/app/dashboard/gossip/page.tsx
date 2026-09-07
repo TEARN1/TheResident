@@ -44,9 +44,14 @@ const MAX_VIDEO_SECONDS = 60
 // Gold/dark brand-family gradients for text-only "status" posts. No generic
 // purple-blue template gradients — everything here keys off gold-primary /
 // gold-secondary plus a couple of warm accent variants.
+// These are ARTWORK, not interface. A resident picks one as the backdrop for
+// their own post, the way you would pick a wallpaper, and it has to look the
+// same to everyone who sees that post regardless of the theme THEY are using.
+// So the colours here are deliberately literal, and this file is on the
+// allowlist in src/styles/noRawColour.test.ts for exactly this reason.
 const BACKGROUND_PRESETS: { key: string; label: string; css: string }[] = [
   { key: 'gold-noir', label: 'Gold Noir', css: 'linear-gradient(135deg, #000000 0%, #3a2c0a 55%, #D4AF37 130%)' },
-  { key: 'amber-glass', label: 'Amber Glass', css: 'linear-gradient(160deg, #1a1a1a 0%, #B8860B 100%)' },
+  { key: 'amber-glass', label: 'Amber Glass', css: 'linear-gradient(160deg, #ffffff 0%, #B8860B 100%)' },
   { key: 'ember', label: 'Ember', css: 'linear-gradient(135deg, #2b0f04 0%, #8a3a12 60%, #D4AF37 130%)' },
   { key: 'midnight-gold', label: 'Midnight Gold', css: 'radial-gradient(circle at 30% 20%, #3a2c0a 0%, #000000 70%)' },
   { key: 'rust', label: 'Rust', css: 'linear-gradient(135deg, #1c1006 0%, #7a3b12 100%)' },
@@ -435,26 +440,26 @@ export default function GossipPage() {
 
   return (
     <div className="space-y-6">
-      <div className="glass-panel p-6 relative overflow-hidden border-gold-primary/10">
+      <div className="glass-panel p-6 relative overflow-hidden border-accent/10">
         {/* A quiet gold glow behind the composer instead of a flat panel —
             the one place in the app people write something new deserves to
             feel a little more alive than a bare textarea. */}
         <div
           className="absolute -top-24 -right-24 w-64 h-64 rounded-full opacity-[0.08] pointer-events-none"
-          style={{ background: 'radial-gradient(circle, #D4AF37 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, var(--accent) 0%, transparent 70%)' }}
         />
         <div className="flex items-center gap-2 mb-4 relative">
-          <div className="p-1.5 bg-gold-primary/10 rounded-lg">
-            <MessageSquare size={18} className="text-gold-primary" />
+          <div className="p-1.5 bg-accent/10 rounded-lg">
+            <MessageSquare size={18} className="text-accent" />
           </div>
-          <h2 className="text-xl font-bold text-white">Gossip Feed</h2>
-          <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-auto hidden sm:inline">What&apos;s the word, neighbour?</span>
+          <h2 className="text-xl font-bold text-content">Gossip Feed</h2>
+          <span className="text-[10px] text-content-muted uppercase tracking-widest font-bold ml-auto hidden sm:inline">What&apos;s the word, neighbour?</span>
         </div>
         {!composerExpanded ? (
           <button
             type="button"
             onClick={() => { setComposerExpanded(true); setTimeout(() => composerTextareaRef.current?.focus(), 0) }}
-            className="w-full text-left bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-gray-500 hover:border-white/20 hover:text-gray-400 transition-all relative"
+            className="w-full text-left bg-surface-sunken/60 border border-default rounded-xl p-4 text-sm text-content-muted hover:border-strong hover:text-content-muted transition-all relative"
           >
             Spotted something? Heard something? Say it here…
           </button>
@@ -466,18 +471,18 @@ export default function GossipPage() {
             onFocus={() => setComposerExpanded(true)}
             maxLength={2000}
             placeholder="Spotted something? Heard something? Say it here…"
-            className="w-full bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all relative"
+            className="w-full bg-surface-sunken/60 border border-default rounded-xl p-4 text-sm text-content h-24 resize-none outline-none focus:border-accent/50 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all relative"
           />
         )}
         {composerExpanded && composerBody.length > 0 && (
-          <p className="text-[10px] text-gray-600 text-right mt-1">{composerBody.length}/2000</p>
+          <p className="text-[10px] text-content-subtle text-right mt-1">{composerBody.length}/2000</p>
         )}
 
         {composerExpanded && mediaPreview && (
-          <div className="relative mt-3 rounded-lg overflow-hidden border border-white/10 bg-black">
+          <div className="relative mt-3 rounded-lg overflow-hidden border border-default bg-surface">
             <button
               onClick={clearMedia}
-              className="absolute top-2 right-2 z-10 bg-black/70 hover:bg-black text-white rounded-full p-1.5"
+              className="absolute top-2 right-2 z-10 bg-surface-sunken/70 hover:bg-surface text-content rounded-full p-1.5"
               aria-label="Remove attachment"
             >
               <X size={14} />
@@ -493,7 +498,7 @@ export default function GossipPage() {
 
         {composerExpanded && !mediaFile && (
           <div className="mt-3">
-            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-content-muted font-bold mb-2">
               <Palette size={12} /> Or style your text post
             </div>
             <div className="flex flex-wrap gap-2">
@@ -502,8 +507,8 @@ export default function GossipPage() {
                 onClick={() => setSelectedBackground(null)}
                 className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-all ${
                   selectedBackground === null
-                    ? 'border-gold-primary text-gold-primary bg-gold-primary/10'
-                    : 'border-white/10 text-gray-500 hover:border-white/20'
+                    ? 'border-accent text-accent bg-accent/10'
+                    : 'border-default text-content-muted hover:border-strong'
                 }`}
               >
                 None
@@ -516,7 +521,7 @@ export default function GossipPage() {
                   title={preset.label}
                   style={{ backgroundImage: preset.css }}
                   className={`w-11 h-9 rounded-lg border-2 transition-all hover:scale-110 hover:-translate-y-0.5 ${
-                    selectedBackground === preset.key ? 'border-gold-primary scale-110 -translate-y-0.5 shadow-lg shadow-gold-primary/20' : 'border-white/10 hover:border-white/30'
+                    selectedBackground === preset.key ? 'border-accent scale-110 -translate-y-0.5 shadow-lg shadow-gold-primary/20' : 'border-default hover:border-default/30'
                   }`}
                 />
               ))}
@@ -524,7 +529,7 @@ export default function GossipPage() {
           </div>
         )}
 
-        {composerExpanded && mediaError && <p className="text-[11px] text-red-400 mt-2">{mediaError}</p>}
+        {composerExpanded && mediaError && <p className="text-[11px] text-danger mt-2">{mediaError}</p>}
 
         {composerExpanded && (
         <div className="flex items-center justify-between mt-3">
@@ -540,30 +545,30 @@ export default function GossipPage() {
               />
               <label
                 htmlFor="gossip-media-input"
-                className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-gold-primary border border-white/10 hover:border-gold-primary/40 rounded-lg px-2.5 py-1.5 cursor-pointer transition-all"
+                className="flex items-center gap-1.5 text-[11px] text-content-muted hover:text-accent border border-default hover:border-accent/40 rounded-lg px-2.5 py-1.5 cursor-pointer transition-all"
               >
                 <ImageIcon size={12} /> Photo / clip
               </label>
             </div>
-            <p className="text-[10px] text-gray-600 flex items-center gap-1.5">
+            <p className="text-[10px] text-content-subtle flex items-center gap-1.5">
               <Video size={12} /> Longer or public videos go on The Gruvs — quick clips are fine here.
             </p>
           </div>
           <button
             onClick={submitPost}
             disabled={posting || uploading || (!composerBody.trim() && !mediaFile)}
-            className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-gold-primary/10 hover:shadow-gold-primary/25"
+            className="flex items-center gap-2 bg-accent hover:bg-accent text-content-on-accent font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-gold-primary/10 hover:shadow-gold-primary/25"
           >
             {uploading ? <Loader size={13} className="animate-spin" /> : <Send size={13} />}
             {uploading ? 'Uploading…' : posting ? 'Posting…' : 'Post'}
           </button>
         </div>
         )}
-        {error && <p className="text-[11px] text-red-400 mt-2">{error}</p>}
+        {error && <p className="text-[11px] text-danger mt-2">{error}</p>}
       </div>
 
       {loading ? (
-        <div className="glass-panel p-12 text-center text-gray-500 flex items-center justify-center gap-2">
+        <div className="glass-panel p-12 text-center text-content-muted flex items-center justify-center gap-2">
           <Loader size={16} className="animate-spin" /> Loading feed…
         </div>
       ) : posts.length === 0 ? (
@@ -583,29 +588,29 @@ export default function GossipPage() {
                   >
                     <div className="absolute top-3 right-3">
                       {post.author_id === myId
-                        ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-black/50 hover:bg-red-500/80 text-white/80 hover:text-white rounded-full p-1.5 transition-all"><Trash2 size={13} /></button>
+                        ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-surface-sunken/50 hover:bg-danger/80 text-content/80 hover:text-content rounded-full p-1.5 transition-all"><Trash2 size={13} /></button>
                         : <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
                     </div>
-                    <p className="text-lg sm:text-xl font-bold text-white text-center leading-snug whitespace-pre-wrap drop-shadow-md max-w-md">
+                    <p className="text-lg sm:text-xl font-bold text-content text-center leading-snug whitespace-pre-wrap drop-shadow-md max-w-md">
                       {post.body}
                     </p>
                     <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                      <span className="text-[11px] font-bold text-white/90">{nameOf(post.author_id)}</span>
-                      <span className="text-[10px] text-white/60">{new Date(post.created_at).toLocaleString()}</span>
+                      <span className="text-[11px] font-bold text-content/90">{nameOf(post.author_id)}</span>
+                      <span className="text-[10px] text-content/60">{new Date(post.created_at).toLocaleString()}</span>
                     </div>
                     <div className="absolute bottom-3 right-4 flex items-center gap-3">
                       <button
                         onClick={() => toggleReaction(post.id)}
                         disabled={reacting[post.id]}
                         aria-label={myReactions[post.id] ? 'Remove reaction' : 'React to this post'}
-                        className={`flex items-center gap-1.5 text-[11px] font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-red-400' : 'text-white/90'}`}
+                        className={`flex items-center gap-1.5 text-[11px] font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-danger' : 'text-content/90'}`}
                       >
                         <Heart size={13} className={myReactions[post.id] ? 'fill-red-400' : ''} />
                         {reactionCounts[post.id] || ''}
                       </button>
                       <button
                         onClick={() => toggleExpand(post.id)}
-                        className="flex items-center gap-1.5 text-[11px] text-white/90 font-bold hover:underline"
+                        className="flex items-center gap-1.5 text-[11px] text-content/90 font-bold hover:underline"
                       >
                         {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                         {expanded[post.id] ? 'Hide' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
@@ -614,15 +619,15 @@ export default function GossipPage() {
                   </div>
 
                   {!expanded[post.id] && (commentPreviews[post.id]?.length ?? 0) > 0 && (
-                    <div className="px-5 pb-4 pt-1 space-y-1.5 border-t border-white/5">
+                    <div className="px-5 pb-4 pt-1 space-y-1.5 border-t border-subtle">
                       {commentPreviews[post.id].map(c => (
                         <div key={c.id} className="flex gap-2 text-xs">
-                          <span className="font-bold text-white">{nameOf(c.author_id)}</span>
-                          <span className="text-gray-400">{c.body}</span>
+                          <span className="font-bold text-content">{nameOf(c.author_id)}</span>
+                          <span className="text-content-muted">{c.body}</span>
                         </div>
                       ))}
                       {commentPreviews[post.id].length >= 2 && (
-                        <button onClick={() => toggleExpand(post.id)} className="text-[11px] text-gold-primary font-bold hover:underline">
+                        <button onClick={() => toggleExpand(post.id)} className="text-[11px] text-accent font-bold hover:underline">
                           View all comments
                         </button>
                       )}
@@ -630,16 +635,16 @@ export default function GossipPage() {
                   )}
 
                   {expanded[post.id] && (
-                    <div className="p-5 space-y-3 border-t border-white/5">
+                    <div className="p-5 space-y-3 border-t border-subtle">
                       {commentLoading[post.id] && !comments[post.id] ? (
-                        <p className="text-[11px] text-gray-500">Loading comments…</p>
+                        <p className="text-[11px] text-content-muted">Loading comments…</p>
                       ) : (comments[post.id] || []).length === 0 ? (
-                        <p className="text-[11px] text-gray-600 italic">No comments yet.</p>
+                        <p className="text-[11px] text-content-subtle italic">No comments yet.</p>
                       ) : (
                         (comments[post.id] || []).map(c => (
                           <div key={c.id} className="flex gap-2 text-xs">
-                            <span className="font-bold text-white">{nameOf(c.author_id)}</span>
-                            <span className="text-gray-400">{c.body}</span>
+                            <span className="font-bold text-content">{nameOf(c.author_id)}</span>
+                            <span className="text-content-muted">{c.body}</span>
                           </div>
                         ))
                       )}
@@ -650,12 +655,12 @@ export default function GossipPage() {
                           maxLength={1000}
                           placeholder="Add a comment…"
                           onKeyDown={e => { if (e.key === 'Enter') submitComment(post.id) }}
-                          className="flex-1 bg-black border border-white/10 rounded-lg p-2 text-xs text-white outline-none focus:border-gold-primary/40"
+                          className="flex-1 bg-surface border border-default rounded-lg p-2 text-xs text-content outline-none focus:border-accent/40"
                         />
                         <button
                           onClick={() => submitComment(post.id)}
                           disabled={commentLoading[post.id] || !(commentDraft[post.id] || '').trim()}
-                          className="bg-white/5 hover:bg-white/10 text-gold-primary border border-gold-primary/20 px-3 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                          className="bg-surface-raised/5 hover:bg-surface-raised/10 text-accent border border-accent/20 px-3 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
                         >
                           Send
                         </button>
@@ -667,31 +672,31 @@ export default function GossipPage() {
             }
 
             return (
-              <div key={post.id} className="glass-panel p-5 transition-all hover:border-gold-primary/15">
+              <div key={post.id} className="glass-panel p-5 transition-all hover:border-accent/15">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gold-primary/10 ring-1 ring-gold-primary/20 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
+                    <div className="w-9 h-9 rounded-full bg-accent/10 ring-1 ring-gold-primary/20 flex items-center justify-center text-accent text-xs font-black overflow-hidden">
                       {profileMap[post.author_id]?.avatar_url
                         ? <img src={profileMap[post.author_id].avatar_url as string} alt="" className="w-full h-full object-cover" />
                         : nameOf(post.author_id).charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-white">{nameOf(post.author_id)}</p>
-                      <p className="text-[10px] text-gray-600">{new Date(post.created_at).toLocaleString()}</p>
+                      <p className="text-sm font-bold text-content">{nameOf(post.author_id)}</p>
+                      <p className="text-[10px] text-content-subtle">{new Date(post.created_at).toLocaleString()}</p>
                     </div>
                   </div>
                   {post.author_id === myId
-                    ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="text-gray-600 hover:text-red-400 transition-all p-1"><Trash2 size={15} /></button>
+                    ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="text-content-subtle hover:text-danger transition-all p-1"><Trash2 size={15} /></button>
                     : <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
                 </div>
-                {post.body && <p className="text-sm text-gray-300 mt-3 leading-relaxed whitespace-pre-wrap">{post.body}</p>}
+                {post.body && <p className="text-sm text-content mt-3 leading-relaxed whitespace-pre-wrap">{post.body}</p>}
 
                 {post.media_url && post.media_type === 'image' && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={post.media_url} alt="" className="mt-3 w-full max-h-96 object-contain rounded-lg border border-white/5" />
+                  <img src={post.media_url} alt="" className="mt-3 w-full max-h-96 object-contain rounded-lg border border-subtle" />
                 )}
                 {post.media_url && post.media_type === 'video' && (
-                  <video src={post.media_url} controls className="mt-3 w-full max-h-96 rounded-lg border border-white/5" />
+                  <video src={post.media_url} controls className="mt-3 w-full max-h-96 rounded-lg border border-subtle" />
                 )}
 
                 <div className="flex items-center gap-4 mt-4">
@@ -699,14 +704,14 @@ export default function GossipPage() {
                     onClick={() => toggleReaction(post.id)}
                     disabled={reacting[post.id]}
                     aria-label={myReactions[post.id] ? 'Remove reaction' : 'React to this post'}
-                    className={`flex items-center gap-1.5 text-[11px] font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-red-400' : 'text-gray-400'}`}
+                    className={`flex items-center gap-1.5 text-[11px] font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-danger' : 'text-content-muted'}`}
                   >
                     <Heart size={13} className={myReactions[post.id] ? 'fill-red-400' : ''} />
                     {reactionCounts[post.id] || ''}
                   </button>
                   <button
                     onClick={() => toggleExpand(post.id)}
-                    className="flex items-center gap-1.5 text-[11px] text-gold-primary font-bold hover:underline"
+                    className="flex items-center gap-1.5 text-[11px] text-accent font-bold hover:underline"
                   >
                     {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                     {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
@@ -717,12 +722,12 @@ export default function GossipPage() {
                   <div className="mt-2 space-y-1.5">
                     {commentPreviews[post.id].map(c => (
                       <div key={c.id} className="flex gap-2 text-xs">
-                        <span className="font-bold text-white">{nameOf(c.author_id)}</span>
-                        <span className="text-gray-400">{c.body}</span>
+                        <span className="font-bold text-content">{nameOf(c.author_id)}</span>
+                        <span className="text-content-muted">{c.body}</span>
                       </div>
                     ))}
                     {commentPreviews[post.id].length >= 2 && (
-                      <button onClick={() => toggleExpand(post.id)} className="text-[11px] text-gold-primary font-bold hover:underline">
+                      <button onClick={() => toggleExpand(post.id)} className="text-[11px] text-accent font-bold hover:underline">
                         View all comments
                       </button>
                     )}
@@ -730,16 +735,16 @@ export default function GossipPage() {
                 )}
 
                 {expanded[post.id] && (
-                  <div className="mt-3 space-y-3 border-t border-white/5 pt-3">
+                  <div className="mt-3 space-y-3 border-t border-subtle pt-3">
                     {commentLoading[post.id] && !comments[post.id] ? (
-                      <p className="text-[11px] text-gray-500">Loading comments…</p>
+                      <p className="text-[11px] text-content-muted">Loading comments…</p>
                     ) : (comments[post.id] || []).length === 0 ? (
-                      <p className="text-[11px] text-gray-600 italic">No comments yet.</p>
+                      <p className="text-[11px] text-content-subtle italic">No comments yet.</p>
                     ) : (
                       (comments[post.id] || []).map(c => (
                         <div key={c.id} className="flex gap-2 text-xs">
-                          <span className="font-bold text-white">{nameOf(c.author_id)}</span>
-                          <span className="text-gray-400">{c.body}</span>
+                          <span className="font-bold text-content">{nameOf(c.author_id)}</span>
+                          <span className="text-content-muted">{c.body}</span>
                         </div>
                       ))
                     )}
@@ -750,12 +755,12 @@ export default function GossipPage() {
                         maxLength={1000}
                         placeholder="Add a comment…"
                         onKeyDown={e => { if (e.key === 'Enter') submitComment(post.id) }}
-                        className="flex-1 bg-black border border-white/10 rounded-lg p-2 text-xs text-white outline-none focus:border-gold-primary/40"
+                        className="flex-1 bg-surface border border-default rounded-lg p-2 text-xs text-content outline-none focus:border-accent/40"
                       />
                       <button
                         onClick={() => submitComment(post.id)}
                         disabled={commentLoading[post.id] || !(commentDraft[post.id] || '').trim()}
-                        className="bg-white/5 hover:bg-white/10 text-gold-primary border border-gold-primary/20 px-3 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                        className="bg-surface-raised/5 hover:bg-surface-raised/10 text-accent border border-accent/20 px-3 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
                       >
                         Send
                       </button>
@@ -769,12 +774,12 @@ export default function GossipPage() {
           <div ref={sentinelRef} className="h-4" />
 
           {loadingMore && (
-            <div className="glass-panel p-4 text-center text-gray-500 flex items-center justify-center gap-2 text-xs">
+            <div className="glass-panel p-4 text-center text-content-muted flex items-center justify-center gap-2 text-xs">
               <Loader size={14} className="animate-spin" /> Loading more…
             </div>
           )}
           {!hasMore && posts.length > 0 && (
-            <p className="text-center text-[10px] text-gray-700 uppercase tracking-widest py-2">You&apos;ve reached the end</p>
+            <p className="text-center text-[10px] text-content-subtle uppercase tracking-widest py-2">You&apos;ve reached the end</p>
           )}
         </div>
       )}

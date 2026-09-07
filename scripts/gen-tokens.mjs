@@ -73,7 +73,21 @@ const DERIVED = `
   --border-default:  rgb(var(--border-rgb) / 0.13);
   --border-strong:   rgb(var(--border-rgb) / 0.24);
   --border-subtle:   rgb(var(--border-rgb) / 0.06);
-  --surface-overlay: rgb(var(--surface-sunken-rgb) / 0.66);`
+  --surface-overlay: rgb(var(--surface-sunken-rgb) / 0.66);
+  --text-on-accent:  rgb(var(--text-on-accent-rgb));
+  --success:         rgb(var(--success-rgb));
+  --warning:         rgb(var(--warning-rgb));
+  --danger:          rgb(var(--danger-rgb));
+  --info:            rgb(var(--info-rgb));
+  /* Section accents. These need plain colour aliases as well as channels:
+     a gradient referencing an UNDEFINED custom property is an invalid
+     declaration, and the whole gradient is dropped. That silently turned the
+     landing page's background-clip:text headline transparent — the text was
+     simply gone, with nothing in the console to say so. */
+  --area-housing:   rgb(var(--area-housing-rgb));
+  --area-community: rgb(var(--area-community-rgb));
+  --area-services:  rgb(var(--area-services-rgb));
+  --area-safety:    rgb(var(--area-safety-rgb));`
 
 const STATIC = `
   /* ── Elevation ────────────────────────────────────────────────────────

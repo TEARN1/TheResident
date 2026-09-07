@@ -50,8 +50,8 @@ export default function AreaLicenceNotice({ unitId, licence }: Props) {
 
   const Icon = lapsed ? AlertTriangle : licence.state === 'probation' ? Clock : ShieldCheck
   const tone = lapsed
-    ? 'text-yellow-500 bg-yellow-500/5 border-yellow-500/20'
-    : 'text-gray-400 bg-white/5 border-white/10'
+    ? 'text-warning bg-warning/5 border-warning/20'
+    : 'text-content-muted bg-surface-raised/5 border-default'
 
   return (
     <div className={`rounded-lg border p-3 space-y-2 ${tone}`}>
@@ -72,20 +72,20 @@ export default function AreaLicenceNotice({ unitId, licence }: Props) {
               {busy ? <Loader size={11} className="animate-spin" /> : <CreditCard size={11} />}
               {busy ? 'Opening checkout…' : `${offer.label} — ${offer.price}`}
             </button>
-            <p className="text-[9px] text-gray-600">
+            <p className="text-[9px] text-content-subtle">
               Billed to this office, not to you personally — it stays with the role if someone else takes over.
             </p>
           </div>
         ) : (
           // A metro or provincial licence goes through procurement. Showing a
           // Pay button here would be a lie about how that deal actually works.
-          <p className="text-[10px] text-gray-400">
+          <p className="text-[10px] text-content-muted">
             {offer.label} is arranged directly rather than online — get in touch and we will set it up.
           </p>
         )
       )}
 
-      {error && <p className="text-[10px] text-red-400">{error}</p>}
+      {error && <p className="text-[10px] text-danger">{error}</p>}
     </div>
   )
 }

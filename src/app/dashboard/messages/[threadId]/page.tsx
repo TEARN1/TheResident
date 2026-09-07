@@ -108,23 +108,23 @@ export default function ThreadPage() {
 
   return (
     <div className="glass-panel p-0 flex flex-col h-[70vh]">
-      <div className="flex items-center gap-3 p-4 border-b border-white/5">
-        <button onClick={() => router.push('/dashboard/messages')} className="text-gray-400 hover:text-white" aria-label="Back to messages">
+      <div className="flex items-center gap-3 p-4 border-b border-subtle">
+        <button onClick={() => router.push('/dashboard/messages')} className="text-content-muted hover:text-content" aria-label="Back to messages">
           <ArrowLeft size={18} />
         </button>
-        <div className="w-8 h-8 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
+        <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent text-xs font-black overflow-hidden">
           {otherProfile?.avatar_url
             ? // eslint-disable-next-line @next/next/no-img-element
               <img src={otherProfile.avatar_url} alt="" className="w-full h-full object-cover" />
             : name.charAt(0).toUpperCase()}
         </div>
-        <span className="text-sm font-bold text-white">{name}</span>
+        <span className="text-sm font-bold text-content">{name}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map(m => (
           <div key={m.id} className={`flex ${m.sender_id === myId ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[70%] rounded-xl px-3.5 py-2.5 text-xs ${m.sender_id === myId ? 'bg-gold-primary text-black font-medium' : 'bg-black/40 border border-white/5 text-gray-300'}`}>
+            <div className={`max-w-[70%] rounded-xl px-3.5 py-2.5 text-xs ${m.sender_id === myId ? 'bg-accent text-content-on-accent font-medium' : 'bg-surface-sunken/40 border border-subtle text-content'}`}>
               {m.is_request && m.sender_id === myId && (
                 <span className="flex items-center gap-1 text-[9px] opacity-70 mb-1 uppercase font-bold tracking-widest"><Clock size={9} /> Request</span>
               )}
@@ -135,20 +135,20 @@ export default function ThreadPage() {
         <div ref={bottomRef} />
       </div>
 
-      {error && <p className="text-[11px] text-red-400 px-4">{error}</p>}
+      {error && <p className="text-[11px] text-danger px-4">{error}</p>}
 
-      <div className="flex gap-2 p-4 border-t border-white/5">
+      <div className="flex gap-2 p-4 border-t border-subtle">
         <input
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') sendMessage() }}
           placeholder="Type a message…"
-          className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40"
+          className="flex-1 bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40"
         />
         <button
           onClick={sendMessage}
           disabled={sending || !draft.trim()}
-          className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-4 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+          className="bg-accent hover:bg-accent text-content-on-accent font-black px-4 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50"
         >
           <Send size={14} />
         </button>

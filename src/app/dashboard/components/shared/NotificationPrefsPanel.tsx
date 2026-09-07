@@ -107,50 +107,50 @@ export default function NotificationPrefsPanel() {
   }
 
   if (loading) {
-    return <div className="glass-panel p-6 text-xs text-gray-500">Loading notification preferences…</div>
+    return <div className="glass-panel p-6 text-xs text-content-muted">Loading notification preferences…</div>
   }
 
   return (
     <div className="glass-panel p-6 space-y-6">
       <div className="flex items-center gap-2">
-        <Bell size={18} className="text-gold-primary" />
-        <h3 className="text-sm font-bold text-white uppercase tracking-widest">Notification preferences</h3>
+        <Bell size={18} className="text-accent" />
+        <h3 className="text-sm font-bold text-content uppercase tracking-widest">Notification preferences</h3>
       </div>
 
       <div>
-        <p className="text-[11px] text-gray-500 mb-3">Mute specific notification types. Panic alerts always reach you.</p>
+        <p className="text-[11px] text-content-muted mb-3">Mute specific notification types. Panic alerts always reach you.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {MUTABLE_TYPES.map(t => (
-            <label key={t.value} className="flex items-center gap-2 p-2.5 bg-black/40 border border-white/5 rounded-lg text-xs text-gray-300 cursor-pointer hover:border-white/10">
+            <label key={t.value} className="flex items-center gap-2 p-2.5 bg-surface-sunken/40 border border-subtle rounded-lg text-xs text-content cursor-pointer hover:border-default">
               <input
                 type="checkbox"
                 checked={prefs.muted_types.includes(t.value)}
                 onChange={() => toggleType(t.value)}
-                className="accent-[#D4AF37]"
+                className="accent-[var(--accent)]"
               />
               {t.label}
             </label>
           ))}
         </div>
-        <p className="text-[10px] text-gray-600 mt-2">Panic alerts ({PANIC_TYPE}) can&apos;t be muted here.</p>
+        <p className="text-[10px] text-content-subtle mt-2">Panic alerts ({PANIC_TYPE}) can&apos;t be muted here.</p>
       </div>
 
       <div>
-        <p className="text-[11px] text-gray-500 mb-3 flex items-center gap-1.5"><Moon size={12} className="text-gold-primary" /> Quiet hours</p>
+        <p className="text-[11px] text-content-muted mb-3 flex items-center gap-1.5"><Moon size={12} className="text-accent" /> Quiet hours</p>
         <div className="flex items-center gap-3">
           <select
             value={prefs.quiet_hours_start ?? ''}
             onChange={e => setPrefs(prev => ({ ...prev, quiet_hours_start: e.target.value === '' ? null : Number(e.target.value) }))}
-            className="bg-black border border-white/10 rounded-lg p-2 text-xs text-white outline-none focus:border-gold-primary/40"
+            className="bg-surface border border-default rounded-lg p-2 text-xs text-content outline-none focus:border-accent/40"
           >
             <option value="">Off</option>
             {HOURS.map(h => <option key={h} value={h}>{h}:00</option>)}
           </select>
-          <span className="text-gray-600 text-xs">to</span>
+          <span className="text-content-subtle text-xs">to</span>
           <select
             value={prefs.quiet_hours_end ?? ''}
             onChange={e => setPrefs(prev => ({ ...prev, quiet_hours_end: e.target.value === '' ? null : Number(e.target.value) }))}
-            className="bg-black border border-white/10 rounded-lg p-2 text-xs text-white outline-none focus:border-gold-primary/40"
+            className="bg-surface border border-default rounded-lg p-2 text-xs text-content outline-none focus:border-accent/40"
           >
             <option value="">Off</option>
             {HOURS.map(h => <option key={h} value={h}>{h}:00</option>)}
@@ -158,22 +158,22 @@ export default function NotificationPrefsPanel() {
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+      <label className="flex items-center gap-2 text-xs text-content cursor-pointer">
         <input
           type="checkbox"
           checked={prefs.digest}
           onChange={e => setPrefs(prev => ({ ...prev, digest: e.target.checked }))}
-          className="accent-[#D4AF37]"
+          className="accent-[var(--accent)]"
         />
         Send me a digest instead of individual notifications
       </label>
 
-      {error && <p className="text-[11px] text-red-400">{error}</p>}
+      {error && <p className="text-[11px] text-danger">{error}</p>}
 
       <button
         onClick={save}
         disabled={saving}
-        className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 px-5 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+        className="flex items-center gap-2 bg-accent hover:bg-accent text-content-on-accent font-black py-2.5 px-5 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50"
       >
         {saved ? <><Check size={14} /> Saved</> : <><Save size={14} /> {saving ? 'Saving…' : 'Save preferences'}</>}
       </button>

@@ -46,12 +46,12 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
 
     return (
       <div className="glass-panel p-6 text-center space-y-3">
-        <AlertTriangle size={28} className="mx-auto text-yellow-500 opacity-70" />
+        <AlertTriangle size={28} className="mx-auto text-warning opacity-70" />
         <div>
-          <p className="text-sm font-black text-white uppercase tracking-widest">
+          <p className="text-sm font-black text-content uppercase tracking-widest">
             This part didn&apos;t load
           </p>
-          <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-sm mx-auto">
+          <p className="text-[11px] text-content-muted mt-1 leading-relaxed max-w-sm mx-auto">
             Something broke on our side, not yours. It has been reported automatically.
             The rest of the app still works.
           </p>
@@ -59,7 +59,7 @@ export default class AppErrorBoundary extends React.Component<Props, State> {
         <button
           type="button"
           onClick={() => this.setState({ crashed: false })}
-          className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gold-primary transition-colors"
+          className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-content-muted hover:text-accent transition-colors"
         >
           <RefreshCw size={12} /> Try again
         </button>
