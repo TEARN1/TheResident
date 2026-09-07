@@ -798,7 +798,7 @@ export const taglineStyle: React.CSSProperties = {
 }
 
 const crossAppNoteStyle: React.CSSProperties = {
-  fontSize: '0.7rem',
+  fontSize: '0.75rem',
   color: 'var(--gold-primary)',
   opacity: 0.75,
   letterSpacing: '1px',
@@ -1034,7 +1034,7 @@ const socialDividerLineStyle: React.CSSProperties = {
 }
 
 const socialDividerTextStyle: React.CSSProperties = {
-  fontSize: '0.7rem',
+  fontSize: '0.75rem',
   color: 'var(--foreground)',
   opacity: 0.5,
   textTransform: 'uppercase',

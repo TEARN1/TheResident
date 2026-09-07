@@ -124,7 +124,7 @@ export default function Home() {
                 style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: 'var(--text-primary)', fontSize: '0.85rem', marginBottom: '0.8rem', outline: 'none' }}
               />
               {loginError && (
-                <p style={{ fontSize: '0.72rem', color: 'var(--danger)', marginBottom: '0.6rem', lineHeight: 1.4 }}>{loginError}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginBottom: '0.6rem', lineHeight: 1.4 }}>{loginError}</p>
               )}
               <button
                 type="submit"
@@ -137,7 +137,7 @@ export default function Home() {
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0.7rem 0' }}>
                 <span style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }} />
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-subtle)', letterSpacing: '1px' }}>OR</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', letterSpacing: '1px' }}>OR</span>
                 <span style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }} />
               </div>
               {/* Google temporarily pulled — Supabase provider isn't configured yet. */}
@@ -146,12 +146,12 @@ export default function Home() {
                   type="button"
                   onClick={() => handleOAuth('facebook')}
                   disabled={oauthLoading !== null}
-                  style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.55rem', color: 'var(--text-primary)', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.55rem', color: 'var(--text-primary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
                 >
                   {oauthLoading === 'facebook' ? '…' : 'Continue with Facebook'}
                 </button>
               </div>
-              <p style={{ fontSize: '0.7rem', color: 'var(--text-subtle)', marginTop: '0.8rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', marginTop: '0.8rem', textAlign: 'center' }}>
                 New here? <Link href="/auth" style={{ color: 'var(--gold-primary)' }}>Create an account</Link>
               </p>
             </motion.form>

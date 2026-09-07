@@ -140,7 +140,7 @@ body {
   border: 1px solid var(--glass-border);
   background: var(--accent-soft);
   color: var(--gold-primary);
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -215,7 +215,7 @@ body {
 }
 
 .sidebar-profile-role {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--text-subtle);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -231,7 +231,7 @@ body {
 
 .sidebar-nav-section-label {
   padding: 0.4rem 1rem 0.6rem;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -288,7 +288,7 @@ body {
   color: var(--text-subtle);
   border: none;
   border-radius: 8px;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 900;
   cursor: pointer;
   transition: all 0.2s;
@@ -379,7 +379,7 @@ body {
 }
 
 .guest-summary-banner strong {
-  color: var(--surface-raised);
+  color: var(--text-primary);
 }
 
 .guest-summary-banner-cta {
@@ -387,7 +387,7 @@ body {
   background: var(--gold-primary);
   color: var(--text-on-accent);
   font-weight: 900;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.5rem 0.9rem;
@@ -453,7 +453,7 @@ body {
 .btn-gold {
   background: var(--gold-primary);
   border: 1px solid var(--gold-primary);
-  color: var(--surface);
+  color: var(--text-on-accent);
   box-shadow: 0 4px 14px var(--accent-soft);
 }
 
@@ -562,7 +562,7 @@ body {
   padding: 0.5rem 0.4rem 0.6rem;
   color: var(--text-subtle);
   text-decoration: none;
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-align: center;
@@ -595,7 +595,7 @@ body {
   .bottom-nav-item {
     padding-left: 0.15rem;
     padding-right: 0.15rem;
-    font-size: 0.69rem;
+    font-size: 0.75rem;
     letter-spacing: 0;
   }
 }
