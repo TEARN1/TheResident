@@ -17,7 +17,19 @@ import { scanInput } from './utils/security'
 // Named and commented this way deliberately — the previous "rate limiting
 // simulator" wording read as a real control in SECURITY.md.
 const instanceThrottleMap = new Map<string, { count: number; resetTime: number }>()
-const INSTANCE_THROTTLE_MAX = 60 // per instance, per minute — best effort only
+// Per instance, per minute, and counting ONLY requests a person actually
+// made. It used to be 60 counting everything, which measured the browser
+// rather than the user: Next prefetches every visible nav link, so a single
+// dashboard page view fired 14 requests through here of which exactly ONE
+// was a real navigation. That put the real ceiling at roughly four page
+// views a minute before a 429 — normal tapping between tabs.
+//
+// The IP is the key, which makes it worse than it sounds for this app's
+// actual users: South African mobile carriers put large numbers of
+// subscribers behind one CGNAT address, as does any shared WiFi. A whole
+// street on the same carrier NAT shares one bucket, so people who have never
+// met can lock each other out.
+const INSTANCE_THROTTLE_MAX = 300
 const WINDOW_MS = 60 * 1000
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
@@ -29,13 +41,23 @@ export async function proxy(request: NextRequest) {
 
   // 1. Best-effort per-instance throttle (see the note on the Map above —
   //    this is not a control to depend on)
-  const now = Date.now()
-  const limitInfo = instanceThrottleMap.get(ip)
+  //
+  // Speculative prefetches are not counted. Next.js issues them on its own
+  // for links it thinks the user might follow; the user did not ask for them
+  // and cannot slow them down, so charging them against a human's budget
+  // measures the framework, not a flood. They are also the overwhelming
+  // majority of traffic through here — 13 of every 14 requests on a plain
+  // page view.
+  const isPrefetch = request.headers.get('next-router-prefetch') === '1' ||
+    request.headers.get('purpose') === 'prefetch' ||
+    request.headers.get('x-purpose') === 'preview'
 
-  if (!limitInfo) {
-    instanceThrottleMap.set(ip, { count: 1, resetTime: now + WINDOW_MS })
-  } else {
-    if (now > limitInfo.resetTime) {
+  const now = Date.now()
+
+  if (!isPrefetch) {
+    const limitInfo = instanceThrottleMap.get(ip)
+
+    if (!limitInfo || now > limitInfo.resetTime) {
       instanceThrottleMap.set(ip, { count: 1, resetTime: now + WINDOW_MS })
     } else {
       limitInfo.count += 1
@@ -43,18 +65,36 @@ export async function proxy(request: NextRequest) {
         // Deliberately does not echo `ip` back: it is derived from the
         // client-supplied x-forwarded-for header, so reflecting it turns
         // this response into a small reflection primitive for no benefit.
+        // A person who taps too fast gets a page, not a raw JSON blob.
+        // Only genuine API callers get JSON — anyone else is looking at
+        // this in a browser and deserves a sentence they can read.
+        const wantsJson = url.pathname.startsWith('/api/') ||
+          (request.headers.get('accept') || '').includes('application/json')
+
+        if (wantsJson) {
+          return new NextResponse(
+            JSON.stringify({
+              error: 'Too Many Requests',
+              message: 'Too many requests. Please slow down and try again shortly.'
+            }),
+            { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '60' } }
+          )
+        }
+
         return new NextResponse(
-          JSON.stringify({
-            error: 'Too Many Requests',
-            message: 'Too many requests. Please slow down and try again shortly.'
-          }),
-          {
-            status: 429,
-            headers: {
-              'Content-Type': 'application/json',
-              'Retry-After': '60'
-            }
-          }
+          `<!doctype html><meta charset="utf-8">` +
+          `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+          `<title>One moment</title>` +
+          `<body style="margin:0;background:#0a0a0a;color:#fff;font-family:system-ui,sans-serif;` +
+          `display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px">` +
+          `<div style="max-width:22rem;text-align:center">` +
+          `<h1 style="color:#D4AF37;font-size:1.1rem;margin:0 0 .75rem">Just a moment</h1>` +
+          `<p style="color:#9ca3af;font-size:.85rem;line-height:1.6;margin:0 0 1.25rem">` +
+          `That was a lot of requests at once. Give it a minute and try again — ` +
+          `nothing is wrong with your account.</p>` +
+          `<a href="/dashboard" style="color:#D4AF37;font-size:.8rem;font-weight:700">Back to the app</a>` +
+          `</div></body>`,
+          { status: 429, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Retry-After': '60' } }
         )
       }
     }
