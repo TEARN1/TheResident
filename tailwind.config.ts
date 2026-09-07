@@ -24,33 +24,35 @@ const config: Config = {
         // <alpha-value> is what lets opacity modifiers still work
         // (`bg-accent/10`); it requires the CSS variable to hold bare channel
         // numbers, which is why tokens.css also publishes *-rgb triplets.
+        // ── Design tokens (src/styles/tokens.css, generated) ─────────────
+        // Channel-based so opacity modifiers work: `bg-accent/10` compiles to
+        // rgb(var(--accent-rgb) / 0.1). The app uses colour-with-opacity over
+        // 400 times, so this is not a nicety.
         surface: {
-          DEFAULT: 'var(--surface)',
-          raised: 'var(--surface-raised)',
-          sunken: 'var(--surface-sunken)',
-          overlay: 'var(--surface-overlay)'
+          DEFAULT: 'rgb(var(--surface-rgb) / <alpha-value>)',
+          raised: 'rgb(var(--surface-raised-rgb) / <alpha-value>)',
+          sunken: 'rgb(var(--surface-sunken-rgb) / <alpha-value>)'
         },
         content: {
-          DEFAULT: 'var(--text-primary)',
-          muted: 'var(--text-muted)',
-          subtle: 'var(--text-subtle)',
-          'on-accent': 'var(--text-on-accent)'
+          DEFAULT: 'rgb(var(--text-primary-rgb) / <alpha-value>)',
+          muted: 'rgb(var(--text-muted-rgb) / <alpha-value>)',
+          subtle: 'rgb(var(--text-subtle-rgb) / <alpha-value>)',
+          'on-accent': 'rgb(var(--text-on-accent-rgb) / <alpha-value>)'
         },
         accent: {
-          DEFAULT: 'var(--accent)',
-          hover: 'var(--accent-hover)',
-          soft: 'var(--accent-soft)',
-          border: 'var(--accent-border)'
+          DEFAULT: 'rgb(var(--accent-rgb) / <alpha-value>)',
+          hover: 'rgb(var(--accent-hover-rgb) / <alpha-value>)'
         },
-        success: { DEFAULT: 'var(--success)', soft: 'var(--success-soft)' },
-        warning: { DEFAULT: 'var(--warning)', soft: 'var(--warning-soft)' },
-        danger:  { DEFAULT: 'var(--danger)',  soft: 'var(--danger-soft)' },
-        info:    { DEFAULT: 'var(--info)',    soft: 'var(--info-soft)' },
+        success: 'rgb(var(--success-rgb) / <alpha-value>)',
+        warning: 'rgb(var(--warning-rgb) / <alpha-value>)',
+        danger:  'rgb(var(--danger-rgb) / <alpha-value>)',
+        info:    'rgb(var(--info-rgb) / <alpha-value>)',
+        hairline: 'rgb(var(--border-rgb) / <alpha-value>)',
         area: {
-          housing: 'var(--area-housing)',
-          community: 'var(--area-community)',
-          services: 'var(--area-services)',
-          safety: 'var(--area-safety)'
+          housing: 'rgb(var(--area-housing-rgb) / <alpha-value>)',
+          community: 'rgb(var(--area-community-rgb) / <alpha-value>)',
+          services: 'rgb(var(--area-services-rgb) / <alpha-value>)',
+          safety: 'rgb(var(--area-safety-rgb) / <alpha-value>)'
         }
       },
       borderColor: {
@@ -60,20 +62,15 @@ const config: Config = {
         subtle: 'var(--border-subtle)'
       },
       boxShadow: {
-        e1: 'var(--elevation-1)',
-        e2: 'var(--elevation-2)',
-        e3: 'var(--elevation-3)',
-        e4: 'var(--elevation-4)',
+        e1: 'var(--elevation-1)', e2: 'var(--elevation-2)',
+        e3: 'var(--elevation-3)', e4: 'var(--elevation-4)',
         focus: 'var(--focus-ring)'
       },
       borderRadius: {
-        sm: 'var(--radius-sm)',
-        md: 'var(--radius-md)',
-        lg: 'var(--radius-lg)'
+        sm: 'var(--radius-sm)', md: 'var(--radius-md)', lg: 'var(--radius-lg)'
       },
       transitionDuration: {
-        fast: 'var(--duration-fast)',
-        base: 'var(--duration-base)',
+        fast: 'var(--duration-fast)', base: 'var(--duration-base)',
         slow: 'var(--duration-slow)'
       },
       maxWidth: { content: 'var(--content-max)' },

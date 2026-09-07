@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ReduxProvider } from '../store/provider'
+import { THEME_BOOT_SCRIPT } from '../utils/theme'
 
 export const metadata: Metadata = {
   title: 'The Resident Crew',
@@ -22,27 +23,25 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    // No hardcoded data-theme here anymore — it used to be a permanent
-    // "day" that CSS never even styled (globals.css only has 'night'/
-    // 'light' blocks), and every page that DID toggle a theme (auth,
-    // dashboard) wrote to its own separate localStorage key, so a choice
-    // made on one never showed up on the other. This inline script runs
-    // before React hydrates and sets data-theme from the one shared key
-    // every page now reads/writes, avoiding a flash of the wrong theme.
+    // Theme is resolved by src/utils/theme.ts, which has three states, not
+    // two. The previous version of this script read
+    //     t === 'light' ? 'light' : 'night'
+    // so anything that was not the exact string 'light' became dark —
+    // including never having chosen, which is the common case. A resident
+    // whose phone was set to light mode still got a dark app permanently,
+    // and prefers-color-scheme was never consulted at all.
+    //
+    // Now: an explicit choice stamps an attribute and wins over the OS in
+    // both directions; no choice removes the attribute so the media query in
+    // tokens.css follows the device. This still runs before hydration, so
+    // there is no flash of the wrong theme.
     <html lang="en">
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                var t = localStorage.getItem('residentTheme');
-                document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'night');
-              } catch (e) {
-                document.documentElement.setAttribute('data-theme', 'night');
-              }
-            `
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {/* So the Android status bar and iOS Safari chrome match the app
+            instead of clashing with it. Two entries, one per scheme. */}
+        <meta name="theme-color" content="#FAF8F3" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#16140F" media="(prefers-color-scheme: dark)" />
       </head>
       <body>
         <ReduxProvider>

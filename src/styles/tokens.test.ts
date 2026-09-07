@@ -33,8 +33,12 @@ function contrast(a: string, b: string): number {
 /** Read a token's hex value out of a specific block of tokens.css. */
 function tokensIn(block: string): Map<string, string> {
   const out = new Map<string, string>()
-  for (const m of block.matchAll(/(--[a-z0-9-]+):\s*(#[0-9a-fA-F]{3,8})\s*;/g)) {
-    out.set(m[1], m[2])
+  // Tokens are stored as channels ("250 248 243") so Tailwind's opacity
+  // modifiers work; convert back to hex for the contrast maths.
+  for (const m of block.matchAll(/--([a-z0-9-]+)-rgb:\s*(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})\s*;/g)) {
+    const hex = '#' + [m[2], m[3], m[4]]
+      .map(n => Number(n).toString(16).padStart(2, '0')).join('')
+    out.set('--' + m[1], hex)
   }
   return out
 }
