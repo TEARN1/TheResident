@@ -8053,3 +8053,62 @@ grant execute on function public.res_set_room_status(uuid,text) to authenticated
 grant execute on function public.res_notify_room_vacancy_watchers(uuid) to service_role;
 grant execute on function public.res_watch_room_vacancy(uuid) to authenticated, service_role;
 grant execute on function public.res_unwatch_room_vacancy(uuid) to authenticated, service_role;
+
+
+-- ==========================================================================
+-- 37. theresident_client_error_admin_view.sql
+-- ==========================================================================
+
+-- theresident_client_error_admin_view.sql
+--
+-- res_client_errors (section 20) already captures real crashes from real
+-- users — deliberately unreadable by anyone through the API, service_role
+-- only, per its own comment: "a crash report is diagnostic data, not
+-- something to show a user." That was the right call for residents. It also
+-- meant the one person who should see this — the founder running the
+-- platform — had no way to either, short of reading raw rows in the
+-- Supabase dashboard.
+--
+-- This adds exactly one door back in: res_is_platform_admin() (section 32),
+-- the same gate every other admin-only decision in this app already uses.
+-- Nothing about res_client_errors' own lockdown changes — no policy, no
+-- grant on the table itself. This is a narrow, read-only, admin-gated
+-- reimplementation of res_client_error_summary's query, not a widening of
+-- that function's grant (which stays service_role only).
+--
+-- Paste into the Supabase SQL editor. Additive only.
+
+create or replace function public.res_client_error_summary_for_admin(p_hours integer default 24)
+returns table (
+  label text,
+  occurrences bigint,
+  affected_users bigint,
+  last_seen timestamptz,
+  sample_message text
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.res_is_platform_admin() then
+    raise exception 'not_a_platform_admin';
+  end if;
+
+  return query
+  select
+    e.label,
+    count(*) as occurrences,
+    count(distinct e.user_id) as affected_users,
+    max(e.created_at) as last_seen,
+    (array_agg(e.message order by e.created_at desc))[1] as sample_message
+  from res_client_errors e
+  where e.created_at > now() - make_interval(hours => greatest(1, least(p_hours, 720)))
+  group by e.label
+  order by count(*) desc;
+end;
+$$;
+
+revoke all on function public.res_client_error_summary_for_admin(integer) from public, anon;
+grant execute on function public.res_client_error_summary_for_admin(integer) to authenticated, service_role;

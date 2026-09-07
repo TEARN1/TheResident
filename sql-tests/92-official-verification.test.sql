@@ -200,4 +200,40 @@ select 'admins_can_call_the_decision_functions_from_the_app' as check,
   and has_function_privilege('authenticated', 'public.res_reject_unit_verification(uuid, text)', 'execute')
   and has_function_privilege('authenticated', 'public.res_revoke_unit_verification(uuid, text)', 'execute') as pass;
 
+-- ── Client error admin view (theresident_client_error_admin_view.sql) ──────
+-- res_client_errors itself stays exactly as locked down as before this file
+-- — no policy, no grant, service_role only. This is a narrow, admin-gated
+-- door back in for the one person who should be able to see crash reports
+-- from inside the app instead of the Supabase dashboard.
+-- A label unique to this file, since 91-client-errors.test.sql already left
+-- a 'render' row behind in this shared table — an exact-count assertion
+-- against a shared label would be testing cross-file leakage, not this RPC.
+insert into res_client_errors (user_id, label, message, created_at) values
+  (null, 'admin_view_test_bug', 'TypeError: cannot read suburb', now() - interval '1 hour'),
+  (null, 'admin_view_test_bug', 'TypeError: cannot read suburb', now() - interval '2 hours'),
+  ('00000000-0000-0000-0000-000000000991', 'admin_view_test_timeout', 'fetch failed', now() - interval '10 hours');
+
+update auth._current set uid = '00000000-0000-0000-0000-000000000991';
+do $$ begin
+  begin
+    perform public.res_client_error_summary_for_admin(24);
+    raise exception 'TEST FAILED: a non-admin read the crash-report summary';
+  exception when others then
+    if sqlerrm like 'TEST FAILED%' then raise; end if;
+    if sqlerrm not like 'not_a_platform_admin%' then raise; end if;
+  end;
+end $$;
+select 'a_non_admin_cannot_read_client_error_summary' as check, true as pass;
+
+update auth._current set uid = '00000000-0000-0000-0000-000000000992';
+select 'an_admin_sees_the_bug_grouped_and_counted' as check,
+  (select occurrences from public.res_client_error_summary_for_admin(24) where label = 'admin_view_test_bug') = 2 as pass;
+
+select 'an_admin_sees_how_many_distinct_users_it_hit' as check,
+  (select affected_users from public.res_client_error_summary_for_admin(24) where label = 'admin_view_test_timeout') = 1 as pass;
+
+select 'the_underlying_table_stays_locked_regardless' as check,
+  not has_table_privilege('authenticated', 'public.res_client_errors', 'select')
+  and not has_function_privilege('anon', 'public.res_client_error_summary_for_admin(integer)', 'execute') as pass;
+
 reset role;

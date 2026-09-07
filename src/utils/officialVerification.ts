@@ -224,3 +224,37 @@ export async function revokeVerification(unitId: string, note: string): Promise<
     if (error) throw error
   })
 }
+
+// ── Client error admin view (theresident_client_error_admin_view.sql) ──────
+// res_client_errors itself is not exposed here or anywhere in the client —
+// it has no policy and no grant, service_role only. This calls the one
+// admin-gated door back in: res_client_error_summary_for_admin(), which
+// checks res_is_platform_admin() again server-side regardless of what the
+// client believes.
+
+export interface ClientErrorSummaryRow {
+  label: string
+  occurrences: number
+  affectedUsers: number
+  lastSeen: string
+  sampleMessage: string | null
+}
+
+export async function fetchClientErrorSummary(hours = 24): Promise<ClientErrorSummaryRow[]> {
+  if (!supabase) return []
+  const client = supabase
+  try {
+    const { data, error } = await client.rpc('res_client_error_summary_for_admin', { p_hours: hours })
+    if (error) throw error
+    return ((data || []) as Array<Record<string, unknown>>).map(row => ({
+      label: row.label as string,
+      occurrences: Number(row.occurrences),
+      affectedUsers: Number(row.affected_users),
+      lastSeen: row.last_seen as string,
+      sampleMessage: (row.sample_message as string | null) ?? null
+    }))
+  } catch {
+    // Not an admin, or the RPC failed — either way, an empty list, never a throw.
+    return []
+  }
+}
