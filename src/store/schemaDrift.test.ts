@@ -36,6 +36,11 @@ const SRC = join(REPO_ROOT, 'src')
  * deliberate act rather than an accident.
  */
 const KNOWN_UNVERSIONED_RPCS = new Set([
+  // Four came off this list when section 40 of the schema captured them
+  // during the SECURITY DEFINER authorisation review: res_moderate,
+  // res_household_members, res_property_occupancy, res_has_household_plus.
+  // That is the list doing its job — reviewing a function requires it to be
+  // in the repo first, which is the whole argument for this test existing.
   'ensure_res_profile',
   'res_block_user',
   'res_care_check_in',
@@ -46,11 +51,7 @@ const KNOWN_UNVERSIONED_RPCS = new Set([
   'res_create_property',
   'res_end_tenancy',
   'res_handyman_near',
-  'res_has_household_plus',
-  'res_household_members',
   'res_market_items_near',
-  'res_moderate',
-  'res_property_occupancy',
   'res_public_provider_tier',
   'res_redeem_invite',
   'res_report_map_zone',

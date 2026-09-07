@@ -8292,3 +8292,200 @@ $$;
 
 revoke all on function public.res_platform_health() from public, anon;
 grant execute on function public.res_platform_health() to authenticated, service_role;
+
+
+-- ==========================================================================
+-- 40. theresident_definer_authorisation_fixes.sql
+-- ==========================================================================
+
+-- theresident_definer_authorisation_fixes.sql
+--
+-- Four SECURITY DEFINER functions that did not check who was asking.
+--
+-- A SECURITY DEFINER function runs as its OWNER, not its caller. The RLS on
+-- every table it touches is therefore irrelevant inside it — the body is the
+-- only thing standing between a caller and the data. An earlier audit said
+-- exactly this and named res_household_members as "the clearest IDOR
+-- candidate", and then nobody read it. This is that review.
+--
+-- These four were among the 75 functions that lived only in production (see
+-- scripts/sync-functions.sh), which is precisely why they had never been
+-- reviewed: they were not in the repo to read.
+--
+-- ── 1. res_moderate — PRIVILEGE ESCALATION, proven by exploit ──────────────
+--
+-- The guard read:
+--
+--     select role into v_role from res_community_members
+--      where community_id = p_community and user_id = auth.uid();
+--     if v_role not in ('admin','founder') then raise exception ...
+--
+-- For someone who is a member of nothing, v_role is NULL. In SQL,
+-- `NULL not in ('admin','founder')` is NULL — not true — and `if NULL then
+-- raise` does not fire. The guard fell straight through.
+--
+-- Verified, not inferred: in a throwaway database a signed-in user belonging
+-- to no community successfully hid another user's post. Any signed-in person
+-- could hide any listing, market item, notice or gossip post on the
+-- platform, remove members from any community, and promote users to admin.
+--
+-- This is the same fail-open-on-NULL shape as the area-billing gate fixed
+-- earlier in this schema; `coalesce` is the fix in both places.
+--
+-- A second, quieter bug: the subject was never scoped to the community, so
+-- even a legitimate admin of one community could hide content belonging to
+-- another. Now scoped by community_id where the table has one. res_listings
+-- and res_notice_events have no community_id at all, so community admins
+-- cannot be scoped for those — they are restricted to the owner or a
+-- platform admin rather than left open to every community admin on the
+-- platform.
+create or replace function public.res_moderate(
+  p_community uuid,
+  p_action text,
+  p_subject_type text,
+  p_subject_id uuid,
+  p_reason text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare v_role text;
+begin
+  if auth.uid() is null then raise exception 'not signed in'; end if;
+
+  select role into v_role from res_community_members
+   where community_id = p_community and user_id = auth.uid();
+
+  -- coalesce is load-bearing — see the header. Without it a non-member
+  -- passes this check.
+  if coalesce(v_role, '') not in ('admin', 'founder') then
+    raise exception 'admin_required';
+  end if;
+
+  if p_action in ('hide','unhide') then
+    if p_subject_type = 'listing' then
+      if not public.res_is_platform_admin()
+         and not exists (select 1 from res_listings where id = p_subject_id and landlord_id = auth.uid()) then
+        raise exception 'not_your_listing: listings are not community-scoped';
+      end if;
+      update res_listings set hidden = (p_action = 'hide') where id = p_subject_id;
+
+    elsif p_subject_type = 'market_item' then
+      update res_market_items set hidden = (p_action = 'hide')
+       where id = p_subject_id and community_id = p_community;
+
+    elsif p_subject_type = 'notice' then
+      if not public.res_is_platform_admin()
+         and not exists (select 1 from res_notice_events where id = p_subject_id and posted_by_id = auth.uid()) then
+        raise exception 'not_your_notice: notices are not community-scoped';
+      end if;
+      update res_notice_events set hidden = (p_action = 'hide') where id = p_subject_id;
+
+    elsif p_subject_type = 'gossip_post' then
+      update res_gossip_posts set hidden = (p_action = 'hide')
+       where id = p_subject_id and community_id = p_community;
+    end if;
+
+  elsif p_action = 'remove_member' then
+    delete from res_community_members where community_id = p_community and user_id = p_subject_id;
+  elsif p_action = 'promote' then
+    update res_community_members set role = 'admin'
+     where community_id = p_community and user_id = p_subject_id;
+  elsif p_action = 'demote' then
+    if v_role <> 'founder' then raise exception 'founder_required'; end if;
+    update res_community_members set role = 'member'
+     where community_id = p_community and user_id = p_subject_id and role <> 'founder';
+  end if;
+
+  insert into res_moderation_actions (community_id, actor_id, action, subject_type, subject_id, reason)
+  values (p_community, auth.uid(), p_action, p_subject_type, p_subject_id, p_reason);
+end;
+$$;
+
+-- ── 2. res_household_members — IDOR: who lives at any address ──────────────
+--
+-- The body contained no reference to auth.uid() at all. Any signed-in user
+-- could pass any listing id and receive the user ids of the landlord and
+-- every approved tenant. Listing ids are trivially obtainable because
+-- res_listings is world-readable (`select using (true)`).
+--
+-- So this answered "who lives at this address?" for every address on the
+-- platform, to anyone with an account — in an app that also holds home areas
+-- and safety alerts. res_is_household_member already encodes the right rule
+-- and is what the RLS policies use.
+create or replace function public.res_household_members(p_listing uuid)
+returns table(user_id uuid, role text)
+language sql
+stable
+security definer
+set search_path to 'public'
+as $$
+  select l.landlord_id, 'landlord'
+    from res_listings l
+   where l.id = p_listing
+     and public.res_is_household_member(p_listing, auth.uid())
+  union
+  select r.tenant_id, 'tenant'
+    from res_room_requests r
+   where r.listing_id = p_listing
+     and r.status = 'approved'
+     and public.res_is_household_member(p_listing, auth.uid());
+$$;
+
+-- ── 3. res_property_occupancy — any landlord's figures ─────────────────────
+--
+-- Same shape: no auth check, and res_properties is otherwise landlord-private
+-- by RLS. Property ids leak through res_listings.property_id, which is
+-- world-readable, so any signed-in user could read any landlord's occupancy.
+create or replace function public.res_property_occupancy(p_property uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path to 'public'
+as $$
+  select jsonb_build_object(
+    'total_rooms', p.total_rooms,
+    'occupied_rooms', (select count(*) from res_listings l where l.property_id = p.id and l.status = 'taken'),
+    'listed_rooms', (select count(*) from res_listings l where l.property_id = p.id)
+  )
+  from res_properties p
+  where p.id = p_property
+    and p.landlord_id = auth.uid();
+$$;
+
+-- ── 4. res_has_household_plus — probing anyone's subscription ──────────────
+--
+-- The client only ever passes the caller's own id, but the function accepted
+-- any id and answered from res_subscriptions regardless of its RLS, so a
+-- crafted call could probe whether any resident pays. Answering only for the
+-- caller costs the client nothing.
+--
+-- res_public_provider_tier is deliberately left alone: a provider's tier is a
+-- badge other people are meant to see, which is what its name says.
+create or replace function public.res_has_household_plus(p_user uuid)
+returns boolean
+language sql
+security definer
+set search_path to 'public'
+as $$
+  select exists (
+    select 1 from res_subscriptions
+     where user_id = p_user
+       and p_user = auth.uid()
+       and product = 'household_plus'
+       and status = 'active'
+  );
+$$;
+
+revoke all on function public.res_moderate(uuid,text,text,uuid,text) from public, anon;
+revoke all on function public.res_household_members(uuid) from public, anon;
+revoke all on function public.res_property_occupancy(uuid) from public, anon;
+revoke all on function public.res_has_household_plus(uuid) from public, anon;
+
+grant execute on function public.res_moderate(uuid,text,text,uuid,text) to authenticated, service_role;
+grant execute on function public.res_household_members(uuid) to authenticated, service_role;
+grant execute on function public.res_property_occupancy(uuid) to authenticated, service_role;
+grant execute on function public.res_has_household_plus(uuid) to authenticated, service_role;
