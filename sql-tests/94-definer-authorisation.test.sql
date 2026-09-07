@@ -165,3 +165,46 @@ select 'residents_cannot_run_the_maintenance_sweeps' as check,
    or not has_function_privilege('authenticated', to_regprocedure('public.res_release_stale_claims()'), 'execute'))
   and (to_regprocedure('public.res_auto_return_tools()') is null
    or not has_function_privilege('authenticated', to_regprocedure('public.res_auto_return_tools()'), 'execute')) as pass;
+
+-- ── The trust pair: a caller-supplied user id, defaulted to auth.uid() ─────
+-- That signature means "act on me" but will act on whoever you name unless
+-- something stops it. Neither of these stopped it.
+--
+-- res_sync_trust's guard was `current_user IN ('authenticated','anon')`, and
+-- current_user inside a SECURITY DEFINER function is the OWNER, not the
+-- caller — so it was permanently false. This reproduces the write it allowed:
+-- one resident promoting another resident's cross-app trust row.
+delete from auth._current;
+insert into auth._current values ('c2222222-2222-4222-8222-222222222222');
+
+do $$ begin
+  if to_regprocedure('public.res_sync_trust(uuid)') is null then return; end if;
+  begin
+    perform public.res_sync_trust('c3333333-3333-4333-8333-333333333333');
+    raise exception 'TEST FAILED: one resident synced another resident''s trust';
+  exception when others then
+    if sqlerrm like 'TEST FAILED%' then raise; end if;
+    if sqlerrm not like '%own trust%' then raise; end if;
+  end;
+end $$;
+select 'a_resident_cannot_sync_someone_elses_trust' as check, true as pass;
+
+do $$ begin
+  if to_regprocedure('public.res_trust_gate(uuid)') is null then return; end if;
+  begin
+    perform public.res_trust_gate('c3333333-3333-4333-8333-333333333333');
+    raise exception 'TEST FAILED: one resident read another resident''s trust standing';
+  exception when others then
+    if sqlerrm like 'TEST FAILED%' then raise; end if;
+    if sqlerrm not like '%own trust standing%' then raise; end if;
+  end;
+end $$;
+select 'a_resident_cannot_read_someone_elses_trust_standing' as check, true as pass;
+
+-- And neither fix may break the person it is for.
+do $$ begin
+  if to_regprocedure('public.res_trust_gate(uuid)') is null then return; end if;
+  perform public.res_trust_gate('c2222222-2222-4222-8222-222222222222');
+  perform public.res_trust_gate();
+end $$;
+select 'a_resident_can_still_read_their_own_standing' as check, true as pass;

@@ -59,7 +59,6 @@ const KNOWN_UNVERSIONED_RPCS = new Set([
   'res_request_move_assist',
   'res_request_trust_connection',
   'res_submit_property_verification',
-  'res_trust_gate',
   'zone_verify',
   'zones_near'
 ])

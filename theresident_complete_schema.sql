@@ -8558,3 +8558,135 @@ begin
   end loop;
 end
 $$;
+
+
+-- ==========================================================================
+-- SECTION 42 — THE TRUST PAIR: TWO MORE AUTHORISATION HOLES
+-- ==========================================================================
+--
+-- Both found by continuing the SECURITY DEFINER review down the list of
+-- functions that take a caller-supplied user id and default it to
+-- `auth.uid()`. That signature is the tell: it means the function is meant to
+-- act on you, but will act on anyone you name unless something stops it.
+--
+-- ── 1. res_sync_trust — a dead guard over a cross-app write ────────────────
+--
+-- The original tried to enforce "own trust only":
+--
+--     IF v_user <> auth.uid() AND current_user IN ('authenticated','anon')
+--
+-- current_user inside a SECURITY DEFINER function is the function's OWNER,
+-- not the caller — postgres, here. session_user is the caller. So the second
+-- half of that AND was permanently false and the branch could never fire.
+-- Verified empirically rather than from memory: a definer function returning
+-- (current_user, session_user), called as authenticated, returns
+-- ('postgres', 'authenticated').
+--
+-- Consequence: any signed-in resident could call
+-- res_sync_trust('<someone else>') and write resident_trust_tier, is_verified
+-- and social_integrity_score onto that person's row in `profiles` — a table
+-- this repo does not own (CONTRACT.md §2) carrying a trust signal shared with
+-- the other app (CONTRACT.md §8).
+--
+-- The values are recomputed from the victim's own res_profiles rather than
+-- supplied by the attacker, so this is forced promotion, not forgery. It is
+-- still a stranger writing to another app's table on a user's behalf.
+--
+-- The fix states the intent directly. auth.uid() is NULL for internal callers
+-- (cron, service_role), which legitimately sync anyone; a browser session
+-- always has one and may only ever sync itself.
+create or replace function public.res_sync_trust(p_user uuid default null)
+returns text language plpgsql security definer set search_path to 'public'
+as $$
+DECLARE
+  v_user UUID := COALESCE(p_user, auth.uid());
+  v_rp RECORD;
+  v_trusted BOOLEAN := false;
+  v_verified BOOLEAN := false;
+  v_tier TEXT;
+BEGIN
+  IF v_user IS NULL THEN RAISE EXCEPTION 'not signed in'; END IF;
+  IF auth.uid() IS NOT NULL AND v_user <> auth.uid() THEN
+    RAISE EXCEPTION 'may only sync own trust';
+  END IF;
+  IF to_regclass('public.res_profiles') IS NULL THEN RETURN NULL; END IF;
+
+  SELECT * INTO v_rp FROM public.res_profiles WHERE id = v_user;
+  IF FOUND THEN
+    v_trusted := v_rp.role IS NOT NULL
+             AND COALESCE(length(trim(v_rp.bio)), 0) >= 20
+             AND v_rp.gender IS NOT NULL;
+    v_verified := v_trusted
+              AND COALESCE(v_rp.verification_doc_url, '') <> ''
+              AND v_rp.verification_status = 'reviewed';
+  END IF;
+
+  v_tier := CASE WHEN v_verified THEN 'verified' WHEN v_trusted THEN 'trusted' ELSE NULL END;
+
+  UPDATE public.profiles SET
+    resident_trust_tier = v_tier,
+    is_verified = CASE WHEN v_verified THEN true ELSE is_verified END,
+    social_integrity_score = GREATEST(
+      COALESCE(social_integrity_score, 50),
+      CASE WHEN v_verified THEN 75 WHEN v_trusted THEN 62 ELSE 0 END
+    )
+  WHERE id = v_user;
+
+  RETURN v_tier;
+END;
+$$;
+
+-- ── 2. res_trust_gate — no ownership check at all ──────────────────────────
+--
+-- Same signature, and nothing checking it. Any signed-in user could read any
+-- other user's trust standing: whether their next-of-kin circle is
+-- established, and therefore whether gated actions are open to them.
+--
+-- That is derived from someone's private social graph — how many confirmed
+-- trust connections they have, and how well-connected those people are in
+-- turn. res_trust_connections is not readable directly; this handed out a
+-- summary of it about anyone.
+create or replace function public.res_trust_gate(p_user uuid default null)
+returns jsonb language plpgsql security definer set search_path to 'public'
+as $$
+declare
+  v_user uuid := coalesce(p_user, auth.uid());
+  v_direct int;
+  v_qualified int;
+  v_unlocked boolean;
+  v_status text;
+begin
+  if v_user is null then raise exception 'not signed in'; end if;
+  if auth.uid() is not null and v_user <> auth.uid() then
+    raise exception 'may only read own trust standing';
+  end if;
+
+  select count(distinct other) into v_direct from (
+    select case when requester_id = v_user then connection_id else requester_id end as other
+    from res_trust_connections
+    where status = 'confirmed' and (requester_id = v_user or connection_id = v_user)
+  ) t;
+
+  select count(*) into v_qualified from (
+    select case when requester_id = v_user then connection_id else requester_id end as other
+    from res_trust_connections
+    where status = 'confirmed' and (requester_id = v_user or connection_id = v_user)
+  ) direct
+  where (
+    select count(distinct other2) from (
+      select case when requester_id = direct.other then connection_id else requester_id end as other2
+      from res_trust_connections
+      where status = 'confirmed' and (requester_id = direct.other or connection_id = direct.other)
+    ) t2
+  ) >= 5;
+
+  v_unlocked := v_direct >= 5 and v_qualified >= 3;
+  v_status := case
+    when v_unlocked then 'established'
+    when v_direct >= 3 then 'building'
+    else 'new'
+  end;
+
+  return jsonb_build_object('status', v_status, 'unlocked', v_unlocked);
+end;
+$$;
