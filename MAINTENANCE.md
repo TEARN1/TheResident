@@ -5,6 +5,13 @@ This is the written answer to "how long between maintenance passes" —
 it should live here, not only in one person's head.
 
 ## Before shipping any UI change
+- **`npm run smoke`** — boots the production build and opens every route in a
+  real phone-sized browser, failing on a bad status, an uncaught exception, a
+  console error, or a page that renders almost nothing. It is the only check
+  in this repo that renders a component at all, which is why the throttle bug
+  (a 429 to anyone who viewed four pages in a minute) shipped with tsc, the
+  unit tests and the build all green. Runs in CI on every push.
+
 
 `npx tsc --noEmit`, `npm run build` and `npm test` are necessary but **not
 sufficient** — none of them render a component. Always also:

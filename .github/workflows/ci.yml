@@ -2,7 +2,9 @@ name: The Resident - Automated CI/CD Quality Pipeline
 
 on:
   push:
-    branches: [ main, map/vibemap-perf-a11y ]
+    # claude/** included because that is where work actually lands — without
+    # it, every commit made on those branches got no CI signal at all.
+    branches: [ main, 'claude/**', map/vibemap-perf-a11y ]
   pull_request:
     branches: [ main ]
 
@@ -29,6 +31,20 @@ jobs:
 
       - name: "Layer 2: Unit Test Suite"
         run: npm test
+
+      - name: "Layer 2: Production Build"
+        run: npm run build
+
+      # The only step here that renders anything. tsc, npm test and the build
+      # above all pass on a route that throws on render, or middleware that
+      # returns 429 to a normal person — which is exactly what happened: the
+      # throttle counted Next's own prefetches against the user, so four page
+      # views a minute earned a JSON error blob, and every check in this file
+      # stayed green while it did.
+      - name: "Layer 14: Browser Smoke Test"
+        run: |
+          npx playwright install --with-deps chromium
+          npm run smoke
 
       - name: "Layer 13: Security Fuzzer"
         run: npm run fuzzer
