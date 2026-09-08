@@ -462,6 +462,30 @@ it. These ten items are what make the other 190 permanent.*
 
 ---
 
+## Progress
+
+**Done and pushed: 76 of 200.** Phases 1 and 2 complete, most of 3, and the
+guardrails from 6 that keep them from regressing.
+
+| Measured | Before | Now |
+|---|---|---|
+| Body text contrast | 4.10:1 (fails AA) | 7.15:1 light / 7.27:1 dark |
+| Hardcoded colour values | ~2,100 | 0 |
+| Horizontal overflow | 398px on `/auth` | 0 |
+| Elements clipped off-screen | 10 at 320px | 0 |
+| Tap targets under 44px | 19–22 per screen (min 11px) | 0 |
+| Text under 12px | 21 per screen | 0 |
+| Layout change 320px → 1024px | none | tablet 2-col, desktop sidebar |
+| Functions that could hang a spinner forever | 17 | 0 |
+
+Completed: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 33, 41, 42, 43, 44, 45, 46, 47, 48, 64, 66, 70, 72, 79, 80, 81, 82, 83, 84, 85, 86, 87, 89, 91, 99, 103, 104, 105, 106, 107, 112, 117, 152, 154, 155, 164, 165, 172, 177, 178, 191, 192, 193, 194, 195, 196
+
+Everything else is outstanding. The largest remaining blocks are the
+component rebuild (121–150), motion and states (156–176), and the rest of
+accessibility (179–190).
+
+---
+
 ## Suggested sequencing
 
 **Phase 1 — foundations (items 1–22, 191–192).** Invisible, and it makes
