@@ -6,6 +6,7 @@ import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check, H
 import { outageConsensus, type StatusReport } from '../../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
+import { withTimeout } from '../../../../utils/resilientCall'
 import UpgradeButton from '../shared/UpgradeButton'
 
 interface CareProfile {
@@ -98,6 +99,36 @@ export default function SafetyTab({
   onReportStatus
 }: SafetyTabProps) {
   const [confirmPanic, setConfirmPanic] = useState(false)
+
+  // How many neighbours a panic alert would ACTUALLY reach.
+  //
+  // This is not a nicety. Measured on live data, an alert reached nobody: no
+  // resident had joined a community, set a suburb, or dropped a home pin, so
+  // there was no signal by which anyone could be found. The app said
+  // "real-time community panic alerts" regardless.
+  //
+  // Someone in danger must not be left believing help is coming when it is
+  // not. The number is shown before they can send, and when it is zero the
+  // control says so plainly and points at the emergency services instead.
+  const [reach, setReach] = useState<number | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      if (!supabase) return
+      try {
+        const { data, error } = await withTimeout(
+          supabase.rpc('res_alert_reach_preview', {
+            p_lat: null, p_lon: null, p_suburb: null, p_community: null
+          }), 8000, 'alert reach')
+        if (!cancelled && !error && typeof data === 'number') setReach(data)
+      } catch {
+        // Unknown reach is not the same as zero. Leaving it null shows the
+        // cautious message rather than a confident wrong number.
+        if (!cancelled) setReach(null)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
   const [showIncidentForm, setShowIncidentForm] = useState(false)
   const [incidentTitle, setIncidentTitle] = useState('')
   const [incidentDesc, setIncidentDesc] = useState('')
@@ -277,7 +308,7 @@ export default function SafetyTab({
                 }}
                 className="flex-1 md:flex-none bg-danger text-content font-bold px-6 py-3 rounded-xl active:scale-95 transition-all"
               >
-                Yes — send it now
+                {reach === 0 ? 'Send anyway' : 'Yes — send it now'}
               </button>
               <button
                 onClick={() => setConfirmPanic(false)}
@@ -287,6 +318,25 @@ export default function SafetyTab({
               </button>
             </div>
           )}
+        </div>
+
+        {/* Always visible, above the app's own alert. In a real emergency the
+            right action is the emergency services, and the app should say so
+            rather than compete with them — particularly while in-app reach is
+            zero. South African numbers; 112 works from any mobile. */}
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-danger/30 bg-danger/10 p-3">
+          <span className="text-xs font-black uppercase tracking-widest text-danger">
+            In an emergency, call first
+          </span>
+          <a href="tel:10111" className="min-h-tap inline-flex items-center rounded-lg bg-danger px-3 font-bold text-content-on-accent">
+            Police 10111
+          </a>
+          <a href="tel:10177" className="min-h-tap inline-flex items-center rounded-lg border border-danger/40 px-3 font-bold text-danger">
+            Ambulance 10177
+          </a>
+          <a href="tel:112" className="min-h-tap inline-flex items-center rounded-lg border border-danger/40 px-3 font-bold text-danger">
+            112 from a mobile
+          </a>
         </div>
 
         <button

@@ -50,6 +50,46 @@ export default function TermsPage() {
           </p>
         </Section>
 
+        <Section title="Safety features are not emergency services">
+          <p className="text-sm leading-relaxed mb-2">
+            <strong className="text-content">
+              Do not rely on The Resident in an emergency. Call 10111 (police), 10177 (ambulance),
+              or 112 from any mobile.
+            </strong>
+          </p>
+          <p className="text-sm leading-relaxed">
+            Panic alerts, mutual-aid check-ins and neighbourhood status reports are a way for
+            neighbours to tell each other things. They are delivered inside the app, over the
+            internet, to residents who have joined a community or shared their area — so they can
+            be delayed, or reach nobody at all, for reasons outside our control: no signal, a
+            phone that is off, notifications switched off, or simply nobody nearby using the app
+            yet. We do not monitor alerts, we do not dispatch help, and we cannot guarantee that
+            anyone will see or respond to one.
+          </p>
+        </Section>
+
+        <Section title="We connect people, we are not a party to what you agree">
+          <p className="text-sm leading-relaxed">
+            Listings, rooms, services and marketplace items are posted by residents, not by us. We
+            are not an estate agent, letting agent, broker or employer, and we are not a party to
+            any lease, sale, job or payment you agree with another user. We do not hold your money.
+            We do not inspect properties or vet the people you meet through the app, and a
+            &ldquo;verified&rdquo; badge means only that someone submitted a document we looked
+            at — it is not a guarantee of honesty, safety or solvency. Meet in public, check
+            documents yourself, and never pay a deposit for a place you have not seen.
+          </p>
+        </Section>
+
+        <Section title="Content posted by residents">
+          <p className="text-sm leading-relaxed">
+            You are responsible for what you post, including anything you say about a landlord,
+            a business or a service provider. Do not post anything untrue, private to someone
+            else, or intended to harass. We can remove content and suspend accounts, and we will
+            act on a reasonable complaint — contact us through the support channel listed in the
+            app. Content you post may remain visible to others until it is removed.
+          </p>
+        </Section>
+
         <Section title="Changes">
           <p className="text-sm leading-relaxed">
             We may update these terms as the app changes. Continued use after an update means you accept the current terms.

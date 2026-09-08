@@ -189,7 +189,7 @@ export default function Home() {
           className={styles.subtitle}
         >
           The community-powered ecosystem connecting neighbors.
-          Coordinate lift clubs, access spaza marketplaces, share tools, and keep your street safe.
+          Coordinate lift clubs, access spaza marketplaces, share tools, and look out for your street.
         </motion.p>
 
         <motion.div
@@ -232,7 +232,7 @@ export default function Home() {
         {[
           { icon: Shield, title: "Trusted Neighbors", desc: "Vibe check ratings and reputation scores ensure you only transact with verified local residents.", accent: 'var(--accent-teal)', glow: 'radial-gradient(circle at 20% 0%, rgba(45, 212, 191, 0.08), transparent 60%)', iconBg: 'rgba(45, 212, 191, 0.1)' },
           { icon: Crown, title: "Local Listings", desc: "Find spaza shops, handyman services, secure rooms, and bakkie transport directly in your suburb.", accent: 'var(--gold-primary)', glow: 'radial-gradient(circle at 20% 0%, rgba(212, 175, 55, 0.1), transparent 60%)', iconBg: 'rgba(212, 175, 55, 0.1)' },
-          { icon: Lock, title: "Safety Net", desc: "Keep your street secure with coordinated mutual aid checks and real-time community panic alerts.", accent: 'var(--accent-rose)', glow: 'radial-gradient(circle at 20% 0%, rgba(251, 113, 133, 0.08), transparent 60%)', iconBg: 'rgba(251, 113, 133, 0.1)' }
+          { icon: Lock, title: "Safety Net", desc: "Coordinate mutual-aid check-ins and raise alerts to neighbours in the app. Not a replacement for emergency services.", accent: 'var(--accent-rose)', glow: 'radial-gradient(circle at 20% 0%, rgba(251, 113, 133, 0.08), transparent 60%)', iconBg: 'rgba(251, 113, 133, 0.1)' }
         ].map((feature, i) => (
           <motion.div
             key={i}

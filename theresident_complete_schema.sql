@@ -8700,3 +8700,168 @@ begin
   return jsonb_build_object('status', v_status, 'unlocked', v_unlocked);
 end;
 $$;
+
+
+-- ==========================================================================
+-- SECTION 44 — THE PANIC ALERT REACHED NOBODY
+-- ==========================================================================
+--
+-- Measured on live data before this section existed:
+--
+--   40 profiles, of which exactly 1 had is_verified = true — and the
+--   recipient query REQUIRED it. A neighbourhood panic alert notified one
+--   account.
+--
+--   The fallback branch matched on profiles.city. Zero profiles have a city
+--   set, so an alert not tied to a community reached nobody at all.
+--
+--   No push was sent on this path, so even that one person saw it only if
+--   they already had the app open — which is not the state a phone is in
+--   when something is happening on your street.
+--
+-- Meanwhile the landing page promised "real-time community panic alerts".
+-- Of everything in this codebase, that gap is the one that could actually
+-- hurt somebody: a person in danger relying on a feature that does not
+-- deliver.
+--
+-- Two changes, and one honest admission.
+--
+-- 1. is_verified is no longer a gate. Verification is a trust signal for
+--    TRANSACTIONS — deciding who can sell, who can be trusted with a deposit.
+--    It has no business deciding who gets warned about danger, and requiring
+--    it made the alert reach exactly one person.
+--
+-- 2. The audience resolves from Resident-owned location data: community
+--    membership, res_profiles.suburb, and res_home_areas within 3km.
+--    res_home_areas exists precisely for this. profiles.city, which the old
+--    query used, is empty for every account in the database.
+--
+-- 3. THE ADMISSION: this does not make the feature work. There are currently
+--    0 community memberships, 0 residents with a suburb, and 0 with a home
+--    pin. There is no signal by which any resident can be reached, so an
+--    alert raised today still notifies nobody. The fix is necessary and not
+--    sufficient, and the product must say so — which is what
+--    res_alert_reach_preview below is for.
+create or replace function public.res_broadcast_alert(p_alert_id uuid)
+returns void
+language plpgsql security definer set search_path to 'public', 'extensions'
+as $$
+declare
+  v_alert record;
+  v_recipients uuid[];
+  v_key text;
+  v_url text;
+begin
+  select * into v_alert from res_alerts where id = p_alert_id;
+  if not found then
+    raise exception 'alert not found';
+  end if;
+
+  -- A UNION of weak signals, deliberately. For a safety alert, reaching
+  -- someone slightly too far away is a far smaller harm than reaching nobody.
+  select array_agg(distinct uid) into v_recipients from (
+    select cm.user_id as uid
+      from res_community_members cm
+     where v_alert.community_id is not null
+       and cm.community_id = v_alert.community_id
+    union
+    select rp.id
+      from res_profiles rp
+     where v_alert.suburb is not null and rp.suburb is not null
+       and lower(rp.suburb) = lower(v_alert.suburb)
+    union
+    select ha.user_id
+      from res_home_areas ha
+     where v_alert.lat is not null and v_alert.lon is not null
+       and public.res_distance_m(ha.lat, ha.lon, v_alert.lat, v_alert.lon) <= 3000
+  ) t
+  where uid is not null and uid <> v_alert.user_id;
+
+  if v_recipients is null or array_length(v_recipients, 1) is null then
+    return;
+  end if;
+
+  insert into notifications (recipient_id, actor_id, type, title, body, data)
+  select r, v_alert.user_id, 'res_alert_panic',
+         '🚨 NEIGHBOURHOOD ALERT: ' || v_alert.title,
+         v_alert.description,
+         jsonb_build_object('alert_id', v_alert.id, 'kind', v_alert.kind)
+  from unnest(v_recipients) as r;
+
+  -- Push, so it reaches a phone with the app closed. Wrapped so a push
+  -- failure can never undo an alert already delivered in-app. Still needs
+  -- VAPID_PRIVATE_KEY on the edge function; until that is set this degrades
+  -- to in-app only rather than erroring.
+  begin
+    select decrypted_secret into v_key
+      from vault.decrypted_secrets where name = 'service_role_key';
+    if v_key is not null then
+      v_url := 'https://feevvddvrjmfbhffccbf.supabase.co';
+      perform net.http_post(
+        url := v_url || '/functions/v1/web-push-send',
+        headers := jsonb_build_object('Content-Type', 'application/json',
+                                      'Authorization', 'Bearer ' || v_key),
+        body := jsonb_build_object(
+          'userIds', to_jsonb(v_recipients),
+          'title', '🚨 ' || v_alert.title,
+          'body', coalesce(v_alert.description, 'A neighbour has raised an alert nearby.'),
+          'url', '/dashboard/community?tab=safety&alert=' || v_alert.id::text,
+          'tag', 'alert-' || v_alert.id::text,
+          'requireInteraction', true)
+      );
+    end if;
+  exception when others then
+    null;
+  end;
+end;
+$$;
+
+-- How many neighbours would an alert actually reach, right now?
+--
+-- So the app can tell someone the truth at the moment they are relying on it,
+-- rather than implying help is coming. Same audience logic as
+-- res_broadcast_alert, deliberately: a preview that can disagree with the
+-- thing it previews is worse than no preview at all.
+create or replace function public.res_alert_reach_preview(
+  p_lat double precision default null,
+  p_lon double precision default null,
+  p_suburb text default null,
+  p_community uuid default null
+)
+returns integer
+language plpgsql stable security definer set search_path to 'public'
+as $$
+declare
+  v_me uuid := auth.uid();
+  v_count integer;
+begin
+  if v_me is null then raise exception 'not signed in'; end if;
+
+  select count(distinct uid) into v_count from (
+    select cm.user_id as uid
+      from res_community_members cm
+     where p_community is not null and cm.community_id = p_community
+    union
+    select rp.id
+      from res_profiles rp
+     where p_suburb is not null and rp.suburb is not null
+       and lower(rp.suburb) = lower(p_suburb)
+    union
+    select ha.user_id
+      from res_home_areas ha
+     where p_lat is not null and p_lon is not null
+       and public.res_distance_m(ha.lat, ha.lon, p_lat, p_lon) <= 3000
+  ) t
+  where uid is not null and uid <> v_me;
+
+  return coalesce(v_count, 0);
+end;
+$$;
+
+do $$
+begin
+  if to_regprocedure('public.res_alert_reach_preview(double precision,double precision,text,uuid)') is not null then
+    execute 'revoke all on function public.res_alert_reach_preview(double precision,double precision,text,uuid) from public, anon';
+    execute 'grant execute on function public.res_alert_reach_preview(double precision,double precision,text,uuid) to authenticated, service_role';
+  end if;
+end $$;
