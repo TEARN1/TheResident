@@ -648,6 +648,7 @@ set search_path = public
 as $$
 declare joined boolean;
 begin
+  perform public.res_check_rate_limit('toggle', 300, 3600);
   if auth.uid() is null then
     raise exception 'not signed in';
   end if;
@@ -1099,6 +1100,7 @@ set search_path = public
 as $$
 declare joined boolean;
 begin
+  perform public.res_check_rate_limit('toggle', 300, 3600);
   if auth.uid() is null then
     raise exception 'not signed in';
   end if;
@@ -1119,6 +1121,7 @@ set search_path = public
 as $$
 declare joined boolean;
 begin
+  perform public.res_check_rate_limit('toggle', 300, 3600);
   if auth.uid() is null then
     raise exception 'not signed in';
   end if;
@@ -1161,6 +1164,7 @@ set search_path = public
 as $$
 declare v_seats integer;
 begin
+  perform public.res_check_rate_limit('lift_book', 30, 3600);
   if auth.uid() is null then
     raise exception 'not signed in';
   end if;
@@ -1221,6 +1225,7 @@ declare
   v_deadline timestamptz;
   v_status text;
 begin
+  perform public.res_check_rate_limit('group_buy_pledge', 30, 86400);
   if auth.uid() is null then
     raise exception 'not signed in';
   end if;
@@ -3414,6 +3419,7 @@ as $$
 declare
   v_row res_rooms;
 begin
+  perform public.res_check_rate_limit('create_room', 40, 86400);
   if auth.uid() is null then raise exception 'not signed in'; end if;
   if coalesce(trim(p_label), '') = '' then raise exception 'label_required'; end if;
   if not exists (select 1 from res_properties where id = p_property and landlord_id = auth.uid()) then
@@ -3569,6 +3575,7 @@ declare
   v_property res_properties;
   v_listing res_listings;
 begin
+  perform public.res_check_rate_limit('advertise_room', 20, 86400);
   if not public.res_owns_room(p_room) then raise exception 'not_your_room'; end if;
 
   select * into v_room from res_rooms where id = p_room;
@@ -3643,6 +3650,7 @@ as $$
 declare
   v_owner uuid;
 begin
+  perform public.res_check_rate_limit('delete_property', 10, 3600);
   select landlord_id into v_owner from public.res_properties where id = p_property;
   if v_owner is null then
     raise exception 'Property not found';
@@ -3739,6 +3747,7 @@ as $$
 declare
   v_row public.res_kin_verification_links;
 begin
+  perform public.res_check_rate_limit('kin_link', 10, 86400);
   if auth.uid() is null then
     raise exception 'Must be signed in';
   end if;
@@ -3995,6 +4004,7 @@ declare
   v_lon double precision;
   v_granularity text;
 begin
+  perform public.res_check_rate_limit('set_home_area', 20, 3600);
   if auth.uid() is null then
     raise exception 'not signed in';
   end if;
