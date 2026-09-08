@@ -1,0 +1,97 @@
+# DigitalOcean App Platform spec for The Resident.
+#
+# WHY THIS FILE EXISTS. On 8 September 2026 the Vercel team hit 100% of the
+# free tier's 10 GB Deployment Storage and Vercel began asking for a $20/month
+# Pro upgrade. DigitalOcean is already being paid for (about $4/month of usage
+# in August), so the app should run there rather than on a second bill.
+#
+# Apply with:
+#   doctl apps create --spec .do/app.yaml
+# or paste it into Apps → Create → "Import from App Spec" in the dashboard.
+#
+# BEFORE IT WILL WORK, set the values marked SET_ME. Everything else is ready.
+
+name: the-resident
+
+# lon, because the existing DigitalOcean resources on this account are in LON1
+# — the Spaces maintenance notices are all for LON1/SGP1/SYD1. Keeping the app
+# beside them avoids a second cross-region hop.
+#
+# DigitalOcean has no South African region, so this does not solve the latency
+# problem that docs/REGION-DECISION.md describes for the DATABASE. That one is
+# about Supabase, and af-south-1 is still the right answer there.
+region: lon
+
+services:
+  - name: web
+    # Builds from the repo's Dockerfile, which produces a Next.js standalone
+    # server. Verified: `node .next/standalone/server.js` serves /, /auth,
+    # /privacy and redirects /dashboard/* correctly.
+    dockerfile_path: Dockerfile
+    source_dir: /
+
+    github:
+      repo: TEARN1/TheResident
+      branch: main
+      # Only main. This is the whole point — Vercel deployed every push to
+      # every branch and kept the artifacts, which is what filled the quota.
+      deploy_on_push: true
+
+    http_port: 3000
+    instance_count: 1
+
+    # Confirm the current size and price in your own dashboard before applying
+    # — I could not reach DigitalOcean's pricing page to verify it. The app is
+    # a single Node process; the smallest tier is the place to start, and the
+    # size can be raised later without redeploying from scratch.
+    instance_size_slug: apps-s-1vcpu-0.5gb
+
+    health_check:
+      http_path: /
+      initial_delay_seconds: 20
+      period_seconds: 30
+
+    # ── Build-time values ────────────────────────────────────────────────
+    # NEXT_PUBLIC_* is compiled INTO the bundle. Set as BUILD_TIME or the
+    # app will build cleanly and then be unable to reach Supabase at all.
+    # These ship to every browser anyway, so they are not secrets.
+    envs:
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        scope: BUILD_TIME
+        value: SET_ME_https://feevvddvrjmfbhffccbf.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        scope: BUILD_TIME
+        value: SET_ME
+      - key: APP_BUILD_SHA
+        scope: BUILD_TIME
+        # Names the service worker's cache so an installed PWA picks up new
+        # deploys instead of serving the previous one.
+        value: ${_self.COMMIT_HASH}
+
+      # ── Runtime secrets ────────────────────────────────────────────────
+      # type: SECRET means encrypted at rest and never shown again after
+      # saving. These must NOT be build args: a build arg is recorded in the
+      # image's layer history and anyone who can pull the image can read it.
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: SET_ME
+      - key: JWT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: SET_ME
+      - key: VOUCHER_SIGNING_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: SET_ME
+      - key: NODE_ENV
+        scope: RUN_TIME
+        value: production
+
+# Add the real domain here once DNS is pointed at the app. App Platform
+# provisions and renews the TLS certificate itself, so this replaces what
+# Vercel was doing for HTTPS.
+#
+# domains:
+#   - domain: theresident.example
+#     type: PRIMARY

@@ -17,5 +17,6 @@
         }
       ]
     }
-  ]
+  ],
+  "ignoreCommand": "bash scripts/vercel-should-build.sh"
 }

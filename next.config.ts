@@ -16,6 +16,10 @@ import { execSync } from "node:child_process";
 // timestamp is a last resort that is wrong only in that it makes every build
 // look new (safe — it over-invalidates rather than under-invalidates).
 function buildId(): string {
+  // Host-agnostic on purpose. VERCEL_GIT_COMMIT_SHA only exists on Vercel;
+  // APP_BUILD_SHA is passed as a build arg by the Dockerfile so the same
+  // mechanism works on DigitalOcean, or anywhere else running the container.
+  if (process.env.APP_BUILD_SHA) return process.env.APP_BUILD_SHA.slice(0, 12);
   if (process.env.VERCEL_GIT_COMMIT_SHA) return process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 12);
   try {
     return execSync("git rev-parse --short=12 HEAD", { stdio: ["ignore", "pipe", "ignore"] })
@@ -26,6 +30,11 @@ function buildId(): string {
 }
 
 const nextConfig: NextConfig = {
+  // Emits .next/standalone: a self-contained server with only the node_modules
+  // it actually needs, which is what the Dockerfile has always tried to copy.
+  // Without this the directory is never produced, so `docker build` failed at
+  // the COPY step — the container path off Vercel did not work at all.
+  output: 'standalone',
   env: {
     NEXT_PUBLIC_BUILD_ID: buildId(),
   },

@@ -1,5 +1,8 @@
 # Base image
-FROM node:18-alpine AS base
+# Node 20: the CI pipeline builds and tests on 20.x, and shipping a container
+# built on a different major than everything is verified against is how a
+# runtime-only bug reaches production.
+FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -16,6 +19,35 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# The service worker names its cache after this, so an installed PWA picks up
+# a new deploy instead of serving the previous one. On Vercel it comes from
+# VERCEL_GIT_COMMIT_SHA; here it has to be passed in, because .git is not in
+# the build context. DigitalOcean App Platform: set it from the commit in
+# .do/app.yaml. Falls back to a timestamp, which over-invalidates (safe)
+# rather than under-invalidating (stale app).
+ARG APP_BUILD_SHA
+ENV APP_BUILD_SHA=$APP_BUILD_SHA
+
+# NEXT_PUBLIC_* is INLINED INTO THE BUNDLE AT BUILD TIME, not read at runtime.
+# Setting them only as runtime environment variables produces an app that
+# builds cleanly and then cannot reach Supabase at all, because the client was
+# compiled with `undefined` where the URL should be. On Vercel this is
+# invisible — it injects them into the build automatically. In a container it
+# has to be done deliberately, so they are build args here.
+#
+# Only PUBLIC values belong in this list. They ship to every browser either
+# way, so a build arg leaks nothing that the bundle does not already contain.
+# The service role key and other secrets are runtime-only and must NEVER be
+# added here — a build arg is recorded in the image's layer history.
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_MAPBOX_TOKEN
+ARG NEXT_PUBLIC_OSRM_ROUTING_URL
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN \
+    NEXT_PUBLIC_OSRM_ROUTING_URL=$NEXT_PUBLIC_OSRM_ROUTING_URL
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
