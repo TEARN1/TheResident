@@ -67,10 +67,61 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
+    // The Content-Security-Policy used to live ONLY in src/proxy.ts, whose
+    // matcher is ['/dashboard/:path*', '/api/:path*']. Every other route —
+    // including /auth, where people type their password, and the landing page
+    // that links to it — was served with no CSP at all. The sign-in page is
+    // the highest-value XSS target on the site and it was the least
+    // protected.
+    //
+    // It lives here now so it covers every route from one place. Two sources
+    // of truth for a security header is how a policy silently ends up weaker
+    // than anyone intended; worse, two DIFFERENT CSP headers on one response
+    // are enforced as their intersection, which breaks pages in ways that are
+    // very hard to trace.
+    const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
+      ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin
+      : 'https://*.supabase.co'
+    const supabaseWsOrigin = supabaseOrigin.replace(/^https:/, 'wss:')
+
+    const csp = [
+      "default-src 'self'",
+      // 'unsafe-inline' is required by Next's own inline bootstrap and by the
+      // pre-hydration theme script. Removing it needs a nonce threaded
+      // through the document, which is a real change rather than a config
+      // tweak — tracked, not pretended away.
+      "script-src 'self' 'unsafe-inline' https://apis.google.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      `img-src 'self' data: blob: ${supabaseOrigin} https://images.unsplash.com https://avatars.githubusercontent.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com`,
+      "font-src 'self' https://fonts.gstatic.com",
+      // nominatim is the map's geocoder: utils/geocode.ts fetches it directly
+      // from the client for the search box and for resolving a dropped pin to
+      // a real address. Omitting it silently breaks both.
+      `connect-src 'self' ${supabaseOrigin} ${supabaseWsOrigin} https://nominatim.openstreetmap.org`,
+      "worker-src 'self'",
+      "manifest-src 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      'upgrade-insecure-requests'
+    ].join('; ')
+
     return [
       {
         source: '/:path*',
         headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: csp
+          },
+          {
+            // Switches off browser features this app never uses, so a
+            // compromised script cannot reach for them. Geolocation IS used
+            // (the map, the home area), so it stays available to same-origin.
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=(), geolocation=(self)'
+          },
           {
             key: 'X-DNS-Prefetch-Control',
             value: 'on'

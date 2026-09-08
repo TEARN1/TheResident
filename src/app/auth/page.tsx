@@ -307,7 +307,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div style={containerStyle}>
+    <main id="main-content" style={containerStyle}>
       <div style={overlayStyle} />
       
       <button
@@ -335,7 +335,7 @@ export default function AuthPage() {
         style={glassPanelStyle}
       >
         <div style={headerStyle}>
-          <h2 style={logoStyle}>THE RESIDENT</h2>
+          <h1 style={logoStyle}>THE RESIDENT</h1>
           <p style={taglineStyle}>Verified Co-Living & Rental Portal</p>
           <p style={crossAppNoteStyle}>One account — the same login works on The Gruvs</p>
         </div>
@@ -393,8 +393,8 @@ export default function AuthPage() {
         {activeTab === 'login' ? (
           <form onSubmit={handleLogin} style={formStyle}>
             <div style={inputGroupStyle}>
-              <label style={labelStyle}>Access Role</label>
-              <select
+              <label style={labelStyle} htmlFor="f-access-role">Access Role</label>
+              <select id="f-access-role"
                 required
                 value={role}
                 onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
@@ -411,8 +411,8 @@ export default function AuthPage() {
             </div>
 
             <div style={inputGroupStyle}>
-              <label style={labelStyle}>Email Address</label>
-              <input 
+              <label style={labelStyle} htmlFor="f-email-address">Email Address</label>
+              <input id="f-email-address" 
                 type="email" 
                 required 
                 placeholder="enter your email..." 
@@ -423,8 +423,8 @@ export default function AuthPage() {
             </div>
 
             <div style={inputGroupStyle}>
-              <label style={labelStyle}>Password</label>
-              <input
+              <label style={labelStyle} htmlFor="f-password">Password</label>
+              <input id="f-password"
                 type="password"
                 required
                 placeholder="enter your password..."
@@ -467,8 +467,8 @@ export default function AuthPage() {
           <form onSubmit={handleSignup} style={formStyle}>
             <div style={rowStyle}>
               <div style={inputGroupStyle}>
-                <label style={labelStyle}>Full Name</label>
-                <input 
+                <label style={labelStyle} htmlFor="f-full-name">Full Name</label>
+                <input id="f-full-name" 
                   type="text" 
                   required 
                   placeholder="e.g. Sarah Connor" 
@@ -478,8 +478,8 @@ export default function AuthPage() {
                 />
               </div>
               <div style={inputGroupStyle}>
-                <label style={labelStyle}>Account Role</label>
-                <select
+                <label style={labelStyle} htmlFor="f-account-role">Account Role</label>
+                <select id="f-account-role"
                   required
                   value={role}
                   onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
@@ -494,8 +494,8 @@ export default function AuthPage() {
 
             <div style={rowStyle}>
               <div style={inputGroupStyle}>
-                <label style={labelStyle}>Email</label>
-                <input 
+                <label style={labelStyle} htmlFor="f-email">Email</label>
+                <input id="f-email" 
                   type="email" 
                   required 
                   placeholder="name@domain.com" 
@@ -505,8 +505,8 @@ export default function AuthPage() {
                 />
               </div>
               <div style={inputGroupStyle}>
-                <label style={labelStyle}>Password</label>
-                <input 
+                <label style={labelStyle} htmlFor="f-password-2">Password</label>
+                <input id="f-password-2" 
                   type="password" 
                   required 
                   placeholder="secure key..." 
@@ -540,8 +540,8 @@ export default function AuthPage() {
                 <h4 style={sectionHeaderStyle}><UserIcon size={14} style={{ marginRight: 6 }} /> Tenant Requirement Profile</h4>
                 
                 <div style={inputGroupStyle}>
-                  <label style={labelStyle}>About Yourself / Intro bio</label>
-                  <textarea 
+                  <label style={labelStyle} htmlFor="f-about-yourself-intro-bio">About Yourself / Intro bio</label>
+                  <textarea id="f-about-yourself-intro-bio" 
                     rows={2} 
                     placeholder="Tell landlords about yourself, your cleanliness habits, etc." 
                     value={bio}
@@ -552,8 +552,8 @@ export default function AuthPage() {
 
                 <div style={rowStyle}>
                   <div style={inputGroupStyle}>
-                    <label style={labelStyle}>Gender</label>
-                    <select 
+                    <label style={labelStyle} htmlFor="f-gender">Gender</label>
+                    <select id="f-gender" 
                       value={gender} 
                       onChange={(e) => setGender(e.target.value as 'men' | 'women' | 'any')}
                       style={selectStyle}
@@ -565,8 +565,8 @@ export default function AuthPage() {
                   </div>
                   
                   <div style={inputGroupStyle}>
-                    <label style={labelStyle}>Number of Children</label>
-                    <input 
+                    <label style={labelStyle} htmlFor="f-number-of-children">Number of Children</label>
+                    <input id="f-number-of-children" 
                       type="number" 
                       min={0} 
                       max={10} 
@@ -579,8 +579,8 @@ export default function AuthPage() {
 
                 <div style={rowStyle}>
                   <div style={inputGroupStyle}>
-                    <label style={labelStyle}>Employment Status</label>
-                    <select 
+                    <label style={labelStyle} htmlFor="f-employment-status">Employment Status</label>
+                    <select id="f-employment-status" 
                       value={employmentStatus} 
                       onChange={(e) => setEmploymentStatus(e.target.value)}
                       style={selectStyle}
@@ -610,8 +610,8 @@ export default function AuthPage() {
                 
                 <div style={rowStyle}>
                   <div style={inputGroupStyle}>
-                    <label style={labelStyle}>Gender Preference</label>
-                    <select 
+                    <label style={labelStyle} htmlFor="f-gender-preference">Gender Preference</label>
+                    <select id="f-gender-preference" 
                       value={genderPreference} 
                       onChange={(e) => setGenderPreference(e.target.value as 'men' | 'women' | 'couple' | 'any')}
                       style={selectStyle}
@@ -624,8 +624,8 @@ export default function AuthPage() {
                   </div>
 
                   <div style={inputGroupStyle}>
-                    <label style={labelStyle}>Max Children Allowed</label>
-                    <input 
+                    <label style={labelStyle} htmlFor="f-max-children-allowed">Max Children Allowed</label>
+                    <input id="f-max-children-allowed" 
                       type="number" 
                       min={0} 
                       max={10} 
@@ -704,7 +704,7 @@ export default function AuthPage() {
           </form>
         )}
       </motion.div>
-    </div>
+    </main>
   )
 }
 

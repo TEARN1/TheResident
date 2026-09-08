@@ -323,10 +323,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div className="dashboard-main-content">
         <header className="dashboard-top-bar">
-          <div className="dashboard-page-title">
-            <pageTitle.icon size={18} />
+          {/* The visible page name was a <span>, so every dashboard page had
+              NO h1 at all. A screen-reader user navigating by heading — the
+              most common way to move around a page — landed on a document
+              whose first heading was an h2 or h3 for some card, with nothing
+              saying which page they were on. It is already the page title
+              visually; it is now the page title semantically. */}
+          <h1 className="dashboard-page-title">
+            <pageTitle.icon size={18} aria-hidden="true" />
             <span>{pageTitle.name}</span>
-          </div>
+          </h1>
 
           {/* Persistent role indicator — a landlord who got mis-assigned as a
               tenant (or vice versa) previously had no way to even notice
@@ -351,9 +357,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               page-agnostic: notifications. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto' }}>
              <div ref={notifMenuRef} style={{ position: 'relative' }}>
-                <button onClick={() => setShowNotifMenu(!showNotifMenu)} style={{ background: 'transparent', border: 'none', color: 'var(--accent)', position: 'relative', cursor: 'pointer' }}>
+                <button
+                   onClick={() => setShowNotifMenu(!showNotifMenu)}
+                   aria-label={
+                     notifications.items.filter(n => !n.read).length > 0
+                       ? `Notifications, ${notifications.items.filter(n => !n.read).length} unread`
+                       : 'Notifications'
+                   }
+                   aria-expanded={showNotifMenu}
+                   aria-haspopup="menu"
+                   style={{ background: 'transparent', border: 'none', color: 'var(--accent)', position: 'relative', cursor: 'pointer' }}>
                    <Megaphone size={20} />
-                   {notifications.items.filter(n => !n.read).length > 0 && <span className="notif-badge">!</span>}
+                   {notifications.items.filter(n => !n.read).length > 0 && <span className="notif-badge" aria-hidden="true">!</span>}
                 </button>
                 {showNotifMenu && (
                    <div className="glass-panel" style={{ position: 'absolute', top: '100%', right: 0, width: '300px', maxHeight: '400px', overflowY: 'auto', zIndex: 100, marginTop: '1rem', padding: '1rem' }}>
@@ -411,7 +426,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="dashboard-page-body">
+        <main id="main-content" className="dashboard-page-body">
           <AppErrorBoundary area="dashboard">
             {children}
           </AppErrorBoundary>

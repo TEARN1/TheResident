@@ -564,9 +564,11 @@ export default function HousingPage() {
                       placeholder="Enter Suburb, City or Complex..."
                       className="bg-transparent border-none text-content px-3 py-2 w-full outline-none text-sm font-bold placeholder:text-content-subtle placeholder:uppercase placeholder:tracking-widest"
                       autoComplete="off"
+                      aria-label="Search by suburb, city or complex"
                    />
                    <button
                       onClick={() => handleGetLiveLocation(setSearchInputValue)}
+                      aria-label={locationLoading ? 'Finding your location' : 'Use my current location'}
                       className={`p-2 transition-all rounded-lg ${locationLoading ? 'text-accent' : 'text-content-subtle hover:text-accent hover:bg-accent/10'}`}
                    >
                       {locationLoading ? <Loader size={18} className="animate-spin" /> : <MapPin size={18} />}
@@ -595,6 +597,8 @@ export default function HousingPage() {
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
+                  aria-label={showFilters ? 'Hide filters' : 'Show filters'}
+                  aria-expanded={showFilters}
                   className={`p-3 rounded-xl border transition-all ${showFilters ? 'bg-accent border-accent text-content-on-accent' : 'bg-surface-raised/5 border-default text-content-muted hover:bg-surface-raised/10'}`}
                 >
                   <Filter size={18} />
@@ -786,7 +790,7 @@ export default function HousingPage() {
                 <div className="p-6 flex-1 flex flex-col gap-5">
                   <div className="space-y-1">
                      <div className="flex items-center gap-2">
-                        <h3 className="text-xl font-black text-content tracking-tight leading-tight group-hover:text-accent transition-colors">{item.title}</h3>
+                        <h2 className="text-xl font-black text-content tracking-tight leading-tight group-hover:text-accent transition-colors">{item.title}</h2>
                         {isFeatured(item) && (
                            <span className="bg-accent text-content-on-accent px-2 py-0.5 rounded-lg text-xs font-black uppercase tracking-widest shrink-0">Featured</span>
                         )}
@@ -931,7 +935,7 @@ export default function HousingPage() {
              <motion.div key={rm.id} whileHover={{ y: -5 }} className="glass-panel p-6 flex flex-col gap-6 bg-surface-sunken/40">
                 <div className="flex justify-between items-start">
                    <div className="space-y-1">
-                      <h3 className="text-xl font-black text-content tracking-tighter uppercase italic">{rm.name}</h3>
+                      <h2 className="text-xl font-black text-content tracking-tighter uppercase italic">{rm.name}</h2>
                       <div className="flex items-center text-xs text-content-subtle font-black uppercase tracking-widest gap-1.5">
                          <MapPin size={10} className="text-accent" /> {rm.suburb}
                       </div>

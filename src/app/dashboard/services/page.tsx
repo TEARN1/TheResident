@@ -314,7 +314,7 @@ export default function ServicesPage() {
                 <div className="flex-1 space-y-4">
                    <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2.5 flex-wrap">
-                         <h3 className="text-xl font-black text-content tracking-tight uppercase group-hover:text-accent transition-colors italic">{lift.driverName}</h3>
+                         <h2 className="text-xl font-black text-content tracking-tight uppercase group-hover:text-accent transition-colors italic">{lift.driverName}</h2>
                          {/* The one piece of real trust info riders had before getting
                              in this driver's car was a first name. TrustBadge pulls
                              their actual verification/reputation — driver_id was

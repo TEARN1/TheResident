@@ -143,6 +143,10 @@ body {
 }
 
 .dashboard-page-title {
+  /* Now an <h1> rather than a <div>, so the browser's default heading margin
+     and size have to be reset — the element's appearance must not change
+     just because its semantics were corrected. */
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -858,4 +862,33 @@ button, [role='button'], a, input, select, textarea, label {
   .dashboard-page-body {
     padding-bottom: var(--space-8);
   }
+}
+
+/* ── Skip to content ───────────────────────────────────────────────────────
+   A keyboard user starting at the top of the page otherwise has to tab
+   through every navigation item to reach the content, on every page. WCAG
+   2.1 AA, 2.4.1 Bypass Blocks.
+
+   Visible only when focused: it is the first thing in the tab order, so a
+   mouse user never sees it and a keyboard user finds it immediately. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 200;
+}
+
+.skip-link:focus {
+  left: var(--space-2);
+  top: var(--space-2);
+  width: auto;
+  height: auto;
+  padding: var(--space-3) var(--space-4);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-decoration: none;
+  box-shadow: var(--elevation-3);
 }

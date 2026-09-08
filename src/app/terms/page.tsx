@@ -11,7 +11,7 @@ export const metadata = { title: 'Terms of Service — The Resident' }
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-surface text-content px-4 py-12">
-      <div className="max-w-2xl mx-auto space-y-8">
+      <main id="main-content" className="max-w-2xl mx-auto space-y-8">
         <div>
           <Link href="/" className="inline-flex items-center min-h-tap text-xs text-accent font-black uppercase tracking-widest hover:underline">← The Resident</Link>
           <h1 className="text-2xl font-black text-content mt-3">Terms of Service</h1>
@@ -59,7 +59,7 @@ export default function TermsPage() {
         <p className="text-xs text-content-subtle pt-4 border-t border-subtle">
           Also see our <Link href="/privacy" className="text-accent hover:underline">Privacy Policy</Link>.
         </p>
-      </div>
+      </main>
     </div>
   )
 }

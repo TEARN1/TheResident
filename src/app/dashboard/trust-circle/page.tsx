@@ -307,6 +307,7 @@ export default function TrustCirclePage() {
           value={query}
           onChange={e => runSearch(e.target.value)}
           placeholder="Search by username or display name…"
+          aria-label="Search for a resident by username or display name"
           className="w-full bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40"
         />
         {searching && <p className="text-xs text-content-muted mt-2">Searching…</p>}
@@ -347,12 +348,14 @@ export default function TrustCirclePage() {
             value={claimedName}
             onChange={e => setClaimedName(e.target.value)}
             placeholder="Their name, e.g. Sipho Dlamini"
+            aria-label="Name of the person you are inviting"
             required
             className="flex-1 bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40"
           />
           <select
             value={relationship}
             onChange={e => setRelationship(e.target.value)}
+            aria-label="Their relationship to you"
             className="bg-surface border border-default rounded-lg p-3 text-sm text-content outline-none focus:border-accent/40"
           >
             {COMMON_RELATIONSHIPS.map(r => <option key={r} value={r}>{r}</option>)}

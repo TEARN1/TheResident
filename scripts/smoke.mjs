@@ -220,6 +220,10 @@ for (const route of ROUTES) {
         if (Math.min(b.width, b.height) >= 44) continue
         const cs = getComputedStyle(el)
         if (cs.visibility === 'hidden' || cs.display === 'none') continue
+        // Positioned off-screen: not a tap target by definition. This is how
+        // a skip link is normally built — it sits at left: -9999px and only
+        // appears when a keyboard user focuses it, so it is never tapped.
+        if (b.right < 0 || b.bottom < 0 || b.left > window.innerWidth) continue
         // WCAG 2.2 SC 2.5.8 exempts a target "in a sentence or block of
         // text" — an inline link inside a paragraph cannot be 44px tall
         // without breaking the sentence around it, and enlarging it is not
@@ -234,6 +238,57 @@ for (const route of ROUTES) {
     if (tiny.length) {
       problems.push(`${tiny.length} tap target(s) under 44px: ${tiny.slice(0, 3).join(', ')}` +
         (tiny.length > 3 ? ` (+${tiny.length - 3} more)` : ''))
+    }
+  }
+
+  // Accessibility, WCAG 2.1 AA. None of this is visible to tsc, the unit
+  // tests or the build, and all of it was failing before it was checked:
+  // no skip link on any page, unnamed icon-only buttons, a sign-in form whose
+  // labels were not associated with their inputs, no <main> on /auth, and no
+  // <h1> on any dashboard page.
+  if (status && status < 400) {
+    const a11y = await page.evaluate(() => {
+      const bad = []
+      // 4.1.2 — an icon-only control announces as "button" and nothing else.
+      for (const el of document.querySelectorAll('button,a,[role="button"]')) {
+        const cs = getComputedStyle(el)
+        if (cs.display === 'none' || cs.visibility === 'hidden') continue
+        const name = el.getAttribute('aria-label') || el.getAttribute('title') ||
+                     (el.textContent || '').trim()
+        if (!name) bad.push(`control with no accessible name: <${el.tagName.toLowerCase()}>`)
+      }
+      // 3.3.2 — a label that is not associated is decoration, not a label.
+      for (const el of document.querySelectorAll('input,select,textarea')) {
+        if (el.type === 'hidden') continue
+        const id = el.id
+        const bound = id && document.querySelector(`label[for="${CSS.escape(id)}"]`)
+        if (!bound && !el.getAttribute('aria-label') &&
+            !el.getAttribute('aria-labelledby') && !el.closest('label')) {
+          bad.push(`form control with no label: ${el.getAttribute('placeholder') || el.type}`)
+        }
+      }
+      // 1.1.1 — every image needs alt, even if empty for decorative ones.
+      for (const img of document.querySelectorAll('img')) {
+        if (img.getAttribute('alt') === null) bad.push(`image with no alt: ${img.src.slice(-40)}`)
+      }
+      // 2.4.1 — bypass blocks.
+      if (!document.querySelector('.skip-link, a[href="#main-content"]')) bad.push('no skip link')
+      // 1.3.1 — landmarks and heading order.
+      if (!document.querySelector('main')) bad.push('no <main> landmark')
+      if (!document.querySelector('h1')) bad.push('no <h1>')
+      const levels = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map(h => +h.tagName[1])
+      for (let i = 1; i < levels.length; i++) {
+        if (levels[i] - levels[i - 1] > 1) {
+          bad.push(`heading level skipped: h${levels[i - 1]} → h${levels[i]}`)
+          break
+        }
+      }
+      if (!document.documentElement.lang) bad.push('<html> has no lang')
+      return [...new Set(bad)]
+    }).catch(() => [])
+    if (a11y.length) {
+      problems.push(`accessibility: ${a11y.slice(0, 3).join('; ')}` +
+        (a11y.length > 3 ? ` (+${a11y.length - 3} more)` : ''))
     }
   }
 

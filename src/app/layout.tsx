@@ -44,6 +44,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#16140F" media="(prefers-color-scheme: dark)" />
       </head>
       <body>
+        {/* First thing in the tab order on every page. Without it a keyboard
+            user has to tab through the whole navigation to reach the content,
+            on every single page — WCAG 2.1 AA, 2.4.1 Bypass Blocks. */}
+        <a href="#main-content" className="skip-link">Skip to main content</a>
         <ReduxProvider>
           {children}
         </ReduxProvider>

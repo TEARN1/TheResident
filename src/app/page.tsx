@@ -66,7 +66,7 @@ export default function Home() {
   }
 
   return (
-    <main className={styles.main}>
+    <main id="main-content" className={styles.main}>
       {/* Background Effects */}
       <div className={styles.backgroundEffects}>
         <div className={`${styles.glowBlob} ${styles.glowTop}`} />
@@ -245,7 +245,7 @@ export default function Home() {
             <div className={styles.iconWrapper}>
               <feature.icon className={styles.icon} size={24} />
             </div>
-            <h3 className={styles.featureTitle}>{feature.title}</h3>
+            <h2 className={styles.featureTitle}>{feature.title}</h2>
             <p className={styles.featureDesc}>{feature.desc}</p>
           </motion.div>
         ))}

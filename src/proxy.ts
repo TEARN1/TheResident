@@ -167,22 +167,17 @@ export async function proxy(request: NextRequest) {
   // Prevent referrer leakage
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
 
-  // Content Security Policy (CSP)
-  // Supabase REST/auth/realtime/storage must be reachable from the dashboard.
-  const supabaseOrigin = supabaseUrl ? new URL(supabaseUrl).origin : 'https://*.supabase.co'
-  const supabaseWsOrigin = supabaseOrigin.replace(/^https:/, 'wss:')
-  response.headers.set(
-    'Content-Security-Policy',
-    // connect-src needs nominatim.openstreetmap.org too, not just Supabase —
-    // utils/geocode.ts's searchPlaces/reverseGeocode (the map's search box
-    // and its "resolve a dropped pin to a real address" lookup) both fetch()
-    // it directly from the client. Without this the CSP silently blocks
-    // every geocoding request in production — confirmed live: "Refused to
-    // connect... violates the following Content Security Policy directive"
-    // on a real reverse-geocode call, the map search box and reverse-
-    // geocoded pin labels are broken right now for exactly this reason.
-    `default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: ${supabaseOrigin} https://images.unsplash.com https://avatars.githubusercontent.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ${supabaseOrigin} ${supabaseWsOrigin} https://nominatim.openstreetmap.org; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`
-  )
+  // The Content-Security-Policy is set in next.config.ts, not here.
+  //
+  // It used to be set here only, and this middleware's matcher is
+  // ['/dashboard/:path*', '/api/:path*'] — so /auth, the landing page and the
+  // policy pages were served with no CSP at all. The sign-in page was the
+  // least protected page on the site.
+  //
+  // Setting it in both places would be worse than either: two different CSP
+  // headers on one response are enforced as their INTERSECTION, so a
+  // directive relaxed in one and tightened in the other silently breaks the
+  // page, and the reason is very hard to find.
 
   return response
 }
