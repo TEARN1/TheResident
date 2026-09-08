@@ -63,3 +63,36 @@ export async function resilientCall<T>(fn: () => Promise<T>, options: ResilientC
 
   throw lastError
 }
+
+/**
+ * Reject if a promise has not settled within `ms`.
+ *
+ * WHY THIS EXISTS. `/dashboard/messages` showed "Loading conversations…"
+ * forever — measured still spinning after four seconds, and it would have
+ * stayed that way indefinitely. The cause was not an error being swallowed;
+ * the request simply never settled, and nothing was watching the clock. A
+ * fetch to an unreachable host can hang for minutes before the browser gives
+ * up, and on a train or in a dead spot that is exactly what happens.
+ *
+ * An infinite spinner is the worst possible answer to a network failure. It
+ * looks like the app is working, right up until the person closes it — so
+ * they never see an error, never retry, and conclude the app is broken.
+ *
+ * Anything that awaits the network on behalf of a visible loading state
+ * should go through this.
+ */
+export function withTimeout<T>(
+  promise: PromiseLike<T>,
+  ms = 15000,
+  label = 'request'
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`The ${label} took too long to respond. Check your connection and try again.`))
+    }, ms)
+    Promise.resolve(promise).then(
+      value => { clearTimeout(timer); resolve(value) },
+      err => { clearTimeout(timer); reject(err) }
+    )
+  })
+}

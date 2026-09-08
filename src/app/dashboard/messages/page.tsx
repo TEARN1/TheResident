@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
+import { withTimeout } from '@/utils/resilientCall'
 import { useSelector } from 'react-redux'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MessageCircle, Loader, Clock } from 'lucide-react'
-import { RootState } from '../../../store'
+import { RootState, isGuestUser } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import EmptyState from '../components/shared/EmptyState'
 
@@ -44,6 +45,7 @@ interface Thread {
 export default function MessagesPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const myId = currentUser?.id
+  const isGuest = isGuestUser(currentUser)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -55,15 +57,27 @@ export default function MessagesPage() {
   const loadThreads = useCallback(async () => {
     if (!supabase || !myId) { setLoading(false); return }
     setLoading(true)
-    const { data, error: msgError } = await supabase
+    setError(null)
+    // Everything below is inside try/finally because it was not, and the
+    // consequence was a permanent spinner: if the request rejected — a
+    // dropped connection, a DNS failure, anything that throws rather than
+    // returning an error object — execution never reached setLoading(false)
+    // at the end, and "Loading conversations…" stayed on screen forever with
+    // no way out. Measured: still spinning after 4 seconds, and it would
+    // have stayed that way indefinitely.
+    //
+    // This is the failure a resident on a bad connection actually gets, and
+    // an infinite spinner is the worst possible answer to it — it looks like
+    // the app is working right up until they close it.
+    try {
+    const { data, error: msgError } = await withTimeout(supabase
       .from('messages')
       .select('id, sender_id, recipient_id, body, is_request, created_at')
       .or(`sender_id.eq.${myId},recipient_id.eq.${myId}`)
       .order('created_at', { ascending: false })
-      .limit(200)
+      .limit(200), 15000, 'conversations')
     if (msgError) {
       setError(msgError.message)
-      setLoading(false)
       return
     }
     const rows = (data || []) as DbMessage[]
@@ -77,15 +91,19 @@ export default function MessagesPage() {
 
     const otherIds = threadList.map(t => t.otherId)
     if (otherIds.length > 0) {
-      const { data: people } = await supabase
+      const { data: people } = await withTimeout(supabase
         .from('profiles')
         .select('id, username, display_name, avatar_url')
-        .in('id', otherIds)
+        .in('id', otherIds), 15000, 'sender names')
       const map: Record<string, ProfileHit> = {}
       for (const p of people || []) map[String(p.id)] = p as ProfileHit
       setProfileMap(prev => ({ ...prev, ...map }))
     }
-    setLoading(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load your conversations.')
+    } finally {
+      setLoading(false)
+    }
   }, [myId])
 
   useEffect(() => {
@@ -149,7 +167,27 @@ export default function MessagesPage() {
           <Loader size={16} className="animate-spin" /> Loading conversations…
         </div>
       ) : error && threads.length === 0 ? (
-        <p className="text-xs text-danger">{error}</p>
+        <div className="py-10 text-center space-y-3">
+          <p className="text-sm font-bold text-content">Couldn&apos;t load your conversations</p>
+          <p className="text-xs text-content-muted max-w-xs mx-auto">
+            This is usually a connection problem rather than anything wrong with your account.
+          </p>
+          <button
+            onClick={() => loadThreads()}
+            className="min-h-tap inline-flex items-center gap-2 bg-accent text-content-on-accent font-bold px-5 rounded-xl text-xs uppercase tracking-widest"
+          >
+            Try again
+          </button>
+          <p className="text-xs text-content-subtle">{error}</p>
+        </div>
+      ) : isGuest ? (
+        /* A guest cannot have conversations, so "No conversations yet" reads
+           as though something is missing. Say what would change it. */
+        <EmptyState
+          icon={MessageCircle}
+          title="Messaging needs an account"
+          subtitle="Sign up free to message landlords, drivers and neighbours — and so they can reply to you."
+        />
       ) : threads.length === 0 ? (
         <EmptyState icon={MessageCircle} title="No conversations yet" subtitle="Message a landlord, driver or neighbour to start one." />
       ) : (
