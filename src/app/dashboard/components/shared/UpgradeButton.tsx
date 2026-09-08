@@ -24,11 +24,22 @@ export default function UpgradeButton({ item, targetId, className }: { item: Sel
 
   const handleClick = async () => {
     setLoading(true)
-    setError(null)
-    const { url, error: checkoutError } = await startCheckout(item, targetId)
-    setLoading(false)
-    if (checkoutError) { setError(checkoutError); return }
-    if (url) window.location.href = url
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      setError(null)
+      const { url, error: checkoutError } = await startCheckout(item, targetId)
+      setLoading(false)
+      if (checkoutError) { setError(checkoutError); return }
+      if (url) window.location.href = url
+
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const label = `${ACTION_VERB[item]} ${PRICING[item].label} — ${formatPrice(item)}`

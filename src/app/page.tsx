@@ -29,14 +29,25 @@ export default function Home() {
     e.preventDefault()
     if (!email || !password) return
     setLoginLoading(true)
-    setLoginError(null)
-    const result = await performLogin({ email, password, dispatch, failedAttempts, lockedUntil })
-    setLoginLoading(false)
-    if (!result.ok) {
-      setLoginError(result.error)
-      return
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      setLoginError(null)
+      const result = await performLogin({ email, password, dispatch, failedAttempts, lockedUntil })
+      setLoginLoading(false)
+      if (!result.ok) {
+        setLoginError(result.error)
+        return
+      }
+      router.push(result.needsOnboarding ? '/auth/onboarding' : '/dashboard')
+
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoginLoading(false)
     }
-    router.push(result.needsOnboarding ? '/auth/onboarding' : '/dashboard')
   }
 
   const handleOAuth = async (provider: 'google' | 'facebook') => {

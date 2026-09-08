@@ -48,25 +48,34 @@ export default function SharedResourcesTab({ currentUserId, communityId }: Share
   const load = useCallback(async () => {
     if (!supabase) { setLoading(false); return }
     setLoading(true)
-    let query = supabase
-      .from('res_shared_resources')
-      .select('id, kind, title, access_note, availability, is_free, price_note, suburb, community_id')
-      .order('created_at', { ascending: false })
-    if (communityId) query = query.eq('community_id', communityId)
-    const { data, error: fetchError } = await query
-    if (!fetchError && data) {
-      setResources(data.map(r => ({
-        id: r.id,
-        kind: r.kind,
-        title: r.title,
-        accessNote: r.access_note,
-        availability: r.availability,
-        isFree: r.is_free ?? true,
-        priceNote: r.price_note,
-        suburb: r.suburb
-      })))
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+        let query = supabase
+          .from('res_shared_resources')
+          .select('id, kind, title, access_note, availability, is_free, price_note, suburb, community_id')
+          .order('created_at', { ascending: false })
+        if (communityId) query = query.eq('community_id', communityId)
+        const { data, error: fetchError } = await query
+        if (!fetchError && data) {
+          setResources(data.map(r => ({
+            id: r.id,
+            kind: r.kind,
+            title: r.title,
+            accessNote: r.access_note,
+            availability: r.availability,
+            isFree: r.is_free ?? true,
+            priceNote: r.price_note,
+            suburb: r.suburb
+          })))
+        }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [communityId])
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -76,25 +85,36 @@ export default function SharedResourcesTab({ currentUserId, communityId }: Share
     e.preventDefault()
     if (!supabase || !currentUserId || !title.trim()) return
     setSubmitting(true)
-    setError(null)
-    const { error: insertError } = await supabase.from('res_shared_resources').insert({
-      owner_id: currentUserId,
-      kind,
-      title: title.trim(),
-      access_note: accessNote.trim() || null,
-      is_free: isFree,
-      price_note: isFree ? null : (priceNote.trim() || null),
-      community_id: communityId,
-      suburb: suburb.trim() || null
-    })
-    setSubmitting(false)
-    if (insertError) {
-      setError(insertError.message)
-      return
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      setError(null)
+      const { error: insertError } = await supabase.from('res_shared_resources').insert({
+        owner_id: currentUserId,
+        kind,
+        title: title.trim(),
+        access_note: accessNote.trim() || null,
+        is_free: isFree,
+        price_note: isFree ? null : (priceNote.trim() || null),
+        community_id: communityId,
+        suburb: suburb.trim() || null
+      })
+      setSubmitting(false)
+      if (insertError) {
+        setError(insertError.message)
+        return
+      }
+      setTitle(''); setAccessNote(''); setPriceNote(''); setSuburb(''); setIsFree(true)
+      setShowForm(false)
+      load()
+
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSubmitting(false)
     }
-    setTitle(''); setAccessNote(''); setPriceNote(''); setSuburb(''); setIsFree(true)
-    setShowForm(false)
-    load()
   }
 
   return (

@@ -63,58 +63,66 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
   const load = useCallback(async () => {
     if (!supabase || !selectedId || !currentUserId) return
     setLoading(true)
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
 
-    const { data: myRow } = await supabase
-      .from('res_community_members')
-      .select('role')
-      .eq('community_id', selectedId)
-      .eq('user_id', currentUserId)
-      .maybeSingle()
-    const myRole = myRow?.role || null
-    setRole(myRole)
-
-    const { data: memberRows } = await supabase
-      .from('res_community_members')
-      .select('user_id, role')
-      .eq('community_id', selectedId)
-    const ids = (memberRows || []).map(m => m.user_id)
-    const { data: profileRows } = ids.length
-      ? await supabase.from('profiles').select('id, display_name, username').in('id', ids)
-      : { data: [] as { id: string; display_name?: string; username?: string }[] }
-    const nameOf = (id: string) => {
-      const p = (profileRows || []).find(pr => pr.id === id)
-      return p?.display_name || p?.username || 'Neighbour'
-    }
-    setMembers((memberRows || []).map(m => ({ userId: m.user_id, name: nameOf(m.user_id), role: m.role })))
-
-    if (myRole === 'admin' || myRole === 'founder') {
-      const { data: actionRows } = await supabase
-        .from('res_moderation_actions')
-        .select('id, action, subject_type, actor_id, reason, created_at')
+      const { data: myRow } = await supabase
+        .from('res_community_members')
+        .select('role')
         .eq('community_id', selectedId)
-        .order('created_at', { ascending: false })
-        .limit(20)
-      const actorIds = [...new Set((actionRows || []).map(a => a.actor_id))]
-      const { data: actorProfiles } = actorIds.length
-        ? await supabase.from('profiles').select('id, display_name, username').in('id', actorIds)
+        .eq('user_id', currentUserId)
+        .maybeSingle()
+      const myRole = myRow?.role || null
+      setRole(myRole)
+
+      const { data: memberRows } = await supabase
+        .from('res_community_members')
+        .select('user_id, role')
+        .eq('community_id', selectedId)
+      const ids = (memberRows || []).map(m => m.user_id)
+      const { data: profileRows } = ids.length
+        ? await supabase.from('profiles').select('id, display_name, username').in('id', ids)
         : { data: [] as { id: string; display_name?: string; username?: string }[] }
-      const actorName = (id: string) => {
-        const p = (actorProfiles || []).find(pr => pr.id === id)
+      const nameOf = (id: string) => {
+        const p = (profileRows || []).find(pr => pr.id === id)
         return p?.display_name || p?.username || 'Neighbour'
       }
-      setActions((actionRows || []).map(a => ({
-        id: a.id,
-        action: a.action,
-        subjectType: a.subject_type,
-        actorName: actorName(a.actor_id),
-        reason: a.reason,
-        createdAt: a.created_at
-      })))
-    } else {
-      setActions([])
-    }
+      setMembers((memberRows || []).map(m => ({ userId: m.user_id, name: nameOf(m.user_id), role: m.role })))
 
-    setLoading(false)
+      if (myRole === 'admin' || myRole === 'founder') {
+        const { data: actionRows } = await supabase
+          .from('res_moderation_actions')
+          .select('id, action, subject_type, actor_id, reason, created_at')
+          .eq('community_id', selectedId)
+          .order('created_at', { ascending: false })
+          .limit(20)
+        const actorIds = [...new Set((actionRows || []).map(a => a.actor_id))]
+        const { data: actorProfiles } = actorIds.length
+          ? await supabase.from('profiles').select('id, display_name, username').in('id', actorIds)
+          : { data: [] as { id: string; display_name?: string; username?: string }[] }
+        const actorName = (id: string) => {
+          const p = (actorProfiles || []).find(pr => pr.id === id)
+          return p?.display_name || p?.username || 'Neighbour'
+        }
+        setActions((actionRows || []).map(a => ({
+          id: a.id,
+          action: a.action,
+          subjectType: a.subject_type,
+          actorName: actorName(a.actor_id),
+          reason: a.reason,
+          createdAt: a.created_at
+        })))
+      } else {
+        setActions([])
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }, [selectedId, currentUserId])
 
   // eslint-disable-next-line react-hooks/set-state-in-effect

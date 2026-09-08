@@ -86,24 +86,35 @@ export default function NotificationPrefsPanel() {
   const save = async () => {
     if (!supabase || !myId) return
     setSaving(true)
-    setError(null)
-    const { error: upsertError } = await supabase
-      .from('res_notification_prefs')
-      .upsert({
-        user_id: myId,
-        muted_types: prefs.muted_types,
-        quiet_hours_start: prefs.quiet_hours_start,
-        quiet_hours_end: prefs.quiet_hours_end,
-        digest: prefs.digest,
-        updated_at: new Date().toISOString()
-      })
-    setSaving(false)
-    if (upsertError) {
-      setError(upsertError.message)
-      return
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      setError(null)
+      const { error: upsertError } = await supabase
+        .from('res_notification_prefs')
+        .upsert({
+          user_id: myId,
+          muted_types: prefs.muted_types,
+          quiet_hours_start: prefs.quiet_hours_start,
+          quiet_hours_end: prefs.quiet_hours_end,
+          digest: prefs.digest,
+          updated_at: new Date().toISOString()
+        })
+      setSaving(false)
+      if (upsertError) {
+        setError(upsertError.message)
+        return
+      }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSaving(false)
     }
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
   }
 
   if (loading) {

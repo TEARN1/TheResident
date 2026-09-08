@@ -33,15 +33,26 @@ export default function BlockUserButton({ targetUserId, currentUserId, className
   const doBlock = async () => {
     if (!supabase) return
     setLoading(true)
-    setError(null)
-    const { error: rpcError } = await supabase.rpc('res_block_user', { p_blocked: targetUserId })
-    setLoading(false)
-    if (rpcError) {
-      setError(rpcError.message)
-      return
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      setError(null)
+      const { error: rpcError } = await supabase.rpc('res_block_user', { p_blocked: targetUserId })
+      setLoading(false)
+      if (rpcError) {
+        setError(rpcError.message)
+        return
+      }
+      setBlocked(true)
+      setConfirming(false)
+
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-    setBlocked(true)
-    setConfirming(false)
   }
 
   if (confirming) {

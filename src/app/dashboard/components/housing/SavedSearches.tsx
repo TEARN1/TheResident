@@ -58,16 +58,27 @@ export default function SavedSearches({ currentFilters, onApply }: SavedSearches
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError('Sign in to save searches.'); return }
     setSaving(true)
-    const { error: err } = await supabase.from('res_saved_searches').insert({
-      user_id: user.id,
-      name: newName.trim() || 'Untitled search',
-      filters: currentFilters,
-      notify: true
-    })
-    setSaving(false)
-    if (err) { setError(err.message); return }
-    setNewName('')
-    load()
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      const { error: err } = await supabase.from('res_saved_searches').insert({
+        user_id: user.id,
+        name: newName.trim() || 'Untitled search',
+        filters: currentFilters,
+        notify: true
+      })
+      setSaving(false)
+      if (err) { setError(err.message); return }
+      setNewName('')
+      load()
+
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleDelete = async (id: string) => {

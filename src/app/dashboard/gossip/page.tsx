@@ -202,26 +202,35 @@ export default function GossipPage() {
   const loadPosts = useCallback(async () => {
     if (!supabase) { setLoading(false); return }
     setLoading(true)
-    setError(null)
-    const { data, error: postsError } = await supabase
-      .from('res_gossip_posts')
-      .select('id, author_id, community_id, body, hidden, created_at, media_url, media_type, background_style')
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: false })
-      .limit(PAGE_SIZE)
-    if (postsError) {
-      setError(humanizeSupabaseError(postsError.message))
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      setError(null)
+      const { data, error: postsError } = await supabase
+        .from('res_gossip_posts')
+        .select('id, author_id, community_id, body, hidden, created_at, media_url, media_type, background_style')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(PAGE_SIZE)
+      if (postsError) {
+        setError(humanizeSupabaseError(postsError.message))
+        setLoading(false)
+        return
+      }
+      const rows = (data || []) as GossipPost[]
+      setPosts(rows)
+      setHasMore(rows.length === PAGE_SIZE)
+      hasMoreRef.current = rows.length === PAGE_SIZE
+      await fetchProfilesFor([...new Set(rows.map(p => p.author_id))])
+      await fetchCommentPreviewsFor(rows.map(p => p.id))
+      await fetchReactionsFor(rows.map(p => p.id))
+    } catch (err) {
+      console.error(err)
+    } finally {
       setLoading(false)
-      return
     }
-    const rows = (data || []) as GossipPost[]
-    setPosts(rows)
-    setHasMore(rows.length === PAGE_SIZE)
-    hasMoreRef.current = rows.length === PAGE_SIZE
-    await fetchProfilesFor([...new Set(rows.map(p => p.author_id))])
-    await fetchCommentPreviewsFor(rows.map(p => p.id))
-    await fetchReactionsFor(rows.map(p => p.id))
-    setLoading(false)
   }, [fetchProfilesFor, fetchCommentPreviewsFor, fetchReactionsFor])
 
   const loadMore = useCallback(async () => {
@@ -350,18 +359,27 @@ export default function GossipPage() {
 
     if (mediaFile && mediaType) {
       setUploading(true)
-      const path = `${myId}/${Date.now()}-${mediaFile.name}`
-      const { error: uploadError } = await supabase.storage.from('gossip-media').upload(path, mediaFile)
-      if (uploadError) {
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+      try {
+        const path = `${myId}/${Date.now()}-${mediaFile.name}`
+        const { error: uploadError } = await supabase.storage.from('gossip-media').upload(path, mediaFile)
+        if (uploadError) {
+          setUploading(false)
+          setPosting(false)
+          setMediaError(uploadError.message)
+          return
+        }
+        const { data: publicUrlData } = supabase.storage.from('gossip-media').getPublicUrl(path)
+        uploadedUrl = publicUrlData.publicUrl
+        uploadedType = mediaType
+      } catch (err) {
+        console.error(err)
+      } finally {
         setUploading(false)
-        setPosting(false)
-        setMediaError(uploadError.message)
-        return
       }
-      const { data: publicUrlData } = supabase.storage.from('gossip-media').getPublicUrl(path)
-      uploadedUrl = publicUrlData.publicUrl
-      uploadedType = mediaType
-      setUploading(false)
     }
 
     const { error: insertError } = await supabase

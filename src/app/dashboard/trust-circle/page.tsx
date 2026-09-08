@@ -117,43 +117,61 @@ export default function TrustCirclePage() {
   const loadGate = useCallback(async () => {
     if (!supabase || !myId) { setGateLoading(false); return }
     setGateLoading(true)
-    const { data, error: rpcError } = await supabase.rpc('res_trust_gate')
-    if (!rpcError && data) {
-      setGate(data as TrustGate)
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      const { data, error: rpcError } = await supabase.rpc('res_trust_gate')
+      if (!rpcError && data) {
+        setGate(data as TrustGate)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setGateLoading(false)
     }
-    setGateLoading(false)
   }, [myId])
 
   const loadConnections = useCallback(async () => {
     if (!supabase || !myId) { setRowsLoading(false); return }
     setRowsLoading(true)
-    const { data, error: rowsError } = await supabase
-      .from('res_trust_connections')
-      .select('id, requester_id, connection_id, status, created_at, confirmed_at')
-      .or(`requester_id.eq.${myId},connection_id.eq.${myId}`)
-    if (rowsError) {
-      setRowsLoading(false)
-      return
-    }
-    const rows = (data || []) as ConnectionRow[]
-    const incomingPending = rows.filter(r => r.status === 'pending' && r.connection_id === myId)
-    const confirmedRows = rows.filter(r => r.status === 'confirmed')
-    setIncoming(incomingPending)
-    setConfirmed(confirmedRows)
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      const { data, error: rowsError } = await supabase
+        .from('res_trust_connections')
+        .select('id, requester_id, connection_id, status, created_at, confirmed_at')
+        .or(`requester_id.eq.${myId},connection_id.eq.${myId}`)
+      if (rowsError) {
+        setRowsLoading(false)
+        return
+      }
+      const rows = (data || []) as ConnectionRow[]
+      const incomingPending = rows.filter(r => r.status === 'pending' && r.connection_id === myId)
+      const confirmedRows = rows.filter(r => r.status === 'confirmed')
+      setIncoming(incomingPending)
+      setConfirmed(confirmedRows)
 
-    const otherIds = [...new Set(
-      [...incomingPending, ...confirmedRows].map(r => (r.requester_id === myId ? r.connection_id : r.requester_id))
-    )]
-    if (otherIds.length > 0) {
-      const { data: people } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, avatar_url, is_verified')
-        .in('id', otherIds)
-      const map: Record<string, ProfileHit> = {}
-      for (const p of people || []) map[String(p.id)] = p as ProfileHit
-      setProfileMap(prev => ({ ...prev, ...map }))
+      const otherIds = [...new Set(
+        [...incomingPending, ...confirmedRows].map(r => (r.requester_id === myId ? r.connection_id : r.requester_id))
+      )]
+      if (otherIds.length > 0) {
+        const { data: people } = await supabase
+          .from('profiles')
+          .select('id, username, display_name, avatar_url, is_verified')
+          .in('id', otherIds)
+        const map: Record<string, ProfileHit> = {}
+        for (const p of people || []) map[String(p.id)] = p as ProfileHit
+        setProfileMap(prev => ({ ...prev, ...map }))
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setRowsLoading(false)
     }
-    setRowsLoading(false)
   }, [myId])
 
   useEffect(() => {

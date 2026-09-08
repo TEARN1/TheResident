@@ -150,33 +150,42 @@ export default function SafetyTab({
   const loadCareCircle = useCallback(async () => {
     if (!supabase || !currentUserId) return
     setCareLoading(true)
-    const { data, error } = await supabase
-      .from('res_care_circle')
-      .select('id, subject_id, carer_id, cadence, last_ok_at, status, note, created_at')
-      .or(`subject_id.eq.${currentUserId},carer_id.eq.${currentUserId}`)
-      .order('created_at', { ascending: false })
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      const { data, error } = await supabase
+        .from('res_care_circle')
+        .select('id, subject_id, carer_id, cadence, last_ok_at, status, note, created_at')
+        .or(`subject_id.eq.${currentUserId},carer_id.eq.${currentUserId}`)
+        .order('created_at', { ascending: false })
 
-    if (error || !data) { setCareLoading(false); return }
+      if (error || !data) { setCareLoading(false); return }
 
-    const otherIds = [...new Set(
-      data.map(r => (r.subject_id === currentUserId ? r.carer_id : r.subject_id))
-    )]
+      const otherIds = [...new Set(
+        data.map(r => (r.subject_id === currentUserId ? r.carer_id : r.subject_id))
+      )]
 
-    let profileMap = new Map<string, CareProfile>()
-    if (otherIds.length > 0) {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, avatar_url, bio, city, vibe_score, is_verified')
-        .in('id', otherIds)
-      profileMap = new Map((profiles || []).map(p => [p.id, p as CareProfile]))
+      let profileMap = new Map<string, CareProfile>()
+      if (otherIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, username, display_name, avatar_url, bio, city, vibe_score, is_verified')
+          .in('id', otherIds)
+        profileMap = new Map((profiles || []).map(p => [p.id, p as CareProfile]))
+      }
+
+      setCareRows(data.map(r => ({
+        ...r,
+        subject: profileMap.get(r.subject_id),
+        carer: profileMap.get(r.carer_id)
+      })))
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setCareLoading(false)
     }
-
-    setCareRows(data.map(r => ({
-      ...r,
-      subject: profileMap.get(r.subject_id),
-      carer: profileMap.get(r.carer_id)
-    })))
-    setCareLoading(false)
   }, [currentUserId])
 
   useEffect(() => {

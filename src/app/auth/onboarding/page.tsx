@@ -49,33 +49,44 @@ export default function OnboardingPage() {
     e.preventDefault()
     if (!role || !currentUser || !supabase) return
     setSubmitting(true)
-    setErrorMessage(null)
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      setErrorMessage(null)
 
-    const sanitizedBio = sanitizeInput(bio)
+      const sanitizedBio = sanitizeInput(bio)
 
-    const { error } = await supabase.from('res_profiles').update({
-      role,
-      bio: sanitizedBio || null,
-      gender: role === 'tenant' ? gender : null,
-      children_count: role === 'tenant' ? childrenCount : 0,
-      employment_status: role === 'tenant' ? employmentStatus : null,
-      has_pets: role === 'tenant' ? hasPets : false,
-      landlord_gender_pref: role === 'landlord' ? genderPreference : null,
-      landlord_children_allowed: role === 'landlord' ? childrenAllowed : true,
-      landlord_max_children: role === 'landlord' ? maxChildren : 0,
-      landlord_smoking_allowed: role === 'landlord' ? smokingAllowed : false,
-      landlord_pets_allowed: role === 'landlord' ? petsAllowed : false
-    }).eq('id', currentUser.id)
+      const { error } = await supabase.from('res_profiles').update({
+        role,
+        bio: sanitizedBio || null,
+        gender: role === 'tenant' ? gender : null,
+        children_count: role === 'tenant' ? childrenCount : 0,
+        employment_status: role === 'tenant' ? employmentStatus : null,
+        has_pets: role === 'tenant' ? hasPets : false,
+        landlord_gender_pref: role === 'landlord' ? genderPreference : null,
+        landlord_children_allowed: role === 'landlord' ? childrenAllowed : true,
+        landlord_max_children: role === 'landlord' ? maxChildren : 0,
+        landlord_smoking_allowed: role === 'landlord' ? smokingAllowed : false,
+        landlord_pets_allowed: role === 'landlord' ? petsAllowed : false
+      }).eq('id', currentUser.id)
 
-    setSubmitting(false)
+      setSubmitting(false)
 
-    if (error) {
-      setErrorMessage(error.message)
-      return
+      if (error) {
+        setErrorMessage(error.message)
+        return
+      }
+
+      dispatch(loginUser({ ...currentUser, role }))
+      router.push('/dashboard')
+
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSubmitting(false)
     }
-
-    dispatch(loginUser({ ...currentUser, role }))
-    router.push('/dashboard')
   }
 
   useEffect(() => {

@@ -228,9 +228,18 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const refreshSavedPins = async () => {
     if (!currentUserId) { setSavedPins([]); return }
     setPinsLoading(true)
-    const pins = await fetchSavedPins()
-    setSavedPins(pins)
-    setPinsLoading(false)
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      const pins = await fetchSavedPins()
+      setSavedPins(pins)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setPinsLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -355,20 +364,29 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
   const loadZones = async (lat: number, lon: number) => {
     setLoading(true)
-    // Refreshing the map means "give me everything current here" — the
-    // civic zone reports and every content layer share the same gesture
-    // (the refresh button, recentring, an initial location fix).
-    const [zonesData, handymenData, marketData, communitiesData] = await Promise.all([
-      fetchSharedZones(lat, lon, 15000),
-      fetchNearbyHandymen(lat, lon, 15000),
-      fetchNearbyMarketItems(lat, lon, 15000),
-      fetchNearbyCommunities(lat, lon, 15000)
-    ])
-    setZones(zonesData)
-    setHandymen(handymenData)
-    setMarketItemsNearby(marketData)
-    setCommunities(communitiesData)
-    setLoading(false)
+    // try/finally so the loading flag resolves on EVERY path. Without it a
+    // rejected request skipped the setter at the end of the function and the
+    // spinner stayed on screen for the rest of the session — see the Messages
+    // page, where that was measured.
+    try {
+      // Refreshing the map means "give me everything current here" — the
+      // civic zone reports and every content layer share the same gesture
+      // (the refresh button, recentring, an initial location fix).
+      const [zonesData, handymenData, marketData, communitiesData] = await Promise.all([
+        fetchSharedZones(lat, lon, 15000),
+        fetchNearbyHandymen(lat, lon, 15000),
+        fetchNearbyMarketItems(lat, lon, 15000),
+        fetchNearbyCommunities(lat, lon, 15000)
+      ])
+      setZones(zonesData)
+      setHandymen(handymenData)
+      setMarketItemsNearby(marketData)
+      setCommunities(communitiesData)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
