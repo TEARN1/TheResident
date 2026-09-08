@@ -13,6 +13,31 @@
 html, body { margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; }
 
+/* Tailwind's Preflight is deliberately disabled in tailwind.config.ts, so it
+   cannot restyle the older inline-styled screens. The cost is that a few of
+   its resets that genuinely matter never ran — including this one.
+
+   An unstyled <button> keeps the user agent's `background-color: buttonface`.
+   That is why the inactive Rooms/Roommates and Rent/Buy/Guest Houses pills
+   rendered as flat grey chips: they carry no background utility at all and
+   were showing a browser default. It was there before this redesign; setting
+   `color-scheme` correctly just changed which grey it was.
+
+   Deliberately NOT resetting borders here. Preflight also sets
+   `border-style: solid; border-width: 0` globally, and Tailwind's `border`
+   utility only sets a WIDTH — so adding a border reset without the matching
+   style default would silently remove borders across the app. */
+button,
+input[type='button'],
+input[type='submit'],
+input[type='reset'] {
+  background-color: transparent;
+  background-image: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
 /* ── Legacy variable bridge ───────────────────────────────────────────────
    The older screens (auth, landing, and every inline-styled component) read
    colours through these names. They used to be a SECOND, parallel palette
