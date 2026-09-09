@@ -39,7 +39,7 @@ export function describeSubject(t: string): string {
     case 'listing': return 'Room listing'
     case 'market_item': return 'Marketplace item'
     case 'notice': return 'Notice'
-    case 'gossip_post': return 'News post'
+    case 'gossip_post': return 'Gossip post'
     default: return t
   }
 }

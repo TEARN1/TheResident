@@ -225,7 +225,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Net: still six items, just a more coherent set of six.
   const socialItems = [
     { name: 'Profile', href: '/dashboard/profile', icon: UserRound },
-    { name: 'News', href: '/dashboard/news', icon: MessagesSquare },
+    { name: 'Gossip', href: '/dashboard/gossip', icon: MessagesSquare },
     { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   ]
   const navItems = [...coreItems, ...socialItems]
@@ -290,7 +290,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="guest-summary-banner">
           <Sparkles size={16} className="shrink-0" style={{ color: 'var(--accent)' }} />
           <span>
-            <strong>You&apos;re browsing as a guest.</strong> Sign up free to save listings, message neighbours, post to the feed, and build the trust circle other residents can see.
+            <strong>You&apos;re browsing as a guest.</strong> Sign up free to save listings, message neighbours, post gossip, and build the trust circle other residents can see.
           </span>
           <Link href="/auth" className="guest-summary-banner-cta">Sign up</Link>
           <button onClick={dismissGuestBanner} aria-label="Dismiss" className="guest-summary-banner-dismiss">

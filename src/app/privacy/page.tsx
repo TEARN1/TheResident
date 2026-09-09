@@ -27,7 +27,7 @@ export default function PrivacyPolicyPage() {
             <li><strong className="text-content">Profile content:</strong> bio, photos, verification documents (e.g. a lease or utility bill), and preferences you choose to add.</li>
             <li><strong className="text-content">Location, used once:</strong> when you search the map, report an issue, or share your live location with people you choose. This is used at the moment you use the feature and is not kept as a location history. We never collect location in the background.</li>
             <li><strong className="text-content">Location, saved: your home area.</strong> If you choose to set one, we save a single point for where you live, so that official announcements for your ward or suburb can reach you. You pick whether it is saved <em>approximately</em> (rounded before it is stored, so we never hold your precise address) or exactly. It is stored once, not tracked over time, it is never shown to other residents, and you can remove it at any time from your Profile.</li>
-            <li><strong className="text-content">Content you post:</strong> news posts, comments, service reports, marketplace listings, messages, and any photos or short videos attached to them.</li>
+            <li><strong className="text-content">Content you post:</strong> gossip posts, comments, service reports, marketplace listings, messages, and any photos or short videos attached to them.</li>
             <li><strong className="text-content">Usage &amp; device info:</strong> basic error/session logs needed to keep the app working, and a push notification token if you enable notifications.</li>
           </ul>
         </Section>

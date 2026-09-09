@@ -648,8 +648,22 @@ body {
 
 @media (max-width: 1024px) {
 
+  /* Icon only on small screens to save top-bar space — but VISUALLY only.
+     This was display:none, which meant the <h1> contained nothing but an icon
+     on every phone and tablet, so a screen-reader user heard "heading level
+     one" with no text in it. A heading with no accessible name is worse than
+     no heading: it announces that a page title exists and then fails to say
+     what it is.
+
+     Same technique as the bottom-nav labels: removed from the visual layout,
+     still read aloud. */
   .dashboard-page-title span {
-    display: none; /* icon only on small screens to save top-bar space */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 

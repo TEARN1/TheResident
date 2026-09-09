@@ -67,7 +67,7 @@ const ROUTES = [
   '/dashboard/community',
   '/dashboard/services',
   '/dashboard/business',
-  '/dashboard/news',
+  '/dashboard/gossip',
   '/dashboard/messages',
   '/dashboard/profile',
   '/dashboard/trust-circle'
@@ -275,7 +275,15 @@ for (const route of ROUTES) {
       if (!document.querySelector('.skip-link, a[href="#main-content"]')) bad.push('no skip link')
       // 1.3.1 — landmarks and heading order.
       if (!document.querySelector('main')) bad.push('no <main> landmark')
-      if (!document.querySelector('h1')) bad.push('no <h1>')
+      // Existence is not enough. The dashboard's h1 contained only an icon on
+      // every phone, because its text was display:none to save top-bar space —
+      // so it announced "heading level one" and then said nothing. A heading
+      // with no accessible name is worse than no heading at all.
+      const h1 = document.querySelector('h1')
+      if (!h1) bad.push('no <h1>')
+      else if (!(h1.getAttribute('aria-label') || (h1.textContent || '').trim())) {
+        bad.push('<h1> has no accessible name')
+      }
       const levels = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].map(h => +h.tagName[1])
       for (let i = 1; i < levels.length; i++) {
         if (levels[i] - levels[i - 1] > 1) {

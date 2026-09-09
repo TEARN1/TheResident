@@ -385,7 +385,7 @@ export default function CommunityPage() {
   const clusters = [
     {
       id: 'feed',
-      label: 'Feed & Social',
+      label: 'Notices & Groups',
       accent: 'text-info bg-info/10',
       tabs: [
         { id: 'notices', label: 'Notices', icon: Megaphone },

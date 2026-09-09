@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import { describeSubject, severityOf } from './contentReports'
 
 test('subject types read as something a person would say', () => {
-  assert.strictEqual(describeSubject('gossip_post'), 'News post')
+  assert.strictEqual(describeSubject('gossip_post'), 'Gossip post')
   assert.strictEqual(describeSubject('market_item'), 'Marketplace item')
   // An unknown type falls back to itself rather than to "undefined": a
   // reviewer seeing a raw key still knows what they are looking at.
