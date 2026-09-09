@@ -44,11 +44,15 @@ const ALLOWED_FILES = new Set<string>([
   // Brand marks belonging to other companies. Facebook blue is Facebook blue
   // in both themes; theming someone else's logo is wrong, not clever.
   'src/app/auth/page.tsx',
-  // Gossip post backdrops are ARTWORK a resident picks for their own post,
+  // News post backdrops are ARTWORK a resident picks for their own post,
   // like a wallpaper. They must look the same to everyone who sees that post,
   // regardless of the theme the VIEWER is using, so they are deliberately
   // literal — see the comment on BACKGROUND_PRESETS.
-  'src/app/dashboard/gossip/page.tsx',
+  //
+  // The path moved with the gossip → news rename, and this test caught the
+  // stale entry, which is the allowlist doing its job: an entry that no longer
+  // matches a real file silently stops protecting anything.
+  'src/app/dashboard/news/page.tsx',
   // The <meta name="theme-color"> tags are per-scheme by definition: each one
   // names the colour for one scheme, so neither can be a theme-following token.
   'src/app/layout.tsx',

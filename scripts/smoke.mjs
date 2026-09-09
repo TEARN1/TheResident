@@ -67,7 +67,7 @@ const ROUTES = [
   '/dashboard/community',
   '/dashboard/services',
   '/dashboard/business',
-  '/dashboard/gossip',
+  '/dashboard/news',
   '/dashboard/messages',
   '/dashboard/profile',
   '/dashboard/trust-circle'

@@ -225,7 +225,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Net: still six items, just a more coherent set of six.
   const socialItems = [
     { name: 'Profile', href: '/dashboard/profile', icon: UserRound },
-    { name: 'Feed', href: '/dashboard/gossip', icon: MessagesSquare },
+    { name: 'News', href: '/dashboard/news', icon: MessagesSquare },
     { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   ]
   const navItems = [...coreItems, ...socialItems]
