@@ -252,7 +252,12 @@ export const reportContent = createAsyncThunk(
       p_detail: args.detail ?? null
     }, dispatch, {
       successTitle: 'Reported',
-      successBody: 'It is hidden from you now and will be reviewed.'
+      // The previous message said "It is hidden from you now and will be
+      // reviewed." Both halves were untrue: nothing hid it from the reporter,
+      // and nothing in the app read res_reports, so no one reviewed anything.
+      // Telling someone their complaint is handled when it is not is worse
+      // than telling them nothing.
+      successBody: 'Thank you. This goes to the moderation queue — content is taken down once enough residents report it, or sooner if we review it.'
     })
 )
 

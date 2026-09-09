@@ -8865,3 +8865,138 @@ begin
     execute 'grant execute on function public.res_alert_reach_preview(double precision,double precision,text,uuid) to authenticated, service_role';
   end if;
 end $$;
+
+
+-- ==========================================================================
+-- SECTION 45 — SOMEBODY HAS TO BE ABLE TO READ THE COMPLAINTS
+-- ==========================================================================
+--
+-- res_reports has existed from early on, with a full status workflow
+-- (open → reviewed → actioned → dismissed), and residents could file into it
+-- from the feed and the marketplace.
+--
+-- NOTHING IN THE CODEBASE EVER READ IT. There was no queue, no reviewer, and
+-- no way to act on a complaint. Meanwhile every reporter was told:
+--
+--     "It is hidden from you now and will be reviewed."
+--
+-- Both halves were untrue. Nothing hid the content from the reporter, and no
+-- one reviewed anything. res_report_content auto-hid a subject once three
+-- DISTINCT residents reported it — with no review, no appeal, and no notice
+-- to the author — and gossip posts had no auto-hide branch at all, so
+-- reporting one did nothing whatsoever.
+--
+-- For a platform carrying residents' statements about named landlords and
+-- service providers, being able to act on a complaint is the difference
+-- between a defensible position and an indefensible one. A process nobody can
+-- execute is not a process.
+
+-- Grouped by the thing complained about, not by individual complaint: a
+-- reviewer decides about a post, not about each person who objected to it.
+create or replace function public.res_pending_reports(p_limit integer default 100)
+returns table (
+  subject_type text,
+  subject_id uuid,
+  report_count integer,
+  reasons text[],
+  first_reported_at timestamptz,
+  last_reported_at timestamptz,
+  details text[],
+  currently_hidden boolean
+)
+language plpgsql stable security definer set search_path to 'public'
+as $$
+begin
+  if not public.res_is_platform_admin() then
+    raise exception 'admin_required';
+  end if;
+
+  return query
+  select r.subject_type,
+         r.subject_id,
+         count(distinct r.reporter_id)::integer,
+         array_agg(distinct r.reason),
+         min(r.created_at),
+         max(r.created_at),
+         -- Reporter identities are deliberately NOT returned. A reviewer
+         -- needs to know what was said and how many people said it, not who;
+         -- exposing complainants to whoever holds the admin role invites
+         -- retaliation.
+         array_remove(array_agg(distinct r.detail), null),
+         coalesce(
+           case r.subject_type
+             when 'listing'     then (select l.hidden from res_listings l where l.id = r.subject_id)
+             when 'market_item' then (select m.hidden from res_market_items m where m.id = r.subject_id)
+             when 'notice'      then (select ne.hidden from res_notice_events ne where ne.id = r.subject_id)
+             when 'gossip_post' then (select g.hidden from res_gossip_posts g where g.id = r.subject_id)
+           end, false)
+  from res_reports r
+  where r.status = 'open'
+  group by r.subject_type, r.subject_id
+  order by count(distinct r.reporter_id) desc, min(r.created_at) asc
+  limit greatest(1, least(coalesce(p_limit, 100), 500));
+end;
+$$;
+
+create or replace function public.res_resolve_report(
+  p_subject_type text,
+  p_subject_id uuid,
+  p_action text,          -- 'hide' | 'restore' | 'dismiss'
+  p_note text default null
+)
+returns void
+language plpgsql security definer set search_path to 'public'
+as $$
+declare v_hide boolean;
+begin
+  if not public.res_is_platform_admin() then
+    raise exception 'admin_required';
+  end if;
+  -- coalesce, not a bare comparison: `NULL not in (...)` is NULL, and
+  -- `if NULL then raise` does not fire. That exact shape was a live
+  -- privilege escalation in res_moderate earlier in this project.
+  if coalesce(p_action, '') not in ('hide', 'restore', 'dismiss') then
+    raise exception 'invalid_action';
+  end if;
+
+  if p_action in ('hide', 'restore') then
+    v_hide := (p_action = 'hide');
+    if p_subject_type = 'listing' then
+      update res_listings set hidden = v_hide where id = p_subject_id;
+    elsif p_subject_type = 'market_item' then
+      update res_market_items set hidden = v_hide where id = p_subject_id;
+    elsif p_subject_type = 'notice' then
+      update res_notice_events set hidden = v_hide where id = p_subject_id;
+    elsif p_subject_type = 'gossip_post' then
+      -- Reportable all along, but with no auto-hide branch, so reporting a
+      -- feed post did nothing at all.
+      update res_gossip_posts set hidden = v_hide where id = p_subject_id;
+    else
+      raise exception 'unknown_subject_type: %', p_subject_type;
+    end if;
+  end if;
+
+  update res_reports
+     set status = case when p_action = 'dismiss' then 'dismissed' else 'actioned' end
+   where subject_type = p_subject_type
+     and subject_id = p_subject_id
+     and status = 'open';
+
+  -- Permanent record of who decided what. community_id is null because this
+  -- is a platform-level decision, not a community one.
+  insert into res_moderation_actions (community_id, actor_id, action, subject_type, subject_id, reason)
+  values (null, auth.uid(), 'report_' || p_action, p_subject_type, p_subject_id, p_note);
+end;
+$$;
+
+do $$
+begin
+  if to_regprocedure('public.res_pending_reports(integer)') is not null then
+    execute 'revoke all on function public.res_pending_reports(integer) from public, anon';
+    execute 'grant execute on function public.res_pending_reports(integer) to authenticated, service_role';
+  end if;
+  if to_regprocedure('public.res_resolve_report(text,uuid,text,text)') is not null then
+    execute 'revoke all on function public.res_resolve_report(text,uuid,text,text) from public, anon';
+    execute 'grant execute on function public.res_resolve_report(text,uuid,text,text) to authenticated, service_role';
+  end if;
+end $$;
