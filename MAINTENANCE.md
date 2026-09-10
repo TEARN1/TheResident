@@ -118,6 +118,48 @@ to read mid-fetch is a **local variable** (see `loadCareCircle` in
   attack rather than the (expected, blocked) noise the fuzzer already
   covers.
 
+## Platform accounts: the things no script can do
+
+Everything here needs a person with the login. They are listed because each
+one has already produced an email that looked like an emergency and was not
+triaged for days. Re-check monthly, on the cadence above.
+
+**Supabase — leaked-password protection is OFF.** Authentication → Policies,
+one toggle, free. It checks new passwords against HaveIBeenPwned at signup.
+It is the only item in the entire Supabase security advisory that is both
+ours and actionable; the rest is triaged once and for all in `SECURITY.md`.
+
+**Supabase — PITR is OFF.** A billing decision, and still the highest-value
+item on this page. See `docs/DISASTER-RECOVERY.md`.
+
+**Vercel — Deployment Storage sits at 100% of the free 10 GB.** Two halves,
+and only one of them is fixed:
+
+* *Stopping the bleeding* is done. `vercel.json`'s `ignoreCommand` runs
+  `scripts/vercel-should-build.sh`, which builds `main` and real pull
+  requests and skips working branches. Before it, every commit here was
+  pushed to two long-lived `claude/**` branches and each push built a full
+  preview nobody opened.
+* *Reclaiming what was already spent* cannot be automated from here.
+  Deployment storage is cumulative and permanent until the deployments
+  themselves are deleted, so the meter does not fall on its own — skipping
+  new builds only stops it climbing. Delete old preview deployments in the
+  dashboard, oldest first; production deployments for `main` are the ones to
+  keep. Until that is done the "upgrade to Pro" emails keep arriving, and
+  they are accurate.
+
+**Vercel — `thegruvs.com` and `www.thegruvs.com` are misconfigured** on
+project `the-gruvs-pt23`. That is the Gruvs project, not this one, and the
+fix is DNS records at the registrar. Listed here only so the recurring email
+has a known home.
+
+**GitHub — the `The_Gruvs_App` fine-grained token expires 13 September 2026.**
+Checked, and worth knowing before the day: **this repository's CI does not use
+it, or any secret at all.** `checks.yml` builds against
+`https://example.supabase.co` and a placeholder anon key; `ci.yml` and
+`nextjs.yml` reference no secrets. So nothing in The Resident breaks when it
+lapses. Whatever the Gruvs side automates with it does.
+
 ## Backups: what is automatic now, and what still is not
 
 `sql-tests/run.sh` and `scripts/restore-drill.sh` run in CI on every push, so

@@ -132,17 +132,51 @@ reasonable window to fix it first.
 Supabase emails "security vulnerabilities detected in your projects" on a
 schedule. Most of what it reports is not ours and not a vulnerability, so the
 triage is recorded here rather than redone from scratch each time. Re-check
-with `get_advisors` after any DDL change; the shape below was current on
-7 September 2026 (356 findings).
+with `get_advisors` after any DDL change; the shape below was re-verified on
+10 September 2026 (359 findings), function by function against the live
+catalogs rather than against this repo's SQL files.
 
 | Finding | Count | Verdict |
 |---|---|---|
 | `rls_disabled_in_public` on `spatial_ref_sys` | 1 (ERROR) | **Not actionable.** PostGIS's own coordinate-system reference table — public, read-only reference data, owned by the extension. Enabling RLS on it needs superuser and Supabase does not grant that. A permanent false positive. |
-| `authenticated_security_definer_function_executable` | 289 | Informational. It flags every SECURITY DEFINER function reachable by a signed-in user, which is what such a function is *for*. The Resident's are individually reviewed — see `sql-tests/94-definer-authorisation.test.sql` and `98-fail-open-on-null.test.sql`. |
-| `anon_security_definer_function_executable` | 27 | Only **4** are ours: `res_log_client_error` (must work before sign-in, or a crash on the login screen is never reported), the kin-verification pair (unguessable-UUID capability links), and `zones_near`. All reviewed. The other 23 are Gruvs-owned or PostGIS. |
+| `authenticated_security_definer_function_executable` | 292 | Informational. It flags every SECURITY DEFINER function reachable by a signed-in user, which is what such a function is *for*. The Resident's are individually reviewed — see `sql-tests/94-definer-authorisation.test.sql` and `98-fail-open-on-null.test.sql`. |
+| `anon_security_definer_function_executable` | 27 | Only **3** are defined by us, all deliberate: `res_log_client_error` (must work before sign-in, or a crash on the login screen is never reported) and the kin-verification pair (unguessable-UUID capability links). The other 24 are Gruvs-owned or PostGIS — see the cross-app note below, which corrects an earlier entry here that counted `zones_near` as ours. |
 | `rls_enabled_no_policy` | 33 | Only **2** are ours: `res_client_errors` and `res_maintenance_runs`. Deny-all is deliberate — both are written by SECURITY DEFINER RPCs and read through `res_client_error_summary_for_admin`, which is itself gated on `res_is_platform_admin()`. A policy on either would widen access, not tighten it. |
 | `extension_in_public` | 4 | Supabase's own default placement of PostGIS et al. |
 | `materialized_view_in_api` | 1 | Not Resident-owned. |
 | `auth_leaked_password_protection` | 1 | **Real, and outstanding.** A dashboard toggle (Authentication → Policies) that checks new passwords against HaveIBeenPwned. Free, one click, and cannot be enabled from code. |
 
 The one line worth acting on is the last one.
+
+### Two things in that table are Gruvs's, and worth telling them
+
+Neither is ours to change — CONTRACT.md §2 — but both are real, and they
+share this database:
+
+* **`maintenance_status()` is callable by `anon`.** It returns pg_cron job
+  names and their last run status, the count of account deletions past their
+  30-day deadline, and how stale the oldest check-in is. That is an
+  operations dashboard, readable by anyone on the internet who knows the
+  URL. It reads Gruvs tables only, so no Resident data is exposed.
+* **`is_admin(p_user_id uuid)` is callable by `anon`.** It answers "is this
+  person an administrator" to a signed-out caller.
+
+The trigger functions in the same list (`notify_checkin_welcome`,
+`notify_business_invoice_paid`, `notify_founder_new_invoice_request`,
+`enforce_report_rate_limit`) hold their EXECUTE via a `PUBLIC` grant rather
+than an explicit `anon` one. Revoking `PUBLIC` on a trigger function cannot
+break the trigger — triggers do not check EXECUTE — so those are the cheapest
+four to close.
+
+### A cross-app dependency that a lint fix would break
+
+`zones_near` is **defined by Gruvs but consumed by The Resident**
+(`src/utils/mapZones.ts`). It appears in the anon list, and revoking `anon`
+EXECUTE on it to satisfy the linter would silently break the map for every
+signed-out visitor to this app — with no error either side would notice,
+because the call fails at the API layer and the map simply renders empty.
+
+`src/store/schemaDrift.test.ts` pins the name, which catches the function
+being renamed or dropped. It does **not** catch the grant being narrowed.
+If the map ever goes blank for guests and nothing else changed, check this
+grant first.
