@@ -84,8 +84,9 @@ a fresh project, a new region, a local development copy, or a forensic
 
 **Status: TABLES AND POLICIES PROVEN. FUNCTIONS INCOMPLETE.**
 
-`theresident_complete_schema.sql` rebuilds every table, policy, trigger,
-index and grant, in dependency order, safe to re-run.
+`theresident_schema_part1.sql`, `theresident_schema_part2.sql` and
+`theresident_schema_part3.sql` — applied in that order — rebuild every table,
+policy, trigger, index and grant, in dependency order, safe to re-run.
 `./scripts/restore-drill.sh` proves that from zero on an empty PostgreSQL.
 
 It does **not** currently rebuild every function. 75 of the database's 163
@@ -165,9 +166,11 @@ performed against a healthy database is itself a data-loss event.
    placement is a decision worth revisiting, and a rebuild is the cheapest
    possible moment to change it.
 2. Enable the extensions the schema needs: `uuid-ossp`, `postgis`.
-3. Apply the schema of record: paste `theresident_complete_schema.sql` into
-   the SQL editor. This is one file on purpose — there is no order to get
-   right and nothing to forget.
+3. Apply the schema of record: paste `theresident_schema_part1.sql`, then
+   `theresident_schema_part2.sql`, then `theresident_schema_part3.sql` into
+   the SQL editor. Three files, in that order — parts 2 and 3 depend on part
+   1. Beyond that order there is nothing to remember: each part is the whole
+   of its range, safe to re-run.
 4. Apply `theresident_functions.sql` if it exists (see Tier 3 above — run
    `scripts/sync-functions.sh` and commit it BEFORE you ever need this).
    Without it the rebuilt database is missing `res_notify`,

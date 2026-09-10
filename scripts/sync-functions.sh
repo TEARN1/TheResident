@@ -21,7 +21,7 @@
 # Connection string (URI). It is a secret: never commit it.
 #
 # Output: theresident_functions.sql, which is applied AFTER
-# theresident_complete_schema.sql (it depends on the tables existing).
+# the theresident_schema_part*.sql files (it depends on the tables existing).
 # Commit the result — that is the whole point.
 set -euo pipefail
 
@@ -52,7 +52,7 @@ echo "→ reading function definitions from the live database"
 -- data. Hand-copying that is how a one-character difference becomes a
 -- security hole.
 --
--- Apply AFTER theresident_complete_schema.sql: these depend on the tables.
+-- Apply AFTER the theresident_schema_part*.sql files: these depend on the tables.
 --
 -- Everything here is CREATE OR REPLACE, so applying it to a database that
 -- already has them changes nothing.

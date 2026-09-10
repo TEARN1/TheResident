@@ -79,7 +79,8 @@ say "→ dumping to $OUT_FILE"
 # --no-owner / --no-privileges: the restore target is a fresh Supabase project
 # where the roles are Supabase's own, not this project's. Ownership from the
 # source would not resolve there. The GRANTs that matter are recreated by
-# theresident_complete_schema.sql (section 35), which is the schema of record.
+# theresident_schema_part2.sql (section 35), which is part of the schema of
+# record.
 #
 # --schema=public only: auth/storage/realtime schemas belong to Supabase and
 # are recreated by the platform, not restored from here.

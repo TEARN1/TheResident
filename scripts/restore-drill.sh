@@ -2,7 +2,7 @@
 # Tier 3 drill — prove the schema of record actually rebuilds from nothing.
 #
 # An untested backup is a hypothesis, not a backup. This is the test. It
-# stands up a throwaway PostgreSQL, applies theresident_complete_schema.sql
+# stands up a throwaway PostgreSQL, applies the three theresident_schema_part*.sql files
 # twice, and asserts the result is a database the app could actually run
 # against.
 #
@@ -19,10 +19,19 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PGBIN="${PGBIN:-/usr/lib/postgresql/16/bin}"
 export PATH="$PGBIN:$PATH"
 
-SCHEMA="$ROOT/theresident_complete_schema.sql"
+# The schema of record is three parts, applied in order (part2 and part3
+# depend on part1). Concatenating them here reproduces exactly what a human
+# pastes into the Supabase SQL editor, one part after another.
+SCHEMA_PARTS=(
+  "$ROOT/theresident_schema_part1.sql"
+  "$ROOT/theresident_schema_part2.sql"
+  "$ROOT/theresident_schema_part3.sql"
+)
 PRELUDE="$ROOT/sql-tests/00-prelude.sql"
 
-[ -f "$SCHEMA" ] || { echo "missing $SCHEMA"; exit 1; }
+for f in "${SCHEMA_PARTS[@]}"; do
+  [ -f "$f" ] || { echo "missing $f"; exit 1; }
+done
 
 WORK="$(mktemp -d)"
 PGDATA="$WORK/data"
@@ -49,7 +58,7 @@ run "initdb -D $PGDATA -A trust -U postgres" >/dev/null
 run "pg_ctl -D $PGDATA -o '-k $SOCK -p $PORT -c listen_addresses=' -l $WORK/pg.log start" >/dev/null
 sleep 2
 
-cp "$SCHEMA" "$WORK/schema.sql"
+cat "${SCHEMA_PARTS[@]}" > "$WORK/schema.sql"
 cp "$PRELUDE" "$WORK/prelude.sql"
 chmod 644 "$WORK"/*.sql
 

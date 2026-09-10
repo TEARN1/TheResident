@@ -1,13 +1,34 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { useSelector } from 'react-redux'
-import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, Heart } from 'lucide-react'
-import { RootState } from '../../../store'
+import { useSelector, useDispatch } from 'react-redux'
+import Link from 'next/link'
+import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, Heart, Flag, MessageCircle } from 'lucide-react'
+import { RootState, AppDispatch, isGuestUser } from '../../../store'
+import { reportContent } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
 import EmptyState from '../components/shared/EmptyState'
+
+/**
+ * Why a resident might report something. The database already constrains
+ * res_reports.reason to exactly this set, so a mismatch here would be
+ * rejected server-side rather than silently stored.
+ *
+ * Asking for a reason matters: the moderation queue sorts a single "unsafe"
+ * or "scam" complaint above three "spam" ones, and it cannot do that if
+ * everything arrives as 'other' — which is what the two existing report
+ * buttons elsewhere in the app hardcode.
+ */
+const REPORT_REASONS: { id: 'spam' | 'scam' | 'abuse' | 'unsafe' | 'wrong_info' | 'other'; label: string }[] = [
+  { id: 'abuse', label: 'Abusive or harassing' },
+  { id: 'unsafe', label: 'Unsafe or dangerous' },
+  { id: 'scam', label: 'A scam' },
+  { id: 'wrong_info', label: 'Untrue about someone' },
+  { id: 'spam', label: 'Spam' },
+  { id: 'other', label: 'Something else' }
+]
 
 interface GossipPost {
   id: string
@@ -64,9 +85,148 @@ const backgroundCssFor = (value: string | null): string | null => {
   return preset ? preset.css : value
 }
 
+/**
+ * The row of actions under a post.
+ *
+ * The card is rendered twice — once for a post with a background, once plain
+ * — so every action used to be written out twice. A button added to one and
+ * forgotten in the other is a feature that exists on half the feed, which is
+ * how the report button ended up missing entirely: reporting was wired into
+ * the marketplace and the notice board, and never here, so the moderation
+ * queue could never receive a complaint about the one surface where residents
+ * actually talk about each other.
+ */
+function CommentRow({ author, body, mine, onDelete }: {
+  author: string; body: string; mine: boolean; onDelete: () => void
+}) {
+  return (
+    <div className="flex items-start gap-2 text-xs group">
+      <span className="font-bold text-content shrink-0">{author}</span>
+      <span className="text-content-muted flex-1 break-words">{body}</span>
+      {mine && (
+        <button
+          onClick={onDelete}
+          aria-label="Delete your comment"
+          className="shrink-0 min-w-[44px] min-h-[44px] -my-3 flex items-center justify-center text-content-subtle hover:text-danger"
+        >
+          <Trash2 size={13} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+function PostActions({
+  postId, authorId, myId, guest, onReact, reacting, reacted, reactionCount,
+  onToggleComments, expanded, commentCount, onDelete, onReport, subtle
+}: {
+  postId: string
+  authorId: string
+  myId?: string
+  guest: boolean
+  onReact: (id: string) => void
+  reacting: boolean
+  reacted: boolean
+  reactionCount: number
+  onToggleComments: (id: string) => void
+  expanded: boolean
+  commentCount?: number
+  onDelete: (id: string) => void
+  onReport: (id: string) => void
+  /** The background-image card needs lighter text to sit on its artwork. */
+  subtle?: boolean
+}) {
+  const mine = authorId === myId
+  const base = subtle ? 'text-content/90' : 'text-content-muted'
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={() => onReact(postId)}
+        disabled={reacting || guest}
+        aria-label={reacted ? 'Remove your like' : 'Like this post'}
+        aria-pressed={reacted}
+        className={`flex items-center gap-1.5 text-xs font-bold hover:underline disabled:opacity-50 ${reacted ? 'text-danger' : base}`}
+      >
+        <Heart size={13} className={reacted ? 'fill-current' : ''} aria-hidden="true" />
+        {reactionCount || ''}
+      </button>
+
+      <button
+        onClick={() => onToggleComments(postId)}
+        aria-label={expanded ? 'Hide comments' : 'Show comments'}
+        aria-expanded={expanded}
+        className={`flex items-center gap-1.5 text-xs font-bold hover:underline ${base}`}
+      >
+        {expanded ? <ChevronUp size={13} aria-hidden="true" /> : <ChevronDown size={13} aria-hidden="true" />}
+        {expanded ? 'Hide' : `Comments${commentCount ? ` (${commentCount})` : ''}`}
+      </button>
+
+      {/* Message the person who posted. There is no public profile page for
+          another resident, so the useful social action is the one that
+          already has a route. */}
+      {!mine && !guest && (
+        <Link
+          href={`/dashboard/messages/${authorId}`}
+          aria-label="Message this resident"
+          className={`flex items-center gap-1.5 text-xs font-bold hover:underline ${base}`}
+        >
+          <MessageCircle size={13} aria-hidden="true" /> Message
+        </Link>
+      )}
+
+      {mine ? (
+        <button
+          onClick={() => onDelete(postId)}
+          aria-label="Delete your post"
+          className={`hover:text-danger transition-colors ${base}`}
+        >
+          <Trash2 size={13} aria-hidden="true" />
+        </button>
+      ) : !guest && (
+        <button
+          onClick={() => onReport(postId)}
+          aria-label="Report this post"
+          className={`hover:text-danger transition-colors ${base}`}
+        >
+          <Flag size={13} aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function GossipPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const myId = currentUser?.id
+  const dispatch = useDispatch<AppDispatch>()
+  const guest = isGuestUser(currentUser)
+
+  // Which post the reporter is choosing a reason for. Asking for a reason is
+  // the point: the moderation queue ranks a single "unsafe" or "scam" above
+  // three "spam", and cannot do that if everything arrives as 'other'.
+  const [reportingPost, setReportingPost] = useState<string | null>(null)
+
+  const submitReport = (postId: string, reason: typeof REPORT_REASONS[number]['id']) => {
+    dispatch(reportContent({ subjectType: 'gossip_post', subjectId: postId, reason }))
+    setReportingPost(null)
+  }
+
+  const deleteComment = async (commentId: string, postId: string) => {
+    if (!supabase || !myId) return
+    // RLS already restricts DELETE on res_gossip_comments to author_id =
+    // auth.uid(), so this needs no RPC — the database refuses anyone else.
+    const { error: delError } = await supabase
+      .from('res_gossip_comments').delete().eq('id', commentId)
+    if (delError) { setError(humanizeSupabaseError(delError.message)); return }
+    setComments(prev => ({
+      ...prev,
+      [postId]: (prev[postId] || []).filter(c => c.id !== commentId)
+    }))
+    setCommentPreviews(prev => ({
+      ...prev,
+      [postId]: (prev[postId] || []).filter(c => c.id !== commentId)
+    }))
+  }
 
   const [posts, setPosts] = useState<GossipPost[]>([])
   const [profileMap, setProfileMap] = useState<Record<string, ProfileHit>>({})
@@ -605,9 +765,13 @@ export default function GossipPage() {
                     style={{ backgroundImage: bgCss }}
                   >
                     <div className="absolute top-3 right-3">
-                      {post.author_id === myId
-                        ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-surface-sunken/50 hover:bg-danger/80 text-content/80 hover:text-content rounded-full p-1.5 transition-all"><Trash2 size={13} /></button>
-                        : <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
+                      {/* Delete lives in the actions row now, with everything
+                          else you can do to a post. Blocking is a different
+                          kind of decision — about a person, not a post — so it
+                          stays separate. */}
+                      {post.author_id !== myId && (
+                        <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />
+                      )}
                     </div>
                     <p className="text-lg sm:text-xl font-bold text-content text-center leading-snug whitespace-pre-wrap drop-shadow-md max-w-md">
                       {post.body}
@@ -616,23 +780,15 @@ export default function GossipPage() {
                       <span className="text-xs font-bold text-content/90">{nameOf(post.author_id)}</span>
                       <span className="text-xs text-content/60">{new Date(post.created_at).toLocaleString()}</span>
                     </div>
-                    <div className="absolute bottom-3 right-4 flex items-center gap-3">
-                      <button
-                        onClick={() => toggleReaction(post.id)}
-                        disabled={reacting[post.id]}
-                        aria-label={myReactions[post.id] ? 'Remove reaction' : 'React to this post'}
-                        className={`flex items-center gap-1.5 text-xs font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-danger' : 'text-content/90'}`}
-                      >
-                        <Heart size={13} className={myReactions[post.id] ? 'fill-red-400' : ''} />
-                        {reactionCounts[post.id] || ''}
-                      </button>
-                      <button
-                        onClick={() => toggleExpand(post.id)}
-                        className="flex items-center gap-1.5 text-xs text-content/90 font-bold hover:underline"
-                      >
-                        {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                        {expanded[post.id] ? 'Hide' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
-                      </button>
+                    <div className="absolute bottom-3 right-4">
+                      <PostActions
+                        postId={post.id} authorId={post.author_id} myId={myId} guest={guest}
+                        onReact={toggleReaction} reacting={!!reacting[post.id]}
+                        reacted={!!myReactions[post.id]} reactionCount={reactionCounts[post.id] || 0}
+                        onToggleComments={toggleExpand} expanded={!!expanded[post.id]}
+                        commentCount={comments[post.id]?.length}
+                        onDelete={deletePost} onReport={setReportingPost} subtle
+                      />
                     </div>
                   </div>
 
@@ -660,10 +816,11 @@ export default function GossipPage() {
                         <p className="text-xs text-content-subtle italic">No comments yet.</p>
                       ) : (
                         (comments[post.id] || []).map(c => (
-                          <div key={c.id} className="flex gap-2 text-xs">
-                            <span className="font-bold text-content">{nameOf(c.author_id)}</span>
-                            <span className="text-content-muted">{c.body}</span>
-                          </div>
+                          <CommentRow
+                            key={c.id} author={nameOf(c.author_id)} body={c.body}
+                            mine={!!myId && c.author_id === myId}
+                            onDelete={() => deleteComment(c.id, post.id)}
+                          />
                         ))
                       )}
                       <div className="flex gap-2 mt-2">
@@ -703,9 +860,12 @@ export default function GossipPage() {
                       <p className="text-xs text-content-subtle">{new Date(post.created_at).toLocaleString()}</p>
                     </div>
                   </div>
-                  {post.author_id === myId
-                    ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="text-content-subtle hover:text-danger transition-all p-1"><Trash2 size={15} /></button>
-                    : <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
+                  {/* Delete moved into the actions row with everything else
+                      you can do to a post. Blocking is about a person rather
+                      than a post, so it stays up here. */}
+                  {post.author_id !== myId && (
+                    <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />
+                  )}
                 </div>
                 {post.body && <p className="text-sm text-content mt-3 leading-relaxed whitespace-pre-wrap">{post.body}</p>}
 
@@ -717,23 +877,15 @@ export default function GossipPage() {
                   <video src={post.media_url} controls className="mt-3 w-full max-h-96 rounded-lg border border-subtle" />
                 )}
 
-                <div className="flex items-center gap-4 mt-4">
-                  <button
-                    onClick={() => toggleReaction(post.id)}
-                    disabled={reacting[post.id]}
-                    aria-label={myReactions[post.id] ? 'Remove reaction' : 'React to this post'}
-                    className={`flex items-center gap-1.5 text-xs font-bold hover:underline disabled:opacity-50 ${myReactions[post.id] ? 'text-danger' : 'text-content-muted'}`}
-                  >
-                    <Heart size={13} className={myReactions[post.id] ? 'fill-red-400' : ''} />
-                    {reactionCounts[post.id] || ''}
-                  </button>
-                  <button
-                    onClick={() => toggleExpand(post.id)}
-                    className="flex items-center gap-1.5 text-xs text-accent font-bold hover:underline"
-                  >
-                    {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                    {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
-                  </button>
+                <div className="mt-4">
+                  <PostActions
+                    postId={post.id} authorId={post.author_id} myId={myId} guest={guest}
+                    onReact={toggleReaction} reacting={!!reacting[post.id]}
+                    reacted={!!myReactions[post.id]} reactionCount={reactionCounts[post.id] || 0}
+                    onToggleComments={toggleExpand} expanded={!!expanded[post.id]}
+                    commentCount={comments[post.id]?.length}
+                    onDelete={deletePost} onReport={setReportingPost}
+                  />
                 </div>
 
                 {!expanded[post.id] && (commentPreviews[post.id]?.length ?? 0) > 0 && (
@@ -760,11 +912,12 @@ export default function GossipPage() {
                       <p className="text-xs text-content-subtle italic">No comments yet.</p>
                     ) : (
                       (comments[post.id] || []).map(c => (
-                        <div key={c.id} className="flex gap-2 text-xs">
-                          <span className="font-bold text-content">{nameOf(c.author_id)}</span>
-                          <span className="text-content-muted">{c.body}</span>
-                        </div>
-                      ))
+                          <CommentRow
+                            key={c.id} author={nameOf(c.author_id)} body={c.body}
+                            mine={!!myId && c.author_id === myId}
+                            onDelete={() => deleteComment(c.id, post.id)}
+                          />
+                        ))
                     )}
                     <div className="flex gap-2 mt-2">
                       <input
@@ -796,7 +949,45 @@ export default function GossipPage() {
               <Loader size={14} className="animate-spin" /> Loading more…
             </div>
           )}
-          {!hasMore && posts.length > 0 && (
+          {reportingPost && (
+        <div
+          className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-4"
+          style={{ background: 'var(--surface-overlay)' }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Report this post"
+          onClick={() => setReportingPost(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-default bg-surface-raised p-5 shadow-e4"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-sm font-black uppercase tracking-widest text-accent">Report this post</h3>
+            <p className="mt-1 text-xs text-content-muted">
+              What is wrong with it? This goes to the moderation queue.
+            </p>
+            <div className="mt-3 space-y-2">
+              {REPORT_REASONS.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => submitReport(reportingPost, r.id)}
+                  className="min-h-tap w-full rounded-xl border border-default px-3 text-left text-sm font-bold text-content hover:border-accent/40"
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setReportingPost(null)}
+              className="min-h-tap mt-3 w-full rounded-xl text-xs font-bold uppercase tracking-widest text-content-muted"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!hasMore && posts.length > 0 && (
             <p className="text-center text-xs text-content-subtle uppercase tracking-widest py-2">You&apos;ve reached the end</p>
           )}
         </div>
