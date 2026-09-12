@@ -359,11 +359,40 @@ body {
 }
 
 /* Glass UI Elements */
+/* Item 126: a real elevation system instead of a border doing all the work.
+   The --elevation-* tokens have existed since the token pass and NOTHING used
+   them — every card was a 1px border and nothing else, which is why cards,
+   sunken wells and the page background were hard to tell apart on a phone in
+   daylight. The border stays: a shadow alone disappears against a dark
+   surface, and this app has a dark theme. */
 .glass-panel {
   background: var(--card-bg);
   backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
   border-radius: 1rem;
+  box-shadow: var(--elevation-1);
+}
+
+/* Raised: something sitting deliberately above the page — a sheet, a popover,
+   a card the user is dragging or has opened. */
+.glass-panel-raised {
+  box-shadow: var(--elevation-3);
+}
+
+/* Cards that respond to a press want the elevation to change, not the colour:
+   a hover colour shift on a touch screen never happens, but the lift reads on
+   the tap. Guarded, because a card that jumps under the finger of someone who
+   asked for less motion is exactly what that setting is for. */
+@media (prefers-reduced-motion: no-preference) {
+  .glass-panel-interactive {
+    transition: box-shadow 160ms ease, transform 160ms ease;
+  }
+  .glass-panel-interactive:hover {
+    box-shadow: var(--elevation-2);
+  }
+  .glass-panel-interactive:active {
+    transform: scale(0.995);
+  }
 }
 
 /* Positions the whole group; individual banners just stack inside it —
@@ -599,8 +628,10 @@ body {
   transition: color 0.2s, border-color 0.2s;
 }
 
-/* A label can never be the reason the bar overflows again. */
-.bottom-nav-item span {
+/* A label can never be the reason the bar overflows again.
+   Targets the label by class, NOT `.bottom-nav-item span`: the item now also
+   contains a span wrapping the icon, and a rule aimed at "the span" hit both. */
+.bottom-nav-label {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -610,16 +641,14 @@ body {
 /* Narrow phones: buy the width back from padding and letter-spacing before
    spending it on an ellipsis. At 390px this is what makes "Maintenance" fit
    whole rather than truncating. */
-/* Six labels do not fit legibly on a narrow phone. My first fix shrank them
-   to 0.55rem — 8.8px — which bought the layout at the cost of being readable,
-   which is the wrong trade. The honest options are fewer destinations or no
-   labels; this takes the second, because dropping a destination is a product
-   decision and not mine to make.
+/* The history here is worth keeping. Six labels did not fit legibly on a
+   narrow phone. The first fix shrank them to 8.8px, which bought the layout
+   at the cost of being readable. The second hid them below 380px, leaving a
+   row of guessable icons on the most common phone width. Both were working
+   around the real problem, which was six.
 
-   Above 380px: labels, at 11px, which is small but legible for a word the
-   user learns the position of within a day.
-   At or below 380px: icons only, with the label still present for screen
-   readers via aria-label on the link. */
+   It is five now (items 121-122), so the labels simply fit at 12px at 320px
+   and there is nothing left to hide. */
 @media (max-width: 420px) {
   .bottom-nav-item {
     padding-left: 0.15rem;
@@ -629,13 +658,57 @@ body {
   }
 }
 
+/* Item 124: the unread count sits on the icon, not the label, so it survives
+   at every width. It is aria-hidden — the link's own accessible name carries
+   the number in words, because "3" read aloud after "Messages" is ambiguous
+   and "Messages, 3 unread" is not. */
+.bottom-nav-icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.bottom-nav-badge {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.5rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--surface);
+  font-size: 0.625rem;
+  font-weight: 900;
+  line-height: 1rem;
+  text-align: center;
+}
+
 .bottom-nav-item:hover {
   color: var(--text-muted);
 }
 
+/* Item 123: a 2px top border was the only thing marking the current tab, and
+   on a phone held at arm's length in daylight it is close to invisible —
+   especially since it is the accent colour against a surface that is already
+   warm. Three signals now, not one: the border, a tinted pill behind the
+   icon, and the label at full weight. Colour is no longer doing the work
+   alone (item 38). */
 .bottom-nav-item.active {
   color: var(--gold-primary);
   border-top-color: var(--gold-primary);
+}
+
+.bottom-nav-item.active .bottom-nav-icon::before {
+  content: '';
+  position: absolute;
+  inset: -0.4rem -0.7rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  z-index: -1;
+}
+
+.bottom-nav-item.active .bottom-nav-label {
+  font-weight: 900;
 }
 
 /* Room for the fixed bottom bar so the last bit of page content is never
@@ -755,21 +828,15 @@ body {
   }
 }
 
-@media (max-width: 380px) {
-  .bottom-nav-item span {
-    /* Hidden visually; the accessible name comes from aria-label on the
-       link, so screen-reader users lose nothing. */
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .bottom-nav-item {
-    gap: 0;
-  }
-}
+/* The block that used to live here hid every nav label below 380px, because
+   six of them could not fit. It is gone: five labels fit at 320px at 12px,
+   measured, so there is nothing left to hide.
+
+   It also caused a regression worth recording. It selected
+   `.bottom-nav-item span` — ALL spans — so the moment an icon was wrapped in
+   a span to hang an unread badge off it, the icon collapsed to 1px and the
+   entire navigation bar rendered empty. That is why the label now has its own
+   class instead of being addressed as "the span". */
 
 /* Removes the 300ms delay browsers historically added while waiting to see if
    a tap was a double-tap. */
@@ -857,15 +924,6 @@ button, [role='button'], a, input, select, textarea, label {
     border-top-color: transparent;
     border-left-color: var(--accent);
     background: var(--accent-soft);
-  }
-
-  /* Labels are hidden below 380px; a sidebar always has room for them. */
-  .bottom-nav-item span {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip-path: none;
   }
 
   .dashboard-wrapper {

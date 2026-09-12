@@ -10,7 +10,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles
+  ShieldCheck, MessageCircle, MessagesSquare, X, Sparkles
 } from 'lucide-react'
 import {
   loginUser,
@@ -217,18 +217,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: t('navMaintenance', lang), href: '/dashboard/services', icon: Wrench },
     { name: t('navCommunity', lang), href: '/dashboard/community', icon: Users },
   ]
-  // Next of Kin lives inside Profile now (it's your safety/trust info, the
-  // same category as everything else there) rather than being its own
-  // primary destination — freeing a bottom-bar slot for Profile itself,
-  // which used to be buried in the hamburger panel despite being a page
-  // people actually need to reach often (edit info, check verification).
-  // Net: still six items, just a more coherent set of six.
+  // Items 121 and 122 of docs/DESIGN-OVERHAUL.md: FIVE, not six.
+  //
+  // Six items is why the labels ended up at 8.8px, and why the earlier fix
+  // had to hide them entirely below 380px — a navigation bar whose labels
+  // vanish on the most common phone width is a row of guessable icons. Five
+  // at a readable size beats six at an unreadable one.
+  //
+  // Profile is the one that leaves, and it is the safe one to move: the top
+  // bar already carries a link to it on every single dashboard page (the role
+  // chip), so this does not bury the page — it stops it occupying a primary
+  // slot twice over. Say if you would rather Services or Community went
+  // instead; that is a product call and easy to change here.
   const socialItems = [
-    { name: 'Profile', href: '/dashboard/profile', icon: UserRound },
     { name: 'Gossip', href: '/dashboard/gossip', icon: MessagesSquare },
     { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   ]
   const navItems = [...coreItems, ...socialItems]
+
+  // Item 124. Derived from the notification rail rather than invented: a
+  // `message` notification is a real row in the database (the shared rail
+  // from CONTRACT.md §4), so this count is the same one the bell shows,
+  // filtered. There is deliberately NO badge on Gossip — nothing in this
+  // system writes a gossip notification, so any number there would be made
+  // up, and a made-up badge is worse than none.
+  const unreadMessages = notifications.items
+    .filter(n => !n.read && n.type === 'message').length
 
   // Next of Kin and Business aren't in the bottom bar but are still real
   // routes — without this, visiting either would show the wrong tab (or
@@ -441,11 +455,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             className={`bottom-nav-item ${pathname === item.href ? 'active' : ''}`}
             // The visible label is hidden at 380px and below (six of them do
             // not fit legibly), so the accessible name has to come from here.
-            aria-label={item.name}
+            aria-label={
+              item.href === '/dashboard/messages' && unreadMessages > 0
+                ? `${item.name}, ${unreadMessages} unread`
+                : item.name
+            }
             aria-current={pathname === item.href ? 'page' : undefined}
           >
-            <item.icon size={20} />
-            <span>{item.name}</span>
+            <span className="bottom-nav-icon">
+              <item.icon size={20} />
+              {item.href === '/dashboard/messages' && unreadMessages > 0 && (
+                <span className="bottom-nav-badge" aria-hidden="true">
+                  {unreadMessages > 9 ? '9+' : unreadMessages}
+                </span>
+              )}
+            </span>
+            <span className="bottom-nav-label">{item.name}</span>
           </Link>
         ))}
       </nav>

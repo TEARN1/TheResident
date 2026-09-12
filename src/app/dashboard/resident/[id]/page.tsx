@@ -9,9 +9,13 @@ import {
 } from 'lucide-react'
 import { RootState } from '../../../../store'
 import BlockUserButton from '../../components/trust-safety/BlockUserButton'
+import StatTile, { StatGrid } from '../../../../components/ui/StatTile'
+import Avatar from '../../../../components/ui/Avatar'
+import Badge from '../../../../components/ui/Badge'
+import Button from '../../../../components/ui/Button'
 import { humanizeSupabaseError } from '../../../../utils/humanizeError'
 import {
-  fetchPublicProfile, fetchPublicProfilePosts, nameOf, initialsOf, placeOf,
+  fetchPublicProfile, fetchPublicProfilePosts, nameOf, placeOf,
   memberSinceLabel, roleLabel, hasScore, messageOf, UNAVAILABLE, NOT_SIGNED_IN,
   type PublicProfile, type PublicProfilePost
 } from '../../../../utils/publicProfile'
@@ -27,15 +31,6 @@ import {
 // it must stay that way: see the docblock in utils/publicProfile.ts for why.
 
 type Status = 'loading' | 'ready' | 'missing' | 'unavailable' | 'signed_out' | 'error'
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="text-center px-2 py-3 rounded-xl bg-surface-sunken/40 border border-subtle">
-      <div className="text-lg font-black text-content leading-none">{value}</div>
-      <div className="text-[10px] uppercase tracking-widest text-content-subtle mt-1.5">{label}</div>
-    </div>
-  )
-}
 
 export default function ResidentProfilePage() {
   const params = useParams()
@@ -159,12 +154,13 @@ export default function ResidentProfilePage() {
         <div className="glass-panel p-10 text-center">
           <h1 className="text-lg font-bold text-content">We couldn&apos;t load this profile</h1>
           <p className="text-sm text-content-muted mt-2">{error || 'Something went wrong.'}</p>
-          <button
+          <Button
+            variant="secondary"
+            className="mt-4"
             onClick={() => { setStatus('loading'); load() }}
-            className="mt-4 min-h-[44px] px-4 text-sm font-bold text-accent hover:underline"
           >
             Try again
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -181,21 +177,7 @@ export default function ResidentProfilePage() {
 
       <div className="glass-panel p-6">
         <div className="flex items-start gap-4">
-          {profile.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.avatarUrl}
-              alt=""
-              className="w-16 h-16 rounded-2xl object-cover border border-subtle flex-shrink-0"
-            />
-          ) : (
-            <div
-              aria-hidden="true"
-              className="w-16 h-16 rounded-2xl bg-accent/10 text-accent flex items-center justify-center text-lg font-black flex-shrink-0"
-            >
-              {initialsOf(name)}
-            </div>
-          )}
+          <Avatar src={profile.avatarUrl} name={name} size="lg" />
 
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-bold text-content flex items-center gap-1.5 flex-wrap">
@@ -226,32 +208,25 @@ export default function ResidentProfilePage() {
         {profile.badges.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-4">
             {profile.badges.map(b => (
-              <span
-                key={b}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-accent/10 text-accent text-[10px] font-black uppercase tracking-widest"
-              >
-                <Sparkles size={10} aria-hidden="true" /> {b}
-              </span>
+              <Badge key={b} tone="accent" icon={<Sparkles size={10} aria-hidden="true" />}>
+                {b}
+              </Badge>
             ))}
           </div>
         )}
 
         {/* Scores render only when the database has one. A missing score shown
             as 0 says "this person scored zero", which is a claim, not a blank. */}
-        {/* A two-column grid, not flex-wrap. The flex version needed
-            min-width: calc(50% - 4px), which measured to exactly the parent
-            width for a pair and let sub-pixel rounding drop every stat onto
-            its own row. The grid cannot round itself into that. An odd last
-            stat spans both columns so it reads as deliberate rather than
-            stranded. */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
-          <Stat label="Posts" value={String(profile.gossipPostCount)} />
-          {hasScore(profile.vibeScore) && <Stat label="Vibe" value={String(profile.vibeScore)} />}
+        {/* Scores render only when the database has one. A missing score shown
+            as 0 says "this person scored zero", which is a claim, not a blank. */}
+        <StatGrid className="mt-5">
+          <StatTile label="Posts" value={String(profile.gossipPostCount)} />
+          {hasScore(profile.vibeScore) && <StatTile label="Vibe" value={String(profile.vibeScore)} />}
           {hasScore(profile.socialIntegrityScore) && (
-            <Stat label="Integrity" value={String(profile.socialIntegrityScore)} />
+            <StatTile label="Integrity" value={String(profile.socialIntegrityScore)} />
           )}
-          {hasScore(profile.xp) && <Stat label="XP" value={String(profile.xp)} />}
-        </div>
+          {hasScore(profile.xp) && <StatTile label="XP" value={String(profile.xp)} />}
+        </StatGrid>
 
         {!profile.isSelf && (
           <div className="flex items-center gap-3 flex-wrap mt-5 pt-5 border-t border-subtle">

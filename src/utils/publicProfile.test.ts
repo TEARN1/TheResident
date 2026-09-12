@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert'
 import {
-  nameOf, initialsOf, placeOf, memberSinceLabel, roleLabel, hasScore, messageOf
+  nameOf, placeOf, memberSinceLabel, roleLabel, hasScore, messageOf
 } from './publicProfile'
 
 test('nameOf prefers the display name', () => {
@@ -16,17 +16,6 @@ test('nameOf falls back to the handle, marked as one', () => {
 test('nameOf never renders an empty name or a raw id', () => {
   assert.strictEqual(nameOf({ displayName: null, username: null }), 'A resident')
   assert.strictEqual(nameOf({ displayName: '', username: '  ' }), 'A resident')
-})
-
-test('initialsOf takes first and last, never the middle', () => {
-  assert.strictEqual(initialsOf('Thandi Nomsa Mahlangu'), 'TM')
-  assert.strictEqual(initialsOf('Sipho'), 'SI')
-  assert.strictEqual(initialsOf('@thandi'), 'TH')
-})
-
-test('initialsOf survives a name it cannot parse', () => {
-  assert.strictEqual(initialsOf(''), '?')
-  assert.strictEqual(initialsOf('   '), '?')
 })
 
 test('placeOf joins what exists and stays empty when nothing does', () => {

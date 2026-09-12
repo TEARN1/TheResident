@@ -81,14 +81,6 @@ export function nameOf(p: Pick<PublicProfile, 'displayName' | 'username'>): stri
   return 'A resident'
 }
 
-/** Initials for the avatar fallback. At most two letters, always uppercase. */
-export function initialsOf(name: string): string {
-  const parts = name.replace(/^@/, '').split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-
 /** "Sunnyside, Pretoria" — and nothing at all when neither is set. */
 export function placeOf(p: Pick<PublicProfile, 'suburb' | 'city'>): string {
   return [p.suburb, p.city].map(s => s?.trim()).filter(Boolean).join(', ')
