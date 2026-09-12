@@ -184,7 +184,7 @@ export default function NotificationPrefsPanel() {
       <button
         onClick={save}
         disabled={saving}
-        className="flex items-center gap-2 bg-accent hover:bg-accent text-content-on-accent font-black py-2.5 px-5 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+        className="min-h-[44px] inline-flex items-center justify-center flex items-center gap-2 bg-accent hover:bg-accent text-content-on-accent font-black py-2.5 px-5 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50"
       >
         {saved ? <><Check size={14} /> Saved</> : <><Save size={14} /> {saving ? 'Saving…' : 'Save preferences'}</>}
       </button>

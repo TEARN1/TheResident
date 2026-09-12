@@ -736,7 +736,7 @@ export default function GossipPage() {
           <button
             onClick={submitPost}
             disabled={posting || uploading || (!composerBody.trim() && !mediaFile)}
-            className="flex items-center gap-2 bg-accent hover:bg-accent text-content-on-accent font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-gold-primary/10 hover:shadow-gold-primary/25"
+            className="min-h-[44px] inline-flex items-center justify-center flex items-center gap-2 bg-accent hover:bg-accent text-content-on-accent font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-gold-primary/10 hover:shadow-gold-primary/25"
           >
             {uploading ? <Loader size={13} className="animate-spin" /> : <Send size={13} />}
             {uploading ? 'Uploading…' : posting ? 'Posting…' : 'Post'}

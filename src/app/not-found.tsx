@@ -18,7 +18,7 @@ export default function NotFound() {
         </p>
         <Link
           href="/dashboard"
-          className="inline-block w-full bg-accent hover:opacity-90 text-content-on-accent font-bold px-4 py-2.5 rounded-xl transition-all text-sm"
+          className="min-h-[44px] inline-flex items-center justify-center inline-block w-full bg-accent hover:opacity-90 text-content-on-accent font-bold px-4 py-2.5 rounded-xl transition-all text-sm"
         >
           Back to dashboard
         </Link>

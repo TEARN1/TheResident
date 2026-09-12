@@ -402,7 +402,7 @@ export default function MarketTab({
                       <p className="text-xs text-accent">Pinned — {postLat.toFixed(4)}, {postLon.toFixed(4)}</p>
                    )}
                 </div>
-                <button type="submit" disabled={posting} className="w-full bg-accent text-content-on-accent font-black py-2.5 rounded-lg text-xs uppercase tracking-widest disabled:opacity-50">
+                <button type="submit" disabled={posting} className="min-h-[44px] inline-flex items-center justify-center w-full bg-accent text-content-on-accent font-black py-2.5 rounded-lg text-xs uppercase tracking-widest disabled:opacity-50">
                   {posting ? 'Posting…' : 'Post it'}
                 </button>
               </form>

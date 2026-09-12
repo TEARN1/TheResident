@@ -62,7 +62,7 @@ export default function BlockUserButton({ targetUserId, currentUserId, className
           type="button"
           onClick={doBlock}
           disabled={loading}
-          className="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-widest bg-danger/10 text-danger border border-danger/20 hover:bg-danger hover:text-content transition-all disabled:opacity-50"
+          className="min-h-[44px] inline-flex items-center justify-center px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-widest bg-danger/10 text-danger border border-danger/20 hover:bg-danger hover:text-content transition-all disabled:opacity-50"
         >
           {loading ? 'Blocking…' : 'Confirm block'}
         </button>

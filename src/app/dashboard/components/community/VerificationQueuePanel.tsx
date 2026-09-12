@@ -214,7 +214,7 @@ export default function VerificationQueuePanel() {
                     <button
                       type="button"
                       onClick={reset}
-                      className="text-xs font-black uppercase tracking-widest text-content-subtle hover:text-content px-2 py-2"
+                      className="min-h-[44px] inline-flex items-center justify-center text-xs font-black uppercase tracking-widest text-content-subtle hover:text-content px-2 py-2"
                     >
                       <X size={12} />
                     </button>

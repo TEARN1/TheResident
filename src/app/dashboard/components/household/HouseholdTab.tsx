@@ -186,7 +186,7 @@ export default function HouseholdTab({
         <button
           onClick={handleRotate}
           disabled={rotating}
-          className="flex items-center gap-2 bg-surface-raised/5 hover:bg-surface-raised/10 text-content border border-default px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50"
+          className="min-h-[44px] inline-flex items-center justify-center flex items-center gap-2 bg-surface-raised/5 hover:bg-surface-raised/10 text-content border border-default px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50"
         >
            <RotateCcw size={16} className={rotating ? 'animate-spin' : ''} /> {rotating ? 'Rotating…' : 'Rotate Chores'}
         </button>
@@ -324,7 +324,7 @@ export default function HouseholdTab({
                      onChange={e => setNewGroceryPrice(Number(e.target.value))}
                      className="w-20 bg-surface border border-default rounded-xl px-2 py-2 text-xs text-accent font-bold outline-none text-right"
                   />
-                  <button type="submit" className="bg-accent text-content-on-accent font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1">
+                  <button type="submit" className="min-h-[44px] inline-flex items-center justify-center bg-accent text-content-on-accent font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1">
                      <Plus size={14} /> Add
                   </button>
                </form>
@@ -391,7 +391,7 @@ export default function HouseholdTab({
                         onChange={e => setNewGuestNights(Number(e.target.value))}
                         className="w-14 bg-surface border border-default rounded-lg px-2 py-1.5 text-xs text-accent text-center font-bold"
                      />
-                     <button type="submit" className="bg-accent text-content-on-accent font-bold px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider">Log</button>
+                     <button type="submit" className="min-h-[44px] inline-flex items-center justify-center bg-accent text-content-on-accent font-bold px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider">Log</button>
                   </form>
                   <div className="space-y-1.5">
                      {guestLogs.map(g => (

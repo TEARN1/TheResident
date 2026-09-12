@@ -10,7 +10,11 @@ import React from 'react'
 // only needs to happen here.
 export function goldButtonClass(opts: { size?: 'sm' | 'md'; fullWidth?: boolean } = {}): string {
   const { size = 'md', fullWidth = false } = opts
-  const padding = size === 'sm' ? 'px-3 py-2 text-xs' : 'px-4 py-2.5 text-xs'
+  // min-h-[44px] regardless of size: padding alone left every call site of
+  // this helper at roughly 32-36px, under the tap-target minimum the rest of
+  // the app now clears. The visual height barely changes because the content
+  // is flex-centred; the hit area is what grows.
+  const padding = size === 'sm' ? 'min-h-[44px] px-3 py-2 text-xs' : 'min-h-[44px] px-4 py-2.5 text-xs'
   return [
     fullWidth ? 'w-full' : '',
     'flex items-center justify-center gap-2',

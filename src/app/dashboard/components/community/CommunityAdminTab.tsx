@@ -215,7 +215,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
             <button
               onClick={handleGenerateInvite}
               disabled={generating}
-              className="bg-accent text-content-on-accent font-black px-4 py-2 rounded-lg text-xs uppercase tracking-widest hover:bg-accent transition-all disabled:opacity-50"
+              className="min-h-[44px] inline-flex items-center justify-center bg-accent text-content-on-accent font-black px-4 py-2 rounded-lg text-xs uppercase tracking-widest hover:bg-accent transition-all disabled:opacity-50"
             >
               {generating ? 'Generating...' : 'Generate invite code'}
             </button>
@@ -238,7 +238,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
             placeholder="Have an invite code?"
             className="flex-1 bg-surface border border-default rounded-xl p-3 text-sm text-content outline-none focus:border-accent/50"
           />
-          <button type="submit" disabled={redeeming} className="bg-surface-raised/5 hover:bg-surface-raised/10 text-accent border border-accent/20 px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
+          <button type="submit" disabled={redeeming} className="min-h-[44px] inline-flex items-center justify-center bg-surface-raised/5 hover:bg-surface-raised/10 text-accent border border-accent/20 px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50">
             {redeeming ? 'Redeeming...' : 'Redeem'}
           </button>
         </form>

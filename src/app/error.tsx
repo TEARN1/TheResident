@@ -35,7 +35,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           </GoldButton>
           <Link
             href="/dashboard"
-            className="w-full bg-surface-raised/5 hover:bg-surface-raised/10 border border-default text-content font-black px-4 py-2.5 rounded-xl transition-all text-xs uppercase tracking-widest"
+            className="min-h-[44px] inline-flex items-center justify-center w-full bg-surface-raised/5 hover:bg-surface-raised/10 border border-default text-content font-black px-4 py-2.5 rounded-xl transition-all text-xs uppercase tracking-widest"
           >
             Back to dashboard
           </Link>

@@ -464,8 +464,19 @@ it. These ten items are what make the other 190 permanent.*
 
 ## Progress
 
-**Done and pushed: 76 of 200.** Phases 1 and 2 complete, most of 3, and the
-guardrails from 6 that keep them from regressing.
+**Done and pushed: 97 of 200.** Phases 1 and 2 complete, most of 3, section G's
+component library (121-138, 148-150), and the guardrails from 6 that keep them
+from regressing.
+
+Section G landed as `src/components/ui/`: Button with the full hierarchy and a
+loading state that disables, Avatar, Badge, Field, Tabs, SegmentedControl,
+SearchInput, PageHeader, SectionHeader, StatTile. The bottom nav went from six
+items to five (121-124), which is what finally let the labels be readable at
+320px instead of 8.8px or hidden.
+
+Still open in G: the domain cards (139-147) — listing, room, message row,
+notification row, service-report clock, provider performance, map marker,
+trust-circle visualisation.
 
 | Measured | Before | Now |
 |---|---|---|
@@ -473,7 +484,11 @@ guardrails from 6 that keep them from regressing.
 | Hardcoded colour values | ~2,100 | 0 |
 | Horizontal overflow | 398px on `/auth` | 0 |
 | Elements clipped off-screen | 10 at 320px | 0 |
-| Tap targets under 44px | 19–22 per screen (min 11px) | 0 |
+| Tap targets under 44px (guest-visible, measured in-browser) | 19–22 per screen (min 11px) | 0 |
+| Tap targets under 44px (whole codebase, static scan) | 23 | 0 |
+| Bottom nav label size at 320px | 8.8px, then hidden entirely | 12px, all five visible |
+| Signals marking the active nav tab | 1 (a 2px border) | 3 (border, pill, weight) |
+| Elevation tokens defined / actually used | 4 / 0 | 4 / 3 |
 | Text under 12px | 21 per screen | 0 |
 | Layout change 320px → 1024px | none | tablet 2-col, desktop sidebar |
 | Functions that could hang a spinner forever | 17 | 0 |

@@ -1419,7 +1419,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
               </div>
               <button
                 onClick={dismissOrientationTip}
-                className="mt-2.5 w-full bg-accent/10 hover:bg-accent hover:text-content-on-accent border border-accent/30 text-accent font-black px-3 py-1.5 rounded-lg text-xs uppercase tracking-widest transition-all"
+                className="min-h-[44px] inline-flex items-center justify-center mt-2.5 w-full bg-accent/10 hover:bg-accent hover:text-content-on-accent border border-accent/30 text-accent font-black px-3 py-1.5 rounded-lg text-xs uppercase tracking-widest transition-all"
               >
                 Got it
               </button>
@@ -1581,7 +1581,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                     <button
                       onClick={submitClosureReport}
                       disabled={reportSubmitting || (isSegmentKind(reportKind) && !segmentEnd)}
-                      className="flex-1 bg-danger hover:bg-danger text-content font-black px-3 py-2 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      className="min-h-[44px] inline-flex items-center justify-center flex-1 bg-danger hover:bg-danger text-content font-black px-3 py-2 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                     >
                       {reportSubmitting ? <Loader size={12} className="animate-spin" /> : <Ban size={12} />}
                       {reportSubmitting ? 'Reporting…' : `Report for ${DURATION_OPTIONS.find(d => d.hours === reportDurationHours)?.label}`}

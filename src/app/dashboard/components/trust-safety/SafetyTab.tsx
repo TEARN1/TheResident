@@ -369,7 +369,7 @@ export default function SafetyTab({
               placeholder="Any detail that would help a neighbour"
               className="w-full bg-surface border border-default rounded-lg p-3 text-sm text-content h-20 resize-none outline-none focus:border-danger/40"
             />
-            <button type="submit" className="bg-danger/10 border border-danger/30 text-danger font-bold px-5 py-2 rounded-lg text-xs uppercase tracking-widest">
+            <button type="submit" className="min-h-[44px] inline-flex items-center justify-center bg-danger/10 border border-danger/30 text-danger font-bold px-5 py-2 rounded-lg text-xs uppercase tracking-widest">
               Report it
             </button>
           </form>
@@ -453,7 +453,7 @@ export default function SafetyTab({
                 <button
                   onClick={registerCareCircle}
                   disabled={registering}
-                  className="bg-accent text-content-on-accent font-bold px-4 py-2 rounded-lg text-xs uppercase tracking-widest disabled:opacity-50"
+                  className="min-h-[44px] inline-flex items-center justify-center bg-accent text-content-on-accent font-bold px-4 py-2 rounded-lg text-xs uppercase tracking-widest disabled:opacity-50"
                 >
                   {registering ? 'Adding…' : 'Add'}
                 </button>

@@ -1,5 +1,6 @@
 'use client'
 
+import Tabs from '../../../components/ui/Tabs'
 import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useSelector, useDispatch } from 'react-redux'
@@ -458,7 +459,7 @@ export default function CommunityPage() {
           onClick={exitFullscreenMap}
           aria-label="Exit fullscreen map"
           title="Exit map"
-          className="absolute top-3 left-3 z-[1001] flex items-center gap-2 bg-surface-sunken/80 backdrop-blur-xl border border-default rounded-xl px-3 py-2.5 text-content hover:text-content shadow-2xl"
+          className="min-h-[44px] inline-flex items-center justify-center absolute top-3 left-3 z-[1001] flex items-center gap-2 bg-surface-sunken/80 backdrop-blur-xl border border-default rounded-xl px-3 py-2.5 text-content hover:text-content shadow-2xl"
         >
           <X size={16} /> <span className="text-xs font-black uppercase tracking-widest">Exit</span>
         </button>
@@ -521,7 +522,7 @@ export default function CommunityPage() {
           })}
           <button
             onClick={toggleVibeMap}
-            className={`md:hidden px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'vibemap' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content bg-surface-raised/5'}`}
+            className={`min-h-[44px] inline-flex items-center justify-center md:hidden px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'vibemap' ? 'bg-accent text-content-on-accent shadow-lg shadow-gold-primary/20' : 'text-content-muted hover:text-content bg-surface-raised/5'}`}
           >
             <MapIcon size={12} /> VibeMap
           </button>
@@ -531,24 +532,22 @@ export default function CommunityPage() {
             this page can do stays a tap away behind its cluster header
             above, instead of permanently on screen. */}
         {activeCluster && (
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-            {activeCluster.tabs.map(t => (
-              <button
-                key={t.id}
-                onClick={() => goToTab(t.id as typeof subTab)}
-                className={`px-3 py-1.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap border ${
-                  subTab === t.id
-                    ? 'bg-accent text-content-on-accent border-accent shadow-lg shadow-gold-primary/20'
-                    : 'text-content-muted border-subtle hover:text-content hover:border-strong'
-                }`}
-              >
-                <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-surface/10' : activeCluster.accent}`}>
-                  <t.icon size={11} />
-                </span>
-                {t.label}
-              </button>
-            ))}
-          </div>
+          // Item 135. These were a row of buttons that looked like tabs:
+          // no tablist role, no arrow-key movement, and px-3 py-1.5 put them
+          // at roughly 30px tall — under the 44px minimum every other control
+          // in this app now clears. The smoke suite never caught it because a
+          // guest never sees this row.
+          <Tabs
+            label={`${activeCluster.label} sections`}
+            items={activeCluster.tabs.map(t => ({
+              id: t.id,
+              label: t.label,
+              icon: <t.icon size={12} aria-hidden="true" />
+            }))}
+            active={subTab}
+            onChange={id => goToTab(id as typeof subTab)}
+            className="pb-1"
+          />
         )}
       </div>
 

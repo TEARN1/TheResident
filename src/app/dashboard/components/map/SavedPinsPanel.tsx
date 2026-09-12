@@ -64,7 +64,7 @@ export default function SavedPinsPanel({ pending, pins, loading, onSave, onDelet
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-accent/90 hover:bg-accent text-content-on-accent text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+              className="min-h-[44px] inline-flex items-center justify-center bg-accent/90 hover:bg-accent text-content-on-accent text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
             >
               Save
             </button>
