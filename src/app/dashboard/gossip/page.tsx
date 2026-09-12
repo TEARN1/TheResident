@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import Link from 'next/link'
-import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, Heart, Flag, MessageCircle } from 'lucide-react'
+import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, Heart, Flag, User as UserIcon } from 'lucide-react'
 import { RootState, AppDispatch, isGuestUser } from '../../../store'
 import { reportContent } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
@@ -161,16 +161,17 @@ function PostActions({
         {expanded ? 'Hide' : `Comments${commentCount ? ` (${commentCount})` : ''}`}
       </button>
 
-      {/* Message the person who posted. There is no public profile page for
-          another resident, so the useful social action is the one that
-          already has a route. */}
+      {/* Open the person, not a conversation with them. This used to link
+          straight into a DM because no profile page existed; deciding whether
+          to message a stranger is exactly the thing you want to do BEFORE
+          messaging them, and the profile page has the Message button on it. */}
       {!mine && !guest && (
         <Link
-          href={`/dashboard/messages/${authorId}`}
-          aria-label="Message this resident"
+          href={`/dashboard/resident/${authorId}`}
+          aria-label="View this resident's profile"
           className={`flex items-center gap-1.5 text-xs font-bold hover:underline ${base}`}
         >
-          <MessageCircle size={13} aria-hidden="true" /> Message
+          <UserIcon size={13} aria-hidden="true" /> Profile
         </Link>
       )}
 
@@ -777,7 +778,12 @@ export default function GossipPage() {
                       {post.body}
                     </p>
                     <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                      <span className="text-xs font-bold text-content/90">{nameOf(post.author_id)}</span>
+                      <Link
+                        href={`/dashboard/resident/${post.author_id}`}
+                        className="text-xs font-bold text-content/90 hover:underline"
+                      >
+                        {nameOf(post.author_id)}
+                      </Link>
                       <span className="text-xs text-content/60">{new Date(post.created_at).toLocaleString()}</span>
                     </div>
                     <div className="absolute bottom-3 right-4">
@@ -849,7 +855,14 @@ export default function GossipPage() {
             return (
               <div key={post.id} className="glass-panel p-5 transition-all hover:border-accent/15">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
+                  {/* The author is a link to a person, not decoration. Before
+                      this the only thing you could do with a name on this feed
+                      was message it, which meant starting a conversation with a
+                      stranger in order to find out anything about them. */}
+                  <Link
+                    href={`/dashboard/resident/${post.author_id}`}
+                    className="flex items-center gap-3 min-h-[44px] rounded-xl hover:opacity-80 transition-opacity"
+                  >
                     <div className="w-9 h-9 rounded-full bg-accent/10 ring-1 ring-gold-primary/20 flex items-center justify-center text-accent text-xs font-black overflow-hidden">
                       {profileMap[post.author_id]?.avatar_url
                         ? <img src={profileMap[post.author_id].avatar_url as string} alt="" className="w-full h-full object-cover" />
@@ -859,7 +872,7 @@ export default function GossipPage() {
                       <p className="text-sm font-bold text-content">{nameOf(post.author_id)}</p>
                       <p className="text-xs text-content-subtle">{new Date(post.created_at).toLocaleString()}</p>
                     </div>
-                  </div>
+                  </Link>
                   {/* Delete moved into the actions row with everything else
                       you can do to a post. Blocking is about a person rather
                       than a post, so it stays up here. */}

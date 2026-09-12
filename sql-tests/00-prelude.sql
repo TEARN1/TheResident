@@ -26,6 +26,16 @@ create table if not exists public.profiles (
   username text,
   avatar_url text,
   is_verified boolean default false,
+  -- The rest of CONTRACT.md §3's readable set. These are here because
+  -- res_public_profile returns them, and a stand-in narrower than the
+  -- contract means the suite cannot test the one function whose whole job is
+  -- honouring that contract. Types match production, checked against
+  -- information_schema: the scores and xp are integer, badges is text[].
+  bio text,
+  vibe_score integer,
+  social_integrity_score integer,
+  badges text[],
+  xp integer,
   -- res_account_ready() gates posting on account age, so the stand-in needs
   -- created_at even though nothing in The Resident reads it directly.
   created_at timestamptz default now()

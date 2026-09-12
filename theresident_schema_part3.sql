@@ -1190,3 +1190,174 @@ begin
     execute 'grant execute on function public.res_resolve_report(text,uuid,text,text) to authenticated, service_role';
   end if;
 end $$;
+
+
+-- ==========================================================================
+-- SECTION 46 — A RESIDENT YOU CAN ACTUALLY LOOK UP
+-- ==========================================================================
+--
+-- The app calls itself a neighbourhood social network and had no way to look
+-- at another resident. Tapping an author's name on the gossip feed opened a
+-- direct message — the only thing the app could do with a person was message
+-- them. You could not check who they were before deciding whether you wanted
+-- to.
+--
+-- THE REASON THERE WAS NO PROFILE PAGE IS THE INTERESTING PART, and it is why
+-- this is an RPC rather than a select.
+--
+-- The person's identity lives in `profiles`, which belongs to The Gruvs. The
+-- Resident may read exactly eleven of its columns (CONTRACT.md §3) and must
+-- never touch `email`, `first_name`, `surname`, `emergency_contacts`,
+-- `lat`/`lon` or `birth_*`. A client-side select cannot be trusted to honour
+-- that: `select *` is one keystroke, and the next person to add a field to
+-- the profile card would not know the rule exists.
+--
+-- The Resident's own extension, `res_profiles`, is worse. Its select policy
+-- deliberately lets a landlord and a tenant who share a room request read
+-- each other's rows — because a landlord considering an application needs to
+-- see it. That row holds `legal_name`, `gender`, `children_count`,
+-- `employment_status`, `verification_doc_url` and every landlord preference.
+-- None of that belongs on a public profile. Reusing the policy would have
+-- shown a landlord their tenant's employment status on a page built for
+-- strangers.
+--
+-- So the column list is written out once, here, server-side, and the page
+-- renders whatever this returns. Adding a field to the profile card now means
+-- editing this function, which is the moment to think about it.
+--
+-- WHAT IT DELIBERATELY DOES NOT DO:
+--
+--   * No location beyond the suburb and city the resident typed themselves.
+--     res_home_areas holds a home pin and it stays inside containment checks,
+--     never rendered — see section 14.
+--   * No reciprocal disclosure. Viewing a profile is not an event; nobody is
+--     told you looked. A neighbourhood app where checking a stranger pings
+--     them is a neighbourhood app people stop using.
+--   * No read-through for a block in either direction. If either party has
+--     blocked the other the function raises, rather than returning a stripped
+--     row — a half-rendered profile tells you the person exists and has
+--     blocked you, which is information the blocker did not choose to share.
+
+create or replace function public.res_public_profile(p_user_id uuid)
+returns table (
+  id                       uuid,
+  username                 text,
+  display_name             text,
+  avatar_url               text,
+  bio                      text,
+  city                     text,
+  suburb                   text,
+  is_verified              boolean,
+  vibe_score               integer,
+  social_integrity_score   integer,
+  badges                   text[],
+  xp                       integer,
+  member_since             timestamptz,
+  role                     text,
+  gossip_post_count        integer,
+  is_self                  boolean
+)
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_me uuid := auth.uid();
+begin
+  if v_me is null then
+    raise exception 'not signed in';
+  end if;
+  if p_user_id is null then
+    raise exception 'no resident given';
+  end if;
+
+  -- Blocks in EITHER direction hide the profile. Symmetry is deliberate: a
+  -- blocker should not have to keep looking at the person they blocked, and
+  -- the blocked person should not be able to keep checking up on them.
+  if exists (
+    select 1 from res_blocks b
+     where (b.blocker_id = v_me and b.blocked_id = p_user_id)
+        or (b.blocker_id = p_user_id and b.blocked_id = v_me)
+  ) then
+    raise exception 'resident_unavailable';
+  end if;
+
+  return query
+  select
+    pr.id,
+    pr.username,
+    pr.display_name,
+    pr.avatar_url,
+    pr.bio,
+    -- The resident's own Resident-side city wins over the Gruvs one when set:
+    -- res_profiles is the row they edit in this app, so it is the more recent
+    -- statement of where they live.
+    coalesce(rp.city, pr.city)                                   as city,
+    rp.suburb,
+    coalesce(pr.is_verified, false)                              as is_verified,
+    pr.vibe_score,
+    pr.social_integrity_score,
+    pr.badges,
+    pr.xp,
+    pr.created_at                                                as member_since,
+    rp.role,
+    (select count(*)::integer from res_gossip_posts g
+      where g.author_id = pr.id and coalesce(g.hidden, false) = false)
+                                                                 as gossip_post_count,
+    (pr.id = v_me)                                               as is_self
+  from profiles pr
+  left join res_profiles rp on rp.id = pr.id
+  where pr.id = p_user_id;
+end;
+$$;
+
+revoke all on function public.res_public_profile(uuid) from public, anon;
+grant execute on function public.res_public_profile(uuid) to authenticated, service_role;
+
+
+-- The posts a resident has written, for their profile page. Same block rule,
+-- same reason it is a function: res_gossip_posts is world-readable by policy,
+-- but "every post by one person, newest first" is the shape a profile needs
+-- and doing it client-side means the block check lives in the client.
+create or replace function public.res_public_profile_posts(
+  p_user_id uuid,
+  p_limit   integer default 20
+)
+returns table (
+  id           uuid,
+  body         text,
+  created_at   timestamptz,
+  media_url    text,
+  media_type   text,
+  background_style text
+)
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_me uuid := auth.uid();
+begin
+  if v_me is null then
+    raise exception 'not signed in';
+  end if;
+  if exists (
+    select 1 from res_blocks b
+     where (b.blocker_id = v_me and b.blocked_id = p_user_id)
+        or (b.blocker_id = p_user_id and b.blocked_id = v_me)
+  ) then
+    raise exception 'resident_unavailable';
+  end if;
+
+  return query
+  select g.id, g.body, g.created_at, g.media_url, g.media_type, g.background_style
+    from res_gossip_posts g
+   where g.author_id = p_user_id
+     and coalesce(g.hidden, false) = false
+   order by g.created_at desc
+   limit greatest(1, least(coalesce(p_limit, 20), 50));
+end;
+$$;
+
+revoke all on function public.res_public_profile_posts(uuid, integer) from public, anon;
+grant execute on function public.res_public_profile_posts(uuid, integer) to authenticated, service_role;

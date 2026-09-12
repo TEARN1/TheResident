@@ -70,7 +70,12 @@ const ROUTES = [
   '/dashboard/gossip',
   '/dashboard/messages',
   '/dashboard/profile',
-  '/dashboard/trust-circle'
+  '/dashboard/trust-circle',
+  // A dynamic route needs a concrete id. This one is deliberately a uuid that
+  // belongs to nobody: the page must render its "this profile isn't
+  // available" state properly rather than an empty shell, and that is exactly
+  // the state a real bad link produces.
+  '/dashboard/resident/00000000-0000-0000-0000-0000000000ff'
 ]
 
 // A page whose visible text is shorter than this rendered a shell and then
