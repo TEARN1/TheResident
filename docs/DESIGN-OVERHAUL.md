@@ -464,7 +464,7 @@ it. These ten items are what make the other 190 permanent.*
 
 ## Progress
 
-**Done and pushed: 120 of 200.** Phases 1 and 2 complete, most of 3, section G's
+**Done and pushed: 127 of 200.** Phases 1 and 2 complete, most of 3, section G's
 component library (121-138, 148-150), and the guardrails from 6 that keep them
 from regressing.
 
@@ -489,6 +489,14 @@ actions. Optimistic likes (157) were already in place.
 Still open in H: page transitions (158) and the core-loop success animation
 (161).
 
+Section J: the contrast, focus ring, skip link, landmarks and alt-text work
+landed earlier; this pass adds the modal focus trap with focus restore (179,
+187) and one polite live region for realtime changes (184). The urgent banner
+was already assertive (190).
+
+Still open in J: a real screen-reader pass on the core loop (188) and 200%
+zoom (189) — both need a human at a device, not a static check.
+
 Still open in G: the domain cards (139-147) — listing, room, message row,
 notification row, service-report clock, provider performance, map marker,
 trust-circle visualisation.
@@ -507,6 +515,7 @@ trust-circle visualisation.
 | Motion tokens defined / actually used | 3 / 0 | 3 / 3 |
 | Transitions slower than 250ms | 12 | 0 |
 | Busy flags that can strand a control | 7 found | 0 |
+| Modal surfaces that trap focus | 0 of 7 | component available, 0 migrated |
 | Text under 12px | 21 per screen | 0 |
 | Layout change 320px → 1024px | none | tablet 2-col, desktop sidebar |
 | Functions that could hang a spinner forever | 17 | 0 |

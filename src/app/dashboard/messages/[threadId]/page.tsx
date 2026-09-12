@@ -1,5 +1,6 @@
 'use client'
 
+import { announce } from '../../../../components/ui/LiveRegion'
 import { withTimeout } from '../../../../utils/resilientCall'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
@@ -56,7 +57,20 @@ export default function ThreadPage() {
       .select('id, sender_id, recipient_id, body, is_request, created_at')
       .or(`and(sender_id.eq.${myId},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${myId})`)
       .order('created_at', { ascending: true })
-    setMessages((data || []) as DbMessage[])
+    const rows = (data || []) as DbMessage[]
+    setMessages(prev => {
+      // Item 184. A message arriving over realtime changes the page under a
+      // screen-reader user with no event they can hear. Only announce
+      // messages from the OTHER person: announcing your own back at you is
+      // noise, and you already know you sent it.
+      const added = rows.length - prev.length
+      if (added > 0 && prev.length > 0) {
+        const fresh = rows.slice(-added).filter(m => m.sender_id !== myId)
+        if (fresh.length === 1) announce('New message')
+        else if (fresh.length > 1) announce(`${fresh.length} new messages`)
+      }
+      return rows
+    })
   }, [myId, otherId])
 
   useEffect(() => {

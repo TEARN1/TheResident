@@ -1,5 +1,6 @@
 'use client'
 
+import LiveRegion from '../../components/ui/LiveRegion'
 import React, { useState, useEffect, useRef } from 'react'
 import AppErrorBoundary from './components/shared/AppErrorBoundary'
 import { installErrorReporting } from '../../utils/errorReporting'
@@ -254,6 +255,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="dashboard-wrapper">
+      {/* Item 184. Mounted once, here, so anything in the dashboard can
+          announce a change without each screen inventing its own region —
+          several regions competing is worse than none, because a screen
+          reader reads them in DOM order rather than in the order things
+          happened. */}
+      <LiveRegion />
       {/* These four could previously all be true at once — a loading spinner,
           a failed-table warning, an offline-queue count, and a one-off toast
           stacked three-deep above every page. Only one is ever the MOST
