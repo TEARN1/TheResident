@@ -9,6 +9,10 @@ import { reportContent } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
+import SkeletonList from '../../../components/ui/Skeleton'
+import Button from '../../../components/ui/Button'
+import { withTimeout } from '../../../utils/resilientCall'
+import { useMinimumDuration } from '../../../utils/useMinimumDuration'
 import EmptyState from '../components/shared/EmptyState'
 
 /**
@@ -232,6 +236,7 @@ export default function GossipPage() {
   const [posts, setPosts] = useState<GossipPost[]>([])
   const [profileMap, setProfileMap] = useState<Record<string, ProfileHit>>({})
   const [loading, setLoading] = useState(true)
+  const showLoading = useMinimumDuration(loading)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -369,12 +374,22 @@ export default function GossipPage() {
     // page, where that was measured.
     try {
       setError(null)
-      const { data, error: postsError } = await supabase
-        .from('res_gossip_posts')
-        .select('id, author_id, community_id, body, hidden, created_at, media_url, media_type, background_style')
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(PAGE_SIZE)
+      // withTimeout, because a finally is not enough on its own: it runs when
+      // the promise SETTLES, and a request that simply never answers never
+      // settles. Measured in a browser — the feed sat on its skeleton
+      // indefinitely with the network hanging, which is the same permanent
+      // spinner noPermanentSpinner.test.ts exists to prevent, just reached by
+      // a route that test cannot see.
+      const { data, error: postsError } = await withTimeout(
+        supabase
+          .from('res_gossip_posts')
+          .select('id, author_id, community_id, body, hidden, created_at, media_url, media_type, background_style')
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .limit(PAGE_SIZE),
+        15000,
+        'gossip feed'
+      )
       if (postsError) {
         setError(humanizeSupabaseError(postsError.message))
         setLoading(false)
@@ -388,7 +403,13 @@ export default function GossipPage() {
       await fetchCommentPreviewsFor(rows.map(p => p.id))
       await fetchReactionsFor(rows.map(p => p.id))
     } catch (err) {
+      // This used to console.error and set NOTHING, so a thrown request —
+      // offline, DNS, a proxy refusing the connection — left error null and
+      // posts empty, and the feed rendered "Nothing posted yet". The app told
+      // a resident their neighbourhood had gone quiet when it had simply
+      // failed to ask. Item 165 is exactly this.
       console.error(err)
+      setError(humanizeSupabaseError(err instanceof Error ? err.message : String(err)))
     } finally {
       setLoading(false)
     }
@@ -746,13 +767,30 @@ export default function GossipPage() {
         {error && <p className="text-xs text-danger mt-2">{error}</p>}
       </div>
 
-      {loading ? (
-        <div className="glass-panel p-12 text-center text-content-muted flex items-center justify-center gap-2">
-          <Loader size={16} className="animate-spin" /> Loading gossip…
+      {showLoading ? (
+        // Items 169 and 170: the shape of what is coming, held long enough to
+        // be read. A centred spinner said "something is happening" and then
+        // reflowed the whole page when the list replaced it.
+        <SkeletonList rows={3} label="Loading gossip" />
+      ) : error && posts.length === 0 ? (
+        // Item 165: this used to fall through to "Nothing posted yet", which
+        // told a resident the neighbourhood had nothing to say when in fact
+        // the request had failed. Three states, three messages.
+        <div className="glass-panel">
+          <EmptyState
+            variant="error"
+            title="Couldn't load the gossip"
+            subtitle="This is usually the connection rather than anything wrong here."
+            action={<Button variant="secondary" onClick={loadPosts}>Try again</Button>}
+          />
         </div>
       ) : posts.length === 0 ? (
         <div className="glass-panel">
-          <EmptyState icon={MessageSquare} title="Nothing posted yet" subtitle="Be the first to say something." />
+          <EmptyState
+            icon={MessageSquare}
+            title="Nothing posted yet"
+            subtitle="Be the first to say something. Your neighbours will see it."
+          />
         </div>
       ) : (
         <div className="space-y-4">

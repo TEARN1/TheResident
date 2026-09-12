@@ -964,3 +964,38 @@ button, [role='button'], a, input, select, textarea, label {
   text-decoration: none;
   box-shadow: var(--elevation-3);
 }
+
+/* Item 169: the skeleton surface. A shimmer sweeping across a muted block,
+   which reads as "content is coming" rather than the bare spinner this app
+   used everywhere.
+
+   The animation is OPT-IN to motion, not opt-out: the base rule is a static
+   block, and the sweep is added only inside the no-preference query. Written
+   this way round because a reduced-motion user getting the static version is
+   then the default path rather than an override that a later edit could
+   forget to carry. */
+.skeleton {
+  background: rgb(var(--border-rgb) / 0.12);
+  position: relative;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--surface-rgb) / 0.45),
+      transparent
+    );
+    animation: skeleton-sweep 1.4s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-sweep {
+    100% { transform: translateX(100%); }
+  }
+}

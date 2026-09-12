@@ -464,7 +464,7 @@ it. These ten items are what make the other 190 permanent.*
 
 ## Progress
 
-**Done and pushed: 97 of 200.** Phases 1 and 2 complete, most of 3, section G's
+**Done and pushed: 110 of 200.** Phases 1 and 2 complete, most of 3, section G's
 component library (121-138, 148-150), and the guardrails from 6 that keep them
 from regressing.
 
@@ -473,6 +473,12 @@ loading state that disables, Avatar, Badge, Field, Tabs, SegmentedControl,
 SearchInput, PageHeader, SectionHeader, StatTile. The bottom nav went from six
 items to five (121-124), which is what finally let the labels be readable at
 320px instead of 8.8px or hidden.
+
+Section I (empty, loading and error states) is done: EmptyState now tells
+"nothing yet" from "nothing matches" from "failed to load" from "offline",
+skeletons replace bare spinners on the feed and the message list, loaders are
+held to a readable minimum, and the guest / unverified gates are a designed
+state rather than an absence.
 
 Still open in G: the domain cards (139-147) — listing, room, message row,
 notification row, service-report clock, provider performance, map marker,

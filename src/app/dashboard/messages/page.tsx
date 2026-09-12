@@ -1,10 +1,12 @@
 'use client'
 
+import SkeletonList from '../../../components/ui/Skeleton'
+import { useMinimumDuration } from '../../../utils/useMinimumDuration'
 import React, { useCallback, useEffect, useState } from 'react'
 import { withTimeout } from '@/utils/resilientCall'
 import { useSelector } from 'react-redux'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { MessageCircle, Loader, Clock } from 'lucide-react'
+import { MessageCircle, Clock } from 'lucide-react'
 import { RootState, isGuestUser } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import EmptyState from '../components/shared/EmptyState'
@@ -52,6 +54,7 @@ export default function MessagesPage() {
   const [threads, setThreads] = useState<Thread[]>([])
   const [profileMap, setProfileMap] = useState<Record<string, ProfileHit>>({})
   const [loading, setLoading] = useState(true)
+  const showLoading = useMinimumDuration(loading)
   const [error, setError] = useState<string | null>(null)
 
   const loadThreads = useCallback(async () => {
@@ -162,10 +165,8 @@ export default function MessagesPage() {
         <h2 className="text-xl font-bold text-content">Messages</h2>
       </div>
 
-      {loading ? (
-        <div className="py-12 text-center text-content-muted flex items-center justify-center gap-2">
-          <Loader size={16} className="animate-spin" /> Loading conversations…
-        </div>
+      {showLoading ? (
+        <SkeletonList rows={4} label="Loading conversations" />
       ) : error && threads.length === 0 ? (
         <div className="py-10 text-center space-y-3">
           <p className="text-sm font-bold text-content">Couldn&apos;t load your conversations</p>

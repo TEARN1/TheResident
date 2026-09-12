@@ -17,10 +17,20 @@ export const useGeolocation = (setAlertNotification: (msg: string | null) => voi
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords
+        // The browser's own geolocation call is bounded (timeout: 8000 below).
+        // THIS fetch was not, and it is a third-party service we do not run.
+        // If Nominatim accepts the connection and then never answers — which
+        // is what a rate-limited or overloaded public endpoint does — the
+        // promise never settles, the finally never runs, and the button spins
+        // for the rest of the session. The user has reported this feature as
+        // unreliable; an unbounded call to someone else's free API is the
+        // most likely reason.
+        const abort = new AbortController()
+        const timer = setTimeout(() => abort.abort(), 8000)
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-            { headers: { 'Accept-Language': 'en' } }
+            { headers: { 'Accept-Language': 'en' }, signal: abort.signal }
           )
           if (!res.ok) throw new Error('OSM Reverse Geocode failed')
           const data = await res.json()
@@ -52,13 +62,23 @@ export const useGeolocation = (setAlertNotification: (msg: string | null) => voi
           }
 
           setTimeout(() => setAlertNotification(null), 4000)
-        } catch {
+        } catch (err) {
           if (setSuburb) {
             setSuburb('')
           }
-          setAlertNotification('Could not resolve your location to an address — try entering your suburb.')
+          // An abort means the address lookup timed out, not that the
+          // location failed — we DID get their coordinates. Saying "could not
+          // determine your location" there would be wrong, and would send
+          // someone to check permissions they have already granted.
+          const timedOut = err instanceof DOMException && err.name === 'AbortError'
+          setAlertNotification(
+            timedOut
+              ? 'Got your location, but the address lookup is not responding — try entering your suburb.'
+              : 'Could not resolve your location to an address — try entering your suburb.'
+          )
           setTimeout(() => setAlertNotification(null), 4000)
         } finally {
+          clearTimeout(timer)
           setLocationLoading(false)
         }
       },
