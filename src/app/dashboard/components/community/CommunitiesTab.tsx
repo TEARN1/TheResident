@@ -56,7 +56,7 @@ export default function CommunitiesTab({
               return (
                 <div key={community.id} className={`glass-panel p-5 flex items-center justify-between group hover:border-accent/30 transition-all ${isMember ? 'border-accent/20 bg-accent/5' : 'hover:bg-surface-raised/[0.02]'}`}>
                    <div className="flex items-center gap-4">
-                      <div className={`p-4 rounded-2xl transition-all duration-300 ${isMember ? 'bg-accent text-content-on-accent scale-105 shadow-lg shadow-gold-primary/20' : 'bg-surface-raised/5 text-content-muted group-hover:text-content group-hover:bg-surface-raised/10'}`}>
+                      <div className={`p-4 rounded-2xl transition-all motion-slow ${isMember ? 'bg-accent text-content-on-accent scale-105 shadow-lg shadow-gold-primary/20' : 'bg-surface-raised/5 text-content-muted group-hover:text-content group-hover:bg-surface-raised/10'}`}>
                          <MapPin size={24} />
                       </div>
                       <div className="space-y-1">

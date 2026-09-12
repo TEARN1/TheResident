@@ -39,13 +39,26 @@ export default function AreaLicenceNotice({ unitId, licence }: Props) {
     if (!offer) return
     setBusy(true)
     setError(null)
-    const { url, error: checkoutError } = await startAreaCheckout(offer.key, unitId)
-    if (url) {
-      window.location.href = url
-      return
+    // `navigating` rather than an early return, so the reset can live in a
+    // finally on EVERY path. On the success path we are leaving the page, and
+    // re-enabling the button for the instant before it unloads would invite a
+    // second checkout — so the flag stays set there, deliberately, and says so.
+    let navigating = false
+    try {
+      const { url, error: checkoutError } = await startAreaCheckout(offer.key, unitId)
+      if (url) {
+        navigating = true
+        window.location.href = url
+        return
+      }
+      setError(checkoutError || 'Could not start checkout.')
+    } catch (err) {
+      // Without this, a thrown checkout left the button disabled forever and
+      // the resident had no way to try again short of reloading.
+      setError(err instanceof Error ? err.message : 'Could not start checkout.')
+    } finally {
+      if (!navigating) setBusy(false)
     }
-    setError(checkoutError || 'Could not start checkout.')
-    setBusy(false)
   }
 
   const Icon = lapsed ? AlertTriangle : licence.state === 'probation' ? Clock : ShieldCheck

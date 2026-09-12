@@ -750,11 +750,11 @@ export default function HousingPage() {
                 key={item.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="glass-panel overflow-hidden flex flex-col hover:border-accent/40 transition-all duration-500 group bg-surface-sunken/40"
+                className="glass-panel overflow-hidden flex flex-col hover:border-accent/40 transition-all motion-slow group bg-surface-sunken/40"
               >
                 <div className="relative h-56 bg-surface overflow-hidden">
                   {item.images[0] ? (
-                    <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                    <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform motion-slow opacity-80 group-hover:opacity-100" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface-sunken to-surface">
                       <Home size={40} className="text-accent/20" />

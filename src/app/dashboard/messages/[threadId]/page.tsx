@@ -1,5 +1,6 @@
 'use client'
 
+import { withTimeout } from '../../../../utils/resilientCall'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
@@ -89,21 +90,34 @@ export default function ThreadPage() {
     setSending(true)
     setError(null)
     const alreadyTalked = messages.length > 0
-    const { error: sendError } = await supabase
-      .from('messages')
-      .insert({
-        sender_id: myId,
-        recipient_id: otherId,
-        body: draft.trim(),
-        is_request: !alreadyTalked
-      })
-    setSending(false)
-    if (sendError) {
-      setError(sendError.message)
-      return
+    // try/finally + a timeout, for the same reason the feed needed both: a
+    // rejected insert skipped setSending(false) and left the composer
+    // disabled for the rest of the session, and a request that hangs rather
+    // than rejects never reaches the finally at all.
+    try {
+      const { error: sendError } = await withTimeout(
+        supabase
+          .from('messages')
+          .insert({
+            sender_id: myId,
+            recipient_id: otherId,
+            body: draft.trim(),
+            is_request: !alreadyTalked
+          }),
+        15000,
+        'message'
+      )
+      if (sendError) {
+        setError(sendError.message)
+        return
+      }
+      setDraft('')
+      loadThread()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send that message.')
+    } finally {
+      setSending(false)
     }
-    setDraft('')
-    loadThread()
   }
 
   return (

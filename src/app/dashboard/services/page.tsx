@@ -418,10 +418,10 @@ export default function ServicesPage() {
            ) : (
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
              {services.map(srv => (
-               <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-surface-sunken/40 hover:border-accent/40 transition-all duration-500 shadow-2xl">
+               <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-surface-sunken/40 hover:border-accent/40 transition-all motion-slow shadow-2xl">
                   <div className="h-44 bg-surface relative overflow-hidden">
                      {srv.image ? (
-                       <img src={srv.image} alt={srv.businessName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" />
+                       <img src={srv.image} alt={srv.businessName} className="w-full h-full object-cover group-hover:scale-110 transition-transform motion-slow opacity-60 group-hover:opacity-100" />
                      ) : (
                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface-sunken to-surface">
                          <ImageIcon size={32} className="text-accent/20" />

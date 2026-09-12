@@ -142,7 +142,7 @@ export default function NoticeBoardTab({
         {showForm && (
            <form
               onSubmit={onPostSubmit}
-              className="bg-surface-sunken/40 border border-accent/20 rounded-2xl p-6 mb-8 space-y-4 shadow-[0_0_20px_rgba(212,175,55,0.05)] animate-in fade-in slide-in-from-top-4 duration-300"
+              className="bg-surface-sunken/40 border border-accent/20 rounded-2xl p-6 mb-8 space-y-4 shadow-[0_0_20px_rgba(212,175,55,0.05)] animate-in fade-in slide-in-from-top-4 motion-slow"
            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {type !== 'event' && (

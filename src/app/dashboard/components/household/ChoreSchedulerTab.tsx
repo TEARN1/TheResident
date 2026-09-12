@@ -29,7 +29,7 @@ export default function ChoreSchedulerTab({
   const otherChores = communityChores.filter(c => c.assignedTo !== currentUser?.id)
 
   const renderChore = (chore: Chore) => (
-    <div key={chore.id} className={`glass-panel p-6 border-l-4 transition-all duration-300 relative overflow-hidden group ${chore.status === 'completed' ? 'border-l-green-500/30 opacity-60 grayscale-[0.5]' : 'border-l-gold-primary hover:border-l-white hover:bg-surface-raised/[0.02] shadow-lg shadow-black/10'}`}>
+    <div key={chore.id} className={`glass-panel p-6 border-l-4 transition-all motion-slow relative overflow-hidden group ${chore.status === 'completed' ? 'border-l-green-500/30 opacity-60 grayscale-[0.5]' : 'border-l-gold-primary hover:border-l-white hover:bg-surface-raised/[0.02] shadow-lg shadow-black/10'}`}>
        {chore.status === 'pending' && (
          <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <Zap size={16} className="text-accent animate-pulse" />
@@ -81,10 +81,10 @@ export default function ChoreSchedulerTab({
     <div className="space-y-10">
       {/* XP Master Banner */}
       <div className="glass-panel p-8 bg-gradient-to-br from-accent/10 via-surface-sunken/40 to-surface-sunken/20 border-accent/30 flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl relative overflow-hidden group/banner">
-         <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover/banner:bg-accent/10 transition-all duration-1000" />
+         <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover/banner:bg-accent/10 transition-all motion-slow" />
 
          <div className="flex items-center gap-6 relative z-10">
-            <div className="p-5 bg-accent rounded-3xl shadow-[0_0_30px_rgba(212,175,55,0.3)] rotate-3 group-hover/banner:rotate-0 transition-transform duration-500">
+            <div className="p-5 bg-accent rounded-3xl shadow-[0_0_30px_rgba(212,175,55,0.3)] rotate-3 group-hover/banner:rotate-0 transition-transform motion-slow">
                <Award size={40} className="text-content-on-accent" />
             </div>
             <div className="space-y-1">

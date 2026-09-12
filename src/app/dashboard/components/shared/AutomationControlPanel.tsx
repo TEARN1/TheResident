@@ -71,7 +71,7 @@ export default function AutomationControlPanel() {
         className="fixed bottom-20 right-4 z-[400] bg-surface-sunken/90 hover:bg-surface backdrop-blur-xl border border-accent/30 text-accent font-black px-3.5 py-2 rounded-2xl shadow-2xl flex items-center gap-2 text-xs uppercase tracking-widest transition-all active:scale-95 group"
         title="View 15-Layer Automation Engine Telemetry"
       >
-        <Cpu size={15} className="text-accent group-hover:rotate-90 transition-transform duration-500" />
+        <Cpu size={15} className="text-accent group-hover:rotate-90 transition-transform motion-slow" />
         <span className="hidden sm:inline">Automation Hub</span>
         <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
       </button>

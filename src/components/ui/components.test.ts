@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert'
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { buttonClass } from './Button'
 import { initialsFrom } from './Avatar'
@@ -104,4 +104,48 @@ test('the elevation tokens are actually used by something', () => {
   assert.ok(defined.length >= 4, 'the elevation scale disappeared')
   assert.ok(css.includes('var(--elevation-1)'),
     'the base card elevation is defined but nothing uses it — the exact rot this file exists to catch')
+})
+
+// Section H, items 151/152/162.
+test('no component writes a raw transition duration', () => {
+  // The --duration-* tokens went the same way as the elevation scale:
+  // defined, and bypassed by twelve hand-written duration-300/500/700/1000
+  // classes — several of them three to four times slower than the 150-250ms
+  // band a phone reads as responsive. A 700ms hover does not feel luxurious
+  // on a mid-range Android; it feels like lag.
+  const offenders: string[] = []
+  const walk = (dir: string): string[] =>
+    readdirSync(dir).flatMap(e => {
+      const full = join(dir, e)
+      return statSync(full).isDirectory() ? walk(full) : (full.endsWith('.tsx') ? [full] : [])
+    })
+  const SRC_ROOT = join(UI_DIR, '..', '..')
+  for (const file of walk(SRC_ROOT)) {
+    const src = readFileSync(file, 'utf8')
+    for (const m of src.matchAll(/\bduration-(\d+)\b/g)) {
+      offenders.push(`${file.replace(SRC_ROOT, 'src')}  duration-${m[1]}`)
+    }
+  }
+  assert.deepStrictEqual(offenders, [],
+    '\nUse motion-fast / motion-base / motion-slow, which read the tokens:\n' +
+    offenders.join('\n') + '\n')
+})
+
+test('reduced motion is handled globally, not per component', () => {
+  const css = readFileSync(join(UI_DIR, '..', '..', 'app', 'globals.css'), 'utf8')
+  assert.ok(css.includes('prefers-reduced-motion: reduce'),
+    'there is no global reduced-motion backstop')
+  // 0.01ms rather than 0: a zero duration can skip transitionend entirely,
+  // and anything waiting on that event never resumes.
+  const block = css.slice(css.indexOf('prefers-reduced-motion: reduce'))
+  assert.ok(block.includes('0.01ms'),
+    'the reduced-motion override uses a duration that can skip transitionend')
+})
+
+test('the motion utilities actually read the tokens', () => {
+  const css = readFileSync(join(UI_DIR, '..', '..', 'app', 'globals.css'), 'utf8')
+  for (const name of ['fast', 'base', 'slow']) {
+    assert.ok(css.includes(`.motion-${name} { transition-duration: var(--duration-${name}); }`),
+      `.motion-${name} is not token-backed`)
+  }
 })

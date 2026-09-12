@@ -355,14 +355,28 @@ export default function GossipPage() {
     // Optimistic — a like toggle should feel instant; rolled back on failure.
     setMyReactions(prev => ({ ...prev, [postId]: !alreadyReacted }))
     setReactionCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + (alreadyReacted ? -1 : 1) }))
-    const { error: reactionError } = alreadyReacted
-      ? await supabase.from('res_gossip_post_reactions').delete().eq('post_id', postId).eq('user_id', myId)
-      : await supabase.from('res_gossip_post_reactions').insert({ post_id: postId, user_id: myId })
-    if (reactionError) {
+    // try/finally. The optimistic update above was already right; the flag
+    // that guards against a double-tap was not. A thrown request skipped the
+    // reset and left THIS post's like button disabled for the rest of the
+    // session — quieter than a stuck spinner, and harder to notice, because
+    // the button looks normal and simply stops responding.
+    try {
+      const { error: reactionError } = await withTimeout(
+        alreadyReacted
+          ? supabase.from('res_gossip_post_reactions').delete().eq('post_id', postId).eq('user_id', myId)
+          : supabase.from('res_gossip_post_reactions').insert({ post_id: postId, user_id: myId }),
+        10000,
+        'reaction'
+      )
+      if (reactionError) throw new Error(reactionError.message)
+    } catch {
+      // Roll the optimistic update back on every failure path, not just on a
+      // returned error.
       setMyReactions(prev => ({ ...prev, [postId]: alreadyReacted }))
       setReactionCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + (alreadyReacted ? 1 : -1) }))
+    } finally {
+      setReacting(prev => ({ ...prev, [postId]: false }))
     }
-    setReacting(prev => ({ ...prev, [postId]: false }))
   }
 
   const loadPosts = useCallback(async () => {
@@ -592,15 +606,27 @@ export default function GossipPage() {
     setExpanded(prev => ({ ...prev, [postId]: willExpand }))
     if (willExpand && !comments[postId] && supabase) {
       setCommentLoading(prev => ({ ...prev, [postId]: true }))
-      const { data } = await supabase
-        .from('res_gossip_comments')
-        .select('id, post_id, author_id, body, created_at')
-        .eq('post_id', postId)
-        .order('created_at', { ascending: true })
-      const rows = (data || []) as GossipComment[]
-      setComments(prev => ({ ...prev, [postId]: rows }))
-      await fetchProfilesFor([...new Set(rows.map(c => c.author_id))].filter(id => !profileMap[id]))
-      setCommentLoading(prev => ({ ...prev, [postId]: false }))
+      // A failure here left "Loading comments…" on that post permanently —
+      // expanding it again did nothing, because the comments-fetched check
+      // saw a loading flag that never cleared.
+      try {
+        const { data } = await withTimeout(
+          supabase
+            .from('res_gossip_comments')
+            .select('id, post_id, author_id, body, created_at')
+            .eq('post_id', postId)
+            .order('created_at', { ascending: true }),
+          10000,
+          'comments'
+        )
+        const rows = (data || []) as GossipComment[]
+        setComments(prev => ({ ...prev, [postId]: rows }))
+        await fetchProfilesFor([...new Set(rows.map(c => c.author_id))].filter(id => !profileMap[id]))
+      } catch (err) {
+        setError(humanizeSupabaseError(err instanceof Error ? err.message : String(err)))
+      } finally {
+        setCommentLoading(prev => ({ ...prev, [postId]: false }))
+      }
     }
   }
 
@@ -618,10 +644,10 @@ export default function GossipPage() {
     const body = (commentDraft[postId] || '').trim()
     if (!supabase || !body) return
     setCommentLoading(prev => ({ ...prev, [postId]: true }))
+    try {
     const { error: rpcError } = await supabase.rpc('res_comment_gossip', { p_post: postId, p_body: body })
     if (rpcError) {
       setError(humanizeSupabaseError(rpcError.message))
-      setCommentLoading(prev => ({ ...prev, [postId]: false }))
       return
     }
     setCommentDraft(prev => ({ ...prev, [postId]: '' }))
@@ -635,7 +661,14 @@ export default function GossipPage() {
     // Keeps the collapsed-card preview in sync for if/when this post is
     // collapsed again — otherwise it'd still show the stale pre-comment state.
     setCommentPreviews(prev => ({ ...prev, [postId]: rows.slice(-2) }))
-    setCommentLoading(prev => ({ ...prev, [postId]: false }))
+    } catch (err) {
+      setError(humanizeSupabaseError(err instanceof Error ? err.message : String(err)))
+    } finally {
+      // Submitting a comment that failed used to leave this post stuck in its
+      // loading state, so the comment box stayed disabled and the resident
+      // could not retry the thing that had just failed.
+      setCommentLoading(prev => ({ ...prev, [postId]: false }))
+    }
   }
 
   return (

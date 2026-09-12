@@ -282,7 +282,7 @@ export default function TrustCirclePage() {
               {(['new', 'building', 'established'] as const).map((stage, i) => (
                 <div
                   key={stage}
-                  className={`h-1.5 flex-1 rounded-full border border-subtle transition-all duration-700 ${i <= STAGE_INDEX[status] ? 'bg-accent' : 'bg-surface-raised'}`}
+                  className={`h-1.5 flex-1 rounded-full border border-subtle transition-all motion-slow ${i <= STAGE_INDEX[status] ? 'bg-accent' : 'bg-surface-raised'}`}
                 />
               ))}
             </div>

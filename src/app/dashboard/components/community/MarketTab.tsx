@@ -114,30 +114,38 @@ export default function MarketTab({
     // photo field — size/type validated on select, uploaded on submit, the
     // public URL stored on the row. Single image, matching the simplicity
     // of the rest of this form rather than a full gallery.
-    let imageUrl: string | null = null
-    if (postImage && supabase && currentUserId) {
-      const path = `${currentUserId}/${Date.now()}-${postImage.name}`
-      const { error: uploadError } = await supabase.storage.from('gossip-media').upload(path, postImage)
-      if (uploadError) {
-        setImageError(uploadError.message)
-        setPosting(false)
-        return
+    // try/finally: a rejected upload — the likeliest failure here, since it
+    // is a file going over a phone connection — skipped setPosting(false) and
+    // left the Post button disabled for the rest of the session, with the
+    // resident's typed listing still on screen and no way to send it.
+    try {
+      let imageUrl: string | null = null
+      if (postImage && supabase && currentUserId) {
+        const path = `${currentUserId}/${Date.now()}-${postImage.name}`
+        const { error: uploadError } = await supabase.storage.from('gossip-media').upload(path, postImage)
+        if (uploadError) {
+          setImageError(uploadError.message)
+          return
+        }
+        const { data: publicUrlData } = supabase.storage.from('gossip-media').getPublicUrl(path)
+        imageUrl = publicUrlData.publicUrl
       }
-      const { data: publicUrlData } = supabase.storage.from('gossip-media').getPublicUrl(path)
-      imageUrl = publicUrlData.publicUrl
-    }
 
-    onPostItem?.({
-      title: postTitle,
-      description: postDesc,
-      price: postPrice.trim() === '' ? null : Number(postPrice),
-      category: postCategory,
-      imageUrl,
-      lat: postLat,
-      lon: postLon
-    })
-    setPosting(false)
-    resetForm()
+      onPostItem?.({
+        title: postTitle,
+        description: postDesc,
+        price: postPrice.trim() === '' ? null : Number(postPrice),
+        category: postCategory,
+        imageUrl,
+        lat: postLat,
+        lon: postLon
+      })
+      resetForm()
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'Could not post that.')
+    } finally {
+      setPosting(false)
+    }
   }
 
   return (
@@ -301,7 +309,7 @@ export default function MarketTab({
                           <span className="text-accent">{Math.round(pct)}%</span>
                        </div>
                        <div className="h-1.5 bg-surface-raised rounded-full overflow-hidden border border-subtle">
-                          <div className="h-full bg-accent transition-all duration-1000 shadow-[0_0_10px_var(--accent)]" style={{ width: `${pct}%` }}></div>
+                          <div className="h-full bg-accent transition-all motion-slow shadow-[0_0_10px_var(--accent)]" style={{ width: `${pct}%` }}></div>
                        </div>
                     </div>
                     <button

@@ -36,6 +36,21 @@ const files = walk(SRC)
 /** How far past `setLoading(true)` to look for the thing that clears it. */
 const LOOKAHEAD = 4200
 
+/**
+ * Every name this codebase uses for "a request is in flight".
+ *
+ * The original pattern covered Loading/Uploading/Saving/Submitting, and four
+ * real stranding bugs hid behind the words it did not know: setSending on the
+ * message composer, setPosting on the marketplace form, setBusy on the licence
+ * checkout, and setReacting on the gossip like button. The last one is the
+ * nastiest of the four — it disables one post's like button silently, with no
+ * spinner to notice, so the button simply stops working and looks fine.
+ *
+ * The lesson is that a guardrail keyed on vocabulary only protects the
+ * vocabulary it was taught. Add the word when you introduce one.
+ */
+const BUSY_FLAG = /set(\w*(?:Loading|Uploading|Saving|Submitting|Sending|Posting|Reacting|Deleting|Busy|Pending|Working|Processing))\(/g
+
 test('the scanner is looking at real files', () => {
   assert.ok(files.length > 30, `only ${files.length} files scanned — the walker has broken, not passed`)
 })
@@ -45,7 +60,11 @@ test('every loading flag set before an await resolves in a finally', () => {
   for (const file of files) {
     const src = readFileSync(file, 'utf8')
     const rel = file.slice(ROOT.length + 1).replace(/\\/g, '/')
-    for (const m of src.matchAll(/set(\w*[Ll]oading|\w*[Uu]ploading|\w*[Ss]aving|\w*[Ss]ubmitting)\(true\)/g)) {
+    for (const m of src.matchAll(new RegExp(BUSY_FLAG.source, 'g'))) {
+      // Both shapes count: setBusy(true) and the functional
+      // setReacting(prev => ({ ...prev, [id]: true })) the gossip feed uses.
+      const opener = src.slice(m.index!, m.index! + 120)
+      if (!/\(true\)/.test(opener) && !/:\s*true\b/.test(opener)) continue
       // Look ahead across a generous window — long enough to contain the
       // function body, short enough not to reach the next one.
       //
@@ -58,7 +77,7 @@ test('every loading flag set before an await resolves in a finally', () => {
       if (!/await/.test(tail)) continue          // nothing async, nothing to hang
       if (/finally\s*\{/.test(tail)) continue    // resolves on every path
       const line = src.slice(0, m.index).split('\n').length
-      offences.push(`  ${rel}:${line}  set${m[1]}(true)`)
+      offences.push(`  ${rel}:${line}  set${m[1]}(…)`)
     }
   }
 
@@ -137,9 +156,6 @@ const KNOWN_UNTIMED_LOADERS = new Set([
   'src/app/dashboard/components/social/FollowButton.tsx',
   'src/app/dashboard/components/trust-safety/BlockUserButton.tsx',
   'src/app/dashboard/components/trust-safety/SafetyTab.tsx',
-  // The gossip feed keeps ONE untimed loader (the composer's own submit); its
-  // feed fetch is wrapped, which is what the browser measurement was about.
-  'src/app/dashboard/gossip/page.tsx',
   'src/app/dashboard/profile/page.tsx',
   'src/app/dashboard/trust-circle/page.tsx',
   'src/app/page.tsx'

@@ -464,7 +464,7 @@ it. These ten items are what make the other 190 permanent.*
 
 ## Progress
 
-**Done and pushed: 110 of 200.** Phases 1 and 2 complete, most of 3, section G's
+**Done and pushed: 120 of 200.** Phases 1 and 2 complete, most of 3, section G's
 component library (121-138, 148-150), and the guardrails from 6 that keep them
 from regressing.
 
@@ -479,6 +479,15 @@ Section I (empty, loading and error states) is done: EmptyState now tells
 skeletons replace bare spinners on the feed and the message list, loaders are
 held to a readable minimum, and the guest / unverified gates are a designed
 state rather than an absence.
+
+Section H (motion) is largely done: the --duration-* tokens are used rather
+than bypassed, every transition sits in the 150-250ms band, reduced motion has
+one global backstop instead of per-component guards, the nav indicator
+animates on transform and opacity only, and haptics exist for committed
+actions. Optimistic likes (157) were already in place.
+
+Still open in H: page transitions (158) and the core-loop success animation
+(161).
 
 Still open in G: the domain cards (139-147) — listing, room, message row,
 notification row, service-report clock, provider performance, map marker,
@@ -495,6 +504,9 @@ trust-circle visualisation.
 | Bottom nav label size at 320px | 8.8px, then hidden entirely | 12px, all five visible |
 | Signals marking the active nav tab | 1 (a 2px border) | 3 (border, pill, weight) |
 | Elevation tokens defined / actually used | 4 / 0 | 4 / 3 |
+| Motion tokens defined / actually used | 3 / 0 | 3 / 3 |
+| Transitions slower than 250ms | 12 | 0 |
+| Busy flags that can strand a control | 7 found | 0 |
 | Text under 12px | 21 per screen | 0 |
 | Layout change 320px → 1024px | none | tablet 2-col, desktop sidebar |
 | Functions that could hang a spinner forever | 17 | 0 |
