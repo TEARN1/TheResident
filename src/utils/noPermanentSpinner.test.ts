@@ -133,6 +133,15 @@ test('the scanner would catch a planted regression', () => {
  * house helper; an AbortController with a timer is what you need when the
  * call is a raw fetch to someone else's API, since aborting actually stops
  * the request rather than just stopping the waiting.
+ *
+ * SINCE THE TRANSPORT FIX, every Supabase request also carries a 20s deadline
+ * of its own (src/utils/supabaseFetch.ts), so a hung query can no longer
+ * strand a loader even at a call site on the allowlist below. That is a floor,
+ * not a reason to stop: it does not cover a raw fetch to a third party (the
+ * Nominatim geocode was exactly that), it does not let a caller choose a
+ * shorter deadline for something a person is watching, and it does not give
+ * the caller its own message. The allowlist stays honest about which call
+ * sites still lack an explicit one.
  */
 function isBounded(tail: string): boolean {
   if (/withTimeout/.test(tail)) return true
