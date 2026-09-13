@@ -246,6 +246,86 @@ for (const route of ROUTES) {
     }
   }
 
+  // COLLAPSED CONTENT. Item 197 asks for visual regression snapshots; pixel
+  // baselines captured on one machine and compared on another mostly detect
+  // font rendering differences, so this checks for content that has been
+  // squashed out of existence instead.
+  //
+  // WHAT THIS DOES NOT CATCH, stated because I tried it and watched it fail.
+  // The nav regression that prompted this — a rule aimed at
+  // `.bottom-nav-item span` collapsing every icon to 1px and rendering the
+  // whole navigation bar empty — is INVISIBLE to this check, because the rule
+  // that caused it (position:absolute, width:1px, clip-path) is character for
+  // character the standard visually-hidden pattern. A legitimate
+  // screen-reader-only label and an accidentally-hidden icon are
+  // geometrically identical. Excluding one necessarily excludes the other.
+  //
+  // So this catches the simpler shape — content squashed by a flex or grid
+  // rule without the visually-hidden idiom — and the nav specifically is
+  // covered by the named assertion further down, which checks the thing
+  // itself rather than a general rule.
+  if (status && status < 400) {
+    const collapsed = await page.evaluate(() => {
+      const out = []
+      for (const el of document.querySelectorAll('body *')) {
+        const cs = getComputedStyle(el)
+        if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') continue
+        // Deliberately hidden from sight but not from screen readers — the
+        // standard visually-hidden pattern, which is SUPPOSED to be 1px.
+        if (cs.clipPath && cs.clipPath !== 'none') continue
+        if (cs.position === 'absolute' && (cs.width === '1px' || cs.height === '1px')) continue
+        const text = (el.textContent || '').trim()
+        const hasOwnContent = text.length > 0 || el.tagName === 'IMG' || el.tagName === 'SVG'
+        if (!hasOwnContent) continue
+        const b = el.getBoundingClientRect()
+        if (b.width === 0 && b.height === 0) continue            // not laid out at all
+        if (b.width >= 4 && b.height >= 4) continue
+        if (b.right < 0 || b.bottom < 0 || b.left > window.innerWidth) continue
+        out.push(`${Math.round(b.width)}x${Math.round(b.height)} <${el.tagName.toLowerCase()}>` +
+          (text ? ` "${text.slice(0, 20)}"` : ''))
+      }
+      return out
+    }).catch(() => [])
+    if (collapsed.length) {
+      problems.push(`${collapsed.length} element(s) collapsed to near-zero size: ` +
+        collapsed.slice(0, 3).join(', ') +
+        (collapsed.length > 3 ? ` (+${collapsed.length - 3} more)` : ''))
+    }
+  }
+
+  // THE NAVIGATION BAR IS ACTUALLY THERE.
+  //
+  // Named rather than general, because the general collapse check above
+  // provably cannot see this one. Every icon and label in the bar once
+  // rendered at 1px and the bar looked empty; everything automated passed.
+  //
+  // Asserting the real invariant: five destinations, each with an icon a
+  // finger could find and a label a person could read.
+  if (status && status < 400 && route.startsWith('/dashboard')) {
+    const nav = await page.evaluate(() => {
+      const items = [...document.querySelectorAll('.bottom-nav-item')]
+      if (items.length === 0) return null
+      return items.map(el => {
+        const icon = el.querySelector('svg')?.getBoundingClientRect()
+        const label = el.querySelector('.bottom-nav-label')
+        const lb = label?.getBoundingClientRect()
+        return {
+          text: (label?.textContent || '').trim(),
+          icon: icon ? Math.round(Math.min(icon.width, icon.height)) : 0,
+          label: lb ? Math.round(lb.height) : 0
+        }
+      })
+    }).catch(() => null)
+
+    if (nav && nav.length) {
+      const broken = nav.filter(n => n.icon < 12 || n.label < 8 || !n.text)
+      if (broken.length) {
+        problems.push(`${broken.length} of ${nav.length} nav items are collapsed or unlabelled: ` +
+          broken.map(n => `"${n.text || '(no label)'}" icon ${n.icon}px label ${n.label}px`).join(', '))
+      }
+    }
+  }
+
   // Accessibility, WCAG 2.1 AA. None of this is visible to tsc, the unit
   // tests or the build, and all of it was failing before it was checked:
   // no skip link on any page, unnamed icon-only buttons, a sign-in form whose

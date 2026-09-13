@@ -464,7 +464,7 @@ it. These ten items are what make the other 190 permanent.*
 
 ## Progress
 
-**Done and pushed: 127 of 200.** Phases 1 and 2 complete, most of 3, section G's
+**Done and pushed: 134 of 200.** Phases 1 and 2 complete, most of 3, section G's
 component library (121-138, 148-150), and the guardrails from 6 that keep them
 from regressing.
 
@@ -497,6 +497,14 @@ was already assertive (190).
 Still open in J: a real screen-reader pass on the core loop (188) and 200%
 zoom (189) — both need a human at a device, not a static check.
 
+Section K: the raw-colour lint, both-themes token test, multi-viewport smoke,
+overflow and tap-target checks were already in CI; this pass adds contrast
+coverage for surface-sunken and the area accents (193), a named navigation
+invariant in place of pixel snapshots (197), docs/DESIGN-SYSTEM.md (199) and
+a PR template with a design-review step (200).
+
+Still open in K: the published token reference page (198).
+
 Still open in G: the domain cards (139-147) — listing, room, message row,
 notification row, service-report clock, provider performance, map marker,
 trust-circle visualisation.
@@ -516,6 +524,8 @@ trust-circle visualisation.
 | Transitions slower than 250ms | 12 | 0 |
 | Busy flags that can strand a control | 7 found | 0 |
 | Modal surfaces that trap focus | 0 of 7 | component available, 0 migrated |
+| Token pairs contrast-checked in CI | 13 | 25 |
+| WCAG AA failures in the palette | 1 (unmeasured) | 0 |
 | Text under 12px | 21 per screen | 0 |
 | Layout change 320px → 1024px | none | tablet 2-col, desktop sidebar |
 | Functions that could hang a spinner forever | 17 | 0 |

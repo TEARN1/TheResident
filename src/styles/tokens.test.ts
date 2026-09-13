@@ -91,7 +91,24 @@ const PAIRS: Array<[string, string, number]> = [
   ['--warning', '--surface', 4.5],
   ['--danger', '--surface', 4.5],
   ['--info', '--surface', 4.5],
-  ['--text-on-accent', '--accent', 4.5]
+  ['--text-on-accent', '--accent', 4.5],
+  // surface-sunken was missing from this list while being used as a
+  // background all over the app — stat tiles, comment rows, skeletons, the
+  // composer, every "well" inside a card. Text on it was simply unchecked.
+  ['--text-primary', '--surface-sunken', 4.5],
+  ['--text-muted', '--surface-sunken', 4.5],
+  ['--text-subtle', '--surface-sunken', 4.5],
+  ['--accent', '--surface-sunken', 4.5],
+  ['--danger', '--surface-sunken', 4.5],
+  ['--success', '--surface-sunken', 4.5],
+  ['--warning', '--surface-sunken', 4.5],
+  ['--info', '--surface-sunken', 4.5],
+  // The area accents carry meaning (which part of the app you are in), so
+  // they have to be legible, not merely decorative.
+  ['--area-housing', '--surface', 4.5],
+  ['--area-community', '--surface', 4.5],
+  ['--area-services', '--surface', 4.5],
+  ['--area-safety', '--surface', 4.5]
 ]
 
 for (const [themeName, tokens] of [['light', LIGHT], ['dark', DARK]] as const) {

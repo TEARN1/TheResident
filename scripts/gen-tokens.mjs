@@ -30,7 +30,13 @@ const LIGHT = {
   surface: '#FAF8F3', 'surface-raised': '#FFFFFF', 'surface-sunken': '#F1EDE4',
   'text-primary': '#1A1712', 'text-muted': '#5A5348', 'text-subtle': '#6E6658',
   'text-on-accent': '#FFFFFF',
-  accent: '#8A6A19', 'accent-hover': '#745714',
+  // #8A6A19 measured 4.32:1 against --surface-sunken, under AA. Nothing
+  // caught it because surface-sunken was not in the contrast test's pair
+  // list, despite being the background of every well, stat tile, comment row
+  // and skeleton in the app. #866619 is the smallest darkening that clears
+  // 4.5:1 there (4.58) and improves every other pair too — white on gold goes
+  // 5.05 to 5.35. The shift is imperceptible next to the old value.
+  accent: '#866619', 'accent-hover': '#745714',
   success: '#1E7A3E', warning: '#8A5A00', danger: '#B3261E', info: '#1D4ED8',
   border: '#1A1712',
   'area-housing': '#8A6A19', 'area-community': '#1D4ED8',
