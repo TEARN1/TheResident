@@ -6,6 +6,7 @@
  * "I have 5 rooms in this house"; occupancy is always derived live from
  * res_listings.status via the res_property_occupancy RPC, never typed in.
  */
+import ProgressSteps from '../../../../components/ui/ProgressSteps'
 import DialogShell from '../../../../components/ui/DialogShell'
 import React, { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -296,6 +297,33 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                       <Info size={14} />
                     </button>
                   </div>
+                </div>
+
+                {/* Item 147. The badge alone said WHAT the property is and
+                    nothing about where that sits in a sequence — "Under
+                    Review" gave a landlord no sense that there is a next
+                    stage or what ends the wait, so it read as a state the
+                    account was stuck in.
+
+                    No timeframe is shown anywhere, deliberately: there is no
+                    guaranteed turnaround behind this queue, and implying one
+                    would be the same empty promise the reports queue used to
+                    make. */}
+                <div className="mt-3">
+                  <ProgressSteps
+                    label={`Verification progress for ${p.suburb}`}
+                    tone={p.doc_review_status === 'pending' ? 'warning' : 'accent'}
+                    currentIndex={
+                      p.doc_review_status === 'reviewed' ? 2
+                      : p.doc_review_status === 'pending' ? 1
+                      : 0
+                    }
+                    steps={[
+                      { id: 'submit', label: 'Add proof of ownership' },
+                      { id: 'review', label: 'We check it' },
+                      { id: 'done', label: 'Shown as verified' }
+                    ]}
+                  />
                 </div>
 
                 {verifyInfoOpenId === p.id && (

@@ -1,12 +1,13 @@
 'use client'
 
+import { relativeTime } from '../../../utils/relativeTime'
 import DialogShell from '../../../components/ui/DialogShell'
 import React, { useState, useEffect, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Camera
-} from 'lucide-react'
+, BadgeCheck } from 'lucide-react'
 import {
   RootState,
   AppDispatch,
@@ -764,9 +765,34 @@ export default function HousingPage() {
                   <div className="absolute inset-0 opacity-70" style={{ background: 'linear-gradient(to top, var(--scrim), transparent 60%)' }} />
                   <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
                      <div className="flex items-center gap-1.5">
-                        <div className="bg-surface-sunken/60 backdrop-blur-md border border-default px-3 py-1.5 rounded-xl">
-                           <span className="text-xs font-black text-content tracking-tight uppercase">Verified</span>
-                        </div>
+                        {/* This badge said "Verified" on EVERY listing,
+                            unconditionally, while res_listings has carried
+                            real last_verified_at and verified_by_user_id
+                            columns all along. There are no listings in
+                            production yet, so nobody has been misled — but the
+                            first room anyone posts would have been labelled
+                            verified with nothing behind it.
+
+                            That is the same failure as the panic alert that
+                            reached nobody and the reports queue nobody read:
+                            the interface asserting something it does not know.
+                            On a housing listing it is worse, because a
+                            resident deciding whether to hand over a deposit is
+                            exactly who that word is aimed at. */}
+                        {item.lastVerifiedAt ? (
+                           <div className="bg-surface-sunken/60 backdrop-blur-md border border-default px-3 py-1.5 rounded-xl flex items-center gap-1">
+                              <BadgeCheck size={11} className="text-accent" aria-hidden="true" />
+                              <span className="text-xs font-black text-content tracking-tight uppercase">
+                                 Verified {relativeTime(item.lastVerifiedAt)}
+                              </span>
+                           </div>
+                        ) : (
+                           <div className="bg-surface-sunken/60 backdrop-blur-md border border-default px-3 py-1.5 rounded-xl">
+                              <span className="text-xs font-black text-content-muted tracking-tight uppercase">
+                                 Not verified
+                              </span>
+                           </div>
+                        )}
                         {item.quickPost && (
                            <div className="bg-accent/90 backdrop-blur-md px-3 py-1.5 rounded-xl" title="Posted fast with minimal details — same listing, just quicker to put up.">
                               <span className="text-xs font-black text-content-on-accent tracking-tight uppercase">Quick Post</span>
