@@ -82,33 +82,47 @@ a fresh project, a new region, a local development copy, or a forensic
 
 **Recovery target:** the full schema, no data.
 
-**Status: TABLES AND POLICIES PROVEN. FUNCTIONS INCOMPLETE.**
+**Status: TABLES, POLICIES AND FUNCTIONS PROVEN.**
 
 `theresident_schema_part1.sql`, `theresident_schema_part2.sql` and
 `theresident_schema_part3.sql` — applied in that order — rebuild every table,
-policy, trigger, index and grant, in dependency order, safe to re-run.
-`./scripts/restore-drill.sh` proves that from zero on an empty PostgreSQL.
+policy, trigger, index and grant, in dependency order, safe to re-run. Then
+`theresident_functions.sql` rebuilds all 168 Resident-owned functions.
+`./scripts/restore-drill.sh` proves the whole sequence from zero on an empty
+PostgreSQL, twice, and checks `res_notify`, `res_check_rate_limit`,
+`res_distance_m`, `res_broadcast_alert`, `res_public_profile` and
+`res_is_platform_admin` by name afterwards.
 
-It does **not** currently rebuild every function. 75 of the database's 163
-functions exist in production and in no file here — created in the Supabase
-dashboard during broad feature work and never brought back. Among them are
-`res_notify`, `res_distance_m`, `res_check_rate_limit`, and every
-maintenance sweep, so a database rebuilt from source today would look
-healthy and then fail the moment anything tried to notify a user or expire a
-listing.
+**This was the long-standing gap and it is now closed.** For most of this
+project 75 of the database's functions existed in production and in no file
+here — created in the Supabase dashboard during feature work and never
+brought back. A database rebuilt from source would have looked healthy and
+then failed the moment anything tried to notify a user or expire a listing.
 
-Fixing it is one command, and it is deliberately a command rather than a
-hand-written file: `./scripts/sync-functions.sh` asks Postgres for the exact
-text of each definition and writes `theresident_functions.sql`. Almost all
-of these are SECURITY DEFINER — they run as their owner, so RLS does not
-constrain them and the body is the only thing deciding who gets what.
-Retyping code like that risks a one-character difference that is a security
-hole, not a typo.
+Two things that came out of actually doing it, both of which would have
+broken a real restore:
 
-Until that has been run and committed, treat Tier 3 as covering the shape of
-the database but not all of its behaviour. `src/store/schemaDrift.test.ts`
-holds the line in the meantime: no NEW undocumented function can be added
-without failing the build.
+* `profiles.resident_trust_tier` and the whole of `map_zones` are Gruvs-owned
+  and were missing from the test harness's stand-ins. `zones_near` returns
+  `setof map_zones`, so the function definitions could not even be created
+  against a rebuilt database.
+* The file sets `check_function_bodies = off`, as `pg_dump` does. These
+  functions call each other and there is no reliable dependency order to emit
+  them in; without it, the first function referencing a later one aborts the
+  entire file.
+
+`theresident_functions.sql` is GENERATED. Do not hand-edit it — re-run
+`./scripts/sync-functions.sh`, which asks Postgres for the exact text of each
+definition. Almost all of them are SECURITY DEFINER: they run as their owner,
+so RLS does not constrain them and the body is the only thing deciding who
+gets what. Retyping code like that risks a one-character difference that is a
+security hole, not a typo.
+
+**What is still not proven:** that the committed snapshot still MATCHES
+production. A function edited in the dashboard drifts from this file silently.
+Re-run the script after any dashboard change and commit the result.
+`src/store/schemaDrift.test.ts` catches new undocumented functions the client
+calls, but it cannot see an edit to one that is already captured.
 
 ---
 
@@ -215,7 +229,7 @@ These cannot be automated from this repository and are the gaps that remain:
 | **Schedule the Tier 2 dump** | Anywhere with cron + `DATABASE_URL` | Needs the connection string, which is a secret. The cron line is written for you above — use `--verify --quiet`. |
 | **Choose off-platform storage** | Not Supabase, not the same login | A vendor/account decision |
 | **Run the quarterly drill** | `./scripts/restore-drill.sh` | Fifteen minutes, four times a year |
-| **Complete Tier 3** | `./scripts/sync-functions.sh` | Needs `DATABASE_URL`; captures the 75 functions that exist only in production |
+| **Keep Tier 3 current** | `./scripts/sync-functions.sh` | Needs `DATABASE_URL`. Tier 3 is complete as of 13 Sep 2026 (168 functions); re-run after any change made in the Supabase dashboard |
 
 ---
 

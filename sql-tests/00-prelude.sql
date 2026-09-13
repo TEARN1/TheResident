@@ -36,6 +36,11 @@ create table if not exists public.profiles (
   social_integrity_score integer,
   badges text[],
   xp integer,
+  -- Not in §3's readable list, but real: a Gruvs-owned column that several
+  -- Resident functions read (checked against information_schema in
+  -- production, where it is text). Without it the function definitions do not
+  -- even parse against a rebuilt database, which is how it was found.
+  resident_trust_tier text,
   -- res_account_ready() gates posting on account age, so the stand-in needs
   -- created_at even though nothing in The Resident reads it directly.
   created_at timestamptz default now()
@@ -72,6 +77,32 @@ $xp$;
 -- a test to depend on shape this project does not own.
 create table if not exists public.events (
   id uuid primary key default uuid_generate_v4()
+);
+
+-- Gruvs-owned. The Resident reads it through zones_near() and mirrors outages
+-- onto it; zones_near RETURNS setof map_zones, so without this stand-in the
+-- function definitions cannot even be created against a rebuilt database.
+-- That is how this was found. Column list copied from the live table;
+-- `geom` is geometry(Geometry,4326) there, and PostGIS is available in the
+-- drill, so it is kept rather than stubbed as text.
+create table if not exists public.map_zones (
+  id uuid primary key default uuid_generate_v4(),
+  source_app text,
+  event_id uuid,
+  kind text,
+  geom geometry(Geometry, 4326),
+  label text,
+  note text,
+  severity integer,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  created_by uuid,
+  confirm_count integer default 0,
+  dispute_count integer default 0,
+  status text,
+  created_at timestamptz default now(),
+  ext_source text,
+  ext_id uuid
 );
 
 -- Gruvs-owned shared rail. Column list copied verbatim from the live table —

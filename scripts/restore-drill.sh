@@ -76,6 +76,24 @@ echo "→ applying the schema of record (pass 1 — a fresh project)"
 psql_f "$WORK/schema.sql" > "$WORK/pass1.log" 2>&1 || {
   echo "FAILED on first apply. Last 20 lines:"; tail -20 "$WORK/pass1.log"; exit 1; }
 
+# The functions file is the other half of a rebuild and was missing for most
+# of this project's life: 75 functions existed only in production, so the
+# schema would restore, the app would come up, and res_notify and every
+# maintenance sweep would quietly not happen. Applying it here is what turns
+# "the tables came back" into "the database came back".
+FUNCTIONS="$ROOT/theresident_functions.sql"
+if [ -f "$FUNCTIONS" ]; then
+  echo "→ applying theresident_functions.sql"
+  psql_f "$FUNCTIONS" > "$WORK/fns.log" 2>&1 || {
+    echo "FAILED applying the function definitions. Last 20 lines:"
+    tail -20 "$WORK/fns.log"; exit 1; }
+  cat "$FUNCTIONS" >> "$WORK/schema.sql"
+else
+  echo "WARNING: theresident_functions.sql is missing — a rebuild will be"
+  echo "         missing every function that lives only in production."
+  echo "         Run ./scripts/sync-functions.sh."
+fi
+
 echo "→ applying it again (pass 2 — proving it is safe to re-run)"
 psql_f "$WORK/schema.sql" > "$WORK/pass2.log" 2>&1 || {
   echo "FAILED on second apply — the schema is not idempotent. Last 20 lines:"
@@ -118,13 +136,11 @@ select count(*) from gr where not exists (
 # produced 149 res_ policies, exactly matching production.
 check "res_ tables rebuilt"                 60  "$TABLES"   ge
 check "RLS policies rebuilt"               140  "$POLICIES" ge
-# 163 live at the time of writing; a rebuild currently produces ~93 because
-# 75 functions exist only in production (see docs/DISASTER-RECOVERY.md and
-# scripts/sync-functions.sh). This floor is set at the CURRENT rebuild count
-# rather than the live count, so it holds the line without failing on debt
-# that predates it — raise it to 160 once sync-functions.sh has been run and
-# theresident_functions.sql is committed.
-check "res_ functions rebuilt"              90  "$FUNCS"    ge
+# Raised from 90 to 160 now that theresident_functions.sql is committed. The
+# old floor was set at what a rebuild could actually manage while 75 functions
+# existed only in production — it held the line without failing on debt that
+# predated it. That debt is gone: a rebuild now produces the full set.
+check "res_ functions rebuilt"             160  "$FUNCS"    ge
 check "every res_ table has RLS enabled"     0  "$RLS_OFF"
 check "no write grant without a policy"      0  "$UNBACKED"
 
@@ -134,6 +150,15 @@ for t in res_profiles res_listings res_properties res_rooms res_room_requests \
          res_org_units res_jurisdictions res_area_broadcasts res_home_areas; do
   EXISTS="$(psql_c "select count(*) from information_schema.tables where table_schema='public' and table_name='$t'")"
   check "$t present" 1 "$EXISTS"
+done
+
+# And the load-bearing FUNCTIONS by name, for the same reason. These are the
+# ones whose absence is silent: the schema restores, the app comes up, and
+# notifications simply never arrive.
+for f in res_notify res_check_rate_limit res_distance_m res_broadcast_alert \
+         res_public_profile res_is_platform_admin; do
+  EXISTS="$(psql_c "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='$f'")"
+  check "$f present" 1 "$EXISTS"
 done
 
 echo
@@ -153,10 +178,10 @@ Two things this does NOT prove:
 
   * Your DATA. That is Tier 1 (PITR, currently not enabled) and Tier 2 (an
     off-platform dump).
-  * Every FUNCTION. 75 of 163 exist only in production, so a rebuild is
-    missing behaviour it will not complain about — including res_notify and
-    every maintenance sweep. One command fixes it:
-    ./scripts/sync-functions.sh
+  * That the functions still MATCH production. theresident_functions.sql is a
+    snapshot, and a function edited in the Supabase dashboard drifts from it
+    silently. Re-run ./scripts/sync-functions.sh after any dashboard change
+    and commit the result.
 
 See docs/DISASTER-RECOVERY.md.
 EOF

@@ -35,32 +35,21 @@ const SRC = join(REPO_ROOT, 'src')
  * function nobody can review or rebuild; the test below is what makes that a
  * deliberate act rather than an accident.
  */
-const KNOWN_UNVERSIONED_RPCS = new Set([
-  // Four came off this list when section 40 of the schema captured them
-  // during the SECURITY DEFINER authorisation review: res_moderate,
-  // res_household_members, res_property_occupancy, res_has_household_plus.
-  // That is the list doing its job — reviewing a function requires it to be
-  // in the repo first, which is the whole argument for this test existing.
-  'ensure_res_profile',
-  'res_block_user',
-  'res_care_check_in',
-  'res_comment_gossip',
-  'res_communities_near',
-  'res_confirm_trust_connection',
-  'res_create_invite',
-  'res_create_property',
-  'res_end_tenancy',
-  'res_handyman_near',
-  'res_market_items_near',
-  'res_public_provider_tier',
-  'res_redeem_invite',
-  'res_report_map_zone',
-  'res_report_road_segment',
-  'res_request_move_assist',
-  'res_request_trust_connection',
-  'res_submit_property_verification',
-  'zone_verify',
-  'zones_near'
+const KNOWN_UNVERSIONED_RPCS = new Set<string>([
+  // EMPTY, and that is the point of it.
+  //
+  // This list held 25 RPCs the client called that were defined in no .sql
+  // file here. Four came off it when section 40 captured them during the
+  // SECURITY DEFINER authorisation review — reviewing a function requires it
+  // to be in the repo first, which is the whole argument for this test. The
+  // remaining 20 came off together when theresident_functions.sql was
+  // generated from the live catalogs: all 168 Resident-owned functions are
+  // now versioned, and scripts/restore-drill.sh applies them from zero.
+  //
+  // Adding a name back here is a deliberate admission of debt, not a
+  // formality. The test below fails on any NEW unversioned RPC, so the
+  // normal fix is to run scripts/sync-functions.sh and commit, never to
+  // extend this set.
 ])
 
 function walk(dir: string, out: string[] = []): string[] {

@@ -58,6 +58,15 @@ echo "→ reading function definitions from the live database"
 -- already has them changes nothing.
 -- ===========================================================================
 
+--
+-- Bodies are not validated as they are created — pg_dump does the same, for
+-- the same reason: these functions call each other and a dump has no
+-- reliable dependency order to emit them in. Without this, the first
+-- function that references a later one aborts the entire file.
+-- res_distance_m is the one that surfaced it.
+-- ===========================================================================
+
+set check_function_bodies = off;
 HEADER
 
   psql "$DATABASE_URL" -At -c "
