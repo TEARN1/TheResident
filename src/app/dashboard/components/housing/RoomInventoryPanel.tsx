@@ -1,7 +1,8 @@
 'use client'
 
+import Badge from '../../../../components/ui/Badge'
 import React, { useEffect, useState } from 'react'
-import { Plus, X, Camera, UserPlus, LogOut, Megaphone, Lock, Users2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Minus, X, Camera, UserPlus, LogOut, Megaphone, Lock, Users2, DoorOpen, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '../../../../utils/supabase'
 import {
   // setOccupantVisibility is deliberately not called from here — it's
@@ -201,47 +202,90 @@ export default function RoomInventoryPanel({ propertyId, currentUserId, onNotify
           {loaded && sortRoomsForLandlord(rooms).map(room => {
             const roomOccupants = (occupants[room.id] || []).filter(isCurrentOccupant)
             return (
-              <div key={room.id} className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-2">
+              <div key={room.id} className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-2.5">
+                {/* Item 140: the same reading order as the listing card —
+                    photo, price, then the facts. This card led with the label
+                    and buried the price mid-sentence in a run of text
+                    separated by interpuncts, so the one number a landlord
+                    scans for was the hardest thing on it to find. */}
+                {room.photos.length > 0 && (
+                  <div className="flex gap-1.5 overflow-x-auto custom-scrollbar -mx-0.5 px-0.5">
+                    {room.photos.map((url, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={i}
+                        src={url}
+                        // Not decorative: these are the landlord's record of
+                        // what the room looks like. An empty alt tells a
+                        // screen reader there is nothing here at all.
+                        alt={`${room.label}, photo ${i + 1} of ${room.photos.length}`}
+                        className="w-16 h-16 rounded-lg object-cover shrink-0 border border-default"
+                      />
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-content truncate">{room.label}</p>
-                    <p className="text-xs text-content-muted flex items-center gap-1 flex-wrap">
-                      <button
-                        onClick={() => handleToggleStatus(room)}
-                        disabled={busyRoomId === room.id}
-                        title="Click to flip vacant/occupied"
-                        className={`font-black uppercase tracking-widest hover:underline disabled:opacity-50 ${room.status === 'vacant' ? 'text-success' : 'text-content-muted'}`}
-                      >
-                        {room.status === 'vacant' ? 'Vacant' : 'Occupied'}
-                      </button>
-                      {room.price ? ` · ${room.currency} ${room.price}` : ''}
-                      {room.listingId ? ' · advertised' : ''}
-                    </p>
+                    {room.price ? (
+                      <p className="text-lg font-black text-content leading-none mt-1">
+                        {room.currency} {room.price}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-content-subtle mt-1">No price set</p>
+                    )}
                   </div>
                   {room.status === 'vacant' && !room.listingId && (
                     <button
                       onClick={() => handleAdvertise(room.id)}
                       disabled={busyRoomId === room.id}
-                      className="text-xs font-black uppercase tracking-widest text-accent hover:underline shrink-0 flex items-center gap-1 disabled:opacity-50"
+                      className="min-h-[44px] text-xs font-black uppercase tracking-widest text-accent hover:underline shrink-0 flex items-center gap-1 disabled:opacity-50"
                     >
                       <Megaphone size={10} /> Advertise
                     </button>
                   )}
                 </div>
 
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Status carries an icon as well as a colour (item 38), and
+                      the button is a real 44px target rather than a coloured
+                      word with a title attribute explaining what it does. */}
+                  <button
+                    onClick={() => handleToggleStatus(room)}
+                    disabled={busyRoomId === room.id}
+                    aria-label={`${room.label} is ${room.status}. Change it.`}
+                    className="min-h-[44px] disabled:opacity-50"
+                  >
+                    <Badge
+                      tone={room.status === 'vacant' ? 'success' : 'neutral'}
+                      icon={room.status === 'vacant'
+                        ? <DoorOpen size={10} aria-hidden="true" />
+                        : <Users2 size={10} aria-hidden="true" />}
+                    >
+                      {room.status === 'vacant' ? 'Vacant' : 'Occupied'}
+                    </Badge>
+                  </button>
+                  {room.listingId && (
+                    <Badge tone="accent" icon={<Megaphone size={10} aria-hidden="true" />}>Advertised</Badge>
+                  )}
+                </div>
+
                 {room.priceNote && <p className="text-xs text-content-muted italic">&quot;{room.priceNote}&quot;</p>}
                 {(room.advantages || room.disadvantages) && (
-                  <div className="text-xs space-y-0.5">
-                    {room.advantages && <p className="text-success/80">+ {room.advantages}</p>}
-                    {room.disadvantages && <p className="text-danger/70">− {room.disadvantages}</p>}
-                  </div>
-                )}
-                {room.photos.length > 0 && (
-                  <div className="flex gap-1.5 overflow-x-auto">
-                    {room.photos.map((url, i) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img key={i} src={url} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0 border border-default" />
-                    ))}
+                  <div className="text-xs space-y-1">
+                    {room.advantages && (
+                      <p className="flex items-start gap-1.5 text-content-muted">
+                        <Plus size={11} className="text-success mt-0.5 shrink-0" aria-hidden="true" />
+                        <span>{room.advantages}</span>
+                      </p>
+                    )}
+                    {room.disadvantages && (
+                      <p className="flex items-start gap-1.5 text-content-muted">
+                        <Minus size={11} className="text-danger mt-0.5 shrink-0" aria-hidden="true" />
+                        <span>{room.disadvantages}</span>
+                      </p>
+                    )}
                   </div>
                 )}
 
