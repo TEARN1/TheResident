@@ -390,8 +390,13 @@ export default function ServicesPage() {
                     <Star size={32} className="text-info" />
                  </div>
                  <div className="text-center md:text-left">
-                    <h3 className="text-lg font-black text-content uppercase tracking-widest italic">Local Verified <span className="text-info">Professionals</span></h3>
-                    <p className="text-xs text-content-muted font-bold uppercase tracking-widest opacity-60">Verified skills helping to grow the local economy</p>
+                    {/* "Local Verified Professionals" / "Verified skills".
+                        There is no verification of any kind for the people
+                        listed here — no column, no review step, nothing. The
+                        word was decoration on a screen where a resident is
+                        choosing who to let into their home. */}
+                    <h3 className="text-lg font-black text-content uppercase tracking-widest italic">Local <span className="text-info">Professionals</span></h3>
+                    <p className="text-xs text-content-muted font-bold uppercase tracking-widest opacity-60">Neighbours and local trades, listed by the community</p>
                  </div>
               </div>
               {trustGate && !trustGate.unlocked ? (

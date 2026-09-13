@@ -100,7 +100,14 @@ export default function CommunitiesTab({
          </div>
          <div className="text-center md:text-left space-y-2">
             <h4 className="font-black text-content uppercase tracking-widest">Trust & Hierarchy Audit</h4>
-            <p className="text-sm text-content-muted leading-relaxed max-w-2xl">Verified groups have higher reputation limits and access to emergency dispatch features. Ensure your profile is verified to join premium complex groups or to apply for Street Captain status.</p>
+            {/* This used to promise "higher reputation limits", "access to
+                emergency dispatch features", "premium complex groups" and
+                "Street Captain status". NONE of those exist — not in the
+                code, not in the schema, nowhere. A resident reading it would
+                go looking for features that were never built, and the
+                emergency-dispatch line is the dangerous one: it implies
+                verification unlocks something in a crisis. It does not. */}
+            <p className="text-sm text-content-muted leading-relaxed max-w-2xl">Verifying your profile shows other residents that someone has checked who you are. It is how neighbours decide whether to trust you with a room, a lift or a key — and it is the same badge landlords look for on an application.</p>
             <Link href="/dashboard/profile" className="text-info text-xs font-black uppercase tracking-widest hover:underline pt-2 inline-block">View Verification Requirements →</Link>
          </div>
       </div>

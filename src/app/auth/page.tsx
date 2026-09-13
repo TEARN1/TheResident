@@ -336,7 +336,11 @@ export default function AuthPage() {
       >
         <div style={headerStyle}>
           <h1 style={logoStyle}>THE RESIDENT</h1>
-          <p style={taglineStyle}>Verified Co-Living & Rental Portal</p>
+          {/* Was "Verified Co-Living & Rental Portal". The portal is not
+              verified and neither is most of what is on it — the same
+              overclaim as the landing page's "real-time community panic
+              alerts", which came out for the same reason. */}
+          <p style={taglineStyle}>Co-Living &amp; Rentals, Neighbour to Neighbour</p>
           <p style={crossAppNoteStyle}>One account — the same login works on The Gruvs</p>
         </div>
 
