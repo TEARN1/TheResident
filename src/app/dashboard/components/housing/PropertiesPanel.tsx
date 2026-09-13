@@ -6,6 +6,7 @@
  * "I have 5 rooms in this house"; occupancy is always derived live from
  * res_listings.status via the res_property_occupancy RPC, never typed in.
  */
+import DialogShell from '../../../../components/ui/DialogShell'
 import React, { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X, MapPin, ShieldCheck, ShieldAlert, ShieldQuestion, Upload, AlertTriangle, Home, Info, Trash2 } from 'lucide-react'
@@ -366,7 +367,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
       {/* CREATE PROPERTY MODAL */}
       <AnimatePresence>
         {showCreate && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <DialogShell onClose={() => setShowCreate(false)} label="Add a property">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCreate(false)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-surface border-accent/20 shadow-2xl relative z-10 overflow-hidden">
               <div className="bg-accent/5 p-6 border-b border-subtle flex justify-between items-center">
@@ -416,14 +417,14 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                 </div>
               </form>
             </motion.div>
-          </div>
+          </DialogShell>
         )}
       </AnimatePresence>
 
       {/* VERIFY ADDRESS MODAL */}
       <AnimatePresence>
         {verifyingFor && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <DialogShell onClose={() => setVerifyingFor(null)} label="Verify ownership">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setVerifyingFor(null)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-surface border-accent/20 shadow-2xl relative z-10 p-8 space-y-6">
               <div className="flex justify-between items-center">
@@ -467,7 +468,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                 {submittingVerification ? 'Submitting...' : 'Submit for Review'}
               </button>
             </motion.div>
-          </div>
+          </DialogShell>
         )}
       </AnimatePresence>
     </div>

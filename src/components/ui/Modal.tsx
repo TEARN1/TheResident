@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useCallback, useEffect, useRef } from 'react'
+import React, { useRef } from 'react'
+import { useDialogBehaviour } from '../../utils/useDialogBehaviour'
 import { X } from 'lucide-react'
 
 // Items 131, 92, 179 and 187 in one component.
@@ -17,11 +18,6 @@ import { X } from 'lucide-react'
 // Shape follows item 92: a full-height sheet on a phone, a centred dialog from
 // tablet up. Same component, one breakpoint.
 
-const FOCUSABLE = [
-  'a[href]', 'button:not([disabled])', 'input:not([disabled])',
-  'select:not([disabled])', 'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])'
-].join(',')
 
 /**
  * The wrap decision, extracted because it is where the off-by-one lives and
@@ -50,43 +46,10 @@ export default function Modal({
   footer?: React.ReactNode
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
-  const returnTo = useRef<HTMLElement | null>(null)
-
-  const focusables = useCallback((): HTMLElement[] => {
-    if (!panelRef.current) return []
-    return Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE))
-      // A control inside a collapsed section is in the DOM but not reachable;
-      // including it would send focus somewhere invisible.
-      .filter(el => el.offsetParent !== null || el === document.activeElement)
-  }, [])
-
-  useEffect(() => {
-    if (!open) return
-    // Remember who opened it, so closing can put focus back rather than
-    // dropping the user at the top of the document.
-    returnTo.current = document.activeElement as HTMLElement | null
-    const first = focusables()[0] || panelRef.current
-    first?.focus()
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); return }
-      if (e.key !== 'Tab') return
-      const items = focusables()
-      const target = wrapTarget(items.indexOf(document.activeElement as HTMLElement), items.length, e.shiftKey)
-      if (target === null) return
-      e.preventDefault()
-      items[target]?.focus()
-    }
-
-    document.addEventListener('keydown', onKey)
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = previousOverflow
-      returnTo.current?.focus?.()
-    }
-  }, [open, onClose, focusables])
+  // The behaviour lives in the hook so the 16 existing hand-rolled overlays
+  // can adopt it without being rewritten. One implementation, two entry
+  // points — this component for new surfaces, the hook for old ones.
+  useDialogBehaviour(open, onClose, panelRef)
 
   if (!open) return null
 

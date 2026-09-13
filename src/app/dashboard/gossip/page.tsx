@@ -9,6 +9,7 @@ import { reportContent } from '../../../store/actions'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
+import DialogShell from '../../../components/ui/DialogShell'
 import SkeletonList from '../../../components/ui/Skeleton'
 import Button from '../../../components/ui/Button'
 import { withTimeout } from '../../../utils/resilientCall'
@@ -1034,14 +1035,17 @@ export default function GossipPage() {
             </div>
           )}
           {reportingPost && (
-        <div
+        <DialogShell
+          onClose={() => setReportingPost(null)}
+          label="Report this post"
           className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-4"
-          style={{ background: 'var(--surface-overlay)' }}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Report this post"
-          onClick={() => setReportingPost(null)}
         >
+        <div
+          className="absolute inset-0"
+          style={{ background: 'var(--surface-overlay)' }}
+          onClick={() => setReportingPost(null)}
+          aria-hidden="true"
+        />
           <div
             className="w-full max-w-sm rounded-2xl border border-default bg-surface-raised p-5 shadow-e4"
             onClick={e => e.stopPropagation()}
@@ -1068,7 +1072,7 @@ export default function GossipPage() {
               Cancel
             </button>
           </div>
-        </div>
+        </DialogShell>
       )}
 
       {!hasMore && posts.length > 0 && (

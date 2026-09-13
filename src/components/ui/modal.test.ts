@@ -5,6 +5,11 @@ import { join } from 'node:path'
 import { wrapTarget } from './Modal'
 
 const SRC = readFileSync(join(import.meta.dirname, 'Modal.tsx'), 'utf8')
+// The trap, Escape, scroll lock and focus restore live in the hook, so the
+// 16 existing hand-rolled overlays can adopt them without being rewritten.
+// Modal uses the same hook — one implementation, two entry points.
+const HOOK = readFileSync(
+  join(import.meta.dirname, '..', '..', 'utils', 'useDialogBehaviour.ts'), 'utf8')
 
 // Items 179 and 187. Seven modal surfaces in this app trapped focus in none of
 // them: a keyboard user who opened a dialog and pressed Tab walked out of it
@@ -48,15 +53,55 @@ test('an empty dialog does not hand focus back to the page behind it', () => {
 // present rather than that it behaves. Stated plainly so nobody reads this
 // file as full coverage of the trap.
 test('the modal restores focus to whatever opened it', () => {
-  assert.ok(SRC.includes('returnTo.current = document.activeElement'),
+  assert.ok(HOOK.includes('returnTo.current = document.activeElement'),
     'the opener is no longer remembered')
-  assert.ok(SRC.includes('returnTo.current?.focus?.()'),
+  assert.ok(HOOK.includes('returnTo.current?.focus?.()'),
     'focus is no longer restored on close — the user lands at the top of the document')
 })
 
+// The behaviour existing in a hook is worth nothing if Modal stops calling it.
+test('Modal actually uses the shared behaviour', () => {
+  assert.ok(SRC.includes('useDialogBehaviour(open, onClose, panelRef)'),
+    'Modal no longer wires up the focus trap')
+})
+
 test('Escape closes, and the dialog names itself', () => {
-  assert.ok(SRC.includes("e.key === 'Escape'"), 'Escape no longer closes the dialog')
+  assert.ok(HOOK.includes("e.key === 'Escape'"), 'Escape no longer closes the dialog')
   assert.ok(SRC.includes('aria-modal="true"'))
   assert.ok(SRC.includes('aria-label={title}'),
     'a dialog with no accessible name is announced as just "dialog"')
+})
+
+// ── Adoption ──────────────────────────────────────────────────────────────
+//
+// A focus trap that exists and is used by nothing protects nobody. There were
+// 16 hand-rolled overlays in this app and not one of them trapped focus; this
+// check is what stops a seventeenth being written the old way.
+
+import { readdirSync, statSync } from 'node:fs'
+
+const SRC_ROOT = join(import.meta.dirname, '..', '..')
+function walkTsx(dir: string): string[] {
+  return readdirSync(dir).flatMap(e => {
+    const full = join(dir, e)
+    return statSync(full).isDirectory() ? walkTsx(full) : (full.endsWith('.tsx') ? [full] : [])
+  })
+}
+
+test('no overlay is hand-rolled without the shared dialog behaviour', () => {
+  const offenders: string[] = []
+  for (const file of walkTsx(SRC_ROOT)) {
+    if (/DialogShell\.tsx$|Modal\.tsx$/.test(file)) continue
+    const src = readFileSync(file, 'utf8')
+    // A dialog is an overlay that declares itself one. A fullscreen VIEW —
+    // the map, for instance — is not a dialog and is correctly excluded by
+    // this, because it has no role="dialog" and traps nothing.
+    if (!src.includes('role="dialog"')) continue
+    if (src.includes('DialogShell') || src.includes('useDialogBehaviour')) continue
+    offenders.push(file.replace(SRC_ROOT, 'src'))
+  }
+  assert.deepStrictEqual(offenders, [],
+    '\n\nThese declare role="dialog" but do not use DialogShell or\n' +
+    'useDialogBehaviour, so a keyboard user tabs straight out of them into\n' +
+    'the page behind:\n' + offenders.join('\n') + '\n')
 })

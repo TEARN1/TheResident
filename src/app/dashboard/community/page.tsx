@@ -1,5 +1,6 @@
 'use client'
 
+import DialogShell from '../../../components/ui/DialogShell'
 import Tabs from '../../../components/ui/Tabs'
 import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -765,7 +766,7 @@ export default function CommunityPage() {
       {/* CREATE COMMUNITY (CommunitiesTab is presentation-only; the form lives here) */}
       <AnimatePresence>
         {showCreateCommunity && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <DialogShell onClose={() => setShowCreateCommunity(false)} label="New community">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCreateCommunity(false)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-surface border-accent/20 shadow-2xl relative z-10 p-8 space-y-6">
               <div className="flex justify-between items-center">
@@ -793,14 +794,14 @@ export default function CommunityPage() {
                 <button type="submit" className="w-full bg-accent text-content-on-accent font-black py-3 rounded-xl uppercase tracking-widest text-xs">Create</button>
               </form>
             </motion.div>
-          </div>
+          </DialogShell>
         )}
       </AnimatePresence>
 
       {/* FILE DISPUTE MODAL */}
       <AnimatePresence>
         {showDisputeModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <DialogShell onClose={() => setShowDisputeModal(false)} label="Raise a dispute">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowDisputeModal(false)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-surface border-accent/20 shadow-2xl relative z-10 p-8 space-y-6">
               <div className="flex justify-between items-center">
@@ -821,7 +822,7 @@ export default function CommunityPage() {
                 <button type="submit" className="w-full bg-accent text-content-on-accent font-black py-3 rounded-xl uppercase tracking-widest text-xs">File dispute</button>
               </form>
             </motion.div>
-          </div>
+          </DialogShell>
         )}
       </AnimatePresence>
 

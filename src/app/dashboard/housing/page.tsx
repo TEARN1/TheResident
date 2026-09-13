@@ -1,5 +1,6 @@
 'use client'
 
+import DialogShell from '../../../components/ui/DialogShell'
 import React, { useState, useEffect, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -973,7 +974,7 @@ export default function HousingPage() {
       {/* CREATE LISTING MODAL */}
       <AnimatePresence>
          {showCreateModal && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <DialogShell onClose={() => setShowCreateModal(false)} label="Create a listing">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCreateModal(false)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-3xl bg-surface border-accent/20 shadow-2xl relative z-10 overflow-hidden">
                   <div className="bg-accent/5 p-6 border-b border-subtle flex justify-between items-center">
@@ -1145,14 +1146,14 @@ export default function HousingPage() {
                      </div>
                   </form>
                </motion.div>
-            </div>
+            </DialogShell>
          )}
       </AnimatePresence>
 
       {/* APPLICATION MODAL */}
       <AnimatePresence>
          {activeListing && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <DialogShell onClose={() => setActiveListing(null)} label="Listing details">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveListing(null)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-surface border-accent/20 shadow-2xl relative z-10 p-8 space-y-8">
                   <div className="flex justify-between items-center">
@@ -1172,14 +1173,14 @@ export default function HousingPage() {
                      </button>
                   </form>
                </motion.div>
-            </div>
+            </DialogShell>
          )}
       </AnimatePresence>
 
       {/* LANDLORD AUDIT MODAL */}
       <AnimatePresence>
          {activeAuditRequest && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <DialogShell onClose={() => setActiveAuditRequest(null)} label="Audit request">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveAuditRequest(null)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-surface border-accent/20 shadow-2xl relative z-10 overflow-hidden">
                   <div className="bg-accent/5 p-6 border-b border-subtle flex justify-between items-center">
@@ -1241,7 +1242,7 @@ export default function HousingPage() {
                      )}
                   </div>
                </motion.div>
-            </div>
+            </DialogShell>
          )}
       </AnimatePresence>
 

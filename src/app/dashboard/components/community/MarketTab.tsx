@@ -1,5 +1,6 @@
 'use client'
 
+import DialogShell from '../../../../components/ui/DialogShell'
 import React, { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -363,7 +364,7 @@ export default function MarketTab({
           third, different approach to "create something" in this app. */}
       <AnimatePresence>
         {showForm && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <DialogShell onClose={resetForm} label="Post an item">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={resetForm} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-surface border-accent/20 shadow-2xl relative z-10 overflow-hidden">
               <div className="bg-accent/5 p-6 border-b border-subtle flex justify-between items-center">
@@ -415,7 +416,7 @@ export default function MarketTab({
                 </button>
               </form>
             </motion.div>
-          </div>
+          </DialogShell>
         )}
       </AnimatePresence>
     </div>

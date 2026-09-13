@@ -464,7 +464,7 @@ it. These ten items are what make the other 190 permanent.*
 
 ## Progress
 
-**Done and pushed: 134 of 200.** Phases 1 and 2 complete, most of 3, section G's
+**Done and pushed: 138 of 200.** Phases 1 and 2 complete, most of 3, section G's
 component library (121-138, 148-150), and the guardrails from 6 that keep them
 from regressing.
 
@@ -523,7 +523,7 @@ trust-circle visualisation.
 | Motion tokens defined / actually used | 3 / 0 | 3 / 3 |
 | Transitions slower than 250ms | 12 | 0 |
 | Busy flags that can strand a control | 7 found | 0 |
-| Modal surfaces that trap focus | 0 of 7 | component available, 0 migrated |
+| Overlays that trap focus | 0 of 16 | 14 of 14 real dialogs (the other two are a fullscreen view and a dev panel) |
 | Token pairs contrast-checked in CI | 13 | 25 |
 | WCAG AA failures in the palette | 1 (unmeasured) | 0 |
 | Text under 12px | 21 per screen | 0 |

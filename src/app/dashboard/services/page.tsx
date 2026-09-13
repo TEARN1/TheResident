@@ -1,5 +1,6 @@
 'use client'
 
+import DialogShell from '../../../components/ui/DialogShell'
 import React, { useState, useEffect, useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -609,7 +610,7 @@ export default function ServicesPage() {
       {/* MODALS SECTION */}
       <AnimatePresence>
          {showBusinessRegModal && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <DialogShell onClose={() => setShowBusinessRegModal(false)} label="Register a business">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBusinessRegModal(false)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-surface border-accent/20 shadow-2xl relative z-10 overflow-hidden">
                   <div className="bg-accent/5 p-6 border-b border-subtle flex justify-between items-center">
@@ -671,13 +672,13 @@ export default function ServicesPage() {
                      <button type="submit" className="w-full bg-accent text-content-on-accent font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 active:scale-95 transition-all">Publish Business Card</button>
                   </form>
                </motion.div>
-            </div>
+            </DialogShell>
          )}
       </AnimatePresence>
 
       <AnimatePresence>
          {selectedBiz && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <DialogShell onClose={() => setSelectedBiz(null)} label="Business details">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedBiz(null)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-surface border-accent/20 shadow-2xl relative z-10 p-8 space-y-8">
                   <div className="flex justify-between items-center">
@@ -701,14 +702,14 @@ export default function ServicesPage() {
                      </button>
                   </form>
                </motion.div>
-            </div>
+            </DialogShell>
          )}
       </AnimatePresence>
 
       {/* LIFT CLUB CREATION MODAL */}
       <AnimatePresence>
          {showLiftModal && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <DialogShell onClose={() => setShowLiftModal(false)} label="Offer a lift">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLiftModal(false)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-surface border-accent/20 shadow-2xl relative z-10 overflow-hidden max-h-[90vh] overflow-y-auto">
                   <div className="bg-accent/5 p-6 border-b border-subtle flex justify-between items-center">
@@ -762,14 +763,14 @@ export default function ServicesPage() {
                      <button type="submit" className="w-full bg-accent text-content-on-accent font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 active:scale-95 transition-all">Post Lift Club</button>
                   </form>
                </motion.div>
-            </div>
+            </DialogShell>
          )}
       </AnimatePresence>
 
       {/* MOVE-ASSIST REQUEST MODAL */}
       <AnimatePresence>
          {moveAssistTarget && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <DialogShell onClose={() => setMoveAssistTarget(null)} label="Request moving help">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoveAssistTarget(null)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-surface border-accent/20 shadow-2xl relative z-10 p-8 space-y-6">
                   <div className="flex justify-between items-center">
@@ -808,14 +809,14 @@ export default function ServicesPage() {
                      </button>
                   </form>
                </motion.div>
-            </div>
+            </DialogShell>
          )}
       </AnimatePresence>
 
       {/* PROOF OF WORK MODAL (MOCK) */}
       <AnimatePresence>
          {showProofModal && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <DialogShell onClose={() => setShowProofModal(null)} label="Proof of payment">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowProofModal(null)} className="absolute inset-0 bg-surface-sunken/90 backdrop-blur-md" />
                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-md bg-surface border-accent/20 shadow-2xl relative z-10 p-8 text-center space-y-6">
                   <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto shadow-2xl">
@@ -835,7 +836,7 @@ export default function ServicesPage() {
                      <button onClick={() => setShowProofModal(null)} className="text-xs text-content-subtle font-black uppercase tracking-widest hover:text-content transition-colors">Not Yet Finished</button>
                   </div>
                </motion.div>
-            </div>
+            </DialogShell>
          )}
       </AnimatePresence>
 
