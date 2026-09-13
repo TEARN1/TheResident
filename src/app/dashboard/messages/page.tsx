@@ -1,5 +1,7 @@
 'use client'
 
+import Avatar from '../../../components/ui/Avatar'
+import { relativeTime } from '../../../utils/relativeTime'
 import SkeletonList from '../../../components/ui/Skeleton'
 import { useMinimumDuration } from '../../../utils/useMinimumDuration'
 import React, { useCallback, useEffect, useState } from 'react'
@@ -140,23 +142,35 @@ export default function MessagesPage() {
   const requests = sorted.filter(isPendingRequest)
   const chats = sorted.filter(t => !isPendingRequest(t))
 
-  const ThreadRow = ({ t }: { t: Thread }) => (
-    <button
-      onClick={() => router.push(`/dashboard/messages/${t.otherId}`)}
-      className="w-full flex items-center gap-3 p-3 bg-surface-sunken/40 border border-subtle rounded-xl hover:border-accent/20 transition-all text-left"
-    >
-      <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center text-accent text-xs font-black overflow-hidden flex-shrink-0">
-        {profileMap[t.otherId]?.avatar_url
-          ? <img src={profileMap[t.otherId].avatar_url as string} alt="" className="w-full h-full object-cover" />
-          : nameOf(t.otherId).charAt(0).toUpperCase()}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-content">{nameOf(t.otherId)}</p>
-        <p className="text-xs text-content-muted truncate">{t.lastMessage.body}</p>
-      </div>
-      <span className="text-xs text-content-subtle flex-shrink-0">{new Date(t.lastMessage.created_at).toLocaleDateString()}</span>
-    </button>
-  )
+  // Item 141. Three things this row was missing, and the first is the one a
+  // person notices:
+  //
+  //  * It showed a DATE — "13/09/2026" — for a message sent five minutes ago.
+  //    A conversation list is read as a timeline, and a date destroys that.
+  //  * It did not say who spoke last, so "Yes that works" read as though the
+  //    other person had said it when you had.
+  //  * It hand-rolled the avatar fallback, differently from every other screen.
+  const ThreadRow = ({ t }: { t: Thread }) => {
+    const mine = t.lastMessage.sender_id === myId
+    const when = relativeTime(t.lastMessage.created_at)
+    return (
+      <button
+        onClick={() => router.push(`/dashboard/messages/${t.otherId}`)}
+        aria-label={`Conversation with ${nameOf(t.otherId)}, last message ${when}`}
+        className="w-full min-h-[44px] flex items-center gap-3 p-3 bg-surface-sunken/40 border border-subtle rounded-xl hover:border-accent/20 motion-base transition-all text-left"
+      >
+        <Avatar src={profileMap[t.otherId]?.avatar_url as string | undefined} name={nameOf(t.otherId)} size="md" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-content truncate">{nameOf(t.otherId)}</p>
+          <p className="text-xs text-content-muted truncate">
+            {mine && <span className="text-content-subtle">You: </span>}
+            {t.lastMessage.body}
+          </p>
+        </div>
+        <span className="text-[10px] text-content-subtle flex-shrink-0 text-right">{when}</span>
+      </button>
+    )
+  }
 
   return (
     <div className="glass-panel p-6">

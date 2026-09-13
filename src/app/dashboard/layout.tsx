@@ -1,5 +1,6 @@
 'use client'
 
+import NotificationRow from './components/shared/NotificationRow'
 import LiveRegion from '../../components/ui/LiveRegion'
 import React, { useState, useEffect, useRef } from 'react'
 import AppErrorBoundary from './components/shared/AppErrorBoundary'
@@ -411,34 +412,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                          {notifications.items.length === 0 ? (
                             <p className="text-xs text-content-subtle italic text-center py-4">{t('noRecentAlerts', lang)}</p>
                          ) : (
-                            notifications.items.map(item => {
-                               const rowClasses = `p-3 rounded-lg border w-full text-left ${item.read ? 'bg-surface-sunken/20 border-subtle opacity-60' : 'bg-accent/5 border-accent/20'} ${item.actionUrl ? 'cursor-pointer hover:border-accent/40 transition-colors' : ''}`
-                               const body = (
-                                  <>
-                                     <p className="text-xs font-black text-content uppercase tracking-tight">{item.title}</p>
-                                     <p className="text-xs text-content-muted mt-1">{item.message}</p>
-                                  </>
-                               )
-                               if (!item.actionUrl) {
-                                  return <div key={item.id} className={rowClasses}>{body}</div>
-                               }
-                               return (
-                                  <button
-                                     key={item.id}
-                                     className={rowClasses}
-                                     onClick={() => {
-                                        dispatch(markNotificationRead(item.id))
-                                        if (supabase) {
-                                           supabase.from('notifications').update({ read: true, is_read: true }).eq('id', item.id).then(() => {})
-                                        }
-                                        setShowNotifMenu(false)
-                                        router.push(item.actionUrl!)
-                                     }}
-                                  >
-                                     {body}
-                                  </button>
-                               )
-                            })
+                            notifications.items.map(item => (
+                               <NotificationRow
+                                  key={item.id}
+                                  item={item}
+                                  onOpen={n => {
+                                     dispatch(markNotificationRead(n.id))
+                                     if (supabase) {
+                                        supabase.from('notifications').update({ read: true, is_read: true }).eq('id', n.id).then(() => {})
+                                     }
+                                     setShowNotifMenu(false)
+                                     router.push(n.actionUrl!)
+                                  }}
+                                  onMarkRead={n => {
+                                     // A row with nowhere to go used to be an
+                                     // inert div. Marking it read is a real
+                                     // action, and most notifications in this
+                                     // app have no destination — so most of
+                                     // the list did nothing when touched.
+                                     if (n.read) return
+                                     dispatch(markNotificationRead(n.id))
+                                     if (supabase) {
+                                        supabase.from('notifications').update({ read: true, is_read: true }).eq('id', n.id).then(() => {})
+                                     }
+                                  }}
+                               />
+                            ))
                          )}
                       </div>
                    </div>

@@ -464,7 +464,7 @@ it. These ten items are what make the other 190 permanent.*
 
 ## Progress
 
-**Done and pushed: 140 of 200.** Phases 1 and 2 complete, most of 3, section G's
+**Done and pushed: 144 of 200.** Phases 1 and 2 complete, most of 3, section G's
 component library (121-138, 148-150), and the guardrails from 6 that keep them
 from regressing.
 
@@ -505,7 +505,13 @@ a PR template with a design-review step (200).
 
 Still open in K: the published token reference page (198).
 
-Still open in G: the domain cards (139-147) — listing, room, message row,
+Section G's domain cards are part-done: the notification row (142/110), the
+service-report clock (143), the provider performance display (144) and the
+message list row (141). Still open there: the listing card (139), the room
+card (140), map markers (145), the trust-circle visualisation (146) and the
+verification-status sequence (147).
+
+Previously open in G: the domain cards (139-147) — listing, room, message row,
 notification row, service-report clock, provider performance, map marker,
 trust-circle visualisation.
 

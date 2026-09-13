@@ -43,34 +43,61 @@ const STATUS_LABEL: Record<string, string> = {
   resolved: 'Resolved', closed: 'Closed', rejected: 'Rejected'
 }
 
-function SlaBadge({ report, now }: { report: ServiceReport; now: number }) {
+function ServiceClock({ report, now }: { report: ServiceReport; now: number }) {
   const state = slaState(report, now)
   const elapsed = hoursBetween(report.createdAt, now)
 
-  if (state === 'done') {
-    return (
-      <span className="text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/20 flex items-center gap-1">
-        <CheckCircle2 size={10} /> {describeDuration(elapsed)} total
-      </span>
-    )
-  }
-  if (state === 'overdue') {
-    const over = elapsed - report.targetHours
-    return (
-      <span className="text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-danger/10 text-danger border border-danger/20 flex items-center gap-1">
-        <AlertTriangle size={10} /> {describeDuration(over)} overdue
-      </span>
-    )
-  }
-  const left = report.targetHours - elapsed
+  // Item 143. This was a small pill sitting among the reference number and
+  // the category. But the elapsed time IS the feature: the whole point of the
+  // Service Desk is "how long has this been broken, and how long are they
+  // taking" — the founder's sewerage running for three weeks. A number that
+  // small says the opposite of what the product is for.
+  //
+  // So it reads as a clock: the duration large, what it means underneath, and
+  // a bar showing how far through the target it is. Never colour alone — each
+  // state carries an icon and words as well (item 38).
+  const pct = report.targetHours > 0
+    ? Math.min(100, Math.round((elapsed / report.targetHours) * 100))
+    : 0
+
+  const tone =
+    state === 'done' ? { text: 'text-success', bar: 'bg-success', icon: CheckCircle2 }
+    : state === 'overdue' ? { text: 'text-danger', bar: 'bg-danger', icon: AlertTriangle }
+    : state === 'due_soon' ? { text: 'text-warning', bar: 'bg-warning', icon: Clock }
+    : { text: 'text-content', bar: 'bg-accent', icon: Clock }
+  const Icon = tone.icon
+
+  const headline =
+    state === 'done' ? describeDuration(elapsed)
+    : describeDuration(elapsed)
+
+  const caption =
+    state === 'done' ? 'to resolve'
+    : state === 'overdue' ? `${describeDuration(elapsed - report.targetHours)} past the ${describeDuration(report.targetHours)} target`
+    : `of a ${describeDuration(report.targetHours)} target`
+
   return (
-    <span className={`text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full border flex items-center gap-1 ${
-      state === 'due_soon'
-        ? 'bg-warning/10 text-warning border-warning/20'
-        : 'bg-surface-raised/5 text-content-muted border-default'
-    }`}>
-      <Clock size={10} /> {describeDuration(left)} left
-    </span>
+    <div className="rounded-xl bg-surface-sunken/40 border border-subtle p-3">
+      <div className="flex items-baseline gap-2">
+        <Icon size={14} className={`${tone.text} self-center flex-shrink-0`} aria-hidden="true" />
+        <span className={`text-xl font-black leading-none ${tone.text}`}>{headline}</span>
+        <span className="text-[10px] uppercase tracking-widest text-content-subtle">
+          {state === 'done' ? 'resolved' : 'open'}
+        </span>
+      </div>
+      <p className="text-[11px] text-content-muted mt-1.5">{caption}</p>
+      {state !== 'done' && (
+        // Not a progress bar toward completion — nothing here knows how close
+        // the fix is. It is how much of the promised time has been used.
+        <div
+          className="mt-2 h-1.5 rounded-full bg-surface-raised/40 overflow-hidden"
+          role="img"
+          aria-label={`${pct}% of the target time used`}
+        >
+          <div className={`h-full ${tone.bar} motion-base transition-all`} style={{ width: `${pct}%` }} />
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -249,12 +276,13 @@ export default function ServiceDeskPanel() {
       <div key={r.id} className="bg-surface-sunken/30 border border-subtle rounded-xl p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
+            <ServiceClock report={r} now={now} />
+
+        <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-mono text-content-muted">{r.reference}</span>
               <span className="text-xs font-black uppercase tracking-widest text-accent">
                 {CATEGORY_LABEL[r.category]}
               </span>
-              <SlaBadge report={r} now={now} />
             </div>
             <p className="text-sm font-bold text-content mt-1 break-words">{r.title}</p>
             <p className="text-xs text-content-muted mt-0.5">
@@ -462,22 +490,65 @@ export default function ServiceDeskPanel() {
       )}
 
       {performance.length > 0 && (
-        <div className="bg-surface-sunken/20 border border-subtle rounded-xl p-3 space-y-2">
-          <p className="text-xs font-black uppercase tracking-widest text-content-muted flex items-center gap-1">
-            <Gauge size={12} /> How long they actually take
+        <div className="bg-surface-sunken/20 border border-subtle rounded-xl p-3">
+          <p className="text-xs font-black uppercase tracking-widest text-content-muted flex items-center gap-1 mb-3">
+            <Gauge size={12} aria-hidden="true" /> How long they actually take
           </p>
-          {performance.map(p => (
-            <div key={p.providerId} className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-content font-bold truncate">{p.providerName}</span>
-              <span className="text-content-muted shrink-0">
-                {p.resolvedCount > 0
-                  ? `typically ${describeDuration(p.medianResolveHours)} to fix`
-                  : 'nothing resolved yet'}
-                {p.openCount > 0 && ` · ${p.openCount} open`}
-                {p.overdueCount > 0 && ` · ${p.overdueCount} overdue`}
-              </span>
-            </div>
-          ))}
+
+          {/* Item 144: a real data display rather than a sentence per provider.
+              ONE measure (median hours to resolve) across a handful of named
+              providers, so: horizontal bars, one hue, direct labels, no legend
+              — a legend for a single series is noise, and the title names it.
+              Sorted slowest first, because the slowest is the one worth
+              looking at; that is the whole reason this card exists.
+
+              A provider with nothing resolved gets NO BAR and says so. A zero
+              bar would claim they fix things instantly, which is the opposite
+              of the truth — absent and zero are different claims. */}
+          <ul className="space-y-2.5">
+            {[...performance]
+              .sort((a, b) => (b.medianResolveHours ?? -1) - (a.medianResolveHours ?? -1))
+              .map((prov, _i, all) => {
+                const slowest = Math.max(
+                  ...all.map(x => (x.resolvedCount > 0 ? x.medianResolveHours ?? 0 : 0)), 1
+                )
+                const measured = prov.resolvedCount > 0 && prov.medianResolveHours != null
+                const pct = measured ? Math.max(4, Math.round((prov.medianResolveHours! / slowest) * 100)) : 0
+                return (
+                  <li key={prov.providerId}>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-xs font-bold text-content truncate">{prov.providerName}</span>
+                      {/* Text wears text tokens, never the series colour. */}
+                      <span className="text-xs text-content-muted shrink-0 tabular-nums">
+                        {measured ? describeDuration(prov.medianResolveHours!) : 'no fixes recorded yet'}
+                      </span>
+                    </div>
+                    {measured && (
+                      <div className="mt-1 h-1.5 rounded-full bg-surface-raised/40 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-accent"
+                          style={{ width: `${pct}%` }}
+                          role="img"
+                          aria-label={`${prov.providerName}: typically ${describeDuration(prov.medianResolveHours!)} to fix`}
+                        />
+                      </div>
+                    )}
+                    {(prov.openCount > 0 || prov.overdueCount > 0) && (
+                      <p className="text-[10px] text-content-subtle mt-1 flex items-center gap-1.5 flex-wrap">
+                        {prov.openCount > 0 && <span>{prov.openCount} open</span>}
+                        {prov.overdueCount > 0 && (
+                          // Status colour, and never colour alone — icon plus
+                          // the word, per item 38.
+                          <span className="inline-flex items-center gap-1 text-danger font-bold">
+                            <AlertTriangle size={9} aria-hidden="true" /> {prov.overdueCount} overdue
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </li>
+                )
+              })}
+          </ul>
         </div>
       )}
 
