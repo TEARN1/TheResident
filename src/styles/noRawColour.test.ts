@@ -52,8 +52,17 @@ const ALLOWED_FILES = new Set<string>([
   // The <meta name="theme-color"> tags are per-scheme by definition: each one
   // names the colour for one scheme, so neither can be a theme-following token.
   'src/app/layout.tsx',
-  // Map markers are drawn to a canvas/Leaflet layer that takes colour strings,
-  // not CSS, so a var() would resolve to nothing. Tracked as item 145.
+  // VibeMap was allowlisted here with the reason "markers are drawn to a
+  // canvas/Leaflet layer that takes colour strings, not CSS, so a var() would
+  // resolve to nothing". THAT WAS WRONG. Leaflet's divIcon takes an HTML
+  // string that goes into the DOM, so `style="border:2px solid var(--x)"`
+  // resolves exactly like any other CSS — proven by doing it (item 145).
+  //
+  // It stays listed for the CLASS-based check above only because its Leaflet
+  // path options (polyline stroke and similar) are passed as plain strings
+  // where a custom property genuinely may not resolve. The CSS-property check
+  // below does NOT exempt it, which is the half that was hiding nine white
+  // marker rings.
   'src/app/dashboard/components/map/VibeMap.tsx'
 ])
 
@@ -115,4 +124,77 @@ test('the scanner would catch a planted violation', () => {
     new RegExp(`(?<![\\w-])${b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(sample))
   assert.ok(hit, 'the banned-utility regex no longer matches bg-black — it is broken')
   assert.ok(/#[0-9a-fA-F]{6}\b/.test('color: #D4AF37'), 'the hex regex is broken')
+})
+
+// ── The blind spot this check had ─────────────────────────────────────────
+//
+// Everything above scans Tailwind utility CLASSES. The map's Leaflet markers
+// are built as raw HTML strings inside template literals:
+//
+//   html: `<div style="...;border:2px solid white">`
+//
+// Nine `solid white` rings, two `color:white` labels and two rgba() glows
+// lived there through the entire colour migration, invisible to this file,
+// because none of them is a class. In dark mode a white ring is the brightest
+// thing on the map, so every marker read as urgent.
+//
+// This catches CSS-property colours wherever they appear — inline styles,
+// template literals, divIcon HTML.
+
+// The trailing boundary is (?![\w-]) and NOT \b, which is the bug my own
+// canary caught: \b after `)` can never match, because `)` is not a word
+// character and neither is whatever follows it. With \b there, this pattern
+// silently skipped every rgba() and the check only appeared to pass because
+// the glows had already been replaced by hand. A guardrail that cannot see
+// half of what it claims to cover is worse than none.
+const CSS_COLOUR = /(?:background|background-color|color|border(?:-\w+)?|box-shadow|fill|stroke)\s*:\s*[^;"'`}]*?\b(white|black|rgba?\([^)]*\)|#[0-9a-fA-F]{3,8})(?![\w-])/g
+
+/**
+ * Files where a literal colour in a CSS property is correct. Keep this
+ * shorter than ALLOWED_FILES — the whole point of this check is the cases
+ * that list was letting through.
+ */
+const CSS_COLOUR_EXEMPT = new Set<string>([
+  // Per-scheme <meta name="theme-color">: each names the colour for ONE
+  // scheme, so neither can follow the theme.
+  'src/app/layout.tsx',
+  // Resident-chosen post artwork, deliberately literal for every viewer.
+  'src/app/dashboard/gossip/page.tsx'
+])
+
+test('no CSS property names a literal colour', () => {
+  const offences: string[] = []
+  for (const file of files) {
+    const rel = file.slice(ROOT.length + 1).replace(/\\/g, '/')
+    // Deliberately NOT ALLOWED_FILES: that list exempts whole files from the
+    // class-based check for reasons that do not apply to CSS properties, and
+    // VibeMap being on it is exactly why nine hardcoded marker rings survived
+    // the entire colour migration.
+    if (CSS_COLOUR_EXEMPT.has(rel)) continue
+    const src = readFileSync(file, 'utf8')
+    for (const m of src.matchAll(new RegExp(CSS_COLOUR.source, 'g'))) {
+      // A var() fallback is still token-driven; `transparent` and `none` are
+      // not colours anyone can get wrong.
+      if (/var\(/.test(m[0])) continue
+      const line = src.slice(0, m.index).split('\n').length
+      offences.push(`  ${rel}:${line}  ${m[0].trim().slice(0, 60)}`)
+    }
+  }
+  assert.deepStrictEqual(
+    offences, [],
+    '\n\nThese name a colour in a CSS property rather than using a token.\n' +
+    'Tokens work in both themes; a literal does not:\n\n' + offences.join('\n') + '\n'
+  )
+})
+
+test('the CSS-property scan would catch a planted violation', () => {
+  // A fresh regex per assertion: CSS_COLOUR carries the `g` flag, and .test()
+  // on a global regex advances lastIndex between calls, so reusing it makes
+  // the second assertion depend on where the first one stopped.
+  const re = () => new RegExp(CSS_COLOUR.source, 'g')
+  // Both shapes that actually occurred in this codebase.
+  assert.ok(re().test('html: `<div style="border:2px solid white">`'))
+  assert.ok(re().test('box-shadow:0 0 0 4px rgba(34,197,94,0.25)'))
+  // And a token does NOT trip it.
+  assert.ok(!re().test('border:2px solid var(--marker-ring)'))
 })

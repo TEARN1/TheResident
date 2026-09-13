@@ -1061,3 +1061,18 @@ button, [role='button'], a, input, select, textarea, label {
     scroll-behavior: auto !important;
   }
 }
+
+/* Item 145. Map markers hardcoded `solid white` for their rings and
+   `color:white` for their labels, plus two rgba() glows — raw colours inside
+   template strings, which is why the colour guardrail never saw them: it
+   scans className attributes, and these are Leaflet divIcon HTML.
+
+   A white ring is wrong in dark mode specifically: it is the brightest thing
+   on a dark map, so every marker reads as urgent. The ring should be the map
+   surface, so a marker looks cut out of the map rather than stuck on it. */
+:root {
+  --marker-ring: var(--surface-raised);
+  --marker-label: var(--text-on-accent);
+  --marker-glow-success: rgb(var(--success-rgb) / 0.25);
+  --marker-glow-info: rgb(var(--info-rgb) / 0.25);
+}

@@ -751,7 +751,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     L.marker([pendingPoint.lat, pendingPoint.lon], {
       icon: L.divIcon({
         className: '',
-        html: `<div style="width:16px;height:16px;border-radius:50%;background:var(--success);border:2px solid white;box-shadow:0 0 0 4px rgba(34,197,94,0.25)"></div>`,
+        html: `<div style="width:16px;height:16px;border-radius:50%;background:var(--success);border:2px solid var(--marker-ring);box-shadow:0 0 0 4px var(--marker-glow-success)"></div>`,
         iconSize: [16, 16],
         iconAnchor: [8, 8]
       })
@@ -771,7 +771,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     L.marker([pendingPoint.lat, pendingPoint.lon], {
       icon: L.divIcon({
         className: '',
-        html: `<div style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--danger);border:2px solid white;color:white;font:800 10px sans-serif">A</div>`,
+        html: `<div style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--danger);border:2px solid var(--marker-ring);color:var(--marker-label);font:800 10px sans-serif">A</div>`,
         iconSize: [18, 18],
         iconAnchor: [9, 9]
       })
@@ -781,7 +781,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       L.marker([segmentEnd.lat, segmentEnd.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--danger);border:2px solid white;color:white;font:800 10px sans-serif">B</div>`,
+          html: `<div style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--danger);border:2px solid var(--marker-ring);color:var(--marker-label);font:800 10px sans-serif">B</div>`,
           iconSize: [18, 18],
           iconAnchor: [9, 9]
         })
@@ -805,7 +805,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       L.marker([pin.lat, pin.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div style="width:14px;height:14px;border-radius:4px;background:var(--accent);border:2px solid white;transform:rotate(45deg)"></div>`,
+          html: `<div style="width:14px;height:14px;border-radius:4px;background:var(--accent);border:2px solid var(--marker-ring);transform:rotate(45deg)"></div>`,
           iconSize: [14, 14],
           iconAnchor: [7, 7]
         })
@@ -829,7 +829,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       const marker = L.marker([listing.lat, listing.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:var(--accent);border:2px solid white;box-shadow:0 1px 4px var(--surface-overlay);color:var(--surface);font-size:11px;font-weight:900">R</div>`,
+          html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:var(--accent);border:2px solid var(--marker-ring);box-shadow:0 1px 4px var(--surface-overlay);color:var(--surface);font-size:11px;font-weight:900">R</div>`,
           iconSize: [22, 22],
           iconAnchor: [11, 11]
         })
@@ -859,7 +859,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       const marker = L.marker([h.lat, h.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:var(--info);border:2px solid white;box-shadow:0 1px 4px var(--surface-overlay)">
+          html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:var(--info);border:2px solid var(--marker-ring);box-shadow:0 1px 4px var(--surface-overlay)">
                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
                  </div>`,
           iconSize: [22, 22],
@@ -901,7 +901,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       const marker = L.marker([m.lat, m.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:var(--success);border:2px solid white;box-shadow:0 1px 4px var(--surface-overlay)">
+          html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:var(--success);border:2px solid var(--marker-ring);box-shadow:0 1px 4px var(--surface-overlay)">
                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>
                  </div>`,
           iconSize: [22, 22],
@@ -964,7 +964,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       L.marker([c.lat, c.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--success);border:2px solid white;box-shadow:0 1px 4px var(--surface-overlay)">
+          html: `<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--success);border:2px solid var(--marker-ring);box-shadow:0 1px 4px var(--surface-overlay)">
                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                  </div>`,
           iconSize: [20, 20],
@@ -999,7 +999,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     L.marker([livePosition.lat, livePosition.lon], {
       icon: L.divIcon({
         className: '',
-        html: `<div style="width:14px;height:14px;border-radius:50%;background:var(--info);border:2px solid white;box-shadow:0 0 0 6px rgba(59,130,246,0.25)"></div>`,
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:var(--info);border:2px solid var(--marker-ring);box-shadow:0 0 0 6px var(--marker-glow-info)"></div>`,
         iconSize: [14, 14],
         iconAnchor: [7, 7]
       })

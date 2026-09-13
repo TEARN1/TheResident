@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux'
 import { ShieldCheck, Search, UserPlus, Check, Users, Info, Loader, Link2, Copy } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
+import ProgressSteps from '../../../components/ui/ProgressSteps'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
 import {
   COMMON_RELATIONSHIPS, createKinVerificationLink, fetchMyKinLinks, kinLinkStatusLabel,
@@ -278,14 +279,26 @@ export default function TrustCirclePage() {
                 {unlocked ? 'Established' : 'Growing'}
               </span>
             </div>
-            <div className="flex gap-1.5">
-              {(['new', 'building', 'established'] as const).map((stage, i) => (
-                <div
-                  key={stage}
-                  className={`h-1.5 flex-1 rounded-full border border-subtle transition-all motion-slow ${i <= STAGE_INDEX[status] ? 'bg-accent' : 'bg-surface-raised'}`}
-                />
-              ))}
-            </div>
+            {/* Item 146. Three bare bars that filled with accent colour, and
+                nothing else — no labels, no names for the stages, and the
+                only difference between "you are here" and "not yet" was a
+                colour fill. A resident could see that something progressed
+                without being able to tell what the stages were or which one
+                they were in.
+
+                ProgressSteps names them, marks the current one by number,
+                tick AND weight, and is the same component the property
+                verification sequence uses — so the two places in this app
+                that show progress now look like the same product. */}
+            <ProgressSteps
+              label="Your trust circle's progress"
+              currentIndex={STAGE_INDEX[status]}
+              steps={[
+                { id: 'new', label: 'Just started' },
+                { id: 'building', label: 'Building' },
+                { id: 'established', label: 'Established' }
+              ]}
+            />
             <p className="text-xs text-content-muted">
               {unlocked
                 ? 'Your circle is established — trusted features like one-click move-assist are unlocked.'
