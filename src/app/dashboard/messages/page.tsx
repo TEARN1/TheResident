@@ -112,7 +112,7 @@ export default function MessagesPage() {
   }, [myId])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount, not a render-loop risk
+     
     loadThreads()
   }, [loadThreads])
 

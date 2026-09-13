@@ -461,7 +461,7 @@ export default function GossipPage() {
   }, [posts, fetchProfilesFor, fetchCommentPreviewsFor, fetchReactionsFor])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadPosts()
   }, [loadPosts])
 

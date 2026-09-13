@@ -26,15 +26,23 @@ import type { AppNotification } from '../../../../store'
 //    did nothing when touched — which reads as the app being broken rather
 //    than as the row being informational.
 
-/** Icon by notification family. Falls back to a bell rather than nothing. */
-function iconFor(type: string | undefined) {
-  if (!type) return Bell
-  if (type.includes('panic') || type.includes('alert')) return AlertTriangle
-  if (type.includes('message')) return MessageCircle
-  if (type.includes('room') || type.includes('listing') || type.includes('housing')) return Home
-  if (type.includes('dispatch') || type.includes('service') || type.includes('maintenance')) return Wrench
-  if (type.includes('community') || type.includes('follow') || type.includes('org')) return Users
-  return Bell
+/**
+ * Icon by notification family. Falls back to a bell rather than nothing.
+ *
+ * Returns a rendered ELEMENT, not a component type. Assigning a component to
+ * a capitalised local inside render (`const Icon = iconFor(...)`) is what
+ * react-hooks flags as "cannot create components during render" — React sees
+ * a new component identity on every render and remounts the subtree.
+ */
+function iconFor(type: string | undefined, className: string): React.ReactNode {
+  const props = { size: 14, className, 'aria-hidden': true as const }
+  if (!type) return <Bell {...props} />
+  if (type.includes('panic') || type.includes('alert')) return <AlertTriangle {...props} />
+  if (type.includes('message')) return <MessageCircle {...props} />
+  if (type.includes('room') || type.includes('listing') || type.includes('housing')) return <Home {...props} />
+  if (type.includes('dispatch') || type.includes('service') || type.includes('maintenance')) return <Wrench {...props} />
+  if (type.includes('community') || type.includes('follow') || type.includes('org')) return <Users {...props} />
+  return <Bell {...props} />
 }
 
 export default function NotificationRow({
@@ -45,7 +53,6 @@ export default function NotificationRow({
   onOpen: (n: AppNotification) => void
   onMarkRead: (n: AppNotification) => void
 }) {
-  const Icon = iconFor(item.type)
   const when = relativeTime(item.timestamp)
   const hasDestination = !!item.actionUrl
   const urgent = !!item.type && (item.type.includes('panic') || item.type.includes('alert'))
@@ -76,7 +83,7 @@ export default function NotificationRow({
         className={`mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
           ${urgent ? 'bg-danger/10 text-danger' : 'bg-accent/10 text-accent'}`}
       >
-        <Icon size={14} />
+        {iconFor(item.type, '')}
       </span>
 
       <span className="min-w-0 flex-1">

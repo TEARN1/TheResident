@@ -23,6 +23,7 @@ the change is server-side or tooling with no UI at all.
 <!-- What you actually ran, and what it said. "Tests pass" on its own is not
      verification; name the failure you reproduced first, if there was one. -->
 
+- [ ] `npm run lint` — the project's own command, not `npx eslint <path>`; they differ
 - [ ] `npm test`
 - [ ] `npx tsc --noEmit`
 - [ ] `npm run build`

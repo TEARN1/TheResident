@@ -54,7 +54,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
   const [moderateError, setModerateError] = useState<string | null>(null)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     if (!selectedId && myCommunities[0]) setSelectedId(myCommunities[0].id)
   }, [myCommunities, selectedId])
 
@@ -125,7 +125,7 @@ export default function CommunityAdminTab({ currentUserId, myCommunities }: Comm
     }
   }, [selectedId, currentUserId])
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => { load() }, [load])
 
   const handleGenerateInvite = async () => {

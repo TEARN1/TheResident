@@ -83,7 +83,7 @@ export default function TrustCirclePage() {
   }, [])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadKinLinks()
   }, [loadKinLinks])
 
@@ -175,11 +175,11 @@ export default function TrustCirclePage() {
   }, [myId])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadGate()
   }, [loadGate])
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadConnections()
   }, [loadConnections])
 

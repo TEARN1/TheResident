@@ -84,6 +84,20 @@ These are not style. They are the recurring defect in this codebase:
 - **Absent and zero are different claims.** A missing score rendered as `0`
   tells every neighbour this person scored zero.
 
+## Run the project's own checks, not your own approximation of them
+
+`npm run lint` — not `npx eslint src/`. They are not the same command and they
+do not report the same thing. I ran the second one all session, saw "0 errors",
+pushed, and CI failed on an error the project's own config catches and mine
+did not. The gate before a push is exactly this, in this order:
+
+```
+npx tsc --noEmit && npm run lint && npm test && npm run build && node scripts/smoke.mjs
+```
+
+The smoke suite needs a free port and a Chromium path in some environments:
+`SMOKE_PORT=3100 CHROMIUM_PATH=/opt/pw-browsers/chromium node scripts/smoke.mjs`.
+
 ## Changing a colour
 
 Edit `scripts/gen-tokens.mjs` and run `node scripts/gen-tokens.mjs`. Never edit

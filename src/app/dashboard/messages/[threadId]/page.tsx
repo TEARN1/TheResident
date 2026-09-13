@@ -74,7 +74,7 @@ export default function ThreadPage() {
   }, [myId, otherId])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount, not a render-loop risk
+     
     loadThread()
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }, [loadThread])

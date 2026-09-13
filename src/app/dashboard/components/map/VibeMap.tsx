@@ -550,7 +550,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   // untouched, only the underlying imagery changes.
   useEffect(() => {
     tileLayerRef.current?.setUrl(TILE_SOURCES[mapTheme])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [mapTheme])
 
   useEffect(() => {

@@ -78,7 +78,7 @@ export default function SharedResourcesTab({ currentUserId, communityId }: Share
     }
   }, [communityId])
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => { load() }, [load])
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -52,7 +52,7 @@ export default function AuthPage() {
     const choice = readTheme()
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage/DOM on mount
     setTheme(choice)
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage/DOM on mount
+     
     setIsDark(resolveTheme(choice, prefersDark()) === 'dark')
   }, [])
 
