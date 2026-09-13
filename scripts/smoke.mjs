@@ -390,6 +390,67 @@ for (const route of ROUTES) {
     problems.push(`rendered only ${chars} characters — blank or errored`)
   }
 
+  // 200% TEXT ZOOM — WCAG 1.4.4, and item 189 of docs/DESIGN-OVERHAUL.md.
+  //
+  // I twice told the founder this needed a human at a device. It does not:
+  // 1.4.4 is about resizing TEXT, not zooming the page, and doubling the root
+  // font size is exactly what a browser's text-size setting does. A person who
+  // needs large text is a person who will hit this on every screen, so leaving
+  // it unchecked because it felt manual was the wrong call.
+  //
+  // Run at the primary width only — the failure is text outgrowing its
+  // container, which does not need two viewports to find, and a second pass
+  // over 15 routes doubles the suite's runtime for very little.
+  if (status && status < 400 && vp.w === 390) {
+    const zoom = await page.evaluate(async () => {
+      const root = document.documentElement
+      const before = root.style.fontSize
+      root.style.fontSize = '32px'            // 200% of the 16px default
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+
+      const vw = window.innerWidth
+      const scrollW = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth)
+      // Text clipped by a fixed-height box: the content is there and cannot
+      // be read, which is the specific loss 1.4.4 prohibits.
+      const clipped = []
+      for (const el of document.querySelectorAll('h1,h2,h3,p,span,a,button,label,li')) {
+        const text = (el.textContent || '').trim()
+        if (!text) continue
+        const cs = getComputedStyle(el)
+        if (cs.display === 'none' || cs.visibility === 'hidden') continue
+        if (cs.overflow !== 'hidden' && cs.overflowY !== 'hidden') continue
+        // Deliberate, designed truncation is not a loss of content — the
+        // rest is reachable by opening the thing. Both of these are:
+        if (cs.textOverflow === 'ellipsis') continue
+        if (cs.webkitLineClamp && cs.webkitLineClamp !== 'none') continue
+        // Visually hidden but present for screen readers. It is SUPPOSED to
+        // be 1px with its text clipped; flagging it would be the same mistake
+        // the collapsed-content check already documents.
+        if (cs.clipPath && cs.clipPath !== 'none') continue
+        const box = el.getBoundingClientRect()
+        if (box.width <= 2 || box.height <= 2) continue
+        if (el.scrollHeight > el.clientHeight + 4 && el.clientHeight > 0) {
+          clipped.push(`<${el.tagName.toLowerCase()}> "${text.slice(0, 24)}"`)
+        }
+      }
+
+      root.style.fontSize = before
+      return { vw, scrollW, clipped }
+    }).catch(() => null)
+
+    if (zoom) {
+      if (zoom.scrollW > zoom.vw + 1) {
+        problems.push(`at 200% text zoom the page scrolls sideways: ` +
+          `${zoom.scrollW}px in a ${zoom.vw}px viewport`)
+      }
+      if (zoom.clipped.length) {
+        problems.push(`${zoom.clipped.length} element(s) clip their text at 200% zoom: ` +
+          zoom.clipped.slice(0, 3).join(', ') +
+          (zoom.clipped.length > 3 ? ` (+${zoom.clipped.length - 3} more)` : ''))
+      }
+    }
+  }
+
   // Screenshots only at the primary size; two sets of 14 is noise.
   if (SHOTS && vp.w === 390 && status && status < 400) {
     const name = (route === '/' ? 'home' : route.replace(/^\//, '').replace(/\//g, '-')) + '.png'

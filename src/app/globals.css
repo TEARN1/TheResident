@@ -422,6 +422,14 @@ body {
   box-shadow: 0 10px 30px rgb(var(--border-rgb) / 0.28);
 }
 
+/* WCAG 1.4.4 — text must survive being doubled. This banner was a single
+   non-wrapping row: icon, a paragraph, a nowrap CTA and a dismiss button, all
+   flex-shrink: 0. At 200% text it ran to 487px inside a 390px viewport and
+   pushed the WHOLE PAGE into sideways scrolling, on every dashboard route.
+   Someone who needs large text meets that on every screen.
+
+   Wrapping fixes it at the source: the CTA drops to its own line when the
+   sentence needs the width. */
 .guest-summary-banner {
   margin: 0 1rem 0.75rem;
   padding: 0.75rem 1rem;
@@ -429,11 +437,19 @@ body {
   border: 1px solid var(--accent-border);
   border-radius: 12px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   font-size: 0.75rem;
   color: var(--text-muted);
   line-height: 1.4;
+}
+
+/* The sentence takes the row and pushes the CTA down, rather than the CTA
+   squeezing the sentence into a column of single words. */
+.guest-summary-banner > span {
+  flex: 1 1 12rem;
+  min-width: 0;
 }
 
 .guest-summary-banner strong {

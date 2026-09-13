@@ -464,7 +464,7 @@ it. These ten items are what make the other 190 permanent.*
 
 ## Progress
 
-**Done and pushed: 138 of 200.** Phases 1 and 2 complete, most of 3, section G's
+**Done and pushed: 140 of 200.** Phases 1 and 2 complete, most of 3, section G's
 component library (121-138, 148-150), and the guardrails from 6 that keep them
 from regressing.
 
@@ -526,6 +526,7 @@ trust-circle visualisation.
 | Overlays that trap focus | 0 of 16 | 14 of 14 real dialogs (the other two are a fullscreen view and a dev panel) |
 | Token pairs contrast-checked in CI | 13 | 25 |
 | WCAG AA failures in the palette | 1 (unmeasured) | 0 |
+| Routes that scroll sideways at 200% text | 10 of 10 dashboard routes | 0 |
 | Text under 12px | 21 per screen | 0 |
 | Layout change 320px → 1024px | none | tablet 2-col, desktop sidebar |
 | Functions that could hang a spinner forever | 17 | 0 |
