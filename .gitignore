@@ -40,3 +40,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Android TWA (Bubblewrap) — never commit a signing key. A leaked upload
+# keystore cannot be revoked the way a password can; the fix is re-keying
+# with Google Play App Signing, which is disruptive. The generated native
+# project is also excluded: it's fully reproducible from twa-manifest.json
+# via `npx @bubblewrap/cli init`, so keeping it out of git avoids two sources
+# of truth drifting apart.
+*.keystore
+*.jks
+key.properties
+/android/

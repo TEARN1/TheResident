@@ -1,0 +1,40 @@
+{
+  "packageId": "com.theresidentcrew.twa",
+  "host": "theresidentcrew.com",
+  "name": "The Resident Co-Living Hub",
+  "launcherName": "Resident",
+  "display": "standalone",
+  "themeColor": "#D4AF37",
+  "navigationColor": "#0a0a0a",
+  "navigationColorDark": "#0a0a0a",
+  "backgroundColor": "#0a0a0a",
+  "enableNotifications": true,
+  "startUrl": "/dashboard",
+  "iconUrl": "https://theresidentcrew.com/logo.png",
+  "shortcuts": [
+    {
+      "name": "Map",
+      "shortName": "Map",
+      "url": "/dashboard/community?tab=vibemap",
+      "chosenIconUrl": "https://theresidentcrew.com/logo.png"
+    },
+    {
+      "name": "Report a fault",
+      "shortName": "Report",
+      "url": "/dashboard/community?tab=faults",
+      "chosenIconUrl": "https://theresidentcrew.com/logo.png"
+    }
+  ],
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  }
+}

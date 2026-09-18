@@ -10,7 +10,7 @@ const WINDOW_MS = 60 * 1000 // 1 minute
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const ip = (request as NextRequest & { ip?: string }).ip || request.headers.get('x-forwarded-for') || 'local-ip'
   const url = request.nextUrl.clone()
 
