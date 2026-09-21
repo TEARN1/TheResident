@@ -55,6 +55,19 @@ function styledSelectors(): Set<string> {
   return covered
 }
 
+test('globals.css still supplies box-sizing: border-box', () => {
+  // The same defect class as the borders, and the more damaging half.
+  // Tailwind's sizing model assumes border-box: `w-full p-3 border` is meant
+  // to fill its parent with the padding taken out of that width. Preflight
+  // normally supplies it and is off here, so the browser's content-box
+  // applied and the padding was added on top — a `w-full border p-3` div
+  // measured 326px inside a 300px parent. Inputs and buttons were spared
+  // only because the user-agent stylesheet already gives form controls
+  // border-box, which is why it stayed hidden for so long.
+  assert.match(GLOBALS, /\*\s*,\s*::before\s*,\s*::after\s*\{[^}]*box-sizing\s*:\s*border-box/,
+    'globals.css no longer sets box-sizing: border-box on every element — every w-full element with padding now overflows its container')
+})
+
 test('globals.css declares a border-style at all', () => {
   // The canary for the whole mechanism. If this block is ever deleted,
   // every border in the app silently disappears again.

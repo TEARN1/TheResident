@@ -1117,3 +1117,27 @@ button, [role='button'], a, input, select, textarea, label {
 .border-dotted { border-style: dotted; }
 .border-double { border-style: double; }
 .border-none, .border-hidden { border-style: none; }
+
+/* ── box-sizing, the other half of the Preflight debt ─────────────────────
+   Tailwind's entire sizing model assumes `box-sizing: border-box`: `w-full`
+   means "fill the parent", and `w-full p-3 border` is supposed to still fill
+   the parent, with the padding and border taken out of that width. Preflight
+   is what normally supplies it, and it is off here, so the browser default
+   `content-box` applied instead and the padding was ADDED on top.
+
+   Measured, not assumed: a `w-full border border-default p-3 rounded-xl`
+   div renders 326px inside a 300px parent. 121 elements in this codebase
+   combine an explicit width with padding and a border. Inputs and buttons
+   escaped it because the user-agent stylesheet already gives form controls
+   border-box — which is exactly why this stayed hidden, since the controls
+   people look at hardest were the ones that were fine.
+
+   Two places in the app had already worked around it locally (`.btn` here
+   and one rule in page.module.css) by setting border-box by hand.
+
+   This one IS safe to apply globally, unlike Preflight's border pair: it
+   changes no element that lacks both a size and padding, and setting it on
+   `*` is what every Tailwind codebase runs with. Elements already declaring
+   border-box are unaffected; the ones that change were overflowing their
+   container before and fit it now. */
+*, ::before, ::after { box-sizing: border-box; }
