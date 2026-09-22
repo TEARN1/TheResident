@@ -2,6 +2,7 @@
 
 import NotificationRow from './components/shared/NotificationRow'
 import LiveRegion from '../../components/ui/LiveRegion'
+import SuccessCheck from '../../components/ui/SuccessCheck'
 import React, { useState, useEffect, useRef } from 'react'
 import AppErrorBoundary from './components/shared/AppErrorBoundary'
 import { installErrorReporting } from '../../utils/errorReporting'
@@ -9,7 +10,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   Home, AlertTriangle,
-  Wifi, Users, CheckCircle2,
+  Wifi, Users,
   Briefcase,
   Megaphone, Wrench, Loader,
   ShieldCheck, MessageCircle, MessagesSquare, X, Sparkles
@@ -268,7 +269,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           urgent thing to tell someone, so show just that one, worst-first:
           a failed fetch beats "still loading", which beats routine offline
           queuing, which beats a transient success toast. */}
-      <div className="top-alert-banner-stack">
+      {/* aria-live because every state in this stack is something that
+          happened without the reader asking: data failed to load, changes
+          are queued offline, a report was filed. Polite rather than
+          assertive — none of it should cut across what is being read.
+          Before this the whole stack was silent to assistive tech. */}
+      <div className="top-alert-banner-stack" aria-live="polite">
         {dataStatus === 'error' && failedTables.length > 0 ? (
           <div className="top-alert-banner">
             <AlertTriangle size={18} color="var(--danger)" />
@@ -286,7 +292,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         ) : alertNotification ? (
           <div className="top-alert-banner">
-            <CheckCircle2 size={18} color="var(--success)" />
+            <SuccessCheck message={alertNotification} />
             <span>{alertNotification}</span>
           </div>
         ) : null}

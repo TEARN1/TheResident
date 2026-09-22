@@ -1141,3 +1141,46 @@ button, [role='button'], a, input, select, textarea, label {
    border-box are unaffected; the ones that change were overflowing their
    container before and fit it now. */
 *, ::before, ::after { box-sizing: border-box; }
+
+/* ── Page transition ──────────────────────────────────────────────────────
+   Paired with src/app/template.tsx, which explains why this is opacity-only
+   and why it is CSS rather than Framer Motion. In short: a transform on that
+   wrapper breaks `position: fixed` for the entire app (measured: a fixed
+   bottom bar moves from 844px to 3350px), and a JS-driven fade shipped
+   `opacity: 0` in the server-rendered HTML, so the app was blank without
+   JavaScript.
+
+   No fill-mode, on purpose: the element's resting opacity is 1 and the
+   animation is the departure from it, so if the animation never runs — a
+   reduced-motion visitor, an old browser — the content is simply there. */
+@media (prefers-reduced-motion: no-preference) {
+  .page-transition {
+    animation: page-enter var(--duration-slow) var(--ease-out);
+  }
+}
+
+@keyframes page-enter {
+  from { opacity: 0; }
+}
+
+/* ── Success check (item 161) ─────────────────────────────────────────────
+   The confirmation beat for a completed core loop — a room request sent, a
+   report filed. Paired with components/ui/SuccessCheck.tsx, which also
+   speaks the message through the live region and fires the commit haptic;
+   this is only the part you can see.
+
+   Transform and opacity only (item 153) so it composites and costs no
+   layout on a low-end Android. Behind no-preference (item 162) so reduced
+   motion gets a check that is simply already there — the icon's resting
+   state is the drawn check, and this animation is the departure from it. */
+@media (prefers-reduced-motion: no-preference) {
+  .success-check {
+    animation: success-pop var(--duration-slow) var(--ease-out);
+  }
+}
+
+@keyframes success-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  60%  { transform: scale(1.08); }
+  to   { opacity: 1; transform: scale(1); }
+}
