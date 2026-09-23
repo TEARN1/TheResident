@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
@@ -492,21 +493,23 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       // who opens that popup. encodeHTMLEntities (utils/security.ts) is the
       // same sanitizer already used at signup, applied here too.
       marker.bindPopup(`
-        <div style="font-family:inherit;min-width:190px">
+        <div style="font-family:inherit;min-width:200px;background:rgba(20,20,20,0.85);backdrop-filter:blur(20px);padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);color:#fff;box-shadow:0 10px 30px rgba(0,0,0,0.5);">
           <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-            <strong>${encodeHTMLEntities(KIND_LABEL[zone.kind] || zone.kind)}</strong>
-            ${distanceLabel ? `<span style="font-size:0.75em;opacity:0.6;white-space:nowrap">${distanceLabel}</span>` : ''}
+            <strong style="font-size:14px;color:${KIND_COLOR[zone.kind] || '#fff'}">${encodeHTMLEntities(KIND_LABEL[zone.kind] || zone.kind)}</strong>
+            ${distanceLabel ? `<span style="font-size:11px;opacity:0.5;white-space:nowrap;background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:10px">${distanceLabel}</span>` : ''}
           </div>
-          ${zone.label ? `<div>${encodeHTMLEntities(zone.label)}</div>` : ''}
-          ${zone.note ? `<div style="opacity:0.7;font-size:0.85em;margin-top:4px">${encodeHTMLEntities(zone.note)}</div>` : ''}
-          ${expiry ? `<div style="font-size:0.75em;margin-top:6px;color:${expiryFactor < 1 ? '#f59e0b' : '#D4AF37'}">${now >= new Date(zone.endsAt as string).getTime() ? 'Cleared' : 'Clears by'} ${expiry}</div>` : ''}
-          <div style="font-size:0.75em;opacity:0.6;margin-top:6px">
+          ${zone.label ? `<div style="font-size:13px;margin-top:6px;font-weight:500">${encodeHTMLEntities(zone.label)}</div>` : ''}
+          ${zone.note ? `<div style="opacity:0.7;font-size:12px;margin-top:4px;line-height:1.4">${encodeHTMLEntities(zone.note)}</div>` : ''}
+          ${expiry ? `<div style="font-size:11px;margin-top:8px;font-weight:600;color:${expiryFactor < 1 ? '#f59e0b' : '#D4AF37'}">${now >= new Date(zone.endsAt as string).getTime() ? 'Cleared' : 'Clears by'} ${expiry}</div>` : ''}
+          <div style="font-size:10px;opacity:0.4;margin-top:8px;text-transform:uppercase;letter-spacing:0.5px">
             Reported via ${sourceLabel} · ${zone.status}
           </div>
-          <div style="font-size:0.75em;margin-top:4px;${isContested ? 'color:#c084fc;font-weight:600' : ''}">
-            ✓ ${zone.confirmCount} confirmed &nbsp; ✗ ${zone.disputeCount} disputed${isContested ? ' — contested' : ''}
+          <div style="font-size:11px;margin-top:4px;display:flex;gap:8px;${isContested ? 'color:#c084fc;font-weight:700' : 'opacity:0.8'}">
+            <span style="color:#22c55e">✓ ${zone.confirmCount}</span> 
+            <span style="color:#ef4444">✗ ${zone.disputeCount}</span>
+            ${isContested ? ' <span style="opacity:0.7">— contested</span>' : ''}
           </div>
-          <div id="${popupId}" style="display:flex;gap:6px;margin-top:8px"></div>
+          <div id="${popupId}" style="display:flex;gap:6px;margin-top:12px"></div>
         </div>
       `)
 
@@ -801,7 +804,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
         {/* Search & Quick Filter Bar — floating top-left */}
         <div className="absolute top-3 left-3 right-3 md:right-auto md:w-[380px] z-[500] space-y-2">
-          <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl">
+          <div className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden shadow-2xl">
             <MapSearchBox onSelect={handleSearchSelect} />
           </div>
           {/* Quick Filter Pills */}
@@ -842,7 +845,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         <div className="absolute top-3 right-3 z-[500] flex flex-col items-end gap-2">
           <button
             onClick={() => setShowLegend(v => !v)}
-            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-2.5 text-gray-300 hover:text-white shadow-2xl"
+            className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden p-2.5 text-gray-300 hover:text-white shadow-2xl"
             title="Legend and filters"
             aria-label={showLegend ? 'Hide map legend and filters' : 'Show map legend and filters'}
             aria-pressed={showLegend}
@@ -853,7 +856,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             // Compact icon-only strip below ~380px wide (a phone in portrait
             // with the map at full width); the full labelled key otherwise —
             // the 190px fixed panel used to eat most of a phone-width map.
-            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl w-[52px] sm:w-[200px]">
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden p-3 shadow-2xl w-[52px] sm:w-[200px]">
               <p className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Map key — tap to filter</p>
               {Object.entries(KIND_LABEL).map(([kind, label]) => {
                 const bounds = mapRef.current?.getBounds()
@@ -894,7 +897,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                 <div className="w-3 h-3 rounded-full shrink-0 bg-white/80 border border-white" />
                 Confirmed / official
               </div>
-            </div>
+            </motion.div>
           )}
 
           <button
@@ -907,7 +910,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             <Wrench size={18} />
           </button>
           {showToolsMenu && (
-            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-2 shadow-2xl w-[160px] flex flex-col gap-1">
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden p-2 shadow-2xl w-[160px] flex flex-col gap-1">
               {(['pins', 'matrix', 'geofence'] as const).map(d => (
                 <button
                   key={d}
@@ -917,7 +920,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                   {d === 'pins' ? 'Saved places' : d === 'matrix' ? 'Distances' : 'Alerts'}
                 </button>
               ))}
-            </div>
+            </motion.div>
           )}
         </div>
 
@@ -927,7 +930,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             rounded container, Google-Maps-style, so it's clear at a glance
             which buttons act on the view vs. on you. */}
         <div className="absolute bottom-3 right-3 z-[500] flex flex-col gap-2.5">
-          <div className="bg-black/85 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl overflow-hidden flex flex-col divide-y divide-white/10">
+          <div className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden shadow-2xl overflow-hidden flex flex-col divide-y divide-white/10">
             <button onClick={() => zoom(1)} aria-label="Zoom in" className="p-2.5 text-gray-300 hover:text-white" title="Zoom in"><Plus size={16} /></button>
             <button onClick={() => zoom(-1)} aria-label="Zoom out" className="p-2.5 text-gray-300 hover:text-white" title="Zoom out"><Minus size={16} /></button>
             <button
@@ -941,7 +944,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             </button>
           </div>
 
-          <div className="bg-black/85 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl overflow-hidden flex flex-col divide-y divide-white/10">
+          <div className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden shadow-2xl overflow-hidden flex flex-col divide-y divide-white/10">
             {/* One-shot only — see the comment on handleCenterOnMe for why
                 this no longer starts live tracking as a side effect. */}
             <button
@@ -986,7 +989,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         {/* Stats chip — floating bottom-left. Counts the FILTERED set, not
             the raw fetch — otherwise "12 nearby" while a filter has hidden
             9 of them would just read as broken. */}
-        <div className="absolute bottom-3 left-3 z-[500] bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl px-3 py-2 shadow-2xl flex items-center gap-3 text-[10px] text-gray-300">
+        <div className="absolute bottom-3 left-3 z-[500] bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden px-3 py-2 shadow-2xl flex items-center gap-3 text-[10px] text-gray-300">
           <span>{filteredZones.length}{filteredZones.length !== zones.length ? ` of ${zones.length}` : ''} nearby</span>
           <span className="text-gray-600">·</span>
           <span className="flex items-center gap-1"><Check size={10} className="text-green-500" /> {filteredZones.filter(z => z.status === 'confirmed' || z.status === 'official').length} confirmed</span>
@@ -999,7 +1002,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         </div>
 
         {locationDenied && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 text-xs text-gray-300 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl p-2.5 shadow-2xl">
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 text-xs text-gray-300 bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden p-2.5 shadow-2xl">
             <ShieldAlert size={14} className="text-gold-primary shrink-0" />
             Showing the whole world — zoom into your area for local reports.
           </div>
@@ -1008,7 +1011,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         {/* Pending-point action card — floating bottom-center, appears after a click or search */}
         {pendingPoint && (
           <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[500] w-[92%] max-w-sm">
-            <div className="bg-black/85 backdrop-blur-xl border border-white/10 rounded-2xl p-3.5 shadow-2xl space-y-2.5">
+            <motion.div initial={{ opacity: 0, y: 50, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 50, scale: 0.95 }} className="bg-surface backdrop-blur-3xl border border-glass-border rounded-3xl shadow-glass overflow-hidden p-3.5 shadow-2xl space-y-2.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-gray-300 truncate flex items-center gap-1.5"><MapPin size={13} className="text-green-500 shrink-0" /> {pendingPoint.label}</span>
                 <button onClick={() => { setPendingPoint(null); setShowReportForm(false) }} className="text-gray-500 hover:text-white shrink-0"><X size={14} /></button>
@@ -1018,21 +1021,21 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setShowReportForm(true)}
-                    className="flex-1 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
+                    className="flex-1 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
                   >
                     <Ban size={12} /> Report closure
                   </button>
                   {currentUserId && (
                     <button
                       onClick={() => handleSavePin(pendingPoint.label)}
-                      className="flex-1 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all"
+                      className="flex-1 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all"
                     >
                       Save place
                     </button>
                   )}
                   <button
                     onClick={() => addMatrixPoint({ id: `pt-${pendingPoint.lat}-${pendingPoint.lon}`, label: pendingPoint.label, lat: pendingPoint.lat, lon: pendingPoint.lon })}
-                    className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all"
+                    className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all"
                   >
                     Add to distances
                   </button>
@@ -1067,7 +1070,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                     <button
                       onClick={submitClosureReport}
                       disabled={reportSubmitting}
-                      className="flex-1 bg-red-500 hover:bg-red-600 text-white font-black px-3 py-2 rounded-lg text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      className="flex-1 bg-red-500 hover:bg-red-600 text-white font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                     >
                       {reportSubmitting ? <Loader size={12} className="animate-spin" /> : <Ban size={12} />}
                       {reportSubmitting ? 'Reporting…' : `Report for ${DURATION_OPTIONS.find(d => d.hours === reportDurationHours)?.label}`}
@@ -1076,7 +1079,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
           </div>
         )}
 
