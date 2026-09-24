@@ -250,17 +250,42 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
           </div>
 
           {/* Modal Actions */}
-          <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between shrink-0">
-            <button
-              onClick={handleCopyBreakdown}
-              className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-gold-primary/10"
-            >
-              {copied ? <Check size={14} /> : <Copy size={14} />}
-              <span>{copied ? 'Copied Breakdown!' : 'Copy Breakdown for Chat'}</span>
-            </button>
+          <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleCopyBreakdown}
+                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-gold-primary/10"
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                <span>{copied ? 'Copied Breakdown!' : 'Copy for Chat'}</span>
+              </button>
+              <button
+                onClick={() => {
+                  playTactileSound('pop')
+                  const subject = encodeURIComponent(`Monthly Household Expense Split (${currency} ${totalExpense.toLocaleString()})`)
+                  const body = encodeURIComponent(
+                    `Hi Housemates,\n\nHere is our monthly living expense split calculated via The Resident:\n\n` +
+                    `Total Pool: ${currency} ${totalExpense.toLocaleString()}\n\n` +
+                    `Individual Contributions:\n` +
+                    roommates.map(rm => {
+                      const share = Math.round((rm.roomSizeRatio / totalRatios) * totalExpense)
+                      return `• ${rm.name}: ${currency} ${share.toLocaleString()}`
+                    }).join('\n') +
+                    `\n\nExpense Breakdown:\n` +
+                    expenses.map(e => ` - ${e.label}: ${currency} ${e.amount.toLocaleString()}`).join('\n') +
+                    `\n\nPlease transfer your shares before the rent due date.\n\nWarm regards,\nHousehold Lead`
+                  )
+                  window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
+                }}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5"
+                title="Send expense breakdown directly via email to all housemates"
+              >
+                <span>Email House</span>
+              </button>
+            </div>
             <button
               onClick={() => { playTactileSound('pop'); onClose() }}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95"
+              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95"
             >
               Done
             </button>

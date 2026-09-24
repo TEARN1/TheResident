@@ -217,16 +217,30 @@ TERM: ${leaseMonths} Months starting ${startDate}
 DEPOSIT: ${currency} ${depositAmount.toLocaleString()}`}
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={handleDownload}
                   className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 active:scale-98"
                 >
-                  <Download size={14} /> Download Legal Copy (.txt)
+                  <Download size={14} /> Download (.txt)
+                </button>
+                <button
+                  onClick={() => {
+                    playTactileSound('pop')
+                    const subject = encodeURIComponent(`Lease Agreement - ${listingTitle} (${tenantName})`)
+                    const body = encodeURIComponent(
+                      `Hi ${landlordName || 'Landlord'},\n\nPlease find the standard residential lease agreement generated via The Resident platform:\n\nTenant: ${tenantName}\nPremises: ${listingTitle} (${listingAddress})\nCommencement: ${startDate}\nTerm: ${leaseMonths} Months\nRent: ${currency} ${monthlyRent.toLocaleString()}/mo\nDeposit: ${currency} ${depositAmount.toLocaleString()}\n\nLet me know if all terms are approved.\n\nWarm regards,\n${tenantName}`
+                    )
+                    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
+                  }}
+                  className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                  title="Open default email client with formatted lease draft"
+                >
+                  <span>Email</span>
                 </button>
                 <button
                   onClick={() => { playTactileSound('click'); setHasGenerated(false) }}
-                  className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95"
+                  className="px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95"
                 >
                   Edit
                 </button>

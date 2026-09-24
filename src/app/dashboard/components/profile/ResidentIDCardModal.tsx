@@ -146,17 +146,31 @@ export default function ResidentIDCardModal({
           </div>
 
           {/* Action buttons */}
-          <div className="w-full mt-5 flex gap-2">
+          <div className="w-full mt-5 flex flex-wrap gap-2">
             <button
               onClick={handleShare}
               className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-gold-primary/20 flex items-center justify-center gap-2 active:scale-95"
             >
               <Share2 size={14} />
-              <span>{copied ? 'Pass Link Copied!' : 'Share Resident Pass'}</span>
+              <span>{copied ? 'Pass Link Copied!' : 'Share Pass Link'}</span>
+            </button>
+            <button
+              onClick={() => {
+                playTactileSound('pop')
+                const subject = encodeURIComponent(`Digital Resident ID Pass - ${residentName} (${citizenNumber})`)
+                const body = encodeURIComponent(
+                  `Hi Security / Host,\n\nPlease find my verified Digital Resident ID pass from The Resident platform:\n\nResident Name: ${residentName}\nCitizen ID: ${citizenNumber}\nVerification Link: https://the-resident.app/verify/${user.id}\nGruvs VIP Access: Active\n\nVerified Co-Living & Community Access.`
+                )
+                window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
+              }}
+              className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5"
+              title="Email digital keycard to building security or event host"
+            >
+              <span>Email Pass</span>
             </button>
             <button
               onClick={() => { playTactileSound('click'); onClose() }}
-              className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95"
+              className="px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95"
             >
               Done
             </button>

@@ -219,17 +219,35 @@ Generated via The Resident Co-Living Platform (TEARN Ecosystem)
           </div>
 
           {/* Footer actions */}
-          <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between shrink-0">
-            <button
-              onClick={handleExport}
-              className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-gold-primary/10"
-            >
-              <Download size={14} />
-              <span>Export Signed Snag Report</span>
-            </button>
+          <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleExport}
+                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-gold-primary/10"
+              >
+                <Download size={14} />
+                <span>Export (.txt)</span>
+              </button>
+              <button
+                onClick={() => {
+                  playTactileSound('pop')
+                  const subject = encodeURIComponent(`Move-In Inspection Snag List - ${propertyAddress}`)
+                  const body = encodeURIComponent(
+                    `Hi Landlord,\n\nPlease find the recorded defects for the move-in inspection at ${propertyAddress}:\n\n` +
+                    items.map((it, i) => `${i + 1}. [${it.room}] ${it.description} (${it.severity})`).join('\n') +
+                    `\n\nPlease acknowledge receipt so maintenance repairs can be scheduled.\n\nWarm regards,\nTenant`
+                  )
+                  window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
+                }}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5"
+                title="Email inspection snag report directly to property owner or landlord"
+              >
+                <span>Email Landlord</span>
+              </button>
+            </div>
             <button
               onClick={() => { playTactileSound('pop'); onClose() }}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95"
+              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95"
             >
               Done
             </button>
