@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Calculator, X, Plus, Trash2, Users, DollarSign, Share2, Copy, Check, Sparkles, PieChart } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
+import { SUPPORTED_CURRENCIES } from '../../../../utils/currencies'
 
 interface ExpenseItem {
   id: string
@@ -142,6 +143,33 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-6 pr-1 custom-scrollbar">
+            {/* Currency Selector Bar */}
+            <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider shrink-0">Currency:</span>
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                {SUPPORTED_CURRENCIES.map(c => {
+                  const active = currency === c.code
+                  return (
+                    <button
+                      key={c.code}
+                      onClick={() => {
+                        playTactileSound('click')
+                        setCurrency(c.code)
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 ${
+                        active
+                          ? 'bg-gold-primary text-black shadow-glow'
+                          : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <span>{c.flag}</span>
+                      <span>{c.code}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             {/* Total Summary Banner */}
             <div className="p-4 rounded-2xl bg-gradient-to-r from-gold-primary/10 via-amber-500/5 to-transparent border border-gold-primary/30 flex items-center justify-between">
               <div>

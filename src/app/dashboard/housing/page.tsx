@@ -131,8 +131,8 @@ export default function HousingPage() {
   // Lifestyle Compatibility Modal
   const [compatModalTarget, setCompatModalTarget] = useState<{ name: string; suburb: string } | null>(null)
 
-  // SA Legal Lease Modal
-  const [leaseModalListing, setLeaseModalListing] = useState<Listing | null>(null)
+  // Legal Lease Modal
+  const [leaseModalListing, setLeaseModalListing] = useState<Partial<Listing> | null>(null)
 
   // Expense Splitter Modal
   const [showSplitterModal, setShowSplitterModal] = useState(false)
@@ -433,6 +433,24 @@ export default function HousingPage() {
             type="button"
             onClick={() => {
               playTactileSound('tab')
+              setLeaseModalListing({
+                id: 'custom-draft',
+                title: 'Urban Co-Living Suite',
+                suburb: 'Central District',
+                location: 'Central District',
+                price: 1200,
+                currency: 'USD'
+              })
+            }}
+            className="flex-1 md:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-400 hover:text-gold-primary hover:bg-white/5 border border-transparent hover:border-gold-primary/30"
+            title="Generate international legally compliant co-living lease agreement"
+          >
+            <FileText size={14} className="text-gold-primary" /> Lease Gen
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              playTactileSound('tab')
               setShowSplitterModal(true)
             }}
             className="flex-1 md:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-400 hover:text-gold-primary hover:bg-white/5 border border-transparent hover:border-gold-primary/30"
@@ -447,7 +465,7 @@ export default function HousingPage() {
               setShowSnagModal(true)
             }}
             className="flex-1 md:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-400 hover:text-gold-primary hover:bg-white/5 border border-transparent hover:border-gold-primary/30"
-            title="Record move-in defects and generate official Act 50 snag report"
+            title="Record move-in defects and generate official snag report"
           >
             <ClipboardList size={14} className="text-gold-primary" /> Snag List
           </button>

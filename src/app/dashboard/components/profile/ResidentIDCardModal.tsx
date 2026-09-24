@@ -27,7 +27,7 @@ export default function ResidentIDCardModal({
 
   if (!isOpen || !user) return null
 
-  const citizenNumber = `RES-ZA-${user.id.slice(0, 8).toUpperCase()}`
+  const citizenNumber = `RES-GLOB-${user.id.slice(0, 8).toUpperCase()}`
   const residentName = user.name || 'Citizen Resident'
 
   const handleShare = () => {
@@ -61,7 +61,7 @@ export default function ResidentIDCardModal({
           {/* Badge Tag */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-primary/10 border border-gold-primary/30 text-gold-primary text-[10px] font-black uppercase tracking-widest mb-5">
             <ShieldCheck size={12} />
-            <span>Digital Citizen Resident ID</span>
+            <span>Global Citizen Mobility Passport</span>
           </div>
 
           {/* Holographic Luxury Card */}
@@ -74,7 +74,7 @@ export default function ResidentIDCardModal({
             <div className="flex justify-between items-start mb-6 relative z-10">
               <div>
                 <span className="text-[9px] font-black uppercase tracking-[0.25em] text-gray-400 block">
-                  Republic of South Africa
+                  Global Civic Operating System
                 </span>
                 <h4 className="text-base font-black text-white tracking-tight flex items-center gap-1.5">
                   THE RESIDENT <span className="text-gold-primary font-serif">PASSPORT</span>

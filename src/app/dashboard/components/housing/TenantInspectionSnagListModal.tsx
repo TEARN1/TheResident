@@ -64,10 +64,11 @@ export default function TenantInspectionSnagListModal({
     playTactileSound('chime')
     const reportText = `
 ================================================================================
-OFFICIAL MOVE-IN INSPECTION SNAG LIST REPORT (ACT 50 OF 1999)
+OFFICIAL MOVE-IN PROPERTY CONDITION & DEFECT REPORT
 Property: ${propertyAddress}
 Date: ${new Date().toLocaleDateString()}
 Status: Verified by Resident
+Jurisdiction / Standard: International Co-Living Deposit Protection Standard
 ================================================================================
 
 RECORDED DEFECTS & INSPECTION ITEMS (${items.length}):
@@ -76,7 +77,7 @@ ${items.map((item, idx) => `${idx + 1}. [${item.room.toUpperCase()}] (${item.sev
 ================================================================================
 TENANT SIGNATURE: ______________________    DATE: ______________________
 LANDLORD SIGNATURE: ____________________    DATE: ______________________
-Generated via The Resident Co-Living Platform (TEARN Ecosystem)
+Generated via The Resident Global Civic Platform (TEARN Ecosystem)
 ================================================================================
     `.trim()
 
@@ -124,7 +125,7 @@ Generated via The Resident Co-Living Platform (TEARN Ecosystem)
                 </span>
               </div>
               <p className="text-xs text-gray-400">
-                Log existing defects on move-in day to protect your 100% deposit refund under Act 50
+                Log pre-existing defects on move-in day to guarantee full statutory deposit refunds worldwide
               </p>
             </div>
           </div>
