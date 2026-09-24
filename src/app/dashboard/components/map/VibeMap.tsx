@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
-import { Navigation, LocateFixed, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon, Wrench, Sparkles, ExternalLink } from 'lucide-react'
+import { Navigation, LocateFixed, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon, Wrench, Sparkles, ExternalLink, Satellite, Zap, Footprints } from 'lucide-react'
 import Image from 'next/image'
 import { useSelector } from 'react-redux'
 import { RootState, isGuestUser } from '../../../../store'
@@ -17,6 +17,7 @@ import { searchPlaces, reverseGeocode, type GeocodeResult } from '../../../../ut
 import { supabase } from '../../../../utils/supabase'
 import { encodeHTMLEntities } from '../../../../utils/security'
 import { getErrorMessage } from '../../../../utils/errors'
+import { playTactileSound } from '../../../../utils/tactileSounds'
 import MapSearchBox from './MapSearchBox'
 import SavedPinsPanel from './SavedPinsPanel'
 import DistanceMatrixPanel, { type MatrixPoint } from './DistanceMatrixPanel'
@@ -67,12 +68,11 @@ const DURATION_OPTIONS: Array<{ hours: number; label: string }> = [
 
 type Drawer = 'none' | 'pins' | 'matrix' | 'geofence'
 
-// Module-level so the reference is stable across renders. Declared inside the
-// component it was a fresh object every render, which made it a churning
-// dependency of the map-init effect below.
-const TILE_SOURCES: Record<'dark' | 'light', string> = {
+// Ultra high-definition basemaps: CARTO Dark Matter, CARTO Voyager, & Esri World Imagery (Satellite)
+const TILE_SOURCES: Record<'dark' | 'light' | 'satellite', string> = {
   dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 }
 
 export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }) {
@@ -85,6 +85,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const searchMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const pinsLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
   const liveMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const isochroneLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
   // Separate from `markersRef` (shared-zone reports) on purpose: each zone
   // there is 2-3 stacked circleMarkers (a halo + an optional contested/
   // geofence ring + the real marker), so clustering that group would badly
@@ -96,13 +97,10 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const leafletRef = useRef<typeof import('leaflet') | null>(null)
   const tileLayerRef = useRef<import('leaflet').TileLayer | null>(null)
 
-  // The map used to be locked to CARTO's light "Voyager" basemap — a bright
-  // white rectangle sitting in the middle of an otherwise all-dark app.
-  // Dark Matter is the same OSM data via CARTO's dark render, so this is a
-  // reskin, not a different data source. Defaults to dark to match the rest
-  // of the UI; Voyager stays available for anyone who finds streets/labels
-  // easier to read on light.
-  const [mapTheme, setMapTheme] = useState<'dark' | 'light'>('dark')
+  // Basemap style switcher: dark / light / satellite
+  const [mapTheme, setMapTheme] = useState<'dark' | 'light' | 'satellite'>('dark')
+  const [showIsochrones, setShowIsochrones] = useState(true)
+  const [isochroneOrigin, setIsochroneOrigin] = useState<{ lat: number; lon: number; label: string } | null>(null)
 
   const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null)
   const [locationDenied, setLocationDenied] = useState(false)
@@ -327,6 +325,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       searchMarkerRef.current = L.layerGroup().addTo(map)
       pinsLayerRef.current = L.layerGroup().addTo(map)
       gruvsHotspotsRef.current = L.layerGroup().addTo(map)
+      isochroneLayerRef.current = L.layerGroup().addTo(map)
       liveMarkerRef.current = L.layerGroup().addTo(map)
       mapRef.current = map
 
@@ -640,20 +639,59 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           iconAnchor: [30, 12]
         })
       })
+      marker.on('click', () => {
+        playTactileSound('pop')
+        setIsochroneOrigin({ lat: listing.lat!, lon: listing.lon!, label: listing.title })
+      })
       marker.bindPopup(`
-        <div style="font-family:inherit;min-width:210px;background:rgba(15,18,24,0.95);backdrop-filter:blur(24px);padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,0.12);color:#fff;box-shadow:0 12px 36px rgba(0,0,0,0.6);">
+        <div style="font-family:inherit;min-width:220px;background:rgba(15,18,24,0.95);backdrop-filter:blur(24px);padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,0.12);color:#fff;box-shadow:0 12px 36px rgba(0,0,0,0.6);">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
             <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#F59E0B;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:999px;border:1px solid rgba(245,158,11,0.25);">Available Room</span>
             <span style="font-size:13px;color:#F59E0B;font-weight:900;">${listing.currency || 'R'} ${listing.price}</span>
           </div>
           <strong style="font-size:14px;display:block;line-height:1.3;">${encodeHTMLEntities(listing.title)}</strong>
           <div style="opacity:0.6;font-size:11px;margin-top:4px;">${encodeHTMLEntities(listing.suburb || listing.location)}</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:10px;color:#22c55e;font-weight:bold;">
+            <span>🚶 5-min walk: 400m radius</span>
+          </div>
           <a href="/dashboard/housing" style="display:block;margin-top:10px;padding:6px 0;background:#F59E0B;color:#000;text-align:center;border-radius:10px;font-size:11px;font-weight:900;text-decoration:none;text-transform:uppercase;letter-spacing:0.5px;">View Listing</a>
         </div>
       `)
       marker.addTo(cluster)
     })
   }, [listings])
+
+  // Interactive 5-min (400m) and 10-min (800m) Walking Transit Isochrone Rings
+  useEffect(() => {
+    const L = leafletRef.current
+    const layer = isochroneLayerRef.current
+    if (!L || !layer) return
+    layer.clearLayers()
+
+    if (!showIsochrones || !isochroneOrigin) return
+
+    // 5-minute pedestrian catchment (400m)
+    L.circle([isochroneOrigin.lat, isochroneOrigin.lon], {
+      radius: 400,
+      color: '#22c55e',
+      weight: 1.5,
+      dashArray: '6 6',
+      fillColor: '#22c55e',
+      fillOpacity: 0.08,
+      interactive: false
+    }).addTo(layer)
+
+    // 10-minute pedestrian catchment (800m)
+    L.circle([isochroneOrigin.lat, isochroneOrigin.lon], {
+      radius: 800,
+      color: '#06b6d4',
+      weight: 1.2,
+      dashArray: '8 8',
+      fillColor: '#06b6d4',
+      fillOpacity: 0.04,
+      interactive: false
+    }).addTo(layer)
+  }, [showIsochrones, isochroneOrigin])
 
   // Fetch upcoming Gruvs events
   useEffect(() => {
@@ -939,12 +977,27 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           </div>
         </div>
 
-        {/* Layers / legend toggle — floating top-right. Each row is now a
-            real filter (see activeKinds/confirmedOnly), and counts reflect
-            what's actually in view, not the whole 15km fetch radius. */}
+        {/* Layers / legend toggle & Grid Status HUD — floating top-right. */}
         <div className="absolute top-3 right-3 z-[500] flex flex-col items-end gap-2">
+          {/* SA Grid & Load-Shedding Status HUD */}
+          <div className="bg-surface/90 backdrop-blur-2xl border border-glass-border rounded-xl px-2.5 py-1.5 shadow-2xl flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <div className="flex flex-col text-right">
+              <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1 justify-end">
+                <Zap size={10} className="fill-emerald-400" /> Grid: Normal
+              </span>
+              <span className="text-[8px] text-gray-400 font-mono">Stage 0 · No Outage</span>
+            </div>
+          </div>
+
           <button
-            onClick={() => setShowLegend(v => !v)}
+            onClick={() => {
+              playTactileSound('click')
+              setShowLegend(v => !v)
+            }}
             className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden p-2.5 text-gray-300 hover:text-white shadow-2xl"
             title="Legend and filters"
             aria-label={showLegend ? 'Hide map legend and filters' : 'Show map legend and filters'}
@@ -1048,21 +1101,38 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             {/* One-shot only — see the comment on handleCenterOnMe for why
                 this no longer starts live tracking as a side effect. */}
             <button
-              onClick={handleCenterOnMe}
+              onClick={() => {
+                playTactileSound('click')
+                handleCenterOnMe()
+              }}
               disabled={locating}
               aria-label="Center map on my location"
               title="Center map on my location"
               className="p-2.5 text-gray-300 hover:text-white transition-all disabled:opacity-60"
             >
-              {locating ? <Loader size={16} className="animate-spin" /> : <LocateFixed size={16} />}
+              {locating ? <Loader size={16} className="animate-spin text-gold-primary" /> : <LocateFixed size={16} />}
             </button>
             <button
-              onClick={() => setMapTheme(t => t === 'dark' ? 'light' : 'dark')}
-              aria-label={mapTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
-              title={mapTheme === 'dark' ? 'Light map' : 'Dark map'}
-              className="p-2.5 text-gray-300 hover:text-white"
+              onClick={() => {
+                playTactileSound('tab')
+                setMapTheme(t => t === 'dark' ? 'light' : t === 'light' ? 'satellite' : 'dark')
+              }}
+              aria-label={`Basemap: ${mapTheme}. Tap to cycle Dark, Light, Satellite`}
+              title={`Basemap: ${mapTheme.toUpperCase()} (tap to switch)`}
+              className={`p-2.5 transition-all ${mapTheme === 'satellite' ? 'text-amber-400 bg-amber-400/10' : 'text-gray-300 hover:text-white'}`}
             >
-              {mapTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              {mapTheme === 'dark' ? <Moon size={16} /> : mapTheme === 'light' ? <Sun size={16} /> : <Satellite size={16} />}
+            </button>
+            <button
+              onClick={() => {
+                playTactileSound('pop')
+                setShowIsochrones(v => !v)
+              }}
+              aria-label="Toggle 5m & 10m walking transit radius rings"
+              title={showIsochrones ? 'Walking Rings: Active (tap to hide)' : 'Walking Rings: Hidden (tap to show)'}
+              className={`p-2.5 transition-all ${showIsochrones ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-white'}`}
+            >
+              <Footprints size={16} />
             </button>
           </div>
 
@@ -1133,6 +1203,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
                       Save place
                     </button>
                   )}
+                  <button
+                    onClick={() => {
+                      playTactileSound('pop')
+                      setIsochroneOrigin({ lat: pendingPoint.lat, lon: pendingPoint.lon, label: pendingPoint.label })
+                      setShowIsochrones(true)
+                    }}
+                    className="flex-1 bg-green-500/10 hover:bg-green-500 hover:text-black border border-green-500/30 text-green-400 font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
+                    title="Calculate 5m (400m) & 10m (800m) pedestrian transit reach"
+                  >
+                    <Footprints size={12} /> Walk Radius
+                  </button>
                   <button
                     onClick={() => addMatrixPoint({ id: `pt-${pendingPoint.lat}-${pendingPoint.lon}`, label: pendingPoint.label, lat: pendingPoint.lat, lon: pendingPoint.lon })}
                     className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all"

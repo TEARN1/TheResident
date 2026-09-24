@@ -99,6 +99,8 @@ export default function AuthPage() {
   // Message states
   const [securityMessage, setSecurityMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [resetEmailSending, setResetEmailSending] = useState(false)
+  const [resetEmailSent, setResetEmailSent] = useState(false)
   // "Sign in with The Gruvs" mode — shows the one-account helper on the login form.
   const [gruvsMode, setGruvsMode] = useState(false)
   const [passwordStrength, setPasswordStrength] = useState<{strong: boolean; score: number; feedback: string[]} | null>(null)
@@ -415,7 +417,36 @@ export default function AuthPage() {
             </div>
 
             <div style={inputGroupStyle}>
-              <label style={labelStyle}>Password</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label style={labelStyle}>Password</label>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!email) {
+                      setErrorMessage('Please type your email address first so we know where to send the reset link.')
+                      return
+                    }
+                    if (!supabase) {
+                      setErrorMessage('Database offline / not configured.')
+                      return
+                    }
+                    setResetEmailSending(true)
+                    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?next=/dashboard/profile` : undefined
+                    })
+                    setResetEmailSending(false)
+                    if (error) {
+                      setErrorMessage(error.message)
+                    } else {
+                      setResetEmailSent(true)
+                      setErrorMessage(null)
+                    }
+                  }}
+                  style={{ background: 'none', border: 'none', color: '#D4AF37', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: '0 2px' }}
+                >
+                  {resetEmailSending ? 'Sending link…' : 'Forgot password?'}
+                </button>
+              </div>
               <input
                 type="password"
                 required
@@ -425,6 +456,13 @@ export default function AuthPage() {
                 style={inputStyle}
               />
             </div>
+
+            {resetEmailSent && (
+              <div style={{ ...alertStyle, background: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)', color: '#86efac' }}>
+                <CheckCircle size={16} color="#22c55e" />
+                <span>Password reset link sent to <strong>{email}</strong>! Check your inbox &amp; spam folder.</span>
+              </div>
+            )}
 
             <button type="submit" className="btn-primary" style={submitButtonStyle}>
               Grant Access <Lock size={14} style={{ marginLeft: 8 }} />
