@@ -25,6 +25,8 @@ import { unlockNotificationAudio } from '../../utils/notificationSounds'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
 import AutomationControlPanel from './components/shared/AutomationControlPanel'
+import CommandPalette from './components/navigation/CommandPalette'
+import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -326,6 +328,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
+            {/* Global Spotlight Palette Trigger (Ctrl+K) */}
+            <CommandPalette />
+
             {/* Ecosystem Badges: The Gruvs & TEARNs Excellence */}
             <a
               href="https://thegruvs.com"
@@ -358,7 +363,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <div ref={notifMenuRef} className="relative">
               <button
-                onClick={() => setShowNotifMenu(!showNotifMenu)}
+                onClick={() => { setShowNotifMenu(!showNotifMenu); playTactileSound('click') }}
                 className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-gray-300 hover:text-gold-primary transition-all relative"
                 aria-label="Open notifications"
               >
@@ -429,6 +434,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => playTactileSound('tab')}
               className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-2xl transition-all relative group ${
                 isActive ? 'text-black' : 'text-gray-400 hover:text-white'
               }`}
