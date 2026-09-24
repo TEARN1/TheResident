@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { performLogin } from '../../utils/authLogin'
-import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react'
+import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon, ExternalLink, Github } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 import Image from 'next/image'
 
@@ -695,6 +695,62 @@ export default function AuthPage() {
             </button>
           </form>
         )}
+
+        {/* Connected Partners Footer */}
+        <div style={{
+          marginTop: '1.75rem',
+          paddingTop: '1.25rem',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.6rem',
+          alignItems: 'center',
+          textAlign: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <a
+              href="https://thegruvs.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: 'var(--gold-primary)',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                textDecoration: 'none',
+                opacity: 0.9
+              }}
+            >
+              <GruvsMark />
+              <span>Explore The Gruvs</span>
+              <ExternalLink size={11} />
+            </a>
+            <span style={{ color: 'rgba(255, 255, 255, 0.2)', fontSize: '0.75rem' }}>•</span>
+            <a
+              href="https://github.com/TEARN1/TEARNs-Excellence"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                textDecoration: 'none'
+              }}
+            >
+              <Github size={13} color="var(--gold-primary)" />
+              <span>TEARN&apos;s Excellence</span>
+              <ExternalLink size={11} />
+            </a>
+          </div>
+          <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '0.5px' }}>
+            Unified student accommodations &amp; nightlife network
+          </span>
+        </div>
       </motion.div>
     </div>
   )

@@ -8,8 +8,9 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Github
 } from 'lucide-react'
+import Image from 'next/image'
 import {
   loginUser,
   RootState,
@@ -324,7 +325,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
+            {/* Ecosystem Badges: The Gruvs & TEARNs Excellence */}
+            <a
+              href="https://thegruvs.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all shadow-sm group/gruvs"
+              title="Visit The Gruvs (our sister live events & student nightlife platform)"
+            >
+              <Image
+                src="/gruvs-logo.png"
+                alt="The Gruvs"
+                width={14}
+                height={14}
+                className="rounded-full object-cover group-hover/gruvs:rotate-12 transition-transform"
+              />
+              <span className="hidden sm:inline">The Gruvs</span>
+              <ExternalLink size={10} className="opacity-60" />
+            </a>
+
+            <a
+              href="https://github.com/TEARN1/TEARNs-Excellence"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all"
+              title="Built with TEARNs Excellence Standards"
+            >
+              <Github size={12} className="text-gold-primary" />
+              <span>TEARN&apos;s Excellence</span>
+            </a>
+
             <div ref={notifMenuRef} className="relative">
               <button
                 onClick={() => setShowNotifMenu(!showNotifMenu)}
