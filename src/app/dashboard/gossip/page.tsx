@@ -3,12 +3,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import Image from 'next/image'
-import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, Sparkles, ExternalLink, Github, Zap } from 'lucide-react'
+import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, Sparkles, ExternalLink, Github, Zap, Car } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
 import EmptyState from '../components/shared/EmptyState'
+import EventRidePoolerModal from '../components/community/EventRidePoolerModal'
+import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../utils/gruvsEvents'
 import { playTactileSound } from '../../../utils/tactileSounds'
 
 interface GossipPost {
@@ -99,6 +101,14 @@ export default function GossipPage() {
   const [commentPreviews, setCommentPreviews] = useState<Record<string, GossipComment[]>>({})
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({})
   const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({})
+
+  // Event Ride Pooler
+  const [showRidePoolerModal, setShowRidePoolerModal] = useState(false)
+  const [upcomingGruvsEvents, setUpcomingGruvsEvents] = useState<GruvsEvent[]>([])
+
+  useEffect(() => {
+    fetchUpcomingGruvsEvents(10).then(events => setUpcomingGruvsEvents(events)).catch(() => {})
+  }, [])
 
   const sentinelRef = useRef<HTMLDivElement>(null)
   const loadingMoreRef = useRef(false)
@@ -432,17 +442,29 @@ export default function GossipPage() {
               </p>
             </div>
 
-            <div className="pt-2 flex items-center justify-between">
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
               <a
                 href="https://thegruvs.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:brightness-110 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-purple-500/20"
               >
-                <span>Explore Tonight On The Gruvs</span>
+                <span>Explore Events</span>
                 <ExternalLink size={12} />
               </a>
-              <span className="text-[10px] text-gray-500 font-bold hidden sm:inline">1-Click Gruvs SSO</span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('chime')
+                  setShowRidePoolerModal(true)
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-200 hover:text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
+                title="Coordinate shared Uber/Bolt or carpool to Gruvs events"
+              >
+                <Car size={13} className="text-pink-400" />
+                <span>Share Ride Pool</span>
+              </button>
             </div>
           </div>
         </div>
@@ -812,6 +834,13 @@ export default function GossipPage() {
           )}
         </div>
       )}
+
+      {/* EVENT RIDE POOLER MODAL */}
+      <EventRidePoolerModal
+        isOpen={showRidePoolerModal}
+        onClose={() => setShowRidePoolerModal(false)}
+        upcomingEvents={upcomingGruvsEvents}
+      />
     </div>
   )
 }

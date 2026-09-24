@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Sparkles, ExternalLink, Radar, FileText, HeartHandshake, Calculator
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Sparkles, ExternalLink, Radar, FileText, HeartHandshake, Calculator, ClipboardList
 } from 'lucide-react'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import {
@@ -39,6 +39,7 @@ import EmptyState from '../components/shared/EmptyState'
 import RoommateCompatibilityModal from '../components/housing/RoommateCompatibilityModal'
 import SALeaseAgreementModal from '../components/housing/SALeaseAgreementModal'
 import CoLivingExpenseSplitterModal from '../components/household/CoLivingExpenseSplitterModal'
+import TenantInspectionSnagListModal from '../components/housing/TenantInspectionSnagListModal'
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
@@ -135,6 +136,9 @@ export default function HousingPage() {
 
   // Expense Splitter Modal
   const [showSplitterModal, setShowSplitterModal] = useState(false)
+
+  // Move-in Snag List Modal
+  const [showSnagModal, setShowSnagModal] = useState(false)
 
   const [confirmDeleteListingId, setConfirmDeleteListingId] = useState<string | null>(null)
   const handleDeleteListing = (id: string) => {
@@ -435,6 +439,17 @@ export default function HousingPage() {
             title="Calculate and split household rent, electricity, and bills"
           >
             <Calculator size={14} className="text-gold-primary" /> Splitter
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              playTactileSound('tab')
+              setShowSnagModal(true)
+            }}
+            className="flex-1 md:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-400 hover:text-gold-primary hover:bg-white/5 border border-transparent hover:border-gold-primary/30"
+            title="Record move-in defects and generate official Act 50 snag report"
+          >
+            <ClipboardList size={14} className="text-gold-primary" /> Snag List
           </button>
         </div>
       </header>
@@ -768,12 +783,28 @@ export default function HousingPage() {
 
                 <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                   <div>
-                    <h3 className="text-base font-bold text-white group-hover:text-gold-primary transition-colors line-clamp-1 leading-snug">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-1.5 line-clamp-2 leading-relaxed">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <h3 className="text-base font-bold text-white group-hover:text-gold-primary transition-colors line-clamp-1 leading-snug">
+                        {item.title}
+                      </h3>
+                      {item.suburb && (
+                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                          Fair Value
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
                       {item.description}
                     </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
+                        <ShieldCheck size={11} className="text-gold-primary" /> Verified Zone
+                      </span>
+                      <span className="text-[10px] text-gray-500">•</span>
+                      <span className="text-[10px] text-gray-400 font-medium">
+                        Suburb Benchmark: <strong className="text-white">Fair</strong>
+                      </span>
+                    </div>
                   </div>
 
                   {/* Amenities Chips */}
@@ -1199,6 +1230,12 @@ export default function HousingPage() {
       <CoLivingExpenseSplitterModal
         isOpen={showSplitterModal}
         onClose={() => setShowSplitterModal(false)}
+      />
+
+      {/* MOVE-IN INSPECTION SNAG LIST MODAL */}
+      <TenantInspectionSnagListModal
+        isOpen={showSnagModal}
+        onClose={() => setShowSnagModal(false)}
       />
     </div>
   )

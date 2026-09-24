@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import Image from 'next/image'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, ExternalLink, Github, Sparkles } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, ExternalLink, Github, Sparkles, QrCode } from 'lucide-react'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
+import ResidentIDCardModal from '../components/profile/ResidentIDCardModal'
+import { playTactileSound } from '../../../utils/tactileSounds'
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import Card from '../../../components/ui/Card'
 
@@ -80,6 +82,7 @@ export default function ProfilePage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [showIDCardModal, setShowIDCardModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -285,7 +288,21 @@ export default function ProfilePage() {
             <h1 className="text-2xl font-black text-white truncate tracking-tight">{currentUser.name}</h1>
           </div>
           <p className="text-[11px] text-gold-primary uppercase tracking-widest font-black mt-0.5">{currentUser.role} Account</p>
-          <div className="mt-2"><TrustBadge userId={currentUser.id} /></div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <TrustBadge userId={currentUser.id} />
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('chime')
+                setShowIDCardModal(true)
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
+              title="Open Digital Resident Passport & QR Keycard"
+            >
+              <QrCode size={13} />
+              <span>Resident ID Pass</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -590,6 +607,13 @@ export default function ProfilePage() {
       >
         <LogOut size={14} /> Log Out
       </button>
+
+      {/* DIGITAL RESIDENT ID MODAL */}
+      <ResidentIDCardModal
+        isOpen={showIDCardModal}
+        onClose={() => setShowIDCardModal(false)}
+        user={currentUser}
+      />
     </div>
   )
 }
