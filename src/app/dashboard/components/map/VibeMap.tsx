@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
-import { Navigation, LocateFixed, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon, Wrench } from 'lucide-react'
+import { Navigation, LocateFixed, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon, Wrench, Sparkles, ExternalLink } from 'lucide-react'
+import Image from 'next/image'
 import { useSelector } from 'react-redux'
 import { RootState, isGuestUser } from '../../../../store'
 import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../../utils/mapZones'
@@ -823,8 +824,20 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           <div className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden shadow-2xl">
             <MapSearchBox onSelect={handleSearchSelect} />
           </div>
-          {/* Quick Filter Pills */}
+          {/* Quick Filter Pills + Gruvs Pulse shortcut */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+            <a
+              href="https://thegruvs.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border border-purple-500/40 bg-purple-950/80 hover:bg-purple-900 text-purple-200 transition-all whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-purple-500/10 group"
+              title="See nightlife & student parties happening near you on The Gruvs"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-ping shrink-0" />
+              <span>The Gruvs Pulse</span>
+              <ExternalLink size={9} className="opacity-60 group-hover:opacity-100" />
+            </a>
+
             <button
               onClick={() => setActiveKinds(new Set(Object.keys(KIND_LABEL)))}
               className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap ${

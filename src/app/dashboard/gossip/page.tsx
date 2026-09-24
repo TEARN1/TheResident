@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2 } from 'lucide-react'
+import Image from 'next/image'
+import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, Sparkles, ExternalLink, Github, Zap } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
@@ -391,6 +392,104 @@ export default function GossipPage() {
 
   return (
     <div className="space-y-6">
+      {/* Creative Advertising Showcase: The Gruvs & TEARNs Excellence */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* The Gruvs Nightlife & Campus Pulse Billboard */}
+        <div className="glass-panel p-5 bg-gradient-to-br from-purple-900/25 via-black/50 to-gold-primary/10 border-purple-500/30 hover:border-gold-primary/40 rounded-3xl relative overflow-hidden group shadow-2xl transition-all duration-300">
+          <div className="absolute top-0 right-0 w-44 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16 group-hover:bg-purple-500/20 transition-all duration-700" />
+          <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2.5 w-2.5 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-pink-500" />
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-wider text-pink-400 bg-pink-500/10 px-2.5 py-0.5 rounded-full border border-pink-500/20">
+                  Live Suburb Nightlife
+                </span>
+              </div>
+              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Co-Powered</span>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gold-primary/20 border border-gold-primary/40 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                  <Image
+                    src="/gruvs-logo.png"
+                    alt="The Gruvs"
+                    width={22}
+                    height={22}
+                    className="rounded-full object-cover group-hover:scale-110 transition-transform"
+                  />
+                </div>
+                <h3 className="text-lg font-black text-white tracking-tight group-hover:text-gold-primary transition-colors">
+                  The Gruvs Campus Pulse
+                </h3>
+              </div>
+              <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                Looking for student gigs, after-hours sets, or housemates going out tonight? Connect directly to verified events on our sister platform.
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between">
+              <a
+                href="https://thegruvs.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:brightness-110 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-purple-500/20"
+              >
+                <span>Explore Tonight On The Gruvs</span>
+                <ExternalLink size={12} />
+              </a>
+              <span className="text-[10px] text-gray-500 font-bold hidden sm:inline">1-Click Gruvs SSO</span>
+            </div>
+          </div>
+        </div>
+
+        {/* TEARNs Excellence Engineering Benchmark Billboard */}
+        <div className="glass-panel p-5 bg-gradient-to-br from-gold-primary/15 via-black/50 to-emerald-950/20 border-gold-primary/30 hover:border-gold-primary/50 rounded-3xl relative overflow-hidden group shadow-2xl transition-all duration-300">
+          <div className="absolute top-0 right-0 w-44 h-44 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16 group-hover:bg-gold-primary/20 transition-all duration-700" />
+          <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap size={14} className="text-gold-primary animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-gold-primary bg-gold-primary/10 px-2.5 py-0.5 rounded-full border border-gold-primary/30">
+                  Engineering Benchmark
+                </span>
+              </div>
+              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Quality Seal</span>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-white/5 border border-white/15 flex items-center justify-center shrink-0">
+                  <Github size={18} className="text-gold-primary group-hover:rotate-12 transition-transform" />
+                </div>
+                <h3 className="text-lg font-black text-white tracking-tight group-hover:text-gold-primary transition-colors">
+                  TEARN&apos;s Excellence
+                </h3>
+              </div>
+              <p className="text-xs text-gray-300 leading-relaxed font-normal">
+                Built to uncompromising software engineering standards: sub-50ms glass interactions, Row-Level Security, and offline resilience.
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between">
+              <a
+                href="https://github.com/TEARN1/TEARNs-Excellence"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-gold-primary via-amber-300 to-gold-secondary text-black font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-gold-primary/20 hover:brightness-105"
+              >
+                <span>View Excellence Blueprint</span>
+                <ExternalLink size={12} />
+              </a>
+              <span className="text-[10px] text-emerald-400 font-bold hidden sm:inline">Certified A+ Standard</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="glass-panel p-6 relative overflow-hidden border-gold-primary/10">
         {/* A quiet gold glow behind the composer instead of a flat panel —
             the one place in the app people write something new deserves to
