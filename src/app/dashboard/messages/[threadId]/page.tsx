@@ -107,51 +107,89 @@ export default function ThreadPage() {
   }
 
   return (
-    <div className="glass-panel p-0 flex flex-col h-[70vh]">
-      <div className="flex items-center gap-3 p-4 border-b border-white/5">
-        <button onClick={() => router.push('/dashboard/messages')} className="text-gray-400 hover:text-white" aria-label="Back to messages">
-          <ArrowLeft size={18} />
-        </button>
-        <div className="w-8 h-8 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
-          {otherProfile?.avatar_url
-            ? // eslint-disable-next-line @next/next/no-img-element
-              <img src={otherProfile.avatar_url} alt="" className="w-full h-full object-cover" />
-            : name.charAt(0).toUpperCase()}
-        </div>
-        <span className="text-sm font-bold text-white">{name}</span>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.map(m => (
-          <div key={m.id} className={`flex ${m.sender_id === myId ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[70%] rounded-xl px-3.5 py-2.5 text-xs ${m.sender_id === myId ? 'bg-gold-primary text-black font-medium' : 'bg-black/40 border border-white/5 text-gray-300'}`}>
-              {m.is_request && m.sender_id === myId && (
-                <span className="flex items-center gap-1 text-[9px] opacity-70 mb-1 uppercase font-bold tracking-widest"><Clock size={9} /> Request</span>
-              )}
-              <p className="whitespace-pre-wrap">{m.body}</p>
+    <div className="p-4 md:p-8 max-w-4xl mx-auto pb-32">
+      <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-3xl overflow-hidden shadow-glass flex flex-col h-[75vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/2">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/dashboard/messages')}
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-all"
+              aria-label="Back to conversations"
+            >
+              <ArrowLeft size={16} />
+            </button>
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gold-primary to-amber-600 flex items-center justify-center text-black font-black text-sm overflow-hidden shadow-sm">
+              {otherProfile?.avatar_url
+                ? // eslint-disable-next-line @next/next/no-img-element
+                  <img src={otherProfile.avatar_url} alt="" className="w-full h-full object-cover" />
+                : name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <span className="text-sm font-black text-white tracking-tight">{name}</span>
+              <p className="text-[10px] text-green-400 font-bold flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Resident Member
+              </p>
             </div>
           </div>
-        ))}
-        <div ref={bottomRef} />
-      </div>
+        </div>
 
-      {error && <p className="text-[11px] text-red-400 px-4">{error}</p>}
+        {/* Message Log */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3.5 custom-scrollbar">
+          {messages.length === 0 && (
+            <div className="text-center py-16 text-gray-500 text-xs">
+              Say hello to start the conversation!
+            </div>
+          )}
+          {messages.map(m => {
+            const isMe = m.sender_id === myId
+            return (
+              <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[75%] rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-sm transition-all ${
+                    isMe
+                      ? 'bg-gradient-to-br from-gold-primary to-amber-500 text-black font-semibold rounded-br-xs shadow-glow'
+                      : 'bg-white/5 backdrop-blur-xl border border-white/10 text-gray-100 rounded-bl-xs'
+                  }`}
+                >
+                  {m.is_request && isMe && (
+                    <span className="flex items-center gap-1 text-[9px] opacity-80 mb-1 uppercase font-black tracking-wider">
+                      <Clock size={10} /> First Inquiry
+                    </span>
+                  )}
+                  <p className="whitespace-pre-wrap">{m.body}</p>
+                  <span className={`block text-[9px] mt-1 text-right font-medium ${isMe ? 'text-black/60' : 'text-gray-500'}`}>
+                    {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+          <div ref={bottomRef} />
+        </div>
 
-      <div className="flex gap-2 p-4 border-t border-white/5">
-        <input
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') sendMessage() }}
-          placeholder="Type a message…"
-          className="flex-1 bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40"
-        />
-        <button
-          onClick={sendMessage}
-          disabled={sending || !draft.trim()}
-          className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-4 rounded-lg text-xs uppercase tracking-widest transition-all disabled:opacity-50"
-        >
-          <Send size={14} />
-        </button>
+        {error && <p className="text-[11px] text-red-400 px-5 pb-2">{error}</p>}
+
+        {/* Message Composer */}
+        <div className="p-3.5 border-t border-white/10 bg-white/2">
+          <div className="flex items-center gap-2 bg-black/60 backdrop-blur-2xl border border-white/15 focus-within:border-gold-primary/60 rounded-2xl px-3 py-1.5 transition-all shadow-inner">
+            <input
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') sendMessage() }}
+              placeholder="Write a message..."
+              className="flex-1 bg-transparent text-xs text-white placeholder:text-gray-500 outline-none p-2 font-medium"
+            />
+            <button
+              onClick={sendMessage}
+              disabled={sending || !draft.trim()}
+              className="bg-gold-primary hover:bg-gold-secondary text-black p-2.5 rounded-xl transition-all shadow-md disabled:opacity-40 shrink-0 active:scale-95"
+              aria-label="Send message"
+            >
+              <Send size={14} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

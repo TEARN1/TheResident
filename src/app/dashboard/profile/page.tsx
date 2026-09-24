@@ -272,51 +272,56 @@ export default function ProfilePage() {
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6 pb-24">
-      <div className="glass-panel p-6 flex items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-gold-primary text-black flex items-center justify-center text-2xl font-black shrink-0">
+      <div className="glass-panel p-6 flex items-center gap-5 border-white/10 relative overflow-hidden shadow-2xl">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
+
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gold-primary via-amber-300 to-gold-secondary text-black flex items-center justify-center text-2xl font-black shrink-0 shadow-[0_0_20px_rgba(212,175,55,0.3)] relative">
           {currentUser.name.charAt(0)}
+          <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-black" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-black text-white truncate">{currentUser.name}</h1>
-          <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">{currentUser.role}</p>
-          <div className="mt-1"><TrustBadge userId={currentUser.id} /></div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black text-white truncate tracking-tight">{currentUser.name}</h1>
+          </div>
+          <p className="text-[11px] text-gold-primary uppercase tracking-widest font-black mt-0.5">{currentUser.role} Account</p>
+          <div className="mt-2"><TrustBadge userId={currentUser.id} /></div>
         </div>
       </div>
 
       {/* Account Mode / Role Switcher */}
-      <Card className="space-y-3">
-        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
-          <UserIcon size={16} /> Account Mode / Role
+      <Card className="space-y-4 border-white/10 shadow-xl">
+        <h2 className="text-xs font-black text-gold-primary uppercase tracking-wider flex items-center gap-2">
+          <UserIcon size={16} /> Account Mode &amp; Role
         </h2>
-        <p className="text-[11px] text-gray-500">
-          Switching to <strong>Landlord</strong> enables adding properties, listing empty rooms, and managing tenant applications. Switch to <strong>Tenant</strong> to set your room requirements.
+        <p className="text-xs text-gray-400 leading-relaxed font-normal">
+          Switch to <strong className="text-white">Landlord</strong> to add properties and manage tenant applications. Switch to <strong className="text-white">Tenant</strong> to set roommate &amp; room search requirements.
         </p>
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => handleSwitchRole('tenant')}
             disabled={roleSwitching || currentUser.role === 'tenant'}
-            className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+            className={`p-4 rounded-2xl border text-xs transition-all flex flex-col items-center gap-1.5 ${
               currentUser.role === 'tenant'
-                ? 'bg-gold-primary text-black border-gold-primary font-black shadow-lg shadow-gold-primary/20'
-                : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'
+                ? 'bg-gradient-to-r from-gold-primary to-amber-300 text-black border-gold-primary font-black shadow-lg shadow-gold-primary/20 scale-[1.02]'
+                : 'bg-black/50 border-white/10 text-gray-300 hover:border-gold-primary/40 hover:bg-white/5 font-semibold'
             }`}
           >
-            <span>Tenant Mode</span>
-            <span className="text-[9px] opacity-70 font-normal">Look for rooms & roommates</span>
+            <span className="text-sm font-bold tracking-tight">Tenant Mode</span>
+            <span className="text-[10px] opacity-80 font-normal">Find rooms &amp; roommates</span>
           </button>
           <button
             type="button"
             onClick={() => handleSwitchRole('landlord')}
             disabled={roleSwitching || currentUser.role === 'landlord'}
-            className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+            className={`p-4 rounded-2xl border text-xs transition-all flex flex-col items-center gap-1.5 ${
               currentUser.role === 'landlord'
-                ? 'bg-gold-primary text-black border-gold-primary font-black shadow-lg shadow-gold-primary/20'
-                : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'
+                ? 'bg-gradient-to-r from-gold-primary to-amber-300 text-black border-gold-primary font-black shadow-lg shadow-gold-primary/20 scale-[1.02]'
+                : 'bg-black/50 border-white/10 text-gray-300 hover:border-gold-primary/40 hover:bg-white/5 font-semibold'
             }`}
           >
-            <span>Landlord Mode</span>
-            <span className="text-[9px] opacity-70 font-normal">List empty rooms & manage units</span>
+            <span className="text-sm font-bold tracking-tight">Landlord Mode</span>
+            <span className="text-[10px] opacity-80 font-normal">List units &amp; manage tenants</span>
           </button>
         </div>
       </Card>

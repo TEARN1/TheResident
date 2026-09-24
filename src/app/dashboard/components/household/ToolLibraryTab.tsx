@@ -109,75 +109,91 @@ export default function ToolLibraryTab({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {communityTools.map(tool => (
-              <div key={tool.id} className="bg-black/40 border border-white/5 rounded-2xl p-6 flex flex-col gap-5 hover:border-gold-primary/30 transition-all group relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gold-primary/5 rounded-full -mr-12 -mt-12 group-hover:bg-gold-primary/10 transition-colors" />
+              <div
+                key={tool.id}
+                className="glass-panel p-6 flex flex-col justify-between gap-5 border-white/10 hover:border-gold-primary/40 transition-all duration-300 group relative overflow-hidden shadow-xl hover:shadow-black/50"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gold-primary/5 rounded-full blur-2xl pointer-events-none -mr-12 -mt-12 group-hover:bg-gold-primary/10 transition-colors" />
 
-                <div className="flex justify-between items-start relative z-10">
-                   <div className="space-y-1">
-                      <h4 className="font-black text-white text-lg group-hover:text-gold-primary transition-colors tracking-tight leading-tight">{tool.title}</h4>
-                      <div className="flex items-center gap-1.5 text-xs text-gold-primary font-black uppercase tracking-wider">
-                         {formatCurrency(tool.pricePerDay)} <span className="text-[10px] text-gray-500 font-bold">/ DAY</span>
+                <div className="space-y-3 relative z-10">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="space-y-1">
+                      <h4 className="font-black text-white text-lg group-hover:text-gold-primary transition-colors tracking-tight leading-snug">
+                        {tool.title}
+                      </h4>
+                      <div className="inline-flex items-center gap-1.5 text-xs text-gold-primary font-black uppercase tracking-wider bg-gold-primary/10 px-2.5 py-1 rounded-lg border border-gold-primary/20">
+                        {formatCurrency(tool.pricePerDay)} <span className="text-[10px] text-gray-400 font-bold">/ DAY</span>
                       </div>
-                   </div>
-                   <span className={`text-[9px] font-black px-2 py-1 rounded-lg border uppercase tracking-widest ${tool.status === 'available' ? 'bg-green-500/10 text-green-500 border-green-500/20' : tool.status === 'pending_return' ? 'bg-gold-primary/10 text-gold-primary border-gold-primary/20' : 'bg-gray-500/10 text-gray-500 border-gray-500/20'}`}>
+                    </div>
+                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border uppercase tracking-wider backdrop-blur-md ${
+                      tool.status === 'available'
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        : tool.status === 'pending_return'
+                        ? 'bg-gold-primary/15 text-gold-primary border-gold-primary/30'
+                        : 'bg-white/5 text-gray-400 border-white/10'
+                    }`}>
                       {tool.status === 'pending_return' ? 'return pending' : tool.status}
-                   </span>
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-300 line-clamp-3 leading-relaxed font-normal">{tool.description}</p>
+
+                  <div className="space-y-2.5 bg-black/40 p-3.5 rounded-xl border border-white/5 backdrop-blur-md">
+                    <div className="flex items-center gap-2.5 text-xs text-gray-300 font-semibold tracking-tight">
+                      <MapPin size={14} className="text-gold-primary shrink-0" />
+                      <span className="truncate">{tool.location}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-white/5">
+                      <div className="flex items-center gap-2 text-gray-400 font-medium">
+                        <ShieldCheck size={14} className="text-gold-primary" /> Refundable Deposit
+                      </div>
+                      <span className="text-white font-black">{formatCurrency(tool.deposit)}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80">{tool.description}</p>
-
-                <div className="space-y-3 bg-black/40 p-4 rounded-xl border border-white/5">
-                   <div className="flex items-center gap-3 text-xs text-gray-400 font-bold uppercase tracking-tighter">
-                      <MapPin size={14} className="text-gold-primary" /> {tool.location}
-                   </div>
-                   <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-xs text-gray-400 font-bold uppercase tracking-tighter">
-                         <ShieldCheck size={14} className="text-gold-primary" /> Deposit
+                <div className="pt-4 border-t border-white/10 flex flex-col gap-3.5 relative z-10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-gold-primary/30 to-amber-200/30 border border-gold-primary/40 flex items-center justify-center text-[10px] font-black text-gold-primary shadow-inner">
+                        {tool.ownerName.charAt(0)}
                       </div>
-                      <span className="text-white font-black text-sm">{formatCurrency(tool.deposit)}</span>
-                   </div>
-                </div>
+                      <span className="text-xs text-gray-300 font-bold tracking-tight">{tool.ownerName}</span>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} size={9} className="fill-gold-primary text-gold-primary" />
+                      ))}
+                    </div>
+                  </div>
 
-                <div className="mt-auto pt-4 border-t border-white/5 flex flex-col gap-4 relative z-10">
-                   <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                         <div className="w-6 h-6 bg-gray-800 rounded-full flex items-center justify-center text-[10px] font-black text-gold-primary">
-                            {tool.ownerName.charAt(0)}
-                         </div>
-                         <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{tool.ownerName}</span>
-                      </div>
-                      <div className="flex gap-0.5">
-                         {[1,2,3,4,5].map(s => <Star key={s} size={8} className="fill-gold-primary text-gold-primary" />)}
-                      </div>
-                   </div>
-
-                   {tool.status === 'available' && tool.ownerId !== currentUser?.id && (
-                     <button
-                        onClick={() => handleRentTool?.(tool)}
-                        className="w-full bg-white/5 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-black/20"
-                     >
-                        Secure Rental Slot
-                     </button>
-                   )}
-                   {tool.status === 'rented' && tool.rentedBy === currentUser?.id && (
-                     <button
-                        onClick={() => onRequestReturn?.(tool.id)}
-                        className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95"
-                     >
-                        Mark as Returned
-                     </button>
-                   )}
-                   {tool.status === 'pending_return' && tool.ownerId === currentUser?.id && (
-                     <button
-                        onClick={() => onConfirmReturn?.(tool.id)}
-                        className="w-full bg-gold-primary text-black font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-gold-primary/10"
-                     >
-                        Confirm Return
-                     </button>
-                   )}
-                   {tool.status === 'pending_return' && tool.rentedBy === currentUser?.id && (
-                     <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest font-bold">Waiting for owner to confirm</p>
-                   )}
+                  {tool.status === 'available' && tool.ownerId !== currentUser?.id && (
+                    <button
+                      onClick={() => handleRentTool?.(tool)}
+                      className="w-full bg-gradient-to-r from-gold-primary via-amber-300 to-gold-secondary hover:brightness-110 text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-gold-primary/20"
+                    >
+                      Secure Rental Slot
+                    </button>
+                  )}
+                  {tool.status === 'rented' && tool.rentedBy === currentUser?.id && (
+                    <button
+                      onClick={() => onRequestReturn?.(tool.id)}
+                      className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95"
+                    >
+                      Mark as Returned
+                    </button>
+                  )}
+                  {tool.status === 'pending_return' && tool.ownerId === currentUser?.id && (
+                    <button
+                      onClick={() => onConfirmReturn?.(tool.id)}
+                      className="w-full bg-gold-primary text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-gold-primary/20"
+                    >
+                      Confirm Return
+                    </button>
+                  )}
+                  {tool.status === 'pending_return' && tool.rentedBy === currentUser?.id && (
+                    <p className="text-[10px] text-gray-400 text-center uppercase tracking-widest font-bold py-1">Waiting for owner confirmation</p>
+                  )}
                 </div>
               </div>
             ))}

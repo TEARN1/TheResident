@@ -29,51 +29,69 @@ export default function ChoreSchedulerTab({
   const otherChores = communityChores.filter(c => c.assignedTo !== currentUser?.id)
 
   const renderChore = (chore: Chore) => (
-    <div key={chore.id} className={`glass-panel p-6 border-l-4 transition-all duration-300 relative overflow-hidden group ${chore.status === 'completed' ? 'border-l-green-500/30 opacity-60 grayscale-[0.5]' : 'border-l-gold-primary hover:border-l-white hover:bg-white/2 shadow-lg shadow-black/10'}`}>
-       {chore.status === 'pending' && (
-         <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Zap size={16} className="text-gold-primary animate-pulse" />
-         </div>
-       )}
+    <div
+      key={chore.id}
+      className={`glass-panel p-5 border-l-4 transition-all duration-300 relative overflow-hidden group shadow-lg ${
+        chore.status === 'completed'
+          ? 'border-l-emerald-500/40 bg-white/2 opacity-65'
+          : 'border-l-gold-primary hover:border-l-gold-secondary hover:bg-white/5 border-white/10'
+      }`}
+    >
+      {chore.status === 'pending' && (
+        <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Zap size={14} className="text-gold-primary animate-pulse" />
+        </div>
+      )}
 
-       <div className="flex justify-between items-start mb-6">
-          <div className="space-y-1">
-             <h4 className={`font-black text-lg tracking-tight ${chore.status === 'completed' ? 'text-gray-500 line-through' : 'text-white'}`}>{chore.title}</h4>
-             <div className="flex items-center gap-2 text-[10px] text-gray-500 font-black uppercase tracking-widest">
-                <Calendar size={12} className="text-gold-primary" /> DUE: <span className={chore.status === 'completed' ? 'text-gray-600' : 'text-gray-300'}>{chore.dueDate}</span>
-             </div>
+      <div className="flex justify-between items-start mb-4">
+        <div className="space-y-1 pr-4">
+          <h4 className={`font-black text-base tracking-tight ${chore.status === 'completed' ? 'text-gray-400 line-through' : 'text-white'}`}>
+            {chore.title}
+          </h4>
+          <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-semibold">
+            <Calendar size={13} className="text-gold-primary shrink-0" />
+            <span>Due: <span className={chore.status === 'completed' ? 'text-gray-500' : 'text-gray-200'}>{chore.dueDate}</span></span>
           </div>
-          <div className={`px-2 py-1 rounded-lg border font-black text-[10px] tracking-tighter transition-colors ${chore.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-gold-primary/10 text-gold-primary border-gold-primary/20 group-hover:bg-gold-primary group-hover:text-black'}`}>
-             +{chore.points} XP
+        </div>
+        <div className={`px-2.5 py-1 rounded-full font-black text-[11px] tracking-tight transition-colors border backdrop-blur-md ${
+          chore.status === 'completed'
+            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+            : 'bg-gold-primary/15 text-gold-primary border-gold-primary/30 group-hover:bg-gold-primary group-hover:text-black'
+        }`}>
+          +{chore.points} XP
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center pt-3 border-t border-white/5">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shadow-inner border ${
+            chore.assignedTo === currentUser?.id
+              ? 'bg-gold-primary text-black border-gold-primary'
+              : 'bg-white/10 text-gray-300 border-white/10'
+          }`}>
+            {chore.assignedTo === currentUser?.id ? 'ME' : 'HM'}
           </div>
-       </div>
-
-       <div className="flex justify-between items-center mt-auto">
-          <div className="flex items-center gap-3">
-             <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black transition-all ${chore.assignedTo === currentUser?.id ? 'bg-gold-primary text-black' : 'bg-gray-800 text-gray-400'}`}>
-                {chore.assignedTo === currentUser?.id ? 'ME' : 'HM'}
-             </div>
-             <div className="flex flex-col">
-                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Assignee</span>
-                <span className="text-xs text-gray-300 font-black">{chore.assignedTo === currentUser?.id ? 'You' : 'Housemate'}</span>
-             </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Assignee</span>
+            <span className="text-xs text-gray-200 font-bold">{chore.assignedTo === currentUser?.id ? 'You' : 'Housemate'}</span>
           </div>
+        </div>
 
-          {chore.status === 'pending' && chore.assignedTo === currentUser?.id && (
-            <button
-                onClick={() => handleCompleteChore?.(chore.id, chore.title)}
-                className="bg-white/5 hover:bg-green-500 hover:text-black border border-white/10 hover:border-green-500 text-gray-300 font-black px-5 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-90 shadow-lg"
-            >
-                Confirm Completion
-            </button>
-          )}
+        {chore.status === 'pending' && chore.assignedTo === currentUser?.id && (
+          <button
+            onClick={() => handleCompleteChore?.(chore.id, chore.title)}
+            className="bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-black border border-emerald-500/40 font-black px-4 py-1.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-emerald-500/10"
+          >
+            Mark Done
+          </button>
+        )}
 
-          {chore.status === 'completed' && (
-            <div className="flex items-center gap-2 text-green-500 text-[10px] font-black uppercase tracking-widest bg-green-500/5 px-3 py-1.5 rounded-full border border-green-500/20">
-               <CheckCircle2 size={14} /> Task Validated
-            </div>
-          )}
-       </div>
+        {chore.status === 'completed' && (
+          <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-bold uppercase tracking-wider bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+            <CheckCircle2 size={13} /> Completed
+          </div>
+        )}
+      </div>
     </div>
   )
 

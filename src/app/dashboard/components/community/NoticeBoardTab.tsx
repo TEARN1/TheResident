@@ -264,118 +264,152 @@ export default function NoticeBoardTab({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {communityNotices.map(notice => (
-              <div key={notice.id} className={`bg-black/40 border rounded-2xl p-6 flex flex-col gap-5 transition-all group shadow-lg hover:shadow-gold-primary/5 ${isFeatured(notice) ? 'border-gold-primary/40' : 'border-white/5 hover:border-gold-primary/20'}`}>
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border transition-all ${notice.type === 'event' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 group-hover:bg-purple-500/20' : notice.type === 'landlord_announcement' ? 'bg-gold-primary/10 text-gold-primary border-gold-primary/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20 group-hover:bg-blue-500/20'}`}>
-                      {notice.type === 'landlord_announcement' ? 'landlord announcement' : notice.type}
-                    </span>
-                    {notice.audience === 'my_tenants' && (
-                      <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-white/5 text-gray-400 border-white/10">
-                        <Users size={10} /> Tenants only
-                      </span>
-                    )}
-                    {notice.audience === 'targeted' && notice.targetSuburbs && notice.targetSuburbs.length > 0 && (
-                      <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-white/5 text-gray-400 border-white/10" title={notice.targetSuburbs.join(', ')}>
-                        <MapPin size={10} /> {notice.targetSuburbs.length === 1 ? notice.targetSuburbs[0] : `${notice.targetSuburbs.length} areas`}
-                      </span>
-                    )}
-                    {isFeatured(notice) && (
-                      <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-gold-primary text-black border-gold-primary">
-                        <Sparkles size={10} /> Boosted
-                      </span>
-                    )}
-                    {notice.type !== 'event' && (
-                      isExpired(notice) ? (
-                        <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-red-500/10 text-red-400 border-red-500/20" title="Only visible to you until it's renewed">
-                          <Clock size={10} /> Expired
-                        </span>
-                      ) : isPastFreeWindow(notice) ? (
-                        <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-green-500/10 text-green-400 border-green-500/20">
-                          <Clock size={10} /> Paid visibility
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest border bg-white/5 text-gray-400 border-white/10">
-                          <Clock size={10} /> Free · {hoursLeftInFreeWindow(notice)}h left
-                        </span>
-                      )
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {isModerator && (
-                      <>
-                        <button onClick={() => onModerate?.('notice', notice.id, 'hide')} title="Hide notice" className="text-gray-600 hover:text-red-400 transition-colors">
-                          <EyeOff size={13} />
-                        </button>
-                        <button onClick={() => onModerate?.('notice', notice.id, 'unhide')} title="Unhide notice" className="text-gray-600 hover:text-green-400 transition-colors">
-                          <Eye size={13} />
-                        </button>
-                      </>
-                    )}
-                    <span className="text-[10px] text-gray-600 font-mono tracking-tighter opacity-60 font-bold">{new Date(notice.timestamp).toLocaleDateString()}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                   <h4 className="text-lg font-black text-white leading-tight group-hover:text-gold-primary transition-colors tracking-tight">
-                      {notice.eventId && gruvsEventInfo[notice.eventId] ? gruvsEventInfo[notice.eventId].title : notice.title}
-                   </h4>
-                   <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80 font-medium">{notice.description}</p>
-                </div>
-
-                {notice.type === 'event' && (
-                  <div className="flex items-center gap-3 text-[10px] font-black text-gold-primary bg-gold-primary/5 p-3 rounded-xl border border-gold-primary/10 uppercase tracking-widest shadow-inner">
-                    <Calendar size={14} className="opacity-60" />
-                    {notice.eventId && gruvsEventInfo[notice.eventId] ? (
-                      <span>On The Gruvs: <span className="text-white ml-1">{formatGruvsEventWhen(gruvsEventInfo[notice.eventId].startsAt, { long: true })}</span></span>
-                    ) : notice.eventDate ? (
-                      <span>Scheduled: <span className="text-white ml-1">{notice.eventDate}</span></span>
-                    ) : (
-                      <span className="opacity-60">Event details unavailable</span>
-                    )}
-                  </div>
+              <div
+                key={notice.id}
+                className={`glass-panel p-6 flex flex-col justify-between gap-5 transition-all duration-300 group relative overflow-hidden ${
+                  isFeatured(notice)
+                    ? 'border-gold-primary/50 shadow-[0_0_24px_rgba(212,175,55,0.15)] bg-gradient-to-b from-gold-primary/10 via-black/40 to-black/30'
+                    : 'border-white/10 hover:border-gold-primary/30 hover:shadow-xl hover:shadow-black/40'
+                }`}
+              >
+                {isFeatured(notice) && (
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gold-primary/10 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10" />
                 )}
 
-                <div className="mt-auto pt-6 border-t border-white/5 flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                     <div className="w-7 h-7 bg-gray-800 rounded-xl flex items-center justify-center text-[10px] font-black text-gold-primary transition-colors group-hover:bg-gold-primary group-hover:text-black">
-                        {notice.postedBy.charAt(0)}
-                     </div>
-                     <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest opacity-80">{notice.postedBy}</span>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border backdrop-blur-md transition-all ${
+                        notice.type === 'event'
+                          ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                          : notice.type === 'landlord_announcement'
+                          ? 'bg-gold-primary/15 text-gold-primary border-gold-primary/30 shadow-[0_0_12px_rgba(212,175,55,0.2)]'
+                          : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                      }`}>
+                        {notice.type === 'landlord_announcement' ? 'Official Announcement' : notice.type}
+                      </span>
+                      {notice.audience === 'my_tenants' && (
+                        <span className="flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border bg-white/5 text-gray-400 border-white/10 backdrop-blur-md">
+                          <Users size={11} className="text-gold-primary" /> Tenants only
+                        </span>
+                      )}
+                      {notice.audience === 'targeted' && notice.targetSuburbs && notice.targetSuburbs.length > 0 && (
+                        <span className="flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border bg-white/5 text-gray-400 border-white/10 backdrop-blur-md" title={notice.targetSuburbs.join(', ')}>
+                          <MapPin size={11} className="text-gold-primary" /> {notice.targetSuburbs.length === 1 ? notice.targetSuburbs[0] : `${notice.targetSuburbs.length} areas`}
+                        </span>
+                      )}
+                      {isFeatured(notice) && (
+                        <span className="flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border bg-gold-primary text-black border-gold-primary shadow-sm font-sans">
+                          <Sparkles size={11} /> Boosted
+                        </span>
+                      )}
+                      {notice.type !== 'event' && (
+                        isExpired(notice) ? (
+                          <span className="flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border bg-red-500/15 text-red-400 border-red-500/30" title="Only visible to you until it's renewed">
+                            <Clock size={11} /> Expired
+                          </span>
+                        ) : isPastFreeWindow(notice) ? (
+                          <span className="flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border bg-emerald-500/15 text-emerald-400 border-emerald-500/30">
+                            <Clock size={11} /> Extended
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border bg-white/5 text-gray-400 border-white/10">
+                            <Clock size={11} /> {hoursLeftInFreeWindow(notice)}h free
+                          </span>
+                        )
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isModerator && (
+                        <div className="flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/10">
+                          <button onClick={() => onModerate?.('notice', notice.id, 'hide')} title="Hide notice" className="p-1 text-gray-500 hover:text-red-400 transition-colors">
+                            <EyeOff size={13} />
+                          </button>
+                          <button onClick={() => onModerate?.('notice', notice.id, 'unhide')} title="Unhide notice" className="p-1 text-gray-500 hover:text-emerald-400 transition-colors">
+                            <Eye size={13} />
+                          </button>
+                        </div>
+                      )}
+                      <span className="text-[11px] text-gray-400 font-mono tracking-tight font-medium bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
+                        {new Date(notice.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex gap-4">
-                     <button onClick={() => handleVibeNotice?.(notice.id)} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-pink-500 transition-colors font-black active:scale-90">
-                        <Heart size={18} className="transition-transform group-hover:scale-110" /> <span>{notice.vibes?.length || 0}</span>
-                     </button>
-                     <button onClick={() => handleEchoNotice?.(notice.id)} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-500 transition-colors font-black active:scale-90">
-                        <Share2 size={18} className="transition-transform group-hover:scale-110" /> <span>{notice.echos?.length || 0}</span>
-                     </button>
-                     {notice.type === 'event' && (
-                       <button onClick={() => handleRSVPToEvent?.(notice.id)} className="flex items-center gap-2 text-[10px] text-green-500 bg-green-500/10 px-3 py-1.5 rounded-xl border border-green-500/20 hover:bg-green-500 hover:text-black transition-all font-black uppercase tracking-widest shadow-lg active:scale-90 ml-1">
-                          <Check size={14} /> RSVP <span className="opacity-40">({notice.rsvps.length})</span>
-                       </button>
-                     )}
-                  </div>
-                </div>
 
-                {notice.postedById === currentUser?.id && (
                   <div className="space-y-2">
-                    {notice.type !== 'event' && isPastFreeWindow(notice) && (
-                      <UpgradeButton
-                        item="notice_extend_visibility"
-                        targetId={notice.id}
-                        className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-black py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95"
-                      />
-                    )}
-                    {!isFeatured(notice) && (
-                      <UpgradeButton
-                        item="notice_boost"
-                        targetId={notice.id}
-                        className={goldButtonClass({ size: 'sm', fullWidth: true })}
-                      />
-                    )}
+                    <h4 className="text-lg font-black text-white leading-snug group-hover:text-gold-primary transition-colors tracking-tight">
+                      {notice.eventId && gruvsEventInfo[notice.eventId] ? gruvsEventInfo[notice.eventId].title : notice.title}
+                    </h4>
+                    <p className="text-sm text-gray-300 leading-relaxed font-normal">{notice.description}</p>
                   </div>
-                )}
+
+                  {notice.type === 'event' && (
+                    <div className="flex items-center gap-3 text-xs font-semibold text-gold-primary bg-gold-primary/10 p-3.5 rounded-2xl border border-gold-primary/20 backdrop-blur-md">
+                      <Calendar size={16} className="text-gold-primary shrink-0" />
+                      {notice.eventId && gruvsEventInfo[notice.eventId] ? (
+                        <span>On The Gruvs: <span className="text-white font-bold ml-1">{formatGruvsEventWhen(gruvsEventInfo[notice.eventId].startsAt, { long: true })}</span></span>
+                      ) : notice.eventDate ? (
+                        <span>Scheduled: <span className="text-white font-bold ml-1">{notice.eventDate}</span></span>
+                      ) : (
+                        <span className="text-gray-400">Event details unavailable</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-white/10 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gold-primary/30 to-amber-200/30 border border-gold-primary/40 flex items-center justify-center text-xs font-black text-gold-primary shadow-inner">
+                        {notice.postedBy.charAt(0)}
+                      </div>
+                      <span className="text-xs text-gray-300 font-bold tracking-tight">{notice.postedBy}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleVibeNotice?.(notice.id)}
+                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-pink-400 bg-white/5 hover:bg-pink-500/10 px-3 py-1.5 rounded-xl border border-white/5 hover:border-pink-500/20 transition-all font-bold active:scale-95"
+                      >
+                        <Heart size={15} className="transition-transform group-hover:scale-110" />
+                        <span>{notice.vibes?.length || 0}</span>
+                      </button>
+                      <button
+                        onClick={() => handleEchoNotice?.(notice.id)}
+                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-cyan-400 bg-white/5 hover:bg-cyan-500/10 px-3 py-1.5 rounded-xl border border-white/5 hover:border-cyan-500/20 transition-all font-bold active:scale-95"
+                      >
+                        <Share2 size={15} className="transition-transform group-hover:scale-110" />
+                        <span>{notice.echos?.length || 0}</span>
+                      </button>
+                      {notice.type === 'event' && (
+                        <button
+                          onClick={() => handleRSVPToEvent?.(notice.id)}
+                          className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/15 hover:bg-emerald-500 hover:text-black px-3.5 py-1.5 rounded-xl border border-emerald-500/30 transition-all font-bold shadow-lg shadow-emerald-500/10 active:scale-95 ml-1"
+                        >
+                          <Check size={14} /> RSVP <span className="opacity-70">({notice.rsvps.length})</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {notice.postedById === currentUser?.id && (
+                    <div className="space-y-2 pt-2">
+                      {notice.type !== 'event' && isPastFreeWindow(notice) && (
+                        <UpgradeButton
+                          item="notice_extend_visibility"
+                          targetId={notice.id}
+                          className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95"
+                        />
+                      )}
+                      {!isFeatured(notice) && (
+                        <UpgradeButton
+                          item="notice_boost"
+                          targetId={notice.id}
+                          className={goldButtonClass({ size: 'sm', fullWidth: true })}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>

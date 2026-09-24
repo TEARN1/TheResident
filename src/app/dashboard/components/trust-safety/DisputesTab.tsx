@@ -83,83 +83,97 @@ export default function DisputesTab({
         ) : (
           <div className="space-y-4">
             {communityDisputes.map(dispute => (
-              <div key={dispute.id} className="bg-black/40 border border-white/5 rounded-xl overflow-hidden hover:border-white/10 transition-colors group">
-                <div className="p-5 flex flex-col md:flex-row justify-between gap-6">
-                   <div className="flex-1 space-y-3">
-                      <div className="flex items-center gap-3">
-                         <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase border tracking-widest ${dispute.status === 'resolved' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'}`}>
-                            {dispute.status}
-                         </span>
-                         <span className="text-[10px] text-gray-600 font-mono flex items-center gap-1"><Clock size={10} /> {dispute.timestamp}</span>
-                      </div>
-                      <h4 className="font-bold text-white text-lg group-hover:text-gold-primary transition-colors">{dispute.title}</h4>
-                      <p className="text-sm text-gray-400 leading-relaxed">{dispute.description}</p>
+              <div
+                key={dispute.id}
+                className="glass-panel p-6 border-white/10 hover:border-gold-primary/30 transition-all duration-300 group shadow-lg"
+              >
+                <div className="flex flex-col md:flex-row justify-between gap-6">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase border tracking-wider backdrop-blur-md ${
+                        dispute.status === 'resolved'
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                      }`}>
+                        {dispute.status}
+                      </span>
+                      <span className="text-[11px] text-gray-400 font-mono flex items-center gap-1.5">
+                        <Clock size={12} className="text-gray-500" /> {dispute.timestamp}
+                      </span>
+                    </div>
 
-                      <div className="flex flex-wrap gap-4 pt-2">
-                         <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-tighter">
-                            <User size={12} className="text-gold-primary" /> Reported by: <span className="text-gray-300 ml-1">{dispute.reportedBy}</span>
-                         </div>
-                         <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-tighter">
-                            <AlertTriangle size={12} className="text-gold-primary" /> Against: <span className="text-gray-300 ml-1">{dispute.againstUser}</span>
-                         </div>
-                      </div>
-                   </div>
+                    <h4 className="font-black text-white text-lg group-hover:text-gold-primary transition-colors tracking-tight leading-snug">
+                      {dispute.title}
+                    </h4>
+                    <p className="text-sm text-gray-300 leading-relaxed font-normal">{dispute.description}</p>
 
-                   <div className="flex flex-col md:items-end justify-center gap-3">
-                      {dispute.status !== 'resolved' && currentUser?.role === 'landlord' && (
-                        <button
-                          onClick={() => setModerating(moderating === dispute.id ? null : dispute.id)}
-                          className="bg-gold-primary text-black font-black px-6 py-2 rounded-lg text-[10px] uppercase tracking-widest hover:bg-gold-secondary transition-all shadow-lg shadow-gold-primary/10"
-                        >
-                          {moderating === dispute.id ? 'Cancel' : 'Moderate Case'}
-                        </button>
-                      )}
-                      {currentUser && (dispute.reportedById === currentUser.id || dispute.againstUserId === currentUser.id) && (
-                        <Link
-                          href={`/dashboard/messages?to=${dispute.reportedById === currentUser.id ? dispute.againstUserId : dispute.reportedById}`}
-                          className="flex items-center gap-2 text-xs text-gray-500 hover:text-white transition-colors font-bold group/btn"
-                        >
-                           <MessageSquare size={14} className="group-hover/btn:text-gold-primary transition-colors" /> Message the other party
-                        </Link>
-                      )}
-                   </div>
+                    <div className="flex flex-wrap gap-4 pt-2">
+                      <div className="flex items-center gap-2 text-xs text-gray-400 font-medium">
+                        <User size={13} className="text-gold-primary" />
+                        <span>Reported by: <strong className="text-white ml-0.5">{dispute.reportedBy}</strong></span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-400 font-medium">
+                        <AlertTriangle size={13} className="text-amber-400" />
+                        <span>Against: <strong className="text-white ml-0.5">{dispute.againstUser}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:items-end justify-center gap-3 shrink-0">
+                    {dispute.status !== 'resolved' && currentUser?.role === 'landlord' && (
+                      <button
+                        onClick={() => setModerating(moderating === dispute.id ? null : dispute.id)}
+                        className="bg-gold-primary text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider hover:bg-gold-secondary transition-all shadow-lg shadow-gold-primary/20 active:scale-95"
+                      >
+                        {moderating === dispute.id ? 'Cancel' : 'Moderate Case'}
+                      </button>
+                    )}
+                    {currentUser && (dispute.reportedById === currentUser.id || dispute.againstUserId === currentUser.id) && (
+                      <Link
+                        href={`/dashboard/messages?to=${dispute.reportedById === currentUser.id ? dispute.againstUserId : dispute.reportedById}`}
+                        className="inline-flex items-center gap-2 text-xs text-gray-400 hover:text-gold-primary bg-white/5 hover:bg-white/10 px-3.5 py-2 rounded-xl border border-white/10 transition-all font-semibold"
+                      >
+                        <MessageSquare size={14} className="text-gold-primary" /> Message the other party
+                      </Link>
+                    )}
+                  </div>
                 </div>
 
                 {moderating === dispute.id && (
-                  <div className="bg-black/60 border-t border-white/5 p-5 space-y-3">
-                     {dispute.status === 'pending' && (
-                       <button
-                         onClick={() => startMediation(dispute.id)}
-                         disabled={saving}
-                         className="text-xs font-bold text-gold-primary hover:underline disabled:opacity-50"
-                       >
-                         Start mediation →
-                       </button>
-                     )}
-                     <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest block">Resolution notes</label>
-                     <textarea
-                       value={resolutionDraft}
-                       onChange={e => setResolutionDraft(e.target.value)}
-                       placeholder="How was this resolved?"
-                       className="w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white h-20 resize-none outline-none focus:border-gold-primary/40"
-                     />
-                     <button
-                       onClick={() => resolveCase(dispute.id)}
-                       disabled={saving || !resolutionDraft.trim()}
-                       className="flex items-center gap-2 bg-gold-primary text-black font-black px-4 py-2 rounded-lg text-[10px] uppercase tracking-widest disabled:opacity-50"
-                     >
-                       {saving ? <Loader size={12} className="animate-spin" /> : null} Mark Resolved
-                     </button>
+                  <div className="bg-black/50 border border-white/10 rounded-2xl p-5 mt-4 space-y-3.5 backdrop-blur-md">
+                    {dispute.status === 'pending' && (
+                      <button
+                        onClick={() => startMediation(dispute.id)}
+                        disabled={saving}
+                        className="text-xs font-bold text-gold-primary hover:underline disabled:opacity-50 block"
+                      >
+                        Start mediation →
+                      </button>
+                    )}
+                    <label className="text-[10px] text-gray-400 uppercase font-black tracking-widest block">Resolution Notes</label>
+                    <textarea
+                      value={resolutionDraft}
+                      onChange={e => setResolutionDraft(e.target.value)}
+                      placeholder="How was this case resolved?"
+                      className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-sm text-white h-20 resize-none outline-none focus:border-gold-primary/50"
+                    />
+                    <button
+                      onClick={() => resolveCase(dispute.id)}
+                      disabled={saving || !resolutionDraft.trim()}
+                      className="flex items-center gap-2 bg-gradient-to-r from-gold-primary to-amber-300 text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider disabled:opacity-50 shadow-md shadow-gold-primary/20 active:scale-95"
+                    >
+                      {saving ? <Loader size={13} className="animate-spin" /> : null} Mark Resolved
+                    </button>
                   </div>
                 )}
 
                 {dispute.status === 'resolved' && dispute.resolutionDetails && (
-                  <div className="bg-green-500/5 border-t border-white/5 p-5 flex gap-4">
-                     <CheckCircle2 size={18} className="text-green-500 shrink-0 mt-0.5" />
-                     <div className="space-y-1">
-                        <p className="text-[10px] text-green-500 font-black uppercase tracking-widest">Resolution Outcome</p>
-                        <p className="text-sm text-gray-400 italic leading-relaxed">&quot;{dispute.resolutionDetails}&quot;</p>
-                     </div>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 mt-4 flex gap-3.5 backdrop-blur-md">
+                    <CheckCircle2 size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-emerald-400 font-black uppercase tracking-wider">Resolution Outcome</p>
+                      <p className="text-sm text-gray-200 italic leading-relaxed">&quot;{dispute.resolutionDetails}&quot;</p>
+                    </div>
                   </div>
                 )}
               </div>
