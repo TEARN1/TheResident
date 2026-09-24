@@ -748,13 +748,13 @@ export const glassPanelStyle: React.CSSProperties = {
   position: 'relative',
   zIndex: 1,
   width: '100%',
-  maxWidth: '540px',
-  background: 'var(--glass-bg)',
-  backdropFilter: 'blur(16px)',
-  WebkitBackdropFilter: 'blur(16px)',
-  border: '1px solid var(--glass-border)',
-  boxShadow: '0 8px 32px 0 var(--shadow-color), 0 0 20px var(--gold-dim)',
-  borderRadius: '16px',
+  maxWidth: '520px',
+  background: 'rgba(10, 10, 10, 0.75)',
+  backdropFilter: 'blur(28px)',
+  WebkitBackdropFilter: 'blur(28px)',
+  border: '1px solid rgba(255, 255, 255, 0.12)',
+  boxShadow: '0 24px 60px -12px rgba(0, 0, 0, 0.8), 0 0 32px rgba(212, 175, 55, 0.12)',
+  borderRadius: '24px',
   padding: '2.5rem',
   color: 'var(--foreground)',
   boxSizing: 'border-box'
@@ -762,83 +762,83 @@ export const glassPanelStyle: React.CSSProperties = {
 
 export const headerStyle: React.CSSProperties = {
   textAlign: 'center',
-  marginBottom: '1.5rem'
+  marginBottom: '2rem'
 }
 
 export const logoStyle: React.CSSProperties = {
-  fontSize: '2rem',
+  fontSize: '2.2rem',
   fontFamily: 'var(--font-heading), serif',
   color: 'var(--gold-primary)',
   letterSpacing: '4px',
-  margin: '0 0 0.5rem 0'
+  fontWeight: 900,
+  margin: '0 0 0.5rem 0',
+  textShadow: '0 0 24px rgba(212, 175, 55, 0.3)'
 }
 
 export const taglineStyle: React.CSSProperties = {
-  fontSize: '0.85rem',
-  color: 'var(--foreground)',
-  opacity: 0.6,
+  fontSize: '0.8rem',
+  color: 'rgba(255, 255, 255, 0.7)',
   textTransform: 'uppercase',
-  letterSpacing: '2px',
+  letterSpacing: '2.5px',
+  fontWeight: 700,
   margin: 0
 }
 
 const crossAppNoteStyle: React.CSSProperties = {
-  fontSize: '0.7rem',
+  fontSize: '0.72rem',
   color: 'var(--gold-primary)',
-  opacity: 0.75,
+  opacity: 0.85,
   letterSpacing: '1px',
-  margin: '0.4rem 0 0 0'
+  fontWeight: 600,
+  margin: '0.5rem 0 0 0'
 }
 
 const tabContainerStyle: React.CSSProperties = {
   display: 'flex',
-  borderBottom: '1px solid var(--glass-border)',
-  marginBottom: '1.5rem'
+  background: 'rgba(0, 0, 0, 0.4)',
+  borderRadius: '16px',
+  padding: '4px',
+  border: '1px solid rgba(255, 255, 255, 0.08)',
+  marginBottom: '1.75rem'
 }
 
-// Both objects share the exact same property keys (only borderBottom's value
-// differs) so React never has to add/remove a style property when the active
-// tab changes — mixing the `border` shorthand with the `borderBottom`
-// longhand on one object triggers a React dev warning and is fragile to diff.
 const activeTabStyle: React.CSSProperties = {
   flex: 1,
-  background: 'transparent',
-  borderTop: 'none',
-  borderLeft: 'none',
-  borderRight: 'none',
-  borderBottom: '2px solid var(--gold-primary)',
-  color: 'var(--gold-primary)',
+  background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.12) 100%)',
+  border: '1px solid rgba(212, 175, 55, 0.4)',
+  borderRadius: '12px',
+  color: '#FFFFFF',
   padding: '0.75rem',
   fontFamily: 'var(--font-body)',
-  fontSize: '0.9rem',
+  fontSize: '0.85rem',
   cursor: 'pointer',
-  fontWeight: 'bold',
+  fontWeight: 800,
+  boxShadow: '0 4px 12px rgba(212, 175, 55, 0.15)',
   transition: 'all 0.3s ease'
 }
 
 const inactiveTabStyle: React.CSSProperties = {
   flex: 1,
   background: 'transparent',
-  borderTop: 'none',
-  borderLeft: 'none',
-  borderRight: 'none',
-  borderBottom: '2px solid transparent',
-  color: 'var(--foreground)',
-  opacity: 0.5,
+  border: '1px solid transparent',
+  borderRadius: '12px',
+  color: 'rgba(255, 255, 255, 0.5)',
   padding: '0.75rem',
   fontFamily: 'var(--font-body)',
-  fontSize: '0.9rem',
+  fontSize: '0.85rem',
   cursor: 'pointer',
+  fontWeight: 600,
   transition: 'all 0.3s ease'
 }
 
 export const errorContainerStyle: React.CSSProperties = {
-  background: 'rgba(239, 68, 68, 0.15)',
-  border: '1px solid #ef4444',
-  borderRadius: '6px',
-  padding: '0.8rem',
-  color: 'var(--foreground)',
-  fontSize: '0.8rem',
+  background: 'rgba(239, 68, 68, 0.12)',
+  border: '1px solid rgba(239, 68, 68, 0.3)',
+  borderRadius: '14px',
+  padding: '0.85rem 1rem',
+  color: '#fca5a5',
+  fontSize: '0.82rem',
+  fontWeight: 600,
   marginBottom: '1.5rem',
   display: 'flex',
   alignItems: 'center'
@@ -847,46 +847,46 @@ export const errorContainerStyle: React.CSSProperties = {
 export const formStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '1.2rem'
+  gap: '1.25rem'
 }
 
 export const inputGroupStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: '0.4rem',
+  gap: '0.45rem',
   flex: 1
 }
 
 export const labelStyle: React.CSSProperties = {
-  fontSize: '0.75rem',
-  color: 'var(--foreground)',
-  opacity: 0.8,
+  fontSize: '0.72rem',
+  color: 'rgba(255, 255, 255, 0.65)',
   textTransform: 'uppercase',
-  letterSpacing: '1px'
+  letterSpacing: '1.5px',
+  fontWeight: 800
 }
 
 export const inputStyle: React.CSSProperties = {
-  background: 'var(--input-bg)',
-  border: '1px solid var(--glass-border)',
-  borderRadius: '6px',
-  padding: '0.75rem',
-  color: 'var(--foreground)',
+  background: 'rgba(0, 0, 0, 0.5)',
+  border: '1px solid rgba(255, 255, 255, 0.12)',
+  borderRadius: '14px',
+  padding: '0.85rem 1rem',
+  color: '#FFFFFF',
   fontFamily: 'var(--font-body)',
-  fontSize: '0.9rem',
+  fontSize: '0.92rem',
   outline: 'none',
-  transition: 'border-color 0.3s ease',
+  transition: 'all 0.25s ease',
   boxSizing: 'border-box',
   width: '100%'
 }
 
 export const selectStyle: React.CSSProperties = {
-  background: 'var(--input-bg)',
-  border: '1px solid var(--glass-border)',
-  borderRadius: '6px',
-  padding: '0.75rem',
-  color: 'var(--foreground)',
+  background: 'rgba(0, 0, 0, 0.5)',
+  border: '1px solid rgba(255, 255, 255, 0.12)',
+  borderRadius: '14px',
+  padding: '0.85rem 1rem',
+  color: '#FFFFFF',
   fontFamily: 'var(--font-body)',
-  fontSize: '0.9rem',
+  fontSize: '0.92rem',
   outline: 'none',
   cursor: 'pointer',
   boxSizing: 'border-box',
@@ -894,13 +894,13 @@ export const selectStyle: React.CSSProperties = {
 }
 
 export const textareaStyle: React.CSSProperties = {
-  background: 'var(--input-bg)',
-  border: '1px solid var(--glass-border)',
-  borderRadius: '6px',
-  padding: '0.75rem',
-  color: 'var(--foreground)',
+  background: 'rgba(0, 0, 0, 0.5)',
+  border: '1px solid rgba(255, 255, 255, 0.12)',
+  borderRadius: '14px',
+  padding: '0.85rem 1rem',
+  color: '#FFFFFF',
   fontFamily: 'var(--font-body)',
-  fontSize: '0.9rem',
+  fontSize: '0.92rem',
   outline: 'none',
   resize: 'none',
   boxSizing: 'border-box',
@@ -914,17 +914,18 @@ export const rowStyle: React.CSSProperties = {
 }
 
 export const profileSectionStyle: React.CSSProperties = {
-  borderTop: '1px dashed var(--glass-border)',
-  paddingTop: '1.2rem',
+  borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+  paddingTop: '1.25rem',
   marginTop: '0.5rem',
   display: 'flex',
   flexDirection: 'column',
-  gap: '1rem'
+  gap: '1.1rem'
 }
 
 export const sectionHeaderStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   color: 'var(--gold-primary)',
+  fontWeight: 800,
   margin: '0 0 0.5rem 0',
   display: 'flex',
   alignItems: 'center'
@@ -947,14 +948,15 @@ export const checkboxStyle: React.CSSProperties = {
 
 export const checkboxLabelStyle: React.CSSProperties = {
   fontSize: '0.85rem',
-  color: 'var(--foreground)',
-  cursor: 'pointer'
+  color: 'rgba(255, 255, 255, 0.8)',
+  cursor: 'pointer',
+  fontWeight: 600
 }
 
 export const preferenceGridStyle: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(3, 1fr)',
-  gap: '0.5rem',
+  gap: '0.75rem',
   marginTop: '0.5rem'
 }
 
@@ -963,10 +965,14 @@ export const submitButtonStyle: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
-  padding: '0.9rem',
-  fontSize: '0.9rem',
-  fontWeight: 'bold',
-  letterSpacing: '2px',
+  padding: '0.9rem 1.5rem',
+  fontSize: '0.85rem',
+  fontWeight: 900,
+  letterSpacing: '1.5px',
+  textTransform: 'uppercase',
+  borderRadius: '14px',
+  cursor: 'pointer',
+  transition: 'all 0.25s ease',
   width: '100%'
 }
 
@@ -975,17 +981,20 @@ const alertStyle: React.CSSProperties = {
   top: '20px',
   left: '50%',
   transform: 'translateX(-50%)',
-  background: 'var(--sidebar-bg)',
-  border: '1px solid var(--gold-primary)',
-  borderRadius: '8px',
+  background: 'rgba(10, 10, 10, 0.9)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  border: '1px solid rgba(212, 175, 55, 0.4)',
+  borderRadius: '16px',
   padding: '1rem 1.5rem',
-  color: 'var(--foreground)',
+  color: '#FFFFFF',
   display: 'flex',
   alignItems: 'center',
   gap: '0.8rem',
   zIndex: 1000,
   fontSize: '0.85rem',
-  boxShadow: '0 4px 20px var(--shadow-color)',
+  fontWeight: 600,
+  boxShadow: '0 12px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.15)',
   width: '90%',
   maxWidth: '500px'
 }
@@ -994,36 +1003,36 @@ const alertStyle: React.CSSProperties = {
 const gruvsBannerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: '10px',
-  background: 'var(--gold-dim, rgba(212,175,55,0.10))',
-  border: '1px solid var(--gold-primary, #D4AF37)',
-  borderRadius: '10px',
-  padding: '12px 14px',
+  gap: '12px',
+  background: 'rgba(212, 175, 55, 0.08)',
+  border: '1px solid rgba(212, 175, 55, 0.25)',
+  borderRadius: '16px',
+  padding: '14px 16px',
   marginBottom: '16px',
-  color: 'var(--foreground)',
-  fontSize: '0.8rem',
-  lineHeight: 1.4,
+  color: 'rgba(255, 255, 255, 0.9)',
+  fontSize: '0.82rem',
+  lineHeight: 1.45,
 }
 
 const socialDividerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '0.75rem',
-  margin: '1.25rem 0 0.5rem'
+  margin: '1.5rem 0 0.75rem'
 }
 
 const socialDividerLineStyle: React.CSSProperties = {
   flex: 1,
   height: '1px',
-  background: 'var(--glass-border)'
+  background: 'rgba(255, 255, 255, 0.1)'
 }
 
 const socialDividerTextStyle: React.CSSProperties = {
   fontSize: '0.7rem',
-  color: 'var(--foreground)',
-  opacity: 0.5,
+  color: 'rgba(255, 255, 255, 0.5)',
   textTransform: 'uppercase',
   letterSpacing: '1.5px',
+  fontWeight: 700,
   whiteSpace: 'nowrap'
 }
 
@@ -1038,13 +1047,13 @@ const oauthBtnStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: '0.7rem 0.5rem',
-  background: 'var(--input-bg)',
-  border: '1px solid var(--glass-border)',
-  borderRadius: '10px',
-  color: 'var(--foreground)',
-  fontSize: '0.8rem',
-  fontWeight: 600,
+  padding: '0.85rem 1rem',
+  background: 'rgba(255, 255, 255, 0.05)',
+  border: '1px solid rgba(255, 255, 255, 0.12)',
+  borderRadius: '14px',
+  color: '#FFFFFF',
+  fontSize: '0.85rem',
+  fontWeight: 700,
   cursor: 'pointer',
   transition: 'all 0.25s ease'
 }
@@ -1053,19 +1062,19 @@ const gruvsBtnStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  gap: '0.6rem',
+  gap: '0.75rem',
   width: '100%',
-  padding: '0.75rem 1rem',
+  padding: '0.85rem 1.25rem',
   marginBottom: '0.75rem',
-  background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%)',
-  border: '1.5px solid var(--gold-primary)',
-  borderRadius: '10px',
+  background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.08) 100%)',
+  border: '1.5px solid rgba(212, 175, 55, 0.6)',
+  borderRadius: '14px',
   color: 'var(--gold-primary)',
-  fontSize: '0.9rem',
-  fontWeight: 700,
+  fontSize: '0.88rem',
+  fontWeight: 800,
   letterSpacing: '0.5px',
   cursor: 'pointer',
   transition: 'all 0.25s ease',
-  boxShadow: '0 0 12px rgba(212, 175, 55, 0.12)'
+  boxShadow: '0 0 16px rgba(212, 175, 55, 0.15)'
 }
 
