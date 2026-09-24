@@ -593,19 +593,27 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       L.marker([pin.lat, pin.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div style="width:14px;height:14px;border-radius:4px;background:#D4AF37;border:2px solid white;transform:rotate(45deg)"></div>`,
-          iconSize: [14, 14],
-          iconAnchor: [7, 7]
+          html: `
+            <div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:12px;background:linear-gradient(135deg,#F59E0B,#D4AF37);box-shadow:0 4px 12px rgba(212,175,55,0.4);border:2px solid #fff;color:#000;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+            </div>
+          `,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
         })
-      }).bindPopup(`<strong>${encodeHTMLEntities(pin.label)}</strong>`).addTo(layer)
+      }).bindPopup(`
+        <div style="font-family:inherit;min-width:180px;background:rgba(15,18,24,0.95);backdrop-filter:blur(24px);padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,0.12);color:#fff;box-shadow:0 12px 36px rgba(0,0,0,0.6);">
+          <div style="display:flex;align-items:center;gap:6px;color:#F59E0B;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+            Saved Location
+          </div>
+          <strong style="font-size:13px;display:block;margin-top:2px;">${encodeHTMLEntities(pin.label)}</strong>
+        </div>
+      `).addTo(layer)
     })
   }, [savedPins])
 
-  // Room/property listings as a clustered pin layer — the map previously had
-  // zero awareness of listings at all, even though "Shared Living Map" is
-  // the header text right above it. Only listings with coordinates render;
-  // most existing listings predate lat/lon capture, so this fills in as
-  // landlords verify addresses rather than needing a backfill migration.
+  // Room/property listings rendered as modern interactive price-pill chips
   useEffect(() => {
     const L = leafletRef.current
     const cluster = listingsClusterRef.current
@@ -617,16 +625,24 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       const marker = L.marker([listing.lat, listing.lon], {
         icon: L.divIcon({
           className: '',
-          html: `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#D4AF37;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);color:#000;font-size:11px;font-weight:900">R</div>`,
-          iconSize: [22, 22],
-          iconAnchor: [11, 11]
+          html: `
+            <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;background:rgba(10,12,18,0.92);border:1.5px solid #F59E0B;color:#fff;font-family:inherit;font-size:11px;font-weight:900;letter-spacing:-0.2px;box-shadow:0 4px 14px rgba(0,0,0,0.5),0 0 10px rgba(245,158,11,0.25);cursor:pointer;white-space:nowrap;transition:transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)';this.style.background='#F59E0B';this.style.color='#000'" onmouseout="this.style.transform='scale(1)';this.style.background='rgba(10,12,18,0.92)';this.style.color='#fff'">
+              <span>${listing.currency || 'R'} ${listing.price}</span>
+            </div>
+          `,
+          iconSize: [60, 24],
+          iconAnchor: [30, 12]
         })
       })
       marker.bindPopup(`
-        <div style="font-family:inherit;min-width:170px">
-          <strong>${encodeHTMLEntities(listing.title)}</strong>
-          <div style="opacity:0.7;font-size:0.85em;margin-top:2px">${encodeHTMLEntities(listing.suburb || listing.location)}</div>
-          <div style="font-size:0.9em;margin-top:4px;color:#D4AF37;font-weight:700">${listing.currency} ${listing.price}</div>
+        <div style="font-family:inherit;min-width:210px;background:rgba(15,18,24,0.95);backdrop-filter:blur(24px);padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,0.12);color:#fff;box-shadow:0 12px 36px rgba(0,0,0,0.6);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#F59E0B;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:999px;border:1px solid rgba(245,158,11,0.25);">Available Room</span>
+            <span style="font-size:13px;color:#F59E0B;font-weight:900;">${listing.currency || 'R'} ${listing.price}</span>
+          </div>
+          <strong style="font-size:14px;display:block;line-height:1.3;">${encodeHTMLEntities(listing.title)}</strong>
+          <div style="opacity:0.6;font-size:11px;margin-top:4px;">${encodeHTMLEntities(listing.suburb || listing.location)}</div>
+          <a href="/dashboard/housing" style="display:block;margin-top:10px;padding:6px 0;background:#F59E0B;color:#000;text-align:center;border-radius:10px;font-size:11px;font-weight:900;text-decoration:none;text-transform:uppercase;letter-spacing:0.5px;">View Listing</a>
         </div>
       `)
       marker.addTo(cluster)
@@ -1090,57 +1106,88 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           </div>
         )}
 
-        {/* Slide-in tools drawer — right side, replaces the old always-visible stacked cards */}
-        {drawer !== 'none' && (
-          <div className="absolute top-0 right-0 bottom-0 w-full sm:w-[340px] z-[600] bg-black/95 backdrop-blur-xl border-l border-white/10 overflow-y-auto p-4">
-            <button onClick={() => setDrawer('none')} className="absolute top-3 right-3 text-gray-500 hover:text-white"><X size={16} /></button>
-
-            {drawer === 'pins' && (
-              <SavedPinsPanel
-                pending={pendingPoint}
-                pins={savedPins}
-                loading={pinsLoading}
-                onSave={handleSavePin}
-                onDelete={handleDeletePin}
-                onJump={handleJumpToPin}
-                onAddToMatrix={pin => addMatrixPoint({ id: pin.id, label: pin.label, lat: pin.lat, lon: pin.lon })}
-              />
-            )}
-
-            {drawer === 'matrix' && (
-              <DistanceMatrixPanel
-                points={matrixPoints}
-                onRemove={id => setMatrixPoints(prev => prev.filter(p => p.id !== id))}
-              />
-            )}
-
-            {drawer === 'geofence' && (
-              <div>
-                <h4 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2 mb-4">
-                  <Bell size={16} className="text-gold-primary" /> Geofenced Area Alerts
-                </h4>
-                <p className="text-[11px] text-gray-500 mb-4">
-                  Highlights shared zones within a radius of any of your saved places — client-side, refreshed with the map.
-                </p>
-                <label className="block text-[10px] text-gray-500 uppercase font-bold mb-1">Alert radius (metres)</label>
-                <input
-                  type="number"
-                  min={50}
-                  max={20000}
-                  step={50}
-                  value={alertRadiusM}
-                  onChange={e => setAlertRadiusM(Math.max(50, Number(e.target.value) || 50))}
-                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-gold-primary/50 mb-4"
-                />
-                <div className="p-3 bg-white/2 border border-white/5 rounded-xl mb-4">
-                  <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Alerts near saved places</p>
-                  <p className="text-lg font-bold text-white">{geofenceHits.length}</p>
-                </div>
-                <LiveLocationToggle userId={currentUserId} sharing={locationSharing} onSharingChange={setLocationSharing} onPosition={setLivePosition} />
+        {/* Slide-in tools drawer — right side modern slide-over */}
+        <AnimatePresence>
+          {drawer !== 'none' && (
+            <motion.div
+              initial={{ x: '100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="absolute top-0 right-0 bottom-0 w-full sm:w-[380px] z-[600] bg-black/90 backdrop-blur-3xl border-l border-white/15 overflow-y-auto p-5 shadow-2xl flex flex-col"
+            >
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+                <span className="text-xs font-black uppercase tracking-widest text-gold-primary">
+                  {drawer === 'pins' ? 'Saved Locations' : drawer === 'matrix' ? 'Distance Comparison' : 'Zone Radar'}
+                </span>
+                <button
+                  onClick={() => setDrawer('none')}
+                  className="p-1.5 rounded-full bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white transition-all"
+                  aria-label="Close drawer"
+                >
+                  <X size={16} />
+                </button>
               </div>
-            )}
-          </div>
-        )}
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+                {drawer === 'pins' && (
+                  <SavedPinsPanel
+                    pending={pendingPoint}
+                    pins={savedPins}
+                    loading={pinsLoading}
+                    onSave={handleSavePin}
+                    onDelete={handleDeletePin}
+                    onJump={handleJumpToPin}
+                    onAddToMatrix={pin => addMatrixPoint({ id: pin.id, label: pin.label, lat: pin.lat, lon: pin.lon })}
+                  />
+                )}
+
+                {drawer === 'matrix' && (
+                  <DistanceMatrixPanel
+                    points={matrixPoints}
+                    onRemove={id => setMatrixPoints(prev => prev.filter(p => p.id !== id))}
+                  />
+                )}
+
+                {drawer === 'geofence' && (
+                  <div className="space-y-4">
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Automatically detects reported incidents, road closures, and traffic within a chosen radius of your saved places.
+                    </p>
+                    <div className="p-3 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+                      <div className="flex justify-between items-center text-xs font-bold text-gray-300">
+                        <span>Radar Radius</span>
+                        <span className="text-gold-primary font-black">{alertRadiusM >= 1000 ? `${(alertRadiusM/1000).toFixed(1)} km` : `${alertRadiusM} m`}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={100}
+                        max={10000}
+                        step={100}
+                        value={alertRadiusM}
+                        onChange={e => setAlertRadiusM(Number(e.target.value))}
+                        className="w-full accent-gold-primary cursor-pointer"
+                      />
+                    </div>
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <Bell size={18} className="text-red-400" />
+                        <div>
+                          <p className="text-xs font-bold text-white">Triggered Alerts</p>
+                          <p className="text-[10px] text-gray-400">Near your saved pins</p>
+                        </div>
+                      </div>
+                      <span className="text-xl font-black text-red-400">{geofenceHits.length}</span>
+                    </div>
+                    <div className="pt-2">
+                      <LiveLocationToggle userId={currentUserId} sharing={locationSharing} onSharingChange={setLocationSharing} onPosition={setLivePosition} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <style jsx global>{`

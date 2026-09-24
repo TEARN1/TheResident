@@ -236,33 +236,41 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
               .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
 
             return (
-              <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="glass-panel p-6 bg-black/40 space-y-5">
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/30 rounded-3xl p-6 shadow-glass space-y-5 transition-all group"
+              >
                 <div className="flex justify-between items-start gap-3">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-white font-black text-sm">
-                      <MapPin size={14} className="text-gold-primary shrink-0" /> {p.address}
+                    <div className="flex items-center gap-2 text-white font-black text-sm tracking-tight group-hover:text-gold-primary transition-colors">
+                      <MapPin size={15} className="text-gold-primary shrink-0" /> {p.address}
                     </div>
-                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{p.suburb}, {p.city}</p>
+                    <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">{p.suburb}, {p.city}</p>
                   </div>
                   {badgeFor(p.doc_review_status)}
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                <div className="space-y-2 bg-white/3 p-3.5 rounded-2xl border border-white/5">
+                  <div className="flex justify-between text-[11px] font-bold tracking-wide text-gray-300">
                     <span>{occupied} of {totalRooms} rooms occupied</span>
-                    <span className="text-gold-primary">{occ?.listed_rooms ?? rooms.length} listed</span>
+                    <span className="text-gold-primary font-black">{occ?.listed_rooms ?? rooms.length} listed</span>
                   </div>
-                  <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                    <div className="h-full bg-gold-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  <div className="w-full h-2.5 bg-black/50 rounded-full overflow-hidden border border-white/10 p-0.5">
+                    <div
+                      className="h-full bg-gradient-to-r from-gold-primary to-amber-400 rounded-full transition-all shadow-glow"
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                 </div>
 
                 {rooms.length > 0 && (
-                  <div className="space-y-1.5 pt-2 border-t border-white/5">
+                  <div className="space-y-2 pt-2 border-t border-white/10">
                     {rooms.map((r, i) => (
-                      <div key={r.id} className="flex justify-between items-center text-xs">
-                        <span className="text-gray-300 font-bold truncate">{r.title}</span>
-                        <span className="text-[9px] text-gray-600 font-black uppercase tracking-widest shrink-0 ml-2">Room {i + 1} of {totalRooms}</span>
+                      <div key={r.id} className="flex justify-between items-center text-xs p-2 rounded-xl bg-white/2 hover:bg-white/5 transition-colors">
+                        <span className="text-gray-200 font-semibold truncate">{r.title}</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider shrink-0 ml-2 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">Room {i + 1} of {totalRooms}</span>
                       </div>
                     ))}
                   </div>
@@ -271,13 +279,13 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                 {p.doc_review_status === 'none' && (
                   <button
                     onClick={() => openVerify(p)}
-                    className="w-full bg-white/5 hover:bg-gold-primary/10 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary font-black py-3 rounded-xl transition-all text-[10px] uppercase tracking-widest"
+                    className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-2xl transition-all text-xs uppercase tracking-wider shadow-sm active:scale-98"
                   >
-                    Verify This Address
+                    Verify Address & Documents
                   </button>
                 )}
                 {p.doc_review_status === 'pending' && p.doc_review_note && (
-                  <p className="text-[10px] text-amber-400/80">{p.doc_review_note}</p>
+                  <p className="text-[11px] text-amber-400/90 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">{p.doc_review_note}</p>
                 )}
               </motion.div>
             )
