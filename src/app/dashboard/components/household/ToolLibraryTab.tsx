@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { Wrench, ShieldCheck, MapPin, Info, Plus, X, Star } from 'lucide-react'
+import { playTactileSound } from '@/utils/tactileSounds'
 
 interface Tool {
   id: string
@@ -101,10 +102,62 @@ export default function ToolLibraryTab({
         </div>
 
         {communityTools.length === 0 ? (
-          <div className="py-20 text-center text-gray-500 bg-white/2 rounded-3xl border border-dashed border-white/5">
-             <Wrench size={48} className="mx-auto mb-4 opacity-10" />
-             <p className="text-sm uppercase tracking-widest font-bold">Your neighborhood tool shed is empty</p>
-             <p className="text-xs text-gray-600 mt-1">Be the first to list a drill, mower, or ladder!</p>
+          <div className="py-16 px-6 text-center text-gray-500 bg-white/[0.02] rounded-3xl border border-dashed border-white/10 relative overflow-hidden backdrop-blur-sm">
+             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gold-primary/10 border border-gold-primary/20 flex items-center justify-center text-gold-primary shadow-[0_0_30px_rgba(212,175,55,0.15)]">
+               <Wrench size={32} />
+             </div>
+             <p className="text-base font-black uppercase tracking-widest text-white">Neighborhood Tool Shed is Empty</p>
+             <p className="text-xs text-gray-400 mt-1.5 max-w-md mx-auto">
+               Lend spare DIY equipment to neighbors, earn side income, and boost your Citizen Reputation.
+             </p>
+
+             <div className="mt-6 flex flex-wrap justify-center gap-3">
+               <button
+                 type="button"
+                 onClick={() => {
+                   playTactileSound('tab')
+                   setTitle('Bosch Hammer Drill 800W')
+                   setDescription('Heavy-duty percussion drill with masonry bit set and case included.')
+                   setPricePerDay('65')
+                   setDeposit('200')
+                   setLocation('Apt 4B')
+                   setShowForm(true)
+                 }}
+                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
+               >
+                 <span>🔨 Drill Preset</span>
+               </button>
+               <button
+                 type="button"
+                 onClick={() => {
+                   playTactileSound('tab')
+                   setTitle('Aluminum 6-Step Folding Ladder')
+                   setDescription('Lightweight 1.8m ladder, rubber grips, certified for up to 150kg.')
+                   setPricePerDay('50')
+                   setDeposit('150')
+                   setLocation('Ground Floor')
+                   setShowForm(true)
+                 }}
+                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
+               >
+                 <span>🪜 Ladder Preset</span>
+               </button>
+               <button
+                 type="button"
+                 onClick={() => {
+                   playTactileSound('tab')
+                   setTitle('High-Pressure Washer 110 Bar')
+                   setDescription('Compact jet washer ideal for balconies, driveways, and vehicles. 5m hose.')
+                   setPricePerDay('120')
+                   setDeposit('350')
+                   setLocation('Block C')
+                   setShowForm(true)
+                 }}
+                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
+               >
+                 <span>🚿 Pressure Washer</span>
+               </button>
+             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -169,7 +222,10 @@ export default function ToolLibraryTab({
 
                   {tool.status === 'available' && tool.ownerId !== currentUser?.id && (
                     <button
-                      onClick={() => handleRentTool?.(tool)}
+                      onClick={() => {
+                        playTactileSound('chime')
+                        handleRentTool?.(tool)
+                      }}
                       className="w-full bg-gradient-to-r from-gold-primary via-amber-300 to-gold-secondary hover:brightness-110 text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-gold-primary/20"
                     >
                       Secure Rental Slot
@@ -177,7 +233,10 @@ export default function ToolLibraryTab({
                   )}
                   {tool.status === 'rented' && tool.rentedBy === currentUser?.id && (
                     <button
-                      onClick={() => onRequestReturn?.(tool.id)}
+                      onClick={() => {
+                        playTactileSound('click')
+                        onRequestReturn?.(tool.id)
+                      }}
                       className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95"
                     >
                       Mark as Returned
@@ -185,7 +244,10 @@ export default function ToolLibraryTab({
                   )}
                   {tool.status === 'pending_return' && tool.ownerId === currentUser?.id && (
                     <button
-                      onClick={() => onConfirmReturn?.(tool.id)}
+                      onClick={() => {
+                        playTactileSound('success')
+                        onConfirmReturn?.(tool.id)
+                      }}
                       className="w-full bg-gold-primary text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-gold-primary/20"
                     >
                       Confirm Return

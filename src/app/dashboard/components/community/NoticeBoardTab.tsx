@@ -5,6 +5,7 @@ import { Megaphone, Calendar, Info, Heart, Share2, Check, Plus, X, EyeOff, Eye, 
 import UpgradeButton from '../shared/UpgradeButton'
 import { formatGruvsEventWhen } from '../../../../utils/gruvsEvents'
 import { goldButtonClass } from '../../../../components/ui/GoldButton'
+import { playTactileSound } from '@/utils/tactileSounds'
 
 const NOTICE_FREE_WINDOW_MS = 8 * 60 * 60 * 1000
 
@@ -256,10 +257,59 @@ export default function NoticeBoardTab({
         )}
 
         {communityNotices.length === 0 ? (
-          <div className="py-20 text-center text-gray-500 bg-white/2 rounded-3xl border border-dashed border-white/5">
-             <Info size={48} className="mx-auto mb-4 opacity-10" />
-             <p className="text-sm uppercase tracking-widest font-bold">Your neighborhood wall is clear</p>
-             <p className="text-xs text-gray-600 mt-1 font-medium">Be the first to post a notice or event!</p>
+          <div className="py-16 px-6 text-center text-gray-500 bg-white/[0.02] rounded-3xl border border-dashed border-white/10 relative overflow-hidden backdrop-blur-sm">
+             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.15)]">
+               <Megaphone size={32} />
+             </div>
+             <p className="text-base font-black uppercase tracking-widest text-white">Your Neighborhood Wall is Clear</p>
+             <p className="text-xs text-gray-400 mt-1.5 max-w-md mx-auto">
+               Be the spark in your building. Post building updates, organize floor meetups, or alert neighbors about maintenance.
+             </p>
+
+             <div className="mt-6 flex flex-wrap justify-center gap-3">
+               <button
+                 type="button"
+                 onClick={() => {
+                   playTactileSound('tab')
+                   setTitle('Weekend Rooftop Sunset Social 🌅')
+                   setDesc('Bring your own drinks and chill on the rooftop lounge this Saturday from 5 PM! Great chance to meet everyone.')
+                   setType('event')
+                   setAudience('everyone')
+                   setShowForm(true)
+                 }}
+                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
+               >
+                 <span>🌇 Rooftop Social</span>
+               </button>
+               <button
+                 type="button"
+                 onClick={() => {
+                   playTactileSound('tab')
+                   setTitle('Scheduled Elevator Maintenance Notice 🛠️')
+                   setDesc('Elevator B will undergo quarterly inspection this Thursday between 10:00 and 13:00. Please plan accordingly.')
+                   setType('notice')
+                   setAudience('everyone')
+                   setShowForm(true)
+                 }}
+                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
+               >
+                 <span>🛠️ Maintenance Alert</span>
+               </button>
+               <button
+                 type="button"
+                 onClick={() => {
+                   playTactileSound('tab')
+                   setTitle('Lost Set of Keys in Lobby 🔑')
+                   setDesc('Found a key ring with a blue carabiner near the mailboxes. Left with security reception.')
+                   setType('notice')
+                   setAudience('everyone')
+                   setShowForm(true)
+                 }}
+                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
+               >
+                 <span>🔑 Lost & Found</span>
+               </button>
+             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -367,14 +417,20 @@ export default function NoticeBoardTab({
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleVibeNotice?.(notice.id)}
+                        onClick={() => {
+                          playTactileSound('pop')
+                          handleVibeNotice?.(notice.id)
+                        }}
                         className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-pink-400 bg-white/5 hover:bg-pink-500/10 px-3 py-1.5 rounded-xl border border-white/5 hover:border-pink-500/20 transition-all font-bold active:scale-95"
                       >
                         <Heart size={15} className="transition-transform group-hover:scale-110" />
                         <span>{notice.vibes?.length || 0}</span>
                       </button>
                       <button
-                        onClick={() => handleEchoNotice?.(notice.id)}
+                        onClick={() => {
+                          playTactileSound('chime')
+                          handleEchoNotice?.(notice.id)
+                        }}
                         className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-cyan-400 bg-white/5 hover:bg-cyan-500/10 px-3 py-1.5 rounded-xl border border-white/5 hover:border-cyan-500/20 transition-all font-bold active:scale-95"
                       >
                         <Share2 size={15} className="transition-transform group-hover:scale-110" />
@@ -382,7 +438,10 @@ export default function NoticeBoardTab({
                       </button>
                       {notice.type === 'event' && (
                         <button
-                          onClick={() => handleRSVPToEvent?.(notice.id)}
+                          onClick={() => {
+                            playTactileSound('success')
+                            handleRSVPToEvent?.(notice.id)
+                          }}
                           className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/15 hover:bg-emerald-500 hover:text-black px-3.5 py-1.5 rounded-xl border border-emerald-500/30 transition-all font-bold shadow-lg shadow-emerald-500/10 active:scale-95 ml-1"
                         >
                           <Check size={14} /> RSVP <span className="opacity-70">({notice.rsvps.length})</span>

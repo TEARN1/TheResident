@@ -5,8 +5,9 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Sparkles, ExternalLink
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Sparkles, ExternalLink, Radar, FileText, HeartHandshake
 } from 'lucide-react'
+import { playTactileSound } from '../../../utils/tactileSounds'
 import {
   RootState,
   AppDispatch,
@@ -35,6 +36,8 @@ import Link from 'next/link'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import PropertiesPanel, { type ResProperty } from '../components/housing/PropertiesPanel'
 import EmptyState from '../components/shared/EmptyState'
+import RoommateCompatibilityModal from '../components/housing/RoommateCompatibilityModal'
+import SALeaseAgreementModal from '../components/housing/SALeaseAgreementModal'
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
@@ -122,6 +125,12 @@ export default function HousingPage() {
 
   // Reviews toggle (per listing card)
   const [reviewsOpenFor, setReviewsOpenFor] = useState<string | null>(null)
+
+  // Lifestyle Compatibility Modal
+  const [compatModalTarget, setCompatModalTarget] = useState<{ name: string; suburb: string } | null>(null)
+
+  // SA Legal Lease Modal
+  const [leaseModalListing, setLeaseModalListing] = useState<Listing | null>(null)
 
   const [confirmDeleteListingId, setConfirmDeleteListingId] = useState<string | null>(null)
   const handleDeleteListing = (id: string) => {
@@ -772,13 +781,31 @@ export default function HousingPage() {
                   {/* Action buttons */}
                   <div className="pt-2 flex items-center gap-2">
                     <button
-                      onClick={() => setActiveListing(item)}
+                      onClick={() => { setActiveListing(item); playTactileSound('pop') }}
                       className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black text-xs font-black py-2.5 rounded-xl uppercase tracking-wider transition-all shadow-md active:scale-98"
                     >
                       View Details
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => { playTactileSound('chime'); setLeaseModalListing(item) }}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary transition-all flex items-center gap-1.5 text-xs font-bold"
+                      title="Generate official South African Lease Agreement (Act 50)"
+                    >
+                      <FileText size={14} className="text-gold-primary" />
+                      <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Lease</span>
+                    </button>
+                    <Link
+                      href={`/dashboard/housing?tab=rooms&lat=${encodeURIComponent(item.location)}`}
+                      onClick={() => playTactileSound('click')}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary transition-all flex items-center gap-1.5 text-xs font-bold"
+                      title="View building coordinates & safety on VibeMap"
+                    >
+                      <Radar size={14} className="text-gold-primary animate-pulse" />
+                      <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Radar</span>
+                    </Link>
                     {item.landlordLivesHere && (
-                      <span className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400" title="Landlord lives on property">
+                      <span className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 shrink-0" title="Landlord lives on property">
                         <Home size={14} className="text-gold-primary" />
                       </span>
                     )}
@@ -839,6 +866,18 @@ export default function HousingPage() {
                   >
                      Invite to Share
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playTactileSound('tab')
+                      setCompatModalTarget({ name: rm.name, suburb: rm.suburb })
+                    }}
+                    className="p-2.5 rounded-xl bg-white/5 hover:bg-pink-500/20 border border-white/10 hover:border-pink-500/40 text-gray-300 hover:text-pink-400 transition-all flex items-center gap-1.5 text-xs font-bold"
+                    title="Run Lifestyle Match Matrix AI Quiz"
+                  >
+                    <HeartHandshake size={14} className="text-pink-400" />
+                    <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Match</span>
+                  </button>
                   <FollowButton targetUserId={rm.id} currentUserId={currentUser?.id} />
                 </div>
              </motion.div>
@@ -1118,6 +1157,28 @@ export default function HousingPage() {
             </motion.div>
          )}
       </AnimatePresence>
+
+      {/* ROOMMATE COMPATIBILITY MATRIX MODAL */}
+      {compatModalTarget && (
+        <RoommateCompatibilityModal
+          isOpen={!!compatModalTarget}
+          onClose={() => setCompatModalTarget(null)}
+          roommateName={compatModalTarget.name}
+          roommateSuburb={compatModalTarget.suburb}
+        />
+      )}
+
+      {/* SA LEASE AGREEMENT MODAL */}
+      {leaseModalListing && (
+        <SALeaseAgreementModal
+          isOpen={!!leaseModalListing}
+          onClose={() => setLeaseModalListing(null)}
+          listingTitle={leaseModalListing.title}
+          listingAddress={leaseModalListing.location || leaseModalListing.suburb}
+          monthlyRent={leaseModalListing.price}
+          currency={leaseModalListing.currency || 'ZAR'}
+        />
+      )}
     </div>
   )
 }

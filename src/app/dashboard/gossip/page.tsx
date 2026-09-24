@@ -9,6 +9,7 @@ import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
 import EmptyState from '../components/shared/EmptyState'
+import { playTactileSound } from '../../../utils/tactileSounds'
 
 interface GossipPost {
   id: string
@@ -605,7 +606,7 @@ export default function GossipPage() {
             </p>
           </div>
           <button
-            onClick={submitPost}
+            onClick={() => { submitPost(); playTactileSound('pop') }}
             disabled={posting || uploading || (!composerBody.trim() && !mediaFile)}
             className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-gold-primary/10 hover:shadow-gold-primary/25"
           >

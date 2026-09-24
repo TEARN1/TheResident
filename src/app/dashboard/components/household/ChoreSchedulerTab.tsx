@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { Award, Calendar, CheckCircle2, Star, User, Info, Zap } from 'lucide-react'
+import { playTactileSound } from '@/utils/tactileSounds'
 
 interface Chore {
   id: string
@@ -79,7 +80,10 @@ export default function ChoreSchedulerTab({
 
         {chore.status === 'pending' && chore.assignedTo === currentUser?.id && (
           <button
-            onClick={() => handleCompleteChore?.(chore.id, chore.title)}
+            onClick={() => {
+              playTactileSound('success')
+              handleCompleteChore?.(chore.id, chore.title)
+            }}
             className="bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-black border border-emerald-500/40 font-black px-4 py-1.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-emerald-500/10"
           >
             Mark Done

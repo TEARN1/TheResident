@@ -26,6 +26,7 @@ import { t } from '../../utils/i18n'
 import Link from 'next/link'
 import AutomationControlPanel from './components/shared/AutomationControlPanel'
 import CommandPalette from './components/navigation/CommandPalette'
+import FloatingEmergencySOS from './components/shared/FloatingEmergencySOS'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 
@@ -456,6 +457,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       <AutomationControlPanel />
+      <FloatingEmergencySOS />
     </div>
   )
 }
