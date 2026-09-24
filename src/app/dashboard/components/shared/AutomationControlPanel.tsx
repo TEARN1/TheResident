@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Cpu, ShieldCheck, Zap, Activity, CheckCircle2, AlertTriangle, MessageSquare, CreditCard, X
+  Cpu, ShieldCheck, Zap, Activity, CheckCircle2, AlertTriangle, MessageSquare, CreditCard, X, ExternalLink, Github, Sparkles
 } from 'lucide-react'
 import { RootState } from '../../../../store'
 import { automationEngine, type AutomationLog } from '../../../../utils/automationEngine'
@@ -119,6 +120,52 @@ export default function AutomationControlPanel() {
                   <span className="text-xs font-black text-gold-primary flex items-center gap-1">
                     <CheckCircle2 size={14} /> Compliant (Act 4)
                   </span>
+                </div>
+              </div>
+
+              {/* Triple-App Ecosystem Circulation Hub */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-gold-primary/10 via-purple-950/20 to-black border border-gold-primary/25 space-y-3 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-white uppercase tracking-wider">
+                    <Sparkles size={14} className="text-gold-primary" /> Ecosystem Circulation
+                  </div>
+                  <span className="text-[9px] font-bold text-gold-primary bg-gold-primary/10 px-2 py-0.5 rounded-full border border-gold-primary/20">
+                    Live Trio
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-300 leading-relaxed font-normal">
+                  Three apps connected by a single identity and engineering standard. Hop seamlessly across the network:
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <a
+                    href="https://thegruvs.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 rounded-xl bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 flex flex-col gap-1 transition-all group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-gold-primary/40">
+                        <Image src="/gruvs-logo.png" alt="The Gruvs" width={20} height={20} className="object-cover" />
+                      </div>
+                      <ExternalLink size={10} className="text-purple-300 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                    <span className="text-[11px] font-black text-white group-hover:text-purple-200">The Gruvs</span>
+                    <span className="text-[9px] text-gray-400">Nightlife & Events</span>
+                  </a>
+
+                  <a
+                    href="https://github.com/TEARN1/TEARNs-Excellence"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 rounded-xl bg-black/60 hover:bg-white/5 border border-white/10 hover:border-gold-primary/40 flex flex-col gap-1 transition-all group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <Github size={16} className="text-gold-primary group-hover:rotate-12 transition-transform" />
+                      <ExternalLink size={10} className="text-gray-400 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                    <span className="text-[11px] font-black text-white group-hover:text-gold-primary">TEARN&apos;s Excellence</span>
+                    <span className="text-[9px] text-gray-400">Core Benchmark</span>
+                  </a>
                 </div>
               </div>
 

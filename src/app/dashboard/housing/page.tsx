@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Sparkles, ExternalLink
 } from 'lucide-react'
 import {
   RootState,
@@ -415,32 +416,59 @@ export default function HousingPage() {
       </header>
 
       {activeTab === 'rooms' && (
-        <div className="flex bg-black/40 p-1 rounded-2xl border border-white/10 w-full sm:w-fit backdrop-blur-xl gap-1">
-          <button
-            onClick={() => setFilterListingType('rent')}
-            className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-              filterListingType === 'rent' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Rent
-          </button>
-          <button
-            onClick={() => setFilterListingType('sale')}
-            className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-              filterListingType === 'sale' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Buy
-          </button>
-          <button
-            onClick={() => setFilterListingType('guesthouse')}
-            title="Short-stay guest houses, listed only through the current event season"
-            className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-              filterListingType === 'guesthouse' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Guest Houses
-          </button>
+        <div className="space-y-4">
+          <div className="flex bg-black/40 p-1 rounded-2xl border border-white/10 w-full sm:w-fit backdrop-blur-xl gap-1">
+            <button
+              onClick={() => setFilterListingType('rent')}
+              className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
+                filterListingType === 'rent' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Rent
+            </button>
+            <button
+              onClick={() => setFilterListingType('sale')}
+              className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
+                filterListingType === 'sale' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Buy
+            </button>
+            <button
+              onClick={() => setFilterListingType('guesthouse')}
+              title="Short-stay guest houses, listed only through the current event season"
+              className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
+                filterListingType === 'guesthouse' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Guest Houses
+            </button>
+          </div>
+
+          {/* Connected Network Callout: The Gruvs Event Stays */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-black/60 to-gold-primary/10 border border-purple-500/20 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gold-primary/20 border border-gold-primary/40 flex items-center justify-center shrink-0">
+                <Image src="/gruvs-logo.png" alt="The Gruvs" width={20} height={20} className="rounded-full object-cover" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white flex items-center gap-2">
+                  <span>Traveling for a festival or event on The Gruvs?</span>
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">Partner Network</span>
+                </p>
+                <p className="text-[11px] text-gray-400">Filter by &quot;Guest Houses&quot; above to find short stays reserved for Gruvs party-goers, or check live events on their portal.</p>
+              </div>
+            </div>
+            <a
+              href="https://thegruvs.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-[10px] uppercase tracking-wider transition-all shadow-md shrink-0 active:scale-95"
+            >
+              <span>See Gruvs Events</span>
+              <ExternalLink size={10} />
+            </a>
+          </div>
         </div>
       )}
 
