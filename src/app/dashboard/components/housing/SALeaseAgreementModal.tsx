@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, FileText, Download, ShieldCheck, CheckCircle2, AlertCircle, Building, Calendar, DollarSign } from 'lucide-react'
-import { playTactileSound } from '../../../utils/tactileSounds'
+import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface SALeaseAgreementModalProps {
   isOpen: boolean

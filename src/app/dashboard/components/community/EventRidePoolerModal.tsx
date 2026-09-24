@@ -3,8 +3,8 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Car, X, Users, MapPin, Calendar, Clock, DollarSign, Share2, Check, Sparkles, AlertCircle } from 'lucide-react'
-import { playTactileSound } from '../../../utils/tactileSounds'
-import { GruvsEvent } from '../../../utils/gruvsEvents'
+import { playTactileSound } from '../../../../utils/tactileSounds'
+import { GruvsEvent } from '../../../../utils/gruvsEvents'
 
 interface EventRidePoolerModalProps {
   isOpen: boolean

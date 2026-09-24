@@ -47,6 +47,7 @@ export default function CommandPalette() {
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 50)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting the palette to its opening state, driven by the `open` prop
       setSelectedIndex(0)
     } else {
       setQuery('')

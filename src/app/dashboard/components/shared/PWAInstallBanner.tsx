@@ -3,12 +3,26 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Download, X, Smartphone, Share, PlusSquare, Sparkles, CheckCircle2 } from 'lucide-react'
-import { playTactileSound } from '../../utils/tactileSounds'
+import { playTactileSound } from '../../../../utils/tactileSounds'
+
+/**
+ * The `beforeinstallprompt` event, which is Chromium-only and therefore not in
+ * the DOM lib. Typed here rather than as `any` so the two things this file
+ * actually uses — prompt() and userChoice — are checked.
+ */
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[]
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+  prompt(): Promise<void>
+}
+
+/** iOS Safari's non-standard standalone flag; absent everywhere else. */
+type IOSNavigator = Navigator & { standalone?: boolean }
 
 export default function PWAInstallBanner() {
   const [showBanner, setShowBanner] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
     // Check if user dismissed earlier in this session
@@ -16,18 +30,19 @@ export default function PWAInstallBanner() {
     if (dismissed) return
 
     // Detect standalone PWA mode
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as IOSNavigator).standalone
     if (isStandalone) return
 
     // Detect iOS
     const userAgent = window.navigator.userAgent.toLowerCase()
     const iosDevice = /iphone|ipad|ipod/.test(userAgent)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the user agent on mount
     setIsIOS(iosDevice)
 
     // Capture Chrome/Android beforeinstallprompt
-    const handleBeforeInstall = (e: any) => {
+    const handleBeforeInstall = (e: Event) => {
       e.preventDefault()
-      setDeferredPrompt(e)
+      setDeferredPrompt(e as BeforeInstallPromptEvent)
       setShowBanner(true)
     }
 

@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ClipboardList, X, CheckSquare, Square, Camera, AlertTriangle, ShieldCheck, Download, Plus, Trash2 } from 'lucide-react'
-import { playTactileSound } from '../../../utils/tactileSounds'
+import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface SnagItem {
   id: string
@@ -12,6 +12,10 @@ interface SnagItem {
   severity: 'minor' | 'moderate' | 'urgent'
   confirmed: boolean
 }
+
+/** The three severities the form offers; kept as one named type so the
+ *  select's cast is checked against the state's own type. */
+type SnagSeverity = 'minor' | 'moderate' | 'urgent'
 
 export default function TenantInspectionSnagListModal({
   isOpen,
@@ -31,7 +35,7 @@ export default function TenantInspectionSnagListModal({
 
   const [newRoom, setNewRoom] = useState('Bedroom')
   const [newDesc, setNewDesc] = useState('')
-  const [newSeverity, setNewSeverity] = useState<'minor' | 'moderate' | 'urgent'>('minor')
+  const [newSeverity, setNewSeverity] = useState<SnagSeverity>('minor')
 
   if (!isOpen) return null
 
@@ -186,7 +190,7 @@ Generated via The Resident Co-Living Platform (TEARN Ecosystem)
 
                 <select
                   value={newSeverity}
-                  onChange={e => setNewSeverity(e.target.value as any)}
+                  onChange={e => setNewSeverity(e.target.value as SnagSeverity)}
                   className="bg-black border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-white outline-none focus:border-gold-primary/50"
                 >
                   <option value="minor">Minor cosmetic</option>

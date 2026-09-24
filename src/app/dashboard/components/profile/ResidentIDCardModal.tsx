@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ShieldCheck, QrCode, Download, Share2, Sparkles, Building, Award, CheckCircle2, Flame, ExternalLink } from 'lucide-react'
-import { playTactileSound } from '../../../utils/tactileSounds'
+import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface ResidentIDCardModalProps {
   isOpen: boolean

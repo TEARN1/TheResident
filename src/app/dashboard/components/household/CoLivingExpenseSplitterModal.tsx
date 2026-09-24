@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Calculator, X, Plus, Trash2, Users, DollarSign, Share2, Copy, Check, Sparkles, PieChart } from 'lucide-react'
-import { playTactileSound } from '../../../utils/tactileSounds'
+import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface ExpenseItem {
   id: string

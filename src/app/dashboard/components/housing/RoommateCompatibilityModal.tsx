@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Sparkles, Check, HeartHandshake, ShieldCheck, Flame, Moon, Music, Coffee, PartyPopper } from 'lucide-react'
-import { playTactileSound } from '../../../utils/tactileSounds'
+import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface RoommateCompatibilityModalProps {
   isOpen: boolean
