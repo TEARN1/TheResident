@@ -3,9 +3,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
-import { Send, ArrowLeft, Clock } from 'lucide-react'
+import { Send, ArrowLeft, Clock, Sparkles } from 'lucide-react'
 import { RootState } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
+import { playTactileSound } from '../../../../utils/tactileSounds'
 
 // One conversation, at its own URL — see the comment at the top of
 // ../page.tsx for why this used to be pure component state instead.
@@ -86,6 +87,7 @@ export default function ThreadPage() {
 
   const sendMessage = async () => {
     if (!supabase || !myId || !otherId || !draft.trim()) return
+    playTactileSound('click')
     setSending(true)
     setError(null)
     const alreadyTalked = messages.length > 0
@@ -102,9 +104,17 @@ export default function ThreadPage() {
       setError(sendError.message)
       return
     }
+    playTactileSound('pop')
     setDraft('')
     loadThread()
   }
+
+  const QUICK_PROMPTS = [
+    { label: 'Room Inquiry', text: `Hi ${name}! Inquiring about apartment sharing and availability.` },
+    { label: 'Gruvs Festival', text: `Hey ${name}! Are you heading to the Gruvs campus party this weekend? Let's link up!` },
+    { label: 'Vibe Check Call', text: `Saw your profile on Roommate Match! Would love to hop on a quick call to check compatibility.` },
+    { label: 'Chore Rota', text: `Hi! Checking in on our household rotation schedule for this week.` }
+  ]
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto pb-32">
@@ -137,8 +147,31 @@ export default function ThreadPage() {
         {/* Message Log */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3.5 custom-scrollbar">
           {messages.length === 0 && (
-            <div className="text-center py-16 text-gray-500 text-xs">
-              Say hello to start the conversation!
+            <div className="text-center py-12 px-4 space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-gold-primary/10 border border-gold-primary/20 text-gold-primary mx-auto flex items-center justify-center shadow-lg shadow-gold-primary/10">
+                <Sparkles size={22} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white tracking-tight">Direct Conversation with {name}</p>
+                <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
+                  Messages are end-to-end synchronized across The Resident and The Gruvs network.
+                </p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto pt-2">
+                {QUICK_PROMPTS.map((prompt, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      playTactileSound('tab')
+                      setDraft(prompt.text)
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/40 text-[11px] font-semibold text-gray-300 hover:text-white transition-all active:scale-95 text-left"
+                  >
+                    <span>💬 {prompt.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {messages.map(m => {

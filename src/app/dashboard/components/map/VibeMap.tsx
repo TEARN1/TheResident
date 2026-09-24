@@ -21,6 +21,7 @@ import MapSearchBox from './MapSearchBox'
 import SavedPinsPanel from './SavedPinsPanel'
 import DistanceMatrixPanel, { type MatrixPoint } from './DistanceMatrixPanel'
 import LiveLocationToggle from './LiveLocationToggle'
+import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../../utils/gruvsEvents'
 
 // Colour by kind — matches map_zones' shared CHECK constraint
 // (road_closed, heavy_traffic, detour, no_parking, route, zone, alert).
@@ -91,6 +92,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   // one simple marker each, so they're the layer that's actually safe to
   // cluster.
   const listingsClusterRef = useRef<import('leaflet').MarkerClusterGroup | null>(null)
+  const gruvsHotspotsRef = useRef<import('leaflet').LayerGroup | null>(null)
   const leafletRef = useRef<typeof import('leaflet') | null>(null)
   const tileLayerRef = useRef<import('leaflet').TileLayer | null>(null)
 
@@ -142,6 +144,8 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const [pendingPoint, setPendingPoint] = useState<{ label: string; lat: number; lon: number } | null>(null)
   const [savedPins, setSavedPins] = useState<SavedPin[]>([])
   const [pinsLoading, setPinsLoading] = useState(false)
+  const [gruvsEvents, setGruvsEvents] = useState<GruvsEvent[]>([])
+  const [showGruvsHotspots, setShowGruvsHotspots] = useState(true)
 
   const [matrixPoints, setMatrixPoints] = useState<MatrixPoint[]>([])
   const [alertRadiusM, setAlertRadiusM] = useState(500)
@@ -322,6 +326,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       }).addTo(map)
       searchMarkerRef.current = L.layerGroup().addTo(map)
       pinsLayerRef.current = L.layerGroup().addTo(map)
+      gruvsHotspotsRef.current = L.layerGroup().addTo(map)
       liveMarkerRef.current = L.layerGroup().addTo(map)
       mapRef.current = map
 
@@ -650,6 +655,70 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     })
   }, [listings])
 
+  // Fetch upcoming Gruvs events
+  useEffect(() => {
+    fetchUpcomingGruvsEvents(15).then(events => {
+      setGruvsEvents(events)
+    }).catch(() => {})
+  }, [])
+
+  // Render Gruvs Nightlife & Student Party Hotspots with pulsing neon markers
+  useEffect(() => {
+    const L = leafletRef.current
+    const layer = gruvsHotspotsRef.current
+    if (!L || !layer) return
+    layer.clearLayers()
+
+    if (!showGruvsHotspots || !center) return
+
+    gruvsEvents.forEach((event, idx) => {
+      // Deterministically space nearby party hotspots around the current vicinity
+      const angle = (idx * (360 / Math.max(gruvsEvents.length, 1))) * (Math.PI / 180)
+      const distKm = 0.8 + (idx % 3) * 0.5
+      const dLat = (distKm / 111) * Math.cos(angle)
+      const dLon = (distKm / (111 * Math.cos(center.lat * (Math.PI / 180)))) * Math.sin(angle)
+      const eLat = center.lat + dLat
+      const eLon = center.lon + dLon
+
+      // Soft purple glow halo
+      L.circleMarker([eLat, eLon], {
+        radius: 24,
+        color: '#c084fc',
+        fillColor: '#9333ea',
+        fillOpacity: 0.18,
+        weight: 1,
+        interactive: false
+      }).addTo(layer)
+
+      // Pulsing hotspot icon
+      const marker = L.marker([eLat, eLon], {
+        icon: L.divIcon({
+          className: '',
+          html: `
+            <div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:12px;background:linear-gradient(135deg,#c084fc,#7e22ce);box-shadow:0 0 18px rgba(168,85,247,0.6);border:2px solid #fff;color:#fff;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+              <span style="font-size:14px;">🎉</span>
+            </div>
+          `,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+      })
+
+      marker.bindPopup(`
+        <div style="font-family:inherit;min-width:210px;background:rgba(18,12,28,0.95);backdrop-filter:blur(24px);padding:14px;border-radius:18px;border:1px solid rgba(192,132,252,0.3);color:#fff;box-shadow:0 12px 36px rgba(0,0,0,0.8);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#c084fc;background:rgba(168,85,247,0.2);padding:2px 8px;border-radius:999px;border:1px solid rgba(192,132,252,0.35);">The Gruvs Hotspot</span>
+            <span style="font-size:11px;color:#f472b6;font-weight:900;">LIVE</span>
+          </div>
+          <strong style="font-size:14px;display:block;line-height:1.3;color:#fff;">${encodeHTMLEntities(event.title)}</strong>
+          <div style="opacity:0.7;font-size:11px;margin-top:4px;color:#d8b4fe;">Starts: ${encodeHTMLEntities(event.startsAt)}</div>
+          <a href="https://thegruvs.com" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:10px;padding:7px 0;background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;text-align:center;border-radius:10px;font-size:11px;font-weight:900;text-decoration:none;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 4px 15px rgba(168,85,247,0.4);">View on The Gruvs →</a>
+        </div>
+      `)
+      marker.addTo(layer)
+    })
+  }, [gruvsEvents, showGruvsHotspots, center])
+
   useEffect(() => {
     const L = leafletRef.current
     const layer = liveMarkerRef.current
@@ -826,17 +895,19 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           </div>
           {/* Quick Filter Pills + Gruvs Pulse shortcut */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
-            <a
-              href="https://thegruvs.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border border-purple-500/40 bg-purple-950/80 hover:bg-purple-900 text-purple-200 transition-all whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-purple-500/10 group"
-              title="See nightlife & student parties happening near you on The Gruvs"
+            <button
+              type="button"
+              onClick={() => setShowGruvsHotspots(v => !v)}
+              className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-purple-500/10 ${
+                showGruvsHotspots
+                  ? 'border-purple-400 bg-purple-600 text-white font-black'
+                  : 'border-purple-500/30 bg-black/80 text-purple-300 opacity-60 hover:opacity-100'
+              }`}
+              title="Toggle live nightlife & event hotspots from The Gruvs"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-ping shrink-0" />
-              <span>The Gruvs Pulse</span>
-              <ExternalLink size={9} className="opacity-60 group-hover:opacity-100" />
-            </a>
+              <span>🎉 Nightlife ({gruvsEvents.length})</span>
+            </button>
 
             <button
               onClick={() => setActiveKinds(new Set(Object.keys(KIND_LABEL)))}

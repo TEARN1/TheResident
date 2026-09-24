@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Sparkles, ExternalLink, Radar, FileText, HeartHandshake
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Sparkles, ExternalLink, Radar, FileText, HeartHandshake, Calculator
 } from 'lucide-react'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import {
@@ -38,6 +38,7 @@ import PropertiesPanel, { type ResProperty } from '../components/housing/Propert
 import EmptyState from '../components/shared/EmptyState'
 import RoommateCompatibilityModal from '../components/housing/RoommateCompatibilityModal'
 import SALeaseAgreementModal from '../components/housing/SALeaseAgreementModal'
+import CoLivingExpenseSplitterModal from '../components/household/CoLivingExpenseSplitterModal'
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
@@ -131,6 +132,9 @@ export default function HousingPage() {
 
   // SA Legal Lease Modal
   const [leaseModalListing, setLeaseModalListing] = useState<Listing | null>(null)
+
+  // Expense Splitter Modal
+  const [showSplitterModal, setShowSplitterModal] = useState(false)
 
   const [confirmDeleteListingId, setConfirmDeleteListingId] = useState<string | null>(null)
   const handleDeleteListing = (id: string) => {
@@ -421,6 +425,17 @@ export default function HousingPage() {
               <Building2 size={14} /> My Properties
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => {
+              playTactileSound('tab')
+              setShowSplitterModal(true)
+            }}
+            className="flex-1 md:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-400 hover:text-gold-primary hover:bg-white/5 border border-transparent hover:border-gold-primary/30"
+            title="Calculate and split household rent, electricity, and bills"
+          >
+            <Calculator size={14} className="text-gold-primary" /> Splitter
+          </button>
         </div>
       </header>
 
@@ -1179,6 +1194,12 @@ export default function HousingPage() {
           currency={leaseModalListing.currency || 'ZAR'}
         />
       )}
+
+      {/* CO-LIVING EXPENSE SPLITTER MODAL */}
+      <CoLivingExpenseSplitterModal
+        isOpen={showSplitterModal}
+        onClose={() => setShowSplitterModal(false)}
+      />
     </div>
   )
 }

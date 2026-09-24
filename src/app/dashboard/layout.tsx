@@ -27,6 +27,7 @@ import Link from 'next/link'
 import AutomationControlPanel from './components/shared/AutomationControlPanel'
 import CommandPalette from './components/navigation/CommandPalette'
 import FloatingEmergencySOS from './components/shared/FloatingEmergencySOS'
+import PWAInstallBanner from './components/shared/PWAInstallBanner'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 
@@ -458,6 +459,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <AutomationControlPanel />
       <FloatingEmergencySOS />
+      <PWAInstallBanner />
     </div>
   )
 }
