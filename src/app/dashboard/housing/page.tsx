@@ -652,159 +652,108 @@ export default function HousingPage() {
             {filteredListings.map((item) => (
               <motion.div
                 key={item.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="glass-panel overflow-hidden flex flex-col hover:border-gold-primary/40 transition-all duration-500 group bg-black/40"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/40 rounded-3xl overflow-hidden flex flex-col shadow-glass hover:shadow-glow transition-all duration-500 group"
               >
-                <div className="relative h-56 bg-gray-900 overflow-hidden">
+                <div className="relative h-60 bg-gray-950 overflow-hidden">
                   {item.images[0] ? (
-                    <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.images[0]}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 opacity-85 group-hover:opacity-100"
+                    />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-950">
                       <Home size={40} className="text-gold-primary/20" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
-                  <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                     <div className="flex items-center gap-1.5">
-                        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl">
-                           <span className="text-xs font-black text-white tracking-tight uppercase">Verified</span>
-                        </div>
-                        {item.quickPost && (
-                           <div className="bg-gold-primary/90 backdrop-blur-md px-3 py-1.5 rounded-xl" title="Posted fast with minimal details — same listing, just quicker to put up.">
-                              <span className="text-xs font-black text-black tracking-tight uppercase">Quick Post</span>
-                           </div>
-                        )}
-                        {item.listingType === 'guesthouse' && (
-                           <div
-                              className="bg-purple-500/90 backdrop-blur-md px-3 py-1.5 rounded-xl"
-                              title={item.visibleUntil ? `Listed through ${new Date(item.visibleUntil).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : 'Guest house'}
-                           >
-                              <span className="text-xs font-black text-white tracking-tight uppercase">Guest House</span>
-                           </div>
-                        )}
-                     </div>
-                     <div className="bg-gold-primary text-black px-4 py-2 rounded-xl shadow-xl">
-                        <span className="text-lg font-black tracking-tighter">{formatCurrency(item.price, item.currency)}</span>
-                        <span className="text-[10px] font-black ml-1 opacity-60">/ {item.listingType === 'guesthouse' ? 'NIGHT' : 'MO'}</span>
-                     </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-80" />
+
+                  {/* Top Badges */}
+                  <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center pointer-events-none">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="bg-black/70 backdrop-blur-xl border border-white/20 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
+                        Verified
+                      </span>
+                      {item.quickPost && (
+                        <span className="bg-gold-primary text-black text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-glow">
+                          Quick Post
+                        </span>
+                      )}
+                      {item.listingType === 'guesthouse' && (
+                        <span className="bg-purple-500/90 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
+                          Guest House
+                        </span>
+                      )}
+                    </div>
+                    {isFeatured(item) && (
+                      <span className="bg-gradient-to-r from-amber-500 to-gold-primary text-black text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-glow">
+                        Featured
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bottom Price Pill Floating */}
+                  <div className="absolute bottom-3.5 left-3.5 right-3.5 flex justify-between items-end">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1 text-[11px] text-gray-300 font-semibold truncate drop-shadow">
+                        <MapPin size={13} className="text-gold-primary shrink-0" />
+                        <span>{item.suburb || item.location}</span>
+                      </div>
+                    </div>
+                    <div className="bg-black/80 backdrop-blur-2xl border border-gold-primary/40 px-3.5 py-1.5 rounded-2xl shadow-xl flex items-baseline gap-1">
+                      <span className="text-base font-black text-gold-primary tracking-tight">
+                        {formatCurrency(item.price, item.currency)}
+                      </span>
+                      <span className="text-[9px] text-gray-400 font-black uppercase">
+                        /{item.listingType === 'guesthouse' ? 'night' : 'mo'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="p-6 flex-1 flex flex-col gap-5">
-                  <div className="space-y-1">
-                     <div className="flex items-center gap-2">
-                        <h3 className="text-xl font-black text-white tracking-tight leading-tight group-hover:text-gold-primary transition-colors">{item.title}</h3>
-                        {isFeatured(item) && (
-                           <span className="bg-gold-primary text-black px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">Featured</span>
-                        )}
-                        {item.landlordId === currentUser?.id && item.propertyId && (() => {
-                           const prop = myProperties.find(p => p.id === item.propertyId)
-                           if (!prop) return null
-                           const siblings = allListings
-                              .filter(l => l.propertyId === item.propertyId)
-                              .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
-                           const ordinal = siblings.findIndex(l => l.id === item.id) + 1
-                           return (
-                              <span className="bg-white/5 border border-white/10 text-gray-400 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0">
-                                 Room {ordinal} of {prop.total_rooms}
-                              </span>
-                           )
-                        })()}
-                     </div>
-                     <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center text-[10px] text-gray-500 font-black uppercase tracking-widest gap-2">
-                           <MapPin size={12} className="text-gold-primary" /> {item.suburb}, {item.location}
-                        </div>
-                        <OpenInMapsButton address={`${item.location}, ${item.suburb}`} />
-                     </div>
-                     {item.listingType === 'guesthouse' && item.eventId && gruvsEventInfo[item.eventId] && (
-                        <div className="flex items-center gap-1.5 text-[10px] font-black text-purple-400 uppercase tracking-widest">
-                           <Building2 size={11} /> Near {gruvsEventInfo[item.eventId].title}
-                        </div>
-                     )}
+                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <h3 className="text-base font-bold text-white group-hover:text-gold-primary transition-colors line-clamp-1 leading-snug">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-1.5 line-clamp-2 leading-relaxed">
+                      {item.description}
+                    </p>
                   </div>
 
-                  <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed opacity-80">{item.description}</p>
-
-                  <div className="flex items-center justify-between gap-2 -mt-1">
-                     <button
-                       onClick={() => setReviewsOpenFor(reviewsOpenFor === item.id ? null : item.id)}
-                       className="text-[10px] text-gray-500 font-bold hover:text-gold-primary transition-colors text-left"
-                     >
-                        Posted by <span className="text-gray-300">{item.landlordName || 'Landlord'}</span>
-                     </button>
-                     <div className="flex items-center gap-2">
-                        <TrustBadge userId={item.landlordId} compact />
-                        <FollowButton targetUserId={item.landlordId} currentUserId={currentUser?.id} />
-                     </div>
+                  {/* Amenities Chips */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-white/5 flex-wrap">
+                    {item.amenities.wifi && (
+                      <span className="text-[10px] text-gray-300 bg-white/5 border border-white/10 px-2 py-0.5 rounded-lg font-medium">
+                        WiFi
+                      </span>
+                    )}
+                    {item.amenities.parking && (
+                      <span className="text-[10px] text-gray-300 bg-white/5 border border-white/10 px-2 py-0.5 rounded-lg font-medium">
+                        Parking
+                      </span>
+                    )}
+                    <span className="text-[10px] text-gray-400 ml-auto capitalize">
+                      {item.amenities.bathroom} Bath
+                    </span>
                   </div>
 
-                  <AnimatePresence>
-                     {reviewsOpenFor === item.id && (
-                        <motion.div
-                           initial={{ height: 0, opacity: 0 }}
-                           animate={{ height: 'auto', opacity: 1 }}
-                           exit={{ height: 0, opacity: 0 }}
-                           className="overflow-hidden space-y-3"
-                        >
-                           <ReviewsList userId={item.landlordId} />
-                           {currentUser?.id && currentUser.id !== item.landlordId && (
-                              <ReviewForm subjectId={item.landlordId} />
-                           )}
-                        </motion.div>
-                     )}
-                  </AnimatePresence>
-
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {item.amenities.wifi && <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-gray-400 flex items-center gap-1.5">WiFi</span>}
-                    {item.amenities.parking && <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-gray-400 flex items-center gap-1.5">Parking</span>}
-                    <span className="text-[9px] font-black bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-gray-400">Bath: {item.amenities.bathroom}</span>
-                  </div>
-
-                  <div className="mt-auto pt-6 border-t border-white/5 space-y-2">
-                     {item.landlordId === currentUser?.id ? (
-                        <>
-                          <UpgradeButton item="room_boost" targetId={item.id} className="w-full bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest" />
-                          {confirmDeleteListingId === item.id ? (
-                             <div className="flex items-center gap-2">
-                                <button
-                                   onClick={() => handleDeleteListing(item.id)}
-                                   className="flex-1 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
-                                >
-                                   Confirm delete
-                                </button>
-                                <button
-                                   onClick={() => setConfirmDeleteListingId(null)}
-                                   className="px-4 bg-white/5 hover:bg-white/10 text-gray-400 font-black py-2.5 rounded-xl transition-all active:scale-95 text-[11px] uppercase tracking-widest"
-                                >
-                                   Cancel
-                                </button>
-                             </div>
-                          ) : (
-                             <button
-                                onClick={() => setConfirmDeleteListingId(item.id)}
-                                className="w-full flex items-center justify-center gap-2 bg-transparent hover:bg-red-500/5 border border-transparent hover:border-red-500/20 text-gray-600 hover:text-red-400 font-bold py-2 rounded-xl transition-all text-[10px] uppercase tracking-widest"
-                             >
-                                <Trash2 size={12} /> Delete listing
-                             </button>
-                          )}
-                        </>
-                     ) : isGuest ? (
-                        <Link
-                           href="/auth"
-                           className={goldButtonClass({ fullWidth: true })}
-                        >
-                           Sign up to request
-                        </Link>
-                     ) : (
-                        <button
-                           onClick={() => setActiveListing(item)}
-                           className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
-                        >
-                           Request Room
-                        </button>
-                     )}
+                  {/* Action buttons */}
+                  <div className="pt-2 flex items-center gap-2">
+                    <button
+                      onClick={() => setActiveListing(item)}
+                      className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black text-xs font-black py-2.5 rounded-xl uppercase tracking-wider transition-all shadow-md active:scale-98"
+                    >
+                      View Details
+                    </button>
+                    {item.landlordLivesHere && (
+                      <span className="p-2 rounded-xl bg-white/5 border border-white/10 text-gray-400" title="Landlord lives on property">
+                        <Home size={14} className="text-gold-primary" />
+                      </span>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -813,41 +762,57 @@ export default function HousingPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
            {filteredRoommates.map(rm => (
-             <motion.div key={rm.id} whileHover={{ y: -5 }} className="glass-panel p-6 flex flex-col gap-6 bg-black/40">
-                <div className="flex justify-between items-start">
-                   <div className="space-y-1">
-                      <h3 className="text-xl font-black text-white tracking-tighter uppercase italic">{rm.name}</h3>
-                      <div className="flex items-center text-[9px] text-gray-600 font-black uppercase tracking-widest gap-1.5">
-                         <MapPin size={10} className="text-gold-primary" /> {rm.suburb}
+             <motion.div
+               key={rm.id}
+               initial={{ opacity: 0, y: 12 }}
+               animate={{ opacity: 1, y: 0 }}
+               whileHover={{ y: -4 }}
+               className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/30 rounded-3xl p-6 flex flex-col justify-between gap-5 shadow-glass transition-all group"
+             >
+                <div className="flex justify-between items-start gap-3">
+                   <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-gold-primary to-amber-600 text-black font-black flex items-center justify-center text-lg shrink-0 shadow-md">
+                        {rm.name.charAt(0)}
+                      </div>
+                      <div className="space-y-0.5 min-w-0">
+                         <h3 className="text-base font-bold text-white tracking-tight group-hover:text-gold-primary transition-colors truncate">{rm.name}</h3>
+                         <div className="flex items-center text-[10px] text-gray-400 font-bold uppercase tracking-wider gap-1">
+                            <MapPin size={11} className="text-gold-primary shrink-0" /> {rm.suburb}
+                         </div>
                       </div>
                    </div>
-                   <div className="flex flex-col items-end gap-2">
-                      <div className="bg-gold-primary/10 border border-gold-primary/20 text-gold-primary px-3 py-1 rounded-xl text-sm font-black tracking-tighter">
-                         {formatCurrency(rm.budget, rm.currency)}
-                      </div>
-                      <TrustBadge userId={rm.id} compact />
-                      <FollowButton targetUserId={rm.id} currentUserId={currentUser?.id} />
+
+                   <div className="bg-gold-primary/10 border border-gold-primary/20 text-gold-primary px-3 py-1 rounded-xl text-xs font-black shrink-0">
+                      {formatCurrency(rm.budget, rm.currency)}
                    </div>
                 </div>
-                <p className="text-sm text-gray-400 italic leading-relaxed font-medium">&quot;{rm.bio}&quot;</p>
-                <div className="grid grid-cols-2 gap-3">
-                   <div className="bg-white/2 border border-white/5 rounded-xl p-2.5">
-                      <span className="text-[8px] text-gray-600 font-black uppercase tracking-widest block">GENDER</span>
-                      <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest">{rm.gender}</span>
+
+                <p className="text-xs text-gray-300 italic leading-relaxed bg-white/2 p-3.5 rounded-2xl border border-white/5 line-clamp-3">
+                  &ldquo;{rm.bio}&rdquo;
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 text-center">
+                   <div className="bg-white/4 border border-white/5 rounded-2xl p-2">
+                      <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Gender</span>
+                      <span className="text-xs text-white font-bold capitalize">{rm.gender}</span>
                    </div>
-                   <div className="bg-white/2 border border-white/5 rounded-xl p-2.5">
-                      <span className="text-[8px] text-gray-600 font-black uppercase tracking-widest block">DEPENDENTS</span>
-                      <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest">{rm.childrenCount}</span>
+                   <div className="bg-white/4 border border-white/5 rounded-2xl p-2">
+                      <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Dependents</span>
+                      <span className="text-xs text-white font-bold">{rm.childrenCount}</span>
                    </div>
                 </div>
-                <Link
-                  href={`/dashboard/messages?to=${rm.id}`}
-                  className="w-full mt-4 bg-gold-primary text-black font-black py-3 rounded-xl transition-all text-xs uppercase tracking-widest active:scale-95 flex items-center justify-center"
-                >
-                   Invite to Share
-                </Link>
+
+                <div className="pt-2 flex items-center gap-2">
+                  <Link
+                    href={`/dashboard/messages?to=${rm.id}`}
+                    className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 rounded-xl transition-all text-xs uppercase tracking-wider active:scale-98 flex items-center justify-center shadow-md"
+                  >
+                     Invite to Share
+                  </Link>
+                  <FollowButton targetUserId={rm.id} currentUserId={currentUser?.id} />
+                </div>
              </motion.div>
            ))}
         </div>
