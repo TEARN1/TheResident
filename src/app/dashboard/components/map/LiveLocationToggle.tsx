@@ -97,32 +97,45 @@ export default function LiveLocationToggle({ userId, sharing, onSharingChange, o
         onClick={() => onSharingChange(!sharing)}
         aria-label={sharing ? 'Stop sharing my live location' : 'Show my live location'}
         aria-pressed={sharing}
-        title={sharing ? 'Live location on — tap to stop' : 'Show my live location'}
-        className={`bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg p-2.5 shadow-2xl transition-all ${sharing ? 'text-gold-primary' : 'text-gray-300 hover:text-white'}`}
+        title={sharing ? 'Live location active (tap to turn off)' : 'Share live location'}
+        className={`backdrop-blur-2xl border rounded-2xl p-2.5 shadow-glass transition-all ${
+          sharing
+            ? 'bg-blue-500/20 text-blue-400 border-blue-500/40 shadow-glow'
+            : 'bg-surface text-gray-400 border-glass-border hover:text-white hover:border-white/20'
+        }`}
       >
-        <Radio size={16} className={sharing ? 'animate-pulse' : ''} />
+        <Radio size={16} className={sharing ? 'animate-pulse text-blue-400' : ''} />
       </button>
     )
   }
 
   return (
-    <div className="flex items-center justify-between p-3 bg-white/2 border border-white/5 rounded-xl">
-      <div className="flex items-center gap-2">
-        <Radio size={14} className={sharing ? 'text-gold-primary animate-pulse' : 'text-gray-500'} />
+    <div className="flex items-center justify-between p-3.5 bg-white/5 hover:bg-white/8 border border-white/10 rounded-2xl transition-all shadow-glass">
+      <div className="flex items-start gap-3">
+        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+          sharing ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-white/5 text-gray-500 border border-white/10'
+        }`}>
+          <Radio size={15} className={sharing ? 'animate-pulse' : ''} />
+        </div>
         <div>
-          <p className="text-xs text-white font-medium">Share my live location</p>
-          <p className="text-[10px] text-gray-500">Live sharing with your Care Circle — coming soon. This proves the mechanism on your own map for now.</p>
-          <p className="text-[10px] text-gray-600 mt-0.5">Shown with its real accuracy radius — a phone GPS is typically 5–20m outdoors, more indoors, never pinpoint.</p>
+          <p className="text-xs text-white font-bold flex items-center gap-2">
+            Share Live Location
+            {sharing && <span className="text-[9px] bg-blue-500/20 text-blue-400 font-black px-1.5 py-0.2 rounded-full border border-blue-500/30 uppercase tracking-widest">Active</span>}
+          </p>
+          <p className="text-[10px] text-gray-400 mt-0.5 leading-relaxed">Broadcasts your live GPS coordinates with realistic accuracy bounds.</p>
         </div>
       </div>
       <button
         onClick={() => onSharingChange(!sharing)}
-        className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ${sharing ? 'bg-gold-primary' : 'bg-white/10'}`}
-        style={{ height: '22px' }}
+        className={`relative w-11 h-6 rounded-full transition-all shrink-0 cursor-pointer p-0.5 border ${
+          sharing ? 'bg-gold-primary border-gold-primary' : 'bg-black/50 border-white/20'
+        }`}
       >
         <span
-          className="absolute top-0.5 w-4.5 h-4.5 rounded-full bg-black transition-transform"
-          style={{ width: '18px', height: '18px', transform: sharing ? 'translateX(20px)' : 'translateX(2px)' }}
+          className={`block w-4.5 h-4.5 rounded-full transition-transform shadow-md ${
+            sharing ? 'bg-black translate-x-5' : 'bg-gray-400 translate-x-0'
+          }`}
+          style={{ width: '18px', height: '18px' }}
         />
       </button>
     </div>

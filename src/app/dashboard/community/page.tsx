@@ -472,22 +472,16 @@ export default function CommunityPage() {
         </button>
       </header>
 
-      {/* TWO-STEP DRILL-DOWN NAVIGATION
-          Community carries roughly a third of the app's total functionality
-          (~10 sub-tabs) behind one bottom-nav item — the clusters below used
-          to only color-code that many tabs in one long always-visible
-          horizontal strip, which didn't actually reduce what was on screen.
-          Cluster is now the primary navigation level: pick a cluster, then
-          its tabs (and only its tabs) appear below for a second tap to
-          switch within it — turning one 10-item scroll into a two-step
-          drill-down. */}
-      <div className="bg-black/40 p-3 md:p-4 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl space-y-3">
+      {/* TWO-STEP DRILL-DOWN NAVIGATION */}
+      <div className="bg-black/60 p-3 md:p-4 rounded-3xl border border-white/10 shadow-glass backdrop-blur-2xl space-y-3">
         <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
           <button
             onClick={() => goToTab('overview')}
-            className={`px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'overview' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white bg-white/5'}`}
+            className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap ${
+              subTab === 'overview' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
+            }`}
           >
-            <LayoutGrid size={12} /> Overview
+            <LayoutGrid size={13} /> Overview
           </button>
           {clusters.map(cluster => {
             const ClusterIcon = cluster.tabs[0].icon
@@ -496,12 +490,12 @@ export default function CommunityPage() {
               <button
                 key={cluster.id}
                 onClick={() => goToTab(cluster.tabs[0].id as typeof subTab)}
-                className={`px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${
-                  active ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white bg-white/5'
+                className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap ${
+                  active ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
                 }`}
               >
                 <span className={`p-0.5 rounded ${active ? '' : cluster.accent}`}>
-                  <ClusterIcon size={12} />
+                  <ClusterIcon size={13} />
                 </span>
                 {cluster.label}
               </button>
@@ -509,29 +503,29 @@ export default function CommunityPage() {
           })}
           <button
             onClick={toggleVibeMap}
-            className={`md:hidden px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${subTab === 'vibemap' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white bg-white/5'}`}
+            className={`md:hidden px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap ${
+              subTab === 'vibemap' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
+            }`}
           >
-            <MapIcon size={12} /> VibeMap
+            <MapIcon size={13} /> VibeMap
           </button>
         </div>
 
-        {/* Only the active cluster's tabs render here — everything else
-            this page can do stays a tap away behind its cluster header
-            above, instead of permanently on screen. */}
+        {/* Second-level tabs for active cluster */}
         {activeCluster && (
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 border-t border-white/10">
             {activeCluster.tabs.map(t => (
               <button
                 key={t.id}
                 onClick={() => goToTab(t.id as typeof subTab)}
-                className={`px-3 py-1.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap border ${
+                className={`px-3 py-1.5 rounded-xl transition-all text-[11px] font-bold tracking-wide flex items-center gap-1.5 whitespace-nowrap border ${
                   subTab === t.id
-                    ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20'
-                    : 'text-gray-400 border-white/5 hover:text-white hover:border-white/20'
+                    ? 'bg-white/15 text-white border-white/20 shadow-sm'
+                    : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
                 }`}
               >
-                <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-black/10' : activeCluster.accent}`}>
-                  <t.icon size={11} />
+                <span className={`p-1 rounded-lg ${subTab === t.id ? 'bg-white/10 text-gold-primary' : activeCluster.accent}`}>
+                  <t.icon size={12} />
                 </span>
                 {t.label}
               </button>

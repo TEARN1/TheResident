@@ -388,10 +388,13 @@ body {
 
 /* Glass UI Elements */
 .glass-panel {
-  background: var(--card-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
-  border-radius: 1rem;
+  background: rgba(12, 12, 12, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 /* Positions the whole group; individual banners just stack inside it —
@@ -399,7 +402,7 @@ body {
    pending-writes) would render on top of each other at identical coordinates. */
 .top-alert-banner-stack {
   position: fixed;
-  top: 1rem;
+  top: 1.25rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
@@ -410,15 +413,19 @@ body {
 }
 
 .top-alert-banner {
-  background: rgba(0,0,0,0.9);
-  border: 1px solid var(--gold-primary);
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  padding: 0.65rem 1.25rem;
+  border-radius: 9999px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 0.85rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  gap: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(212, 175, 55, 0.15);
 }
 
 .guest-summary-banner {

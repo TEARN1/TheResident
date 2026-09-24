@@ -378,28 +378,35 @@ export default function HousingPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10 pb-32">
-      {/* The big icon+title+tagline block that used to live here duplicated
-          what the top bar already shows (icon + "Housing") — pure vertical
-          space with no new information. The tab switcher is the only part
-          of this header that actually does something. */}
-      <header className="flex justify-end">
-        <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl w-full md:w-auto">
+      <header className="flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h2 className="text-xl font-black text-white uppercase tracking-tight">Find A <span className="text-gold-primary">Home</span></h2>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Explore verified rooms, compatible roommates, and managed properties.</p>
+        </div>
+
+        <div className="flex bg-black/60 p-1.5 rounded-2xl border border-white/10 shadow-glass backdrop-blur-2xl w-full md:w-auto">
           <button
             onClick={() => setActiveTab('rooms')}
-            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest ${activeTab === 'rooms' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white'}`}
+            className={`flex-1 md:flex-none px-6 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
+              activeTab === 'rooms' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+            }`}
           >
             Rooms
           </button>
           <button
             onClick={() => setActiveTab('roommates')}
-            className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest ${activeTab === 'roommates' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white'}`}
+            className={`flex-1 md:flex-none px-6 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
+              activeTab === 'roommates' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+            }`}
           >
             Roommates
           </button>
           {currentUser?.role === 'landlord' && (
             <button
               onClick={() => setActiveTab('properties')}
-              className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 ${activeTab === 'properties' ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white'}`}
+              className={`flex-1 md:flex-none px-6 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 ${
+                activeTab === 'properties' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+              }`}
             >
               <Building2 size={14} /> My Properties
             </button>
@@ -408,23 +415,29 @@ export default function HousingPage() {
       </header>
 
       {activeTab === 'rooms' && (
-        <div className="flex bg-black/20 p-1 rounded-xl border border-white/5 w-full sm:w-fit">
+        <div className="flex bg-black/40 p-1 rounded-2xl border border-white/10 w-full sm:w-fit backdrop-blur-xl gap-1">
           <button
             onClick={() => setFilterListingType('rent')}
-            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'rent' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
+              filterListingType === 'rent' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
+            }`}
           >
             Rent
           </button>
           <button
             onClick={() => setFilterListingType('sale')}
-            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'sale' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
+              filterListingType === 'sale' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
+            }`}
           >
             Buy
           </button>
           <button
             onClick={() => setFilterListingType('guesthouse')}
             title="Short-stay guest houses, listed only through the current event season"
-            className={`flex-1 sm:flex-none px-5 py-2 rounded-lg transition-all text-xs font-black uppercase tracking-widest ${filterListingType === 'guesthouse' ? 'bg-gold-primary text-black' : 'text-gray-500 hover:text-white'}`}
+            className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
+              filterListingType === 'guesthouse' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+            }`}
           >
             Guest Houses
           </button>
@@ -470,42 +483,39 @@ export default function HousingPage() {
         <div className="space-y-8">
           {/* Search & Action Bar */}
           <div className="flex flex-col lg:flex-row gap-4">
-             <div className="flex-1 glass-panel p-2 flex items-center gap-2 bg-black/60 shadow-inner relative">
-                <div className="flex-1 flex items-center bg-black/40 rounded-xl px-4 py-1.5 border border-white/5 focus-within:border-gold-primary/40 transition-colors">
-                   <Search size={18} className="text-gray-600" />
+             <div className="flex-1 bg-black/60 backdrop-blur-2xl p-2 rounded-2xl border border-white/10 shadow-glass flex items-center gap-2 relative">
+                <div className="flex-1 flex items-center bg-white/5 rounded-xl px-4 py-2 border border-white/10 focus-within:border-gold-primary/60 transition-colors">
+                   <Search size={18} className="text-gray-400 mr-2 shrink-0" />
                    <input
                       type="text"
                       value={searchInputValue}
                       onChange={(e) => { setSearchInputValue(e.target.value); setShowSuburbSuggestions(true) }}
                       onFocus={() => setShowSuburbSuggestions(true)}
                       onBlur={() => setTimeout(() => setShowSuburbSuggestions(false), 150)}
-                      placeholder="Enter Suburb, City or Complex..."
-                      className="bg-transparent border-none text-white px-3 py-2 w-full outline-none text-sm font-bold placeholder:text-gray-700 placeholder:uppercase placeholder:tracking-widest"
+                      placeholder="Enter suburb, city or complex..."
+                      className="bg-transparent border-none text-white w-full outline-none text-xs font-semibold placeholder:text-gray-500"
                       autoComplete="off"
                    />
                    <button
                       onClick={() => handleGetLiveLocation(setSearchInputValue)}
-                      className={`p-2 transition-all rounded-lg ${locationLoading ? 'text-gold-primary' : 'text-gray-600 hover:text-gold-primary hover:bg-gold-primary/10'}`}
+                      className={`p-1.5 transition-all rounded-lg shrink-0 ${locationLoading ? 'text-gold-primary' : 'text-gray-400 hover:text-gold-primary hover:bg-gold-primary/10'}`}
+                      title="Use current location"
                    >
-                      {locationLoading ? <Loader size={18} className="animate-spin" /> : <MapPin size={18} />}
+                      {locationLoading ? <Loader size={16} className="animate-spin" /> : <MapPin size={16} />}
                    </button>
                 </div>
 
-                {/* Suggests suburbs that actually HAVE listings, with a live
-                    count, instead of a free-text field where a typo just
-                    silently returns nothing. Sourced from allListings — real
-                    data, zero extra network calls. */}
                 {showSuburbSuggestions && suburbSuggestions.length > 0 && (
-                   <div className="absolute top-full left-0 right-24 mt-1 z-20 bg-black border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                   <div className="absolute top-full left-0 right-28 mt-2 z-30 bg-black/90 backdrop-blur-3xl border border-white/15 rounded-2xl shadow-glass overflow-hidden p-1.5 space-y-1">
                       {suburbSuggestions.map(s => (
                          <button
                             key={s.suburb}
                             type="button"
                             onMouseDown={() => { setSearchInputValue(s.suburb); setShowSuburbSuggestions(false) }}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-200 hover:bg-gold-primary/10 hover:text-gold-primary transition-colors text-left"
+                            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs text-gray-200 hover:bg-white/10 hover:text-white transition-all text-left"
                          >
-                            <span className="flex items-center gap-2"><MapPin size={13} className="text-gray-600" /> {s.suburb}</span>
-                            <span className="text-[10px] text-gray-500 font-bold">{s.count} room{s.count === 1 ? '' : 's'}</span>
+                            <span className="flex items-center gap-2"><MapPin size={13} className="text-gold-primary" /> {s.suburb}</span>
+                            <span className="text-[10px] text-gray-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">{s.count} rooms</span>
                          </button>
                       ))}
                    </div>
@@ -513,7 +523,10 @@ export default function HousingPage() {
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`p-3 rounded-xl border transition-all ${showFilters ? 'bg-gold-primary border-gold-primary text-black' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                  className={`p-2.5 rounded-xl border transition-all shrink-0 ${
+                    showFilters ? 'bg-gold-primary border-gold-primary text-black shadow-glow' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white'
+                  }`}
+                  title="Filter options"
                 >
                   <Filter size={18} />
                 </button>
@@ -524,17 +537,17 @@ export default function HousingPage() {
              {currentUser?.role === 'landlord' ? (
                 <button
                    onClick={() => setShowCreateModal(true)}
-                   className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-8 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-gold-primary/10 uppercase tracking-widest text-xs"
+                   className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-7 py-3.5 rounded-2xl flex items-center justify-center gap-2.5 transition-all active:scale-95 shadow-glow uppercase tracking-wider text-xs shrink-0"
                 >
-                   <Plus size={20} /> List Your Property
+                   <Plus size={18} /> List Property
                 </button>
              ) : (
                 <Link
                    href="/dashboard/profile"
-                   className="bg-white/5 hover:bg-gold-primary/10 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary font-bold px-4 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all text-xs shrink-0"
+                   className="bg-white/5 hover:bg-gold-primary/10 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary font-bold px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all text-xs shrink-0"
                    title="Want to list a room? Switch to Landlord mode in your profile."
                 >
-                   <Building2 size={16} /> Have a room to rent? Switch to Landlord Mode
+                   <Building2 size={16} /> Rent out a room
                 </Link>
              )}
           </div>

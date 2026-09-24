@@ -18,7 +18,7 @@ const PADDING: Record<NonNullable<CardProps['padding']>, string> = {
 
 export default function Card({ padding = 'md', className, children, ...rest }: CardProps) {
   return (
-    <div className={`glass-panel ${PADDING[padding]} ${className || ''}`.trim()} {...rest}>
+    <div className={`bg-surface backdrop-blur-2xl border border-glass-border rounded-3xl shadow-glass transition-all ${PADDING[padding]} ${className || ''}`.trim()} {...rest}>
       {children}
     </div>
   )

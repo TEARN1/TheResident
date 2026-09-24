@@ -90,48 +90,60 @@ export default function MapSearchBox({ onSelect }: Props) {
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
-        <Search size={16} className="text-gold-primary shrink-0" />
+      <div className="flex items-center gap-2.5 bg-black/60 backdrop-blur-2xl border border-white/15 rounded-2xl px-3.5 py-2.5 shadow-glass transition-all focus-within:border-gold-primary/60 focus-within:shadow-glow">
+        <Search size={16} className="text-gold-primary shrink-0 transition-transform group-focus-within:scale-110" />
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => (visibleResults.length > 0 || showRecent) && setOpen(true)}
-          placeholder="Search a place or address…"
-          className="bg-transparent outline-none text-sm text-white placeholder:text-gray-500 w-full"
+          placeholder="Search places, suburbs, addresses..."
+          className="bg-transparent outline-none text-xs text-white placeholder:text-gray-400 w-full font-medium"
         />
-        {loading && <Loader2 size={14} className="animate-spin text-gray-500 shrink-0" />}
+        {query && (
+          <button
+            onClick={() => { setQuery(''); setOpen(false) }}
+            className="text-gray-400 hover:text-white p-0.5 rounded-full hover:bg-white/10 transition-colors"
+          >
+            <X size={13} />
+          </button>
+        )}
+        {loading && <Loader2 size={14} className="animate-spin text-gold-primary shrink-0" />}
       </div>
 
       {open && visibleResults.length > 0 && (
-        <div className="absolute z-[500] mt-1 w-full glass-panel border border-white/10 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+        <div className="absolute z-[500] mt-2 w-full bg-black/80 backdrop-blur-3xl border border-white/15 rounded-2xl shadow-glass overflow-hidden max-h-72 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
           {visibleResults.map(r => (
             <button
               key={r.id}
               onClick={() => selectResult(r)}
-              className="block w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-white/5 hover:text-white transition-colors border-b border-white/5 last:border-0"
+              className="flex items-start gap-2.5 w-full text-left px-3 py-2 rounded-xl text-xs text-gray-200 hover:bg-white/10 hover:text-white transition-all group"
             >
-              {r.label}
+              <span className="w-1.5 h-1.5 rounded-full bg-gold-primary/70 mt-1.5 shrink-0 group-hover:scale-125 transition-transform" />
+              <span className="line-clamp-2 leading-relaxed">{r.label}</span>
             </button>
           ))}
         </div>
       )}
 
       {open && visibleResults.length === 0 && showRecent && (
-        <div className="absolute z-[500] mt-1 w-full glass-panel border border-white/10 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
-          <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/5">
-            <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Recent</span>
-            <button onClick={clearRecent} className="text-gray-500 hover:text-white" aria-label="Clear recent searches">
-              <X size={11} />
+        <div className="absolute z-[500] mt-2 w-full bg-black/80 backdrop-blur-3xl border border-white/15 rounded-2xl shadow-glass overflow-hidden max-h-72 overflow-y-auto custom-scrollbar p-1.5">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 mb-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Recent Searches</span>
+            <button
+              onClick={clearRecent}
+              className="text-[10px] text-gray-400 hover:text-red-400 font-semibold px-1.5 py-0.5 rounded hover:bg-white/5 transition-colors"
+            >
+              Clear
             </button>
           </div>
           {recent.map(r => (
             <button
               key={r.id}
               onClick={() => selectResult(r)}
-              className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-white/5 hover:text-white transition-colors border-b border-white/5 last:border-0"
+              className="flex items-center gap-2.5 w-full text-left px-3 py-2 rounded-xl text-xs text-gray-300 hover:bg-white/10 hover:text-white transition-all group"
             >
-              <Clock size={11} className="text-gray-600 shrink-0" />
-              {r.label}
+              <Clock size={13} className="text-gray-500 group-hover:text-gold-primary transition-colors shrink-0" />
+              <span className="truncate">{r.label}</span>
             </button>
           ))}
         </div>

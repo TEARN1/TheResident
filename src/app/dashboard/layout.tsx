@@ -304,89 +304,118 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           that only ever opened a settings panel had nothing left to hold. */}
 
       <div className="dashboard-main-content">
-        <header className="dashboard-top-bar">
-          <div className="dashboard-page-title">
-            <pageTitle.icon size={18} />
-            <span>{pageTitle.name}</span>
+        <header className="sticky top-0 z-40 h-16 bg-black/60 backdrop-blur-2xl border-b border-white/10 px-4 md:px-6 flex items-center justify-between transition-all">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary shadow-glow">
+              <pageTitle.icon size={18} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-black text-sm tracking-wide text-white uppercase">{pageTitle.name}</span>
+              {!isGuestUser(currentUser) && (
+                <Link
+                  href="/dashboard/profile"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 text-gold-primary border border-gold-primary/30 hover:bg-gold-primary/20 transition-all"
+                  title={`Mode: ${currentUser.role}. Tap to switch.`}
+                >
+                  {currentUser.role === 'landlord' ? <Briefcase size={10} /> : <Home size={10} />}
+                  <span>{currentUser.role}</span>
+                </Link>
+              )}
+            </div>
           </div>
 
-          {/* Persistent role indicator — a landlord who got mis-assigned as a
-              tenant (or vice versa) previously had no way to even notice
-              their current mode short of digging into Profile. Visible on
-              every dashboard page now, and doubles as a shortcut to the
-              role switcher there. */}
-          {!isGuestUser(currentUser) && (
-            <Link
-              href="/dashboard/profile"
-              className="dashboard-role-chip"
-              title={`Account mode: ${currentUser.role}. Tap to switch.`}
-            >
-              {currentUser.role === 'landlord' ? <Briefcase size={12} /> : <Home size={12} />}
-              <span>{currentUser.role}</span>
-            </Link>
-          )}
-
-          {/* The "Map" shortcut used to live here on every single page — dead
-              weight on the 5 of 6 tabs that have nothing to do with the map.
-              VibeMap is one tap away from Community's own tab bar (and its
-              fullscreen entry), so this bar now only carries what's actually
-              page-agnostic: notifications. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: 'auto' }}>
-             <div ref={notifMenuRef} style={{ position: 'relative' }}>
-                <button onClick={() => setShowNotifMenu(!showNotifMenu)} style={{ background: 'transparent', border: 'none', color: '#D4AF37', position: 'relative', cursor: 'pointer' }}>
-                   <Megaphone size={20} />
-                   {notifications.items.filter(n => !n.read).length > 0 && <span className="notif-badge">!</span>}
-                </button>
-                {showNotifMenu && (
-                   <div className="glass-panel" style={{ position: 'absolute', top: '100%', right: 0, width: '300px', maxHeight: '400px', overflowY: 'auto', zIndex: 100, marginTop: '1rem', padding: '1rem' }}>
-                      <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-                         <span className="text-xs font-black text-white uppercase tracking-widest">{t('alerts', lang)}</span>
-                         <button
-                           onClick={() => {
-                             dispatch(markAllNotificationsRead())
-                             markNotificationsReadInDb()
-                             setAlertNotification('All notifications marked as read')
-                             setTimeout(() => setAlertNotification(null), 3000)
-                           }}
-                           className="text-[10px] text-gold-primary font-bold hover:underline"
-                         >
-                           {t('markAllRead', lang)}
-                         </button>
-                      </div>
-                      <div className="space-y-3">
-                         {notifications.items.length === 0 ? (
-                            <p className="text-[10px] text-gray-600 italic text-center py-4">{t('noRecentAlerts', lang)}</p>
-                         ) : (
-                            notifications.items.map(item => (
-                               <div key={item.id} className={`p-3 rounded-lg border ${item.read ? 'bg-black/20 border-white/5 opacity-60' : 'bg-gold-primary/5 border-gold-primary/20'}`}>
-                                  <p className="text-[10px] font-black text-white uppercase tracking-tight">{item.title}</p>
-                                  <p className="text-[10px] text-gray-400 mt-1">{item.message}</p>
-                               </div>
-                            ))
-                         )}
-                      </div>
-                   </div>
+          <div className="flex items-center gap-3">
+            <div ref={notifMenuRef} className="relative">
+              <button
+                onClick={() => setShowNotifMenu(!showNotifMenu)}
+                className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-gray-300 hover:text-gold-primary transition-all relative"
+                aria-label="Open notifications"
+              >
+                <Megaphone size={16} />
+                {notifications.items.filter(n => !n.read).length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-black animate-pulse" />
                 )}
-             </div>
+              </button>
+
+              <AnimatePresence>
+                {showNotifMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute top-full right-0 mt-3 w-80 max-h-96 bg-black/90 backdrop-blur-3xl border border-white/15 rounded-2xl shadow-glass overflow-hidden z-50 p-4 space-y-3"
+                  >
+                    <div className="flex justify-between items-center pb-2 border-b border-white/10">
+                      <span className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-1.5">
+                        <Megaphone size={12} className="text-gold-primary" /> {t('alerts', lang)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          dispatch(markAllNotificationsRead())
+                          markNotificationsReadInDb()
+                          setAlertNotification('All notifications marked as read')
+                          setTimeout(() => setAlertNotification(null), 3000)
+                        }}
+                        className="text-[10px] text-gold-primary font-bold hover:underline"
+                      >
+                        {t('markAllRead', lang)}
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 overflow-y-auto max-h-64 custom-scrollbar pr-1">
+                      {notifications.items.length === 0 ? (
+                        <p className="text-xs text-gray-500 italic text-center py-6">{t('noRecentAlerts', lang)}</p>
+                      ) : (
+                        notifications.items.map(item => (
+                          <div
+                            key={item.id}
+                            className={`p-2.5 rounded-xl border text-xs transition-all ${
+                              item.read ? 'bg-white/2 border-white/5 opacity-50' : 'bg-gold-primary/5 border-gold-primary/20 text-white'
+                            }`}
+                          >
+                            <p className="font-bold text-gray-200">{item.title}</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{item.message}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 
-        <main className="dashboard-page-body">
+        <main className="dashboard-page-body pb-28">
           {children}
         </main>
       </div>
 
-      <nav className="bottom-nav-bar">
-        {navItems.map(item => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`bottom-nav-item ${pathname === item.href ? 'active' : ''}`}
-          >
-            <item.icon size={20} />
-            <span>{item.name}</span>
-          </Link>
-        ))}
+      <nav className="fixed bottom-3 left-3 right-3 max-w-lg mx-auto z-50 bg-black/70 backdrop-blur-3xl border border-white/15 rounded-3xl p-1.5 shadow-glass flex items-center justify-around">
+        {navItems.map(item => {
+          const isActive = pathname === item.href
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-2xl transition-all relative group ${
+                isActive ? 'text-black' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="activeTabIndicator"
+                  className="absolute inset-0 bg-gold-primary rounded-2xl shadow-glow"
+                  transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                />
+              )}
+              <div className="relative z-10 flex flex-col items-center gap-0.5">
+                <item.icon size={18} className="transition-transform group-hover:scale-110" />
+                <span className="text-[9px] font-black uppercase tracking-wider">{item.name}</span>
+              </div>
+            </Link>
+          )
+        })}
       </nav>
 
       <AutomationControlPanel />

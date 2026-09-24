@@ -248,11 +248,14 @@ export default function ServicesPage() {
   const incomingOrders = myBiz ? dispatches.filter(d => d.serviceId === myBiz.id) : []
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10 pb-32">
-      {/* Duplicated what the top bar already shows (icon + "Services") —
-          removed for the same reason as Housing's. */}
-      <header className="flex justify-end">
-        <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 shadow-2xl backdrop-blur-xl w-full md:w-auto overflow-x-auto no-scrollbar">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-32">
+      <header className="flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h2 className="text-xl font-black text-white uppercase tracking-tight">Community <span className="text-gold-primary">Services</span></h2>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Verified local transport, trades, and direct utilities management.</p>
+        </div>
+
+        <div className="flex bg-black/60 p-1.5 rounded-2xl border border-white/10 shadow-glass backdrop-blur-2xl w-full md:w-auto overflow-x-auto no-scrollbar gap-1">
           {[
             { id: 'lifts', label: 'Lifts', icon: Car },
             { id: 'handymen', label: 'Skills', icon: Briefcase },
@@ -261,7 +264,9 @@ export default function ServicesPage() {
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id as 'lifts' | 'handymen' | 'utilities')}
-              className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl transition-all text-xs font-black uppercase tracking-widest flex items-center gap-2 whitespace-nowrap ${activeTab === t.id ? 'bg-gold-primary text-black shadow-lg shadow-gold-primary/20' : 'text-gray-500 hover:text-white'}`}
+              className={`flex-1 md:flex-none px-6 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 whitespace-nowrap ${
+                activeTab === t.id ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+              }`}
             >
               <t.icon size={14} /> {t.label}
             </button>
