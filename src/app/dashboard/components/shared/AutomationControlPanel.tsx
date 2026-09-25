@@ -98,9 +98,9 @@ export default function AutomationControlPanel() {
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div>
                   <h2 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
-                    <Zap size={18} className="text-gold-primary" /> 15-Layer Automation Hub
+                    <Zap size={18} className="text-gold-primary" /> Mastermind Governance
                   </h2>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Real-time system telemetry & operational connectors</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Sovereign Civic Chessboard &amp; 15-Layer Automation Engine</p>
                 </div>
                 <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-white p-1">
                   <X size={18} />

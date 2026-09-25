@@ -7,9 +7,10 @@ import { motion } from 'framer-motion'
 import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { performLogin } from '../../utils/authLogin'
-import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon, ExternalLink, Github } from 'lucide-react'
+import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon, ExternalLink, Github, Scale } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 import Image from 'next/image'
+import MasterLegalPolicyModal from '../dashboard/components/shared/MasterLegalPolicyModal'
 
 // Cross-app SSO mark for The Gruvs — their real logo (public/gruvs-logo.png),
 // not a placeholder monogram.
@@ -95,6 +96,8 @@ export default function AuthPage() {
   const [maxChildren, setMaxChildren] = useState(2)
   const [smokingAllowed, setSmokingAllowed] = useState(false)
   const [petsAllowed, setPetsAllowed] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [showPolicyModal, setShowPolicyModal] = useState(false)
 
   // Message states
   const [securityMessage, setSecurityMessage] = useState<string | null>(null)
@@ -154,6 +157,11 @@ export default function AuthPage() {
 
     if (passwordStrength && !passwordStrength.strong) {
       setErrorMessage('Please choose a stronger password. ' + (passwordStrength.feedback[0] || ''))
+      return
+    }
+
+    if (!termsAccepted) {
+      setErrorMessage('You must review and accept the Master Platform Liability Shield and Terms to proceed.')
       return
     }
 
@@ -703,6 +711,39 @@ export default function AuthPage() {
               </div>
             )}
 
+            {/* Sovereign Platform Liability Shield Checkbox */}
+            <div style={{
+              padding: '0.85rem',
+              borderRadius: '1rem',
+              backgroundColor: 'rgba(212, 175, 55, 0.05)',
+              border: '1px solid rgba(212, 175, 55, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              marginBottom: '0.75rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
+                <input
+                  type="checkbox"
+                  id="termsAgreement"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  style={{ marginTop: '0.15rem', cursor: 'pointer', accentColor: '#D4AF37' }}
+                />
+                <label htmlFor="termsAgreement" style={{ fontSize: '11px', color: '#D1D5DB', lineHeight: 1.45, cursor: 'pointer' }}>
+                  I accept the{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowPolicyModal(true)}
+                    style={{ color: '#D4AF37', textDecoration: 'underline', fontWeight: 'bold', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  >
+                    Platform Liability Shield &amp; Terms
+                  </button>
+                  . I acknowledge The Resident is an independent technology facilitator, not a property owner, broker, or financial custodian.
+                </label>
+              </div>
+            </div>
+
             <button type="submit" className="btn-gold" style={submitButtonStyle}>
               Confirm Profile & Enter <CheckCircle size={14} style={{ marginLeft: 8 }} />
             </button>
@@ -785,11 +826,37 @@ export default function AuthPage() {
               <ExternalLink size={11} />
             </a>
           </div>
+          <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => setShowPolicyModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.7rem',
+                color: '#D4AF37',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 700,
+                textDecoration: 'underline'
+              }}
+            >
+              <Scale size={12} />
+              <span>Platform Legal Shield &amp; POPIA Policies</span>
+            </button>
+          </div>
           <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '0.5px' }}>
             Unified student accommodations &amp; nightlife network
           </span>
         </div>
       </motion.div>
+
+      <MasterLegalPolicyModal
+        isOpen={showPolicyModal}
+        onClose={() => setShowPolicyModal(false)}
+      />
     </div>
   )
 }

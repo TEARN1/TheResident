@@ -9,7 +9,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Github
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Github, Scale
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -29,6 +29,7 @@ import AutomationControlPanel from './components/shared/AutomationControlPanel'
 import CommandPalette from './components/navigation/CommandPalette'
 import FloatingEmergencySOS from './components/shared/FloatingEmergencySOS'
 import PWAInstallBanner from './components/shared/PWAInstallBanner'
+import MasterLegalPolicyModal from './components/shared/MasterLegalPolicyModal'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 
@@ -37,6 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const dispatch = useDispatch()
   const [showNotifMenu, setShowNotifMenu] = useState(false)
+  const [showLegalModal, setShowLegalModal] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
   // Browser autoplay policy blocks audio until a real user gesture — this
@@ -364,6 +366,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span>TEARN&apos;s Excellence</span>
             </a>
 
+            {/* Platform Legal Shield & Governance Trigger */}
+            <button
+              onClick={() => { setShowLegalModal(true); playTactileSound('tab') }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all shadow-sm"
+              title="Platform Legal Shield, Neutrality Disclaimers & POPIA Governance"
+            >
+              <Scale size={12} className="text-amber-400" />
+              <span className="hidden lg:inline">Legal Shield</span>
+            </button>
+
             <div ref={notifMenuRef} className="relative">
               <button
                 onClick={() => { setShowNotifMenu(!showNotifMenu); playTactileSound('click') }}
@@ -461,6 +473,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <AutomationControlPanel />
       <FloatingEmergencySOS />
       <PWAInstallBanner />
+      <MasterLegalPolicyModal
+        isOpen={showLegalModal}
+        onClose={() => setShowLegalModal(false)}
+      />
     </div>
   )
 }
