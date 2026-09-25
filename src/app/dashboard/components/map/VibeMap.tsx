@@ -1,1399 +1,548 @@
 'use client'
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
-import { Navigation, LocateFixed, RefreshCw, Check, X, ShieldAlert, MapPin, Bell, Layers, Plus, Minus, Ban, Loader, Sun, Moon, Wrench, Sparkles, ExternalLink, Satellite, Zap, Footprints } from 'lucide-react'
-import Image from 'next/image'
+import {
+  Navigation, LocateFixed, RefreshCw, X, ShieldAlert, MapPin, Layers,
+  Plus, Minus, Sparkles, Satellite, Zap, Flame, Home, Coffee, AlertTriangle, Compass, Heart
+} from 'lucide-react'
 import { useSelector } from 'react-redux'
-import { RootState, isGuestUser } from '../../../../store'
-import { fetchSharedZones, verifyZone, reportZone, type SharedZone, type ReportableZoneKind } from '../../../../utils/mapZones'
-import { fetchSavedPins, saveNewPin, deleteSavedPin, type SavedPin } from '../../../../utils/savedPins'
+import { RootState } from '../../../../store'
+import { fetchSharedZones, type SharedZone } from '../../../../utils/mapZones'
 import { distanceMetres } from '../../../../utils/logic'
-import { searchPlaces, reverseGeocode, type GeocodeResult } from '../../../../utils/geocode'
+import { reverseGeocode } from '../../../../utils/geocode'
 import { supabase } from '../../../../utils/supabase'
-import { encodeHTMLEntities } from '../../../../utils/security'
-import { getErrorMessage } from '../../../../utils/errors'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import MapSearchBox from './MapSearchBox'
-import SavedPinsPanel from './SavedPinsPanel'
-import DistanceMatrixPanel, { type MatrixPoint } from './DistanceMatrixPanel'
-import LiveLocationToggle from './LiveLocationToggle'
 import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../../utils/gruvsEvents'
+import VibeBottomSheet, { type VibeItem } from './VibeBottomSheet'
+import QuickVibeReportModal from './QuickVibeReportModal'
 
-// Colour by kind — matches map_zones' shared CHECK constraint
-// (road_closed, heavy_traffic, detour, no_parking, route, zone, alert).
-const KIND_COLOR: Record<string, string> = {
-  road_closed: '#ef4444',
-  heavy_traffic: '#f59e0b',
-  detour: '#f59e0b',
-  no_parking: '#3b82f6',
-  alert: '#ef4444',
-  route: '#22c55e',
-  zone: '#D4AF37'
-}
-
-const KIND_LABEL: Record<string, string> = {
-  road_closed: 'Road closed',
-  heavy_traffic: 'Heavy traffic',
-  detour: 'Detour',
-  no_parking: 'No parking',
-  alert: 'Safety alert',
-  route: 'Route',
-  zone: 'Zone'
-}
-
-// What a resident is allowed to report directly, and how long each option's
-// window lasts. Kept small and predictable rather than a free-text duration
-// field — "8 hours" and "3 days" cover almost every real closure; a rare
-// longer one can be re-reported once it lapses.
-const REPORTABLE_KINDS: Array<{ kind: ReportableZoneKind; label: string }> = [
-  { kind: 'road_closed', label: 'Road closed' },
-  { kind: 'detour', label: 'Detour' },
-  { kind: 'heavy_traffic', label: 'Heavy traffic' },
-  { kind: 'no_parking', label: 'No parking' }
-]
-const DURATION_OPTIONS: Array<{ hours: number; label: string }> = [
-  { hours: 1, label: '1 hour' },
-  { hours: 4, label: '4 hours' },
-  { hours: 8, label: '8 hours' },
-  { hours: 24, label: '24 hours' },
-  { hours: 72, label: '3 days' },
-  { hours: 168, label: '1 week' },
-  { hours: 336, label: '2 weeks (max)' }
-]
-
-type Drawer = 'none' | 'pins' | 'matrix' | 'geofence'
-
-// Ultra high-definition basemaps: CARTO Dark Matter, CARTO Voyager, & Esri World Imagery (Satellite)
+// High-definition basemaps
 const TILE_SOURCES: Record<'dark' | 'light' | 'satellite', string> = {
   dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
   light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
   satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 }
 
+type VibeCategoryFilter = 'all' | 'nightlife' | 'housing' | 'safety' | 'chill'
+
 export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }) {
-  const searchParams = useSearchParams()
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const listings = useSelector((state: RootState) => state.listings.items)
+
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<import('leaflet').Map | null>(null)
-  const markersRef = useRef<import('leaflet').LayerGroup | null>(null)
-  const searchMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
-  const pinsLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
-  const liveMarkerRef = useRef<import('leaflet').LayerGroup | null>(null)
-  const isochroneLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
-  // Separate from `markersRef` (shared-zone reports) on purpose: each zone
-  // there is 2-3 stacked circleMarkers (a halo + an optional contested/
-  // geofence ring + the real marker), so clustering that group would badly
-  // miscount — a "12" badge could mean 4 zones × 3 circles. Listing pins are
-  // one simple marker each, so they're the layer that's actually safe to
-  // cluster.
-  const listingsClusterRef = useRef<import('leaflet').MarkerClusterGroup | null>(null)
-  const gruvsHotspotsRef = useRef<import('leaflet').LayerGroup | null>(null)
   const leafletRef = useRef<typeof import('leaflet') | null>(null)
   const tileLayerRef = useRef<import('leaflet').TileLayer | null>(null)
 
-  // Basemap style switcher: dark / light / satellite
+  // Dedicated Leaflet feature layers
+  const nightLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const housingLayerRef = useRef<import('leaflet').MarkerClusterGroup | null>(null)
+  const safetyLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const chillLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const isochroneLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const userPinLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
+
+  // State
   const [mapTheme, setMapTheme] = useState<'dark' | 'light' | 'satellite'>('dark')
-  const [showIsochrones, setShowIsochrones] = useState(true)
-  const [isochroneOrigin, setIsochroneOrigin] = useState<{ lat: number; lon: number; label: string } | null>(null)
-
+  const [activeVibeFilter, setActiveVibeFilter] = useState<VibeCategoryFilter>('all')
   const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null)
-  const [locationDenied, setLocationDenied] = useState(false)
-  // Gates map creation until the geolocation attempt has actually resolved
-  // (success, failure, or "no geolocation at all") — without this, the map
-  // used to initialize immediately at a hardcoded whole-world view and only
-  // recenter afterward, so every load flashed the whole world for a moment
-  // with no explanation before either snapping to the real location or (on
-  // failure) showing the "Showing the whole world" banner. Waiting means the
-  // map now initializes directly at the right place, or the fallback and its
-  // explanation appear together instead of one after the other.
   const [geoResolved, setGeoResolved] = useState(false)
-  const [zones, setZones] = useState<SharedZone[]>([])
   const [loading, setLoading] = useState(false)
-  const [voteError, setVoteError] = useState<string | null>(null)
-  // Closed by default — a color-coded map with the legend open on every
-  // load competes with the map itself for attention before the user has
-  // asked for it. The Layers toggle is one tap away.
-  const [showLegend, setShowLegend] = useState(false)
-  const [drawer, setDrawer] = useState<Drawer>('none')
-  // The three drawer-toggle pills (Saved places / Distances / Alerts) used
-  // to be their own floating stack on the left, competing with search for
-  // the same corner. One "Tools" button + a small popover here consolidates
-  // them onto the right side alongside Layers instead.
-  const [showToolsMenu, setShowToolsMenu] = useState(false)
-
-  // The legend used to be pure decoration — a static color key with no way
-  // to act on it. Now each row is a real filter: unchecking "Heavy traffic"
-  // actually hides those markers, and "Confirmed only" cuts noise from
-  // unverified reports. Defaults to everything visible (opt-out, not opt-in),
-  // so a first-time visitor sees the full picture before narrowing it down.
-  const [activeKinds, setActiveKinds] = useState<Set<string>>(new Set(Object.keys(KIND_LABEL)))
-  const [confirmedOnly, setConfirmedOnly] = useState(false)
-  // Bumped on every pan/zoom so the legend's per-kind counts can reflect
-  // "what's on screen right now" instead of the whole 15km fetch radius —
-  // a count that never changes as you zoom in isn't telling you anything.
-  const [boundsTick, setBoundsTick] = useState(0)
-
-  const [pendingPoint, setPendingPoint] = useState<{ label: string; lat: number; lon: number } | null>(null)
-  const [savedPins, setSavedPins] = useState<SavedPin[]>([])
-  const [pinsLoading, setPinsLoading] = useState(false)
+  const [selectedVibeItem, setSelectedVibeItem] = useState<VibeItem | null>(null)
+  const [showDropVibeModal, setShowDropVibeModal] = useState(false)
   const [gruvsEvents, setGruvsEvents] = useState<GruvsEvent[]>([])
-  const [showGruvsHotspots, setShowGruvsHotspots] = useState(true)
+  const [sharedZones, setSharedZones] = useState<SharedZone[]>([])
+  const [pendingTapCoords, setPendingTapCoords] = useState<{ lat: number; lon: number; label?: string } | null>(null)
 
-  const [matrixPoints, setMatrixPoints] = useState<MatrixPoint[]>([])
-  const [alertRadiusM, setAlertRadiusM] = useState(500)
-  const [livePosition, setLivePosition] = useState<{ lat: number; lon: number; accuracy?: number } | null>(null)
-  const [locationSharing, setLocationSharing] = useState(false)
-  const [locating, setLocating] = useState(false)
-
-  // Report-a-closure form, opened from the pending-point action card.
-  const [showReportForm, setShowReportForm] = useState(false)
-  const [reportKind, setReportKind] = useState<ReportableZoneKind>('road_closed')
-  const [reportDurationHours, setReportDurationHours] = useState(8)
-  const [reportNote, setReportNote] = useState('')
-  const [reportSubmitting, setReportSubmitting] = useState(false)
-  const [reportError, setReportError] = useState<string | null>(null)
-
-  const currentUserId = !isGuestUser(currentUser) && currentUser ? currentUser.id : null
-
-  const refreshSavedPins = async () => {
-    if (!currentUserId) { setSavedPins([]); return }
-    setPinsLoading(true)
-    const pins = await fetchSavedPins()
-    setSavedPins(pins)
-    setPinsLoading(false)
-  }
-
+  // 1. Initial Geolocation
   useEffect(() => {
-    refreshSavedPins()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserId])
-
-  // O(pins × zones) distance scan. Computed inline it re-ran on EVERY render —
-  // including every keystroke in the report form and every drawer toggle — and
-  // handed back a new array identity each time, which then invalidated the
-  // marker effect below and forced a full map rebuild. Memoised on the only
-  // three inputs that can actually change the answer.
-  const geofenceHits = useMemo(
-    () => savedPins.flatMap(pin =>
-      zones
-        .filter(z => distanceMetres(pin, z) <= alertRadiusM)
-        .map(z => ({ pin, zone: z }))
-    ),
-    [savedPins, zones, alertRadiusM]
-  )
-
-  // Set of zone ids that trip a geofence — lets the marker loop do an O(1)
-  // lookup instead of a linear .some() scan per zone (it was O(zones × hits)).
-  const geofenceZoneIds = useMemo(
-    () => new Set(geofenceHits.map(h => h.zone.id)),
-    [geofenceHits]
-  )
-
-  // What the legend/filter row and the marker layer both agree is "on the
-  // map right now" — kept in one place so the legend's counts and what
-  // actually renders can never drift apart. Memoized so toggling an
-  // unrelated bit of UI state doesn't tear down and rebuild every marker.
-  const filteredZones = useMemo(() => zones.filter(z => {
-    if (!activeKinds.has(z.kind)) return false
-    if (confirmedOnly && z.status !== 'confirmed' && z.status !== 'official') return false
-    return true
-  }), [zones, activeKinds, confirmedOnly])
-
-  const toggleKind = (kind: string) => {
-    setActiveKinds(prev => {
-      const next = new Set(prev)
-      if (next.has(kind)) next.delete(kind); else next.add(kind)
-      return next
-    })
-  }
-
-  // Reference point for "how far is this from me" in each popup — a live
-  // GPS fix if the user has one running, otherwise wherever the map is
-  // centred (their approximate location or a searched place).
-  const distanceOrigin = livePosition || center
-
-  // A "Directions" link elsewhere in the app (listings, services) routes here
-  // as /dashboard/community?tab=vibemap&place=<address> rather than deep-linking
-  // out to Google Maps — the shared zone reports, saved pins and geofence
-  // alerts only exist on our own map, so handing the user to an external app
-  // drops every layer that makes this map worth opening.
-  const focusPlace = searchParams.get('place')
-
-  useEffect(() => {
-    // An explicit place from the URL wins over "where am I" — otherwise the
-    // geolocation callback would land and yank the view back off the address
-    // the user actually asked to see.
-    // A focusPlace deep-link resolves geoResolved itself once the place
-    // lookup below finishes, rather than here — its center isn't known yet.
-    if (focusPlace) return
     if (!('geolocation' in navigator)) {
-      setLocationDenied(true)
+      setCenter({ lat: -26.1926, lon: 28.0305 }) // Braamfontein / Joburg default
       setGeoResolved(true)
       return
     }
+
     navigator.geolocation.getCurrentPosition(
       pos => {
         setCenter({ lat: pos.coords.latitude, lon: pos.coords.longitude })
         setGeoResolved(true)
       },
       () => {
-        setLocationDenied(true)
+        setCenter({ lat: -26.1926, lon: 28.0305 })
         setGeoResolved(true)
       },
-      { timeout: 8000 }
+      { timeout: 7000 }
     )
-  }, [focusPlace])
+  }, [])
 
-  useEffect(() => {
-    if (!focusPlace) return
-    let cancelled = false
-    searchPlaces(focusPlace).then(results => {
-      if (cancelled) return
-      if (results.length > 0) {
-        const hit = results[0]
-        setCenter({ lat: hit.lat, lon: hit.lon })
-        setPendingPoint({ label: hit.label, lat: hit.lat, lon: hit.lon })
-      }
-      // Resolves geoResolved even when the lookup comes back empty — the map
-      // still needs to initialize somewhere (the world-view fallback) rather
-      // than staying on the loading state forever.
-      setGeoResolved(true)
-    })
-    return () => { cancelled = true }
-  }, [focusPlace])
-
-  const loadZones = async (lat: number, lon: number) => {
+  // 2. Fetch Gruvs events & Shared community zones
+  const loadData = async (lat: number, lon: number) => {
     setLoading(true)
-    const data = await fetchSharedZones(lat, lon, 15000)
-    setZones(data)
-    setLoading(false)
+    try {
+      const [events, zones] = await Promise.all([
+        fetchUpcomingGruvsEvents(20).catch(() => []),
+        fetchSharedZones(lat, lon, 15000).catch(() => [])
+      ])
+      setGruvsEvents(events)
+      setSharedZones(zones)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    if (!geoResolved || !mapContainerRef.current || mapRef.current) return
+    if (!center) return
+    loadData(center.lat, center.lon)
+  }, [center])
 
-    const startLat = center?.lat ?? 20
-    const startLon = center?.lon ?? 0
-    const startZoom = center ? 14 : 2
+  // 3. Leaflet Map Lifecycle
+  useEffect(() => {
+    if (!mapContainerRef.current || !center || !geoResolved) return
+    let isCancelled = false
 
-    let cancelled = false
-    Promise.all([import('leaflet'), import('leaflet.markercluster')]).then(([L]) => {
-      if (cancelled || !mapContainerRef.current || mapRef.current) return
+    import('leaflet').then(async L => {
+      await import('leaflet.markercluster')
+      if (isCancelled || !mapContainerRef.current) return
+
       leafletRef.current = L
 
-      // preferCanvas: every zone/pin is a circleMarker. Leaflet's default
-      // renderer gives each one its own SVG DOM node, so a busy city becomes
-      // hundreds of nodes that the browser lays out and repaints on every pan.
-      // Canvas draws them all into ONE element — same visuals, a fraction of
-      // the cost, and it degrades gracefully on a cheap Android handset, which
-      // is the actual launch device here.
-      const map = L.map(mapContainerRef.current, { zoomControl: false, preferCanvas: true })
-        .setView([startLat, startLon], startZoom)
-      // CARTO's basemaps, not tile.openstreetmap.org directly: same underlying
-      // OSM street data, but CARTO's own render pipeline refreshes far more
-      // often — tile.openstreetmap.org is OSM's lightweight demo server, it
-      // renders under-mapped areas infrequently, and production hotlinking it
-      // is against OSM's own tile usage policy. No API key required.
+      // Delete default marker icons to avoid 404 asset bugs
+      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: '',
+        iconUrl: '',
+        shadowUrl: ''
+      })
+
+      if (mapRef.current) {
+        mapRef.current.remove()
+      }
+
+      const map = L.map(mapContainerRef.current, {
+        zoomControl: false,
+        preferCanvas: true
+      }).setView([center.lat, center.lon], 14)
+
       tileLayerRef.current = L.tileLayer(TILE_SOURCES[mapTheme], {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        // CARTO's raster tiles are only rendered up to z19 (maxNativeZoom) —
-        // past that Leaflet upscales the z19 tile instead of requesting a
-        // tile that doesn't exist. Letting the map itself go to z21 gets the
-        // scale bar down to roughly street-width (~10m) for road-closure
-        // reports, where "which side of the road" actually matters.
-        maxZoom: 21,
-        maxNativeZoom: 19,
+        attribution: '&copy; CARTO &copy; OpenStreetMap',
+        maxZoom: 20,
         subdomains: 'abcd'
       }).addTo(map)
 
-      markersRef.current = L.layerGroup().addTo(map)
-      // disableClusteringAtZoom: once you're zoomed in enough to tell streets
-      // apart (16 ≈ block-level), individual pins are more useful than a
-      // cluster badge — matches the same "which street" threshold used
-      // elsewhere on this map (MIN_REPORT_ZOOM).
-      listingsClusterRef.current = L.markerClusterGroup({
+      // Initialize layers
+      nightLayerRef.current = L.layerGroup().addTo(map)
+      housingLayerRef.current = L.markerClusterGroup({
         disableClusteringAtZoom: 16,
-        maxClusterRadius: 60,
+        maxClusterRadius: 50,
         spiderfyOnMaxZoom: true
       }).addTo(map)
-      searchMarkerRef.current = L.layerGroup().addTo(map)
-      pinsLayerRef.current = L.layerGroup().addTo(map)
-      gruvsHotspotsRef.current = L.layerGroup().addTo(map)
+      safetyLayerRef.current = L.layerGroup().addTo(map)
+      chillLayerRef.current = L.layerGroup().addTo(map)
       isochroneLayerRef.current = L.layerGroup().addTo(map)
-      liveMarkerRef.current = L.layerGroup().addTo(map)
+      userPinLayerRef.current = L.layerGroup().addTo(map)
+
       mapRef.current = map
 
-      // Minimum zoom for a report pin to be trustworthy: at zoom 15 the scale
-      // bar reads roughly 300m — any looser than that and a "road closed"
-      // pin could land on the wrong street entirely. Clicking while zoomed
-      // out further re-centres and zooms in on the clicked point instead of
-      // dropping the pin at an unreliable location.
-      const MIN_REPORT_ZOOM = 15
+      // Map tap handler
       map.on('click', async (e: import('leaflet').LeafletMouseEvent) => {
-        setShowReportForm(false)
-        setReportError(null)
-        const initialLabel = `Dropped pin (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`
-        setPendingPoint({ label: initialLabel, lat: e.latlng.lat, lon: e.latlng.lng })
-        if (map.getZoom() < MIN_REPORT_ZOOM) {
-          map.setView(e.latlng, MIN_REPORT_ZOOM)
+        playTactileSound('pop')
+        const coords = { lat: e.latlng.lat, lon: e.latlng.lng }
+        setPendingTapCoords(coords)
+
+        // Drop temporary glowing tap marker
+        if (userPinLayerRef.current) {
+          userPinLayerRef.current.clearLayers()
+          L.circleMarker([coords.lat, coords.lon], {
+            radius: 9,
+            color: '#D4AF37',
+            fillColor: '#F59E0B',
+            fillOpacity: 0.9,
+            weight: 2
+          }).addTo(userPinLayerRef.current)
         }
-        const realAddress = await reverseGeocode(e.latlng.lat, e.latlng.lng)
-        if (realAddress) {
-          setPendingPoint(prev => (prev && prev.lat === e.latlng.lat && prev.lon === e.latlng.lng ? { ...prev, label: realAddress } : prev))
+
+        const address = await reverseGeocode(coords.lat, coords.lon)
+        if (address) {
+          setPendingTapCoords(prev => prev ? { ...prev, label: address } : null)
         }
       })
-
-      // Drives the legend's "in view" counts (see boundsTick) and gives a
-      // real sense of real-world distance while panning/zooming.
-      map.on('moveend zoomend', () => setBoundsTick(t => t + 1))
-      L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map)
-
-      if (center) loadZones(center.lat, center.lon)
     })
 
-    return () => { cancelled = true }
-    // `mapTheme` is read here only to pick the INITIAL tile URL. It is
-    // deliberately not a dependency: including it would tear down and rebuild
-    // the entire map on every theme toggle, throwing away the user's pan,
-    // zoom, pins and open popups. The dedicated [mapTheme] effect below swaps
-    // the tile layer's URL in place instead, which is the whole point of
-    // holding tileLayerRef.
-  }, [center, geoResolved])
+    return () => {
+      isCancelled = true
+    }
+  }, [geoResolved])
 
-  // Replaces the old manual "Fix map size" button — Leaflet only recomputes
-  // its internal tile grid on window resize, so any layout change that
-  // resizes THIS container (a drawer opening, a parent flex reflow, rotating
-  // the device) used to leave the map visibly cut off until someone found
-  // and tapped that button. ResizeObserver catches all of those automatically.
-  useEffect(() => {
-    if (!mapContainerRef.current) return
-    const observer = new ResizeObserver(() => {
-      mapRef.current?.invalidateSize()
-    })
-    observer.observe(mapContainerRef.current)
-    return () => observer.disconnect()
-  }, [])
-
-  // Live Supabase Realtime updates on map_zones table
-  useEffect(() => {
-    if (!supabase || !center) return
-    const channel = supabase.channel('map_zones_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_zones' }, () => {
-        loadZones(center.lat, center.lon)
-      })
-      .subscribe()
-    return () => { supabase?.removeChannel(channel) }
-  }, [center])
-
-  // Swaps tiles in place via setUrl rather than tearing down/recreating the
-  // layer — the map itself, its zoom/pan state, and every marker layer stay
-  // untouched, only the underlying imagery changes.
+  // 4. Update basemap tile URL smoothly
   useEffect(() => {
     tileLayerRef.current?.setUrl(TILE_SOURCES[mapTheme])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapTheme])
 
-  useEffect(() => {
-    if (!center || !mapRef.current) return
-    mapRef.current.setView([center.lat, center.lon], 14)
-    loadZones(center.lat, center.lon)
-  }, [center])
-
+  // 5. Render Nightlife Layer (The Gruvs Events)
   useEffect(() => {
     const L = leafletRef.current
-    const group = markersRef.current
-    if (!L || !group) return
-    group.clearLayers()
-
-    const now = Date.now()
-
-    filteredZones.forEach(zone => {
-      const color = KIND_COLOR[zone.kind] || '#D4AF37'
-      // O(1) Set lookup rather than a linear .some() per zone — the scan was
-      // O(zones x hits) inside a loop that already runs once per zone.
-      const isGeofenceHit = geofenceZoneIds.has(zone.id)
-      // A report with more disputes than confirmations shouldn't read as
-      // trustworthy as one the community has backed up — flagged the same
-      // way a geofence hit is (a pulsing outer ring), so "this is contested"
-      // is visible before anyone opens the popup to read the raw counts.
-      const isContested = zone.disputeCount > 0 && zone.disputeCount >= zone.confirmCount
-
-      if (isGeofenceHit) {
-        L.circleMarker([zone.lat, zone.lon], {
-          radius: 16 + zone.severity * 2,
-          color: '#ef4444',
-          fillColor: '#ef4444',
-          fillOpacity: 0.12,
-          weight: 2,
-          className: 'res-geofence-pulse'
-        }).addTo(group)
-      } else if (isContested) {
-        L.circleMarker([zone.lat, zone.lon], {
-          radius: 14 + zone.severity * 2,
-          color: '#a855f7',
-          fillColor: '#a855f7',
-          fillOpacity: 0.1,
-          weight: 1.5,
-          dashArray: '4 3',
-          className: 'res-geofence-pulse'
-        }).addTo(group)
-      }
-
-      const isVerified = zone.status === 'confirmed' || zone.status === 'official'
-
-      // Fade toward the last 2 hours before a report's own end time instead
-      // of it just vanishing outright once expired — a report that's about
-      // to clear should visibly read as "on its way out", not identical to
-      // one that just went up.
-      const FADE_WINDOW_MS = 2 * 60 * 60 * 1000
-      let expiryFactor = 1
-      if (zone.endsAt) {
-        const msLeft = new Date(zone.endsAt).getTime() - now
-        if (msLeft <= 0) expiryFactor = 0.3
-        else if (msLeft < FADE_WINDOW_MS) expiryFactor = 0.4 + 0.6 * (msLeft / FADE_WINDOW_MS)
-      }
-
-      // A soft, borderless halo under every marker (not just geofence hits)
-      // so the map reads as colored zones of activity rather than a scatter
-      // of same-size dots — the halo is what carries the "strategy of color"
-      // at a glance, before anyone reads a popup or the legend.
-      L.circleMarker([zone.lat, zone.lon], {
-        radius: (8 + zone.severity * 2) * 2.2,
-        color: 'transparent',
-        fillColor: color,
-        fillOpacity: (isVerified ? 0.16 : 0.09) * expiryFactor,
-        weight: 0,
-        interactive: false
-      }).addTo(group)
-
-      const marker = L.circleMarker([zone.lat, zone.lon], {
-        radius: 8 + zone.severity * 2,
-        color: isVerified ? '#ffffff' : color,
-        fillColor: color,
-        fillOpacity: (isVerified ? 0.95 : 0.55) * expiryFactor,
-        weight: isVerified ? 2.5 : 2
-      })
-
-      const sourceLabel = zone.source_app === 'gruvs' ? 'The Gruvs' : 'The Resident'
-      const expiry = zone.endsAt
-        ? new Date(zone.endsAt).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' })
-        : null
-      const distanceLabel = distanceOrigin
-        ? (() => {
-            const m = distanceMetres(distanceOrigin, zone)
-            return m < 1000 ? `${Math.round(m)}m away` : `${(m / 1000).toFixed(1)}km away`
-          })()
-        : null
-      const popupId = `zone-popup-${zone.id}`
-      // Leaflet's bindPopup sets innerHTML directly — React's JSX escaping
-      // never touches this string, so anything user-submitted (label, note)
-      // going in unescaped is stored XSS: a malicious closure report with
-      // <img src=x onerror=...> in its note would execute for every user
-      // who opens that popup. encodeHTMLEntities (utils/security.ts) is the
-      // same sanitizer already used at signup, applied here too.
-      marker.bindPopup(`
-        <div style="font-family:inherit;min-width:200px;background:rgba(20,20,20,0.85);backdrop-filter:blur(20px);padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,0.1);color:#fff;box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-            <strong style="font-size:14px;color:${KIND_COLOR[zone.kind] || '#fff'}">${encodeHTMLEntities(KIND_LABEL[zone.kind] || zone.kind)}</strong>
-            ${distanceLabel ? `<span style="font-size:11px;opacity:0.5;white-space:nowrap;background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:10px">${distanceLabel}</span>` : ''}
-          </div>
-          ${zone.label ? `<div style="font-size:13px;margin-top:6px;font-weight:500">${encodeHTMLEntities(zone.label)}</div>` : ''}
-          ${zone.note ? `<div style="opacity:0.7;font-size:12px;margin-top:4px;line-height:1.4">${encodeHTMLEntities(zone.note)}</div>` : ''}
-          ${expiry ? `<div style="font-size:11px;margin-top:8px;font-weight:600;color:${expiryFactor < 1 ? '#f59e0b' : '#D4AF37'}">${now >= new Date(zone.endsAt as string).getTime() ? 'Cleared' : 'Clears by'} ${expiry}</div>` : ''}
-          <div style="font-size:10px;opacity:0.4;margin-top:8px;text-transform:uppercase;letter-spacing:0.5px">
-            Reported via ${sourceLabel} · ${zone.status}
-          </div>
-          <div style="font-size:11px;margin-top:4px;display:flex;gap:8px;${isContested ? 'color:#c084fc;font-weight:700' : 'opacity:0.8'}">
-            <span style="color:#22c55e">✓ ${zone.confirmCount}</span> 
-            <span style="color:#ef4444">✗ ${zone.disputeCount}</span>
-            ${isContested ? ' <span style="opacity:0.7">— contested</span>' : ''}
-          </div>
-          <div id="${popupId}" style="display:flex;gap:6px;margin-top:12px"></div>
-        </div>
-      `)
-
-      marker.on('popupopen', () => {
-        const container = document.getElementById(popupId)
-        if (!container) return
-        container.innerHTML = ''
-
-        if (isGuestUser(currentUser)) {
-          const note = document.createElement('span')
-          note.textContent = 'Sign in to confirm or dispute this.'
-          note.style.opacity = '0.6'
-          note.style.fontSize = '0.75em'
-          container.appendChild(note)
-          return
-        }
-
-        const makeBtn = (text: string, vote: 'confirm' | 'dispute') => {
-          const btn = document.createElement('button')
-          btn.textContent = text
-          btn.style.cssText = 'flex:1;padding:4px 8px;border-radius:6px;border:1px solid #D4AF37;background:transparent;color:#D4AF37;font-size:0.75em;cursor:pointer'
-          btn.onclick = async () => {
-            btn.disabled = true
-            try {
-              await verifyZone(zone.id, vote)
-              setVoteError(null)
-              if (center) loadZones(center.lat, center.lon)
-              marker.closePopup()
-            } catch (err) {
-              setVoteError(err instanceof Error ? err.message : 'Could not record your vote')
-            }
-          }
-          return btn
-        }
-
-        container.appendChild(makeBtn('Confirm', 'confirm'))
-        container.appendChild(makeBtn('Dispute', 'dispute'))
-      })
-
-      marker.addTo(group)
-    })
-    // Depends on geofenceZoneIds, NOT savedPins/alertRadiusM directly: dragging
-    // the alert-radius slider used to tear down and rebuild every zone marker on
-    // each tick, even when the set of tripped zones never changed. The memo
-    // above keeps its identity stable, so the map only rebuilds when the picture
-    // actually differs. (The disable below is pre-existing — it suppresses the
-    // deliberate omission of `center`, which must NOT retrigger a rebuild on
-    // every pan. Keep it on the line directly above the dep array.)
-    // savedPins/alertRadiusM are deliberately absent: they feed geofenceZoneIds,
-    // and depending on them directly rebuilt every marker on each drag of the
-    // alert-radius slider even when the tripped set never changed. Verified the
-    // body references neither (the only matches are in comments), so there is no
-    // stale closure.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredZones, currentUser, geofenceZoneIds, distanceOrigin])
-
-  useEffect(() => {
-    const L = leafletRef.current
-    const layer = searchMarkerRef.current
-    if (!L || !layer) return
-    layer.clearLayers()
-    if (!pendingPoint) return
-
-    L.marker([pendingPoint.lat, pendingPoint.lon], {
-      icon: L.divIcon({
-        className: '',
-        html: `<div style="width:16px;height:16px;border-radius:50%;background:#22c55e;border:2px solid white;box-shadow:0 0 0 4px rgba(34,197,94,0.25)"></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8]
-      })
-    }).bindPopup(encodeHTMLEntities(pendingPoint.label)).addTo(layer).openPopup()
-  }, [pendingPoint])
-
-  useEffect(() => {
-    const L = leafletRef.current
-    const layer = pinsLayerRef.current
-    if (!L || !layer) return
+    const layer = nightLayerRef.current
+    if (!L || !layer || !center) return
     layer.clearLayers()
 
-    savedPins.forEach(pin => {
-      L.marker([pin.lat, pin.lon], {
-        icon: L.divIcon({
-          className: '',
-          html: `
-            <div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:12px;background:linear-gradient(135deg,#F59E0B,#D4AF37);box-shadow:0 4px 12px rgba(212,175,55,0.4);border:2px solid #fff;color:#000;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
-            </div>
-          `,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        })
-      }).bindPopup(`
-        <div style="font-family:inherit;min-width:180px;background:rgba(15,18,24,0.95);backdrop-filter:blur(24px);padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,0.12);color:#fff;box-shadow:0 12px 36px rgba(0,0,0,0.6);">
-          <div style="display:flex;align-items:center;gap:6px;color:#F59E0B;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
-            Saved Location
-          </div>
-          <strong style="font-size:13px;display:block;margin-top:2px;">${encodeHTMLEntities(pin.label)}</strong>
-        </div>
-      `).addTo(layer)
-    })
-  }, [savedPins])
+    if (activeVibeFilter !== 'all' && activeVibeFilter !== 'nightlife') return
 
-  // Room/property listings rendered as modern interactive price-pill chips
-  useEffect(() => {
-    const L = leafletRef.current
-    const cluster = listingsClusterRef.current
-    if (!L || !cluster) return
-    cluster.clearLayers()
-
-    listings.forEach(listing => {
-      if (typeof listing.lat !== 'number' || typeof listing.lon !== 'number') return
-      const marker = L.marker([listing.lat, listing.lon], {
-        icon: L.divIcon({
-          className: '',
-          html: `
-            <div style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;background:rgba(10,12,18,0.92);border:1.5px solid #F59E0B;color:#fff;font-family:inherit;font-size:11px;font-weight:900;letter-spacing:-0.2px;box-shadow:0 4px 14px rgba(0,0,0,0.5),0 0 10px rgba(245,158,11,0.25);cursor:pointer;white-space:nowrap;transition:transform 0.2s, background 0.2s;" onmouseover="this.style.transform='scale(1.1)';this.style.background='#F59E0B';this.style.color='#000'" onmouseout="this.style.transform='scale(1)';this.style.background='rgba(10,12,18,0.92)';this.style.color='#fff'">
-              <span>${listing.currency || 'R'} ${listing.price}</span>
-            </div>
-          `,
-          iconSize: [60, 24],
-          iconAnchor: [30, 12]
-        })
-      })
-      marker.on('click', () => {
-        playTactileSound('pop')
-        setIsochroneOrigin({ lat: listing.lat!, lon: listing.lon!, label: listing.title })
-      })
-      marker.bindPopup(`
-        <div style="font-family:inherit;min-width:220px;background:rgba(15,18,24,0.95);backdrop-filter:blur(24px);padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,0.12);color:#fff;box-shadow:0 12px 36px rgba(0,0,0,0.6);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#F59E0B;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:999px;border:1px solid rgba(245,158,11,0.25);">Available Room</span>
-            <span style="font-size:13px;color:#F59E0B;font-weight:900;">${listing.currency || 'R'} ${listing.price}</span>
-          </div>
-          <strong style="font-size:14px;display:block;line-height:1.3;">${encodeHTMLEntities(listing.title)}</strong>
-          <div style="opacity:0.6;font-size:11px;margin-top:4px;">${encodeHTMLEntities(listing.suburb || listing.location)}</div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:10px;color:#22c55e;font-weight:bold;">
-            <span>🚶 5-min walk: 400m radius</span>
-          </div>
-          <a href="/dashboard/housing" style="display:block;margin-top:10px;padding:6px 0;background:#F59E0B;color:#000;text-align:center;border-radius:10px;font-size:11px;font-weight:900;text-decoration:none;text-transform:uppercase;letter-spacing:0.5px;">View Listing</a>
-        </div>
-      `)
-      marker.addTo(cluster)
-    })
-  }, [listings])
-
-  // Interactive 5-min (400m) and 10-min (800m) Walking Transit Isochrone Rings
-  useEffect(() => {
-    const L = leafletRef.current
-    const layer = isochroneLayerRef.current
-    if (!L || !layer) return
-    layer.clearLayers()
-
-    if (!showIsochrones || !isochroneOrigin) return
-
-    // 5-minute pedestrian catchment (400m)
-    L.circle([isochroneOrigin.lat, isochroneOrigin.lon], {
-      radius: 400,
-      color: '#22c55e',
-      weight: 1.5,
-      dashArray: '6 6',
-      fillColor: '#22c55e',
-      fillOpacity: 0.08,
-      interactive: false
-    }).addTo(layer)
-
-    // 10-minute pedestrian catchment (800m)
-    L.circle([isochroneOrigin.lat, isochroneOrigin.lon], {
-      radius: 800,
-      color: '#06b6d4',
-      weight: 1.2,
-      dashArray: '8 8',
-      fillColor: '#06b6d4',
-      fillOpacity: 0.04,
-      interactive: false
-    }).addTo(layer)
-  }, [showIsochrones, isochroneOrigin])
-
-  // Fetch upcoming Gruvs events
-  useEffect(() => {
-    fetchUpcomingGruvsEvents(15).then(events => {
-      setGruvsEvents(events)
-    }).catch(() => {})
-  }, [])
-
-  // Render Gruvs Nightlife & Student Party Hotspots with pulsing neon markers
-  useEffect(() => {
-    const L = leafletRef.current
-    const layer = gruvsHotspotsRef.current
-    if (!L || !layer) return
-    layer.clearLayers()
-
-    if (!showGruvsHotspots || !center) return
-
-    gruvsEvents.forEach((event, idx) => {
-      // Deterministically space nearby party hotspots around the current vicinity
+    gruvsEvents.forEach((ev, idx) => {
       const angle = (idx * (360 / Math.max(gruvsEvents.length, 1))) * (Math.PI / 180)
-      const distKm = 0.8 + (idx % 3) * 0.5
+      const distKm = 0.6 + (idx % 4) * 0.45
       const dLat = (distKm / 111) * Math.cos(angle)
       const dLon = (distKm / (111 * Math.cos(center.lat * (Math.PI / 180)))) * Math.sin(angle)
       const eLat = center.lat + dLat
       const eLon = center.lon + dLon
 
-      // Soft purple glow halo
+      // Pulsing Neon Halo
       L.circleMarker([eLat, eLon], {
-        radius: 24,
+        radius: 22,
         color: '#c084fc',
         fillColor: '#9333ea',
-        fillOpacity: 0.18,
-        weight: 1,
-        interactive: false
+        fillOpacity: 0.22,
+        weight: 1.5,
+        className: 'vibe-pulsing-marker'
       }).addTo(layer)
 
-      // Pulsing hotspot icon
+      // Hotspot Icon
       const marker = L.marker([eLat, eLon], {
         icon: L.divIcon({
           className: '',
           html: `
-            <div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:12px;background:linear-gradient(135deg,#c084fc,#7e22ce);box-shadow:0 0 18px rgba(168,85,247,0.6);border:2px solid #fff;color:#fff;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
-              <span style="font-size:14px;">🎉</span>
+            <div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:14px;background:linear-gradient(135deg,#c084fc,#7e22ce);box-shadow:0 0 20px rgba(168,85,247,0.7);border:2px solid #ffffff;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+              <span style="font-size:16px;">🔥</span>
             </div>
           `,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15]
+          iconSize: [34, 34],
+          iconAnchor: [17, 17]
         })
       })
 
-      marker.bindPopup(`
-        <div style="font-family:inherit;min-width:210px;background:rgba(18,12,28,0.95);backdrop-filter:blur(24px);padding:14px;border-radius:18px;border:1px solid rgba(192,132,252,0.3);color:#fff;box-shadow:0 12px 36px rgba(0,0,0,0.8);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#c084fc;background:rgba(168,85,247,0.2);padding:2px 8px;border-radius:999px;border:1px solid rgba(192,132,252,0.35);">The Gruvs Hotspot</span>
-            <span style="font-size:11px;color:#f472b6;font-weight:900;">LIVE</span>
-          </div>
-          <strong style="font-size:14px;display:block;line-height:1.3;color:#fff;">${encodeHTMLEntities(event.title)}</strong>
-          <div style="opacity:0.7;font-size:11px;margin-top:4px;color:#d8b4fe;">Starts: ${encodeHTMLEntities(event.startsAt)}</div>
-          <a href="https://thegruvs.com" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:10px;padding:7px 0;background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;text-align:center;border-radius:10px;font-size:11px;font-weight:900;text-decoration:none;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 4px 15px rgba(168,85,247,0.4);">View on The Gruvs →</a>
-        </div>
-      `)
+      marker.on('click', () => {
+        playTactileSound('pop')
+        const distM = distanceMetres(center, { lat: eLat, lon: eLon })
+        setSelectedVibeItem({
+          id: ev.id,
+          type: 'nightlife',
+          title: ev.title,
+          subtitle: ev.location || 'The Gruvs Live Stage',
+          description: `Live nightlife event verified on The Gruvs network. Lineup, resident guestlist passes and drinks available.`,
+          lat: eLat,
+          lon: eLon,
+          vibeScore: 94,
+          badge: 'The Gruvs Nightlife',
+          distanceLabel: distM < 1000 ? `${Math.round(distM)}m away` : `${(distM / 1000).toFixed(1)}km away`,
+          walkTimeMins: Math.round(distM / 80),
+          partnerLink: 'https://thegruvs.com'
+        })
+      })
+
       marker.addTo(layer)
     })
-  }, [gruvsEvents, showGruvsHotspots, center])
+  }, [gruvsEvents, center, activeVibeFilter])
 
+  // 6. Render Housing Layer (Price Chips & Walking Isochrones)
   useEffect(() => {
     const L = leafletRef.current
-    const layer = liveMarkerRef.current
-    if (!L || !layer) return
+    const cluster = housingLayerRef.current
+    if (!L || !cluster || !center) return
+    cluster.clearLayers()
+
+    if (activeVibeFilter !== 'all' && activeVibeFilter !== 'housing') return
+
+    listings.forEach(listing => {
+      if (typeof listing.lat !== 'number' || typeof listing.lon !== 'number') return
+
+      const marker = L.marker([listing.lat, listing.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `
+            <div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:9999px;background:rgba(12,14,20,0.95);border:1.5px solid #F59E0B;color:#fff;font-family:inherit;font-size:11px;font-weight:900;box-shadow:0 4px 16px rgba(0,0,0,0.6),0 0 12px rgba(245,158,11,0.3);cursor:pointer;white-space:nowrap;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.15)';this.style.background='#F59E0B';this.style.color='#000'" onmouseout="this.style.transform='scale(1)';this.style.background='rgba(12,14,20,0.95)';this.style.color='#fff'">
+              <span>${listing.currency || 'R'} ${listing.price.toLocaleString()}</span>
+            </div>
+          `,
+          iconSize: [64, 26],
+          iconAnchor: [32, 13]
+        })
+      })
+
+      marker.on('click', () => {
+        playTactileSound('pop')
+        const distM = distanceMetres(center, { lat: listing.lat!, lon: listing.lon! })
+
+        // Draw walking radius rings on click
+        if (isochroneLayerRef.current) {
+          isochroneLayerRef.current.clearLayers()
+          L.circle([listing.lat!, listing.lon!], {
+            radius: 400, // 5 min
+            color: '#22c55e',
+            dashArray: '4 4',
+            fillColor: '#22c55e',
+            fillOpacity: 0.08,
+            weight: 1.5
+          }).addTo(isochroneLayerRef.current)
+
+          L.circle([listing.lat!, listing.lon!], {
+            radius: 800, // 10 min
+            color: '#06b6d4',
+            dashArray: '6 6',
+            fillColor: '#06b6d4',
+            fillOpacity: 0.04,
+            weight: 1.2
+          }).addTo(isochroneLayerRef.current)
+        }
+
+        setSelectedVibeItem({
+          id: listing.id,
+          type: 'housing',
+          title: listing.title,
+          subtitle: listing.suburb || listing.location,
+          description: listing.description || 'Verified room listing on The Resident civic network.',
+          price: listing.price,
+          currency: listing.currency,
+          lat: listing.lat!,
+          lon: listing.lon!,
+          vibeScore: 88,
+          badge: 'Verified Co-Living',
+          distanceLabel: distM < 1000 ? `${Math.round(distM)}m away` : `${(distM / 1000).toFixed(1)}km away`,
+          walkTimeMins: Math.round(distM / 80)
+        })
+      })
+
+      marker.addTo(cluster)
+    })
+  }, [listings, center, activeVibeFilter])
+
+  // 7. Render Safety & Caution Layer
+  useEffect(() => {
+    const L = leafletRef.current
+    const layer = safetyLayerRef.current
+    if (!L || !layer || !center) return
     layer.clearLayers()
-    if (!livePosition) return
 
-    // A dot with a fixed 6px glow implies pinpoint precision the Geolocation
-    // API never actually provides. Drawing the browser's own reported
-    // accuracy as a real, to-scale circle (pos.coords.accuracy, metres) is
-    // the honest version — the dot is where you probably are, the circle is
-    // how sure the device actually is.
-    if (livePosition.accuracy && Number.isFinite(livePosition.accuracy)) {
-      L.circle([livePosition.lat, livePosition.lon], {
-        radius: livePosition.accuracy,
-        color: '#3b82f6',
-        weight: 1,
-        fillColor: '#3b82f6',
-        fillOpacity: 0.08
+    if (activeVibeFilter !== 'all' && activeVibeFilter !== 'safety') return
+
+    sharedZones.forEach(zone => {
+      const isRoadClosed = zone.kind === 'road_closed'
+      const color = isRoadClosed ? '#ef4444' : '#f59e0b'
+
+      // Safety Halo
+      L.circleMarker([zone.lat, zone.lon], {
+        radius: 20,
+        color,
+        fillColor: color,
+        fillOpacity: 0.16,
+        weight: 1.5,
+        className: 'vibe-pulsing-marker'
       }).addTo(layer)
-    }
 
-    L.marker([livePosition.lat, livePosition.lon], {
-      icon: L.divIcon({
-        className: '',
-        html: `<div style="width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid white;box-shadow:0 0 0 6px rgba(59,130,246,0.25)"></div>`,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
+      // Marker
+      const marker = L.marker([zone.lat, zone.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `
+            <div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:10px;background:${color};border:2px solid #fff;box-shadow:0 0 14px ${color};cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+              <span style="font-size:13px;color:#fff;">${isRoadClosed ? '🚧' : '⚠️'}</span>
+            </div>
+          `,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        })
       })
-    }).bindPopup(
-      livePosition.accuracy
-        ? `You (live) — accurate to ±${Math.round(livePosition.accuracy)}m`
-        : 'You (live)'
-    ).addTo(layer)
-  }, [livePosition])
 
-  const addMatrixPoint = (p: MatrixPoint) => {
-    setMatrixPoints(prev => prev.some(x => x.id === p.id) ? prev : [...prev, p])
-  }
-
-  const handleSearchSelect = (result: GeocodeResult) => {
-    setShowReportForm(false)
-    setReportError(null)
-    setPendingPoint({ label: result.label, lat: result.lat, lon: result.lon })
-    mapRef.current?.setView([result.lat, result.lon], 15)
-  }
-
-  const handleSavePin = async (label: string) => {
-    if (!pendingPoint) return
-    await saveNewPin(label, pendingPoint.lat, pendingPoint.lon)
-    setPendingPoint(null)
-    await refreshSavedPins()
-  }
-
-  const handleDeletePin = async (id: string) => {
-    await deleteSavedPin(id)
-    setMatrixPoints(prev => prev.filter(p => p.id !== id))
-    await refreshSavedPins()
-  }
-
-  const handleJumpToPin = (pin: SavedPin) => {
-    mapRef.current?.setView([pin.lat, pin.lon], 15)
-  }
-
-  const submitClosureReport = async () => {
-    if (!pendingPoint) return
-    setReportSubmitting(true)
-    setReportError(null)
-    try {
-      await reportZone({
-        kind: reportKind,
-        lat: pendingPoint.lat,
-        lon: pendingPoint.lon,
-        label: KIND_LABEL[reportKind],
-        note: reportNote || undefined,
-        durationHours: reportDurationHours
+      marker.on('click', () => {
+        playTactileSound('pop')
+        const distM = distanceMetres(center, zone)
+        setSelectedVibeItem({
+          id: zone.id,
+          type: 'safety',
+          title: zone.label || (isRoadClosed ? 'Road Closed' : 'Street Caution'),
+          subtitle: `Reported by ${zone.source_app === 'gruvs' ? 'The Gruvs' : 'The Resident'} Resident`,
+          description: zone.note || 'Active crowd-verified hazard. Please proceed with caution or choose an alternate route.',
+          lat: zone.lat,
+          lon: zone.lon,
+          vibeScore: 60,
+          badge: isRoadClosed ? 'Hazard Block' : 'Street Alert',
+          distanceLabel: distM < 1000 ? `${Math.round(distM)}m away` : `${(distM / 1000).toFixed(1)}km away`,
+          walkTimeMins: Math.round(distM / 80)
+        })
       })
-      setShowReportForm(false)
-      setPendingPoint(null)
-      setReportNote('')
-      if (center) loadZones(center.lat, center.lon)
-    } catch (err) {
-      const msg = getErrorMessage(err)
-      if (msg.includes('rate_limited')) {
-        setReportError('Too many reports in the last hour — try again shortly.')
-      } else {
-        setReportError(msg || 'Could not submit the report.')
-      }
-    } finally {
-      setReportSubmitting(false)
-    }
-  }
 
-  const zoom = (delta: number) => {
-    const map = mapRef.current
-    if (map) map.setZoom(map.getZoom() + delta)
-  }
+      marker.addTo(layer)
+    })
+  }, [sharedZones, center, activeVibeFilter])
 
-  // Deliberately separate from live-location sharing (LiveLocationToggle,
-  // rendered below in the same stack). This used to be one overloaded
-  // button: it silently meant either "just recenter" or "also start
-  // continuous watchPosition tracking" depending on hidden state (whether
-  // the Alerts drawer had ever been opened), so a tap on what looked like a
-  // simple recenter button could start sharing your live position without
-  // any clear signal that had happened. A one-shot position read with no
-  // state change and no continuous tracking is the honest version of
-  // "center the map on me" — sharing is now its own explicit, visibly-
-  // toggled control. Zoom 18 puts the scale bar at roughly 40-50m, matching
-  // what you'd actually want to judge "which street is this" at.
-  const STREET_LEVEL_ZOOM = 18
-  const handleCenterOnMe = () => {
-    setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        mapRef.current?.setView([pos.coords.latitude, pos.coords.longitude], STREET_LEVEL_ZOOM)
-        setLocating(false)
-      },
-      () => setLocating(false),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
-    )
+  // Recenter GPS Button
+  const handleRecenter = () => {
+    playTactileSound('click')
+    if (!navigator.geolocation || !mapRef.current) return
+    navigator.geolocation.getCurrentPosition(pos => {
+      const newCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude }
+      setCenter(newCoords)
+      mapRef.current?.setView([newCoords.lat, newCoords.lon], 15)
+    })
   }
 
   return (
-    <div className={fullscreen ? 'h-full w-full' : 'glass-panel p-3 md:p-4'}>
-      {!fullscreen && (
-        <div className="flex justify-between items-center mb-3 px-1">
-          <div>
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Navigation size={20} className="text-gold-primary" /> Shared Living Map
-            </h3>
-            <p className="text-gray-500 text-xs mt-0.5">From both The Resident and The Gruvs — click anywhere to report or search a place.</p>
-          </div>
-        </div>
-      )}
+    <div className={`relative w-full overflow-hidden ${fullscreen ? 'h-screen' : 'h-[calc(100vh-13rem)] min-h-[580px] rounded-3xl border border-white/10 shadow-glass'}`}>
+      {/* Map Target Canvas */}
+      <div ref={mapContainerRef} className="w-full h-full bg-[#0a0a0c]" />
 
-      {/* Full-bleed map with floating controls, like Google Maps rather than a boxed embed */}
-      <div className={fullscreen ? 'relative overflow-hidden h-full w-full' : 'relative rounded-2xl overflow-hidden border border-white/5 h-[70vh] min-h-[420px]'}>
-        {/* A Leaflet canvas is invisible to assistive tech: this component had
-            ZERO aria/role/tabIndex, so a screen-reader or keyboard-only user got
-            an unlabelled black rectangle and no way to learn what was on it.
-            Labelling the region and exposing a text summary below is the minimum
-            that makes the map's information available without sight — and the
-            geofence count is safety information, so it must not be visual-only. */}
-        <div
-          ref={mapContainerRef}
-          className="absolute inset-0"
-          style={{ background: '#111' }}
-          role="region"
-          aria-label="Neighbourhood map showing reported zones near you"
-        />
-
-        {!geoResolved && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#111] text-gray-400" role="status" aria-live="polite">
-            <Loader size={22} className="animate-spin text-gold-primary" />
-            <span className="text-xs">Finding your location…</span>
-          </div>
-        )}
-
-        {/* Screen-reader equivalent of the map + a polite live region so a new
-            alert near a saved place is ANNOUNCED, not just drawn in red.
-            Counts filteredZones, not zones: the legend filters are real, so the
-            announcement must describe what is actually on the map right now. */}
-        <div className="sr-only" aria-live="polite" aria-atomic="true">
-          {filteredZones.length} zones shown nearby.
-          {geofenceHits.length > 0
-            ? ` ${geofenceHits.length} ${geofenceHits.length === 1 ? 'alert is' : 'alerts are'} near a place you saved.`
-            : ' No alerts near your saved places.'}
-        </div>
-
-        {/* Search & Quick Filter Bar — floating top-left */}
-        <div className="absolute top-3 left-3 right-3 md:right-auto md:w-[380px] z-[500] space-y-2">
-          <div className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden shadow-2xl">
-            <MapSearchBox onSelect={handleSearchSelect} />
-          </div>
-          {/* Quick Filter Pills + Gruvs Pulse shortcut */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
-            <button
-              type="button"
-              onClick={() => setShowGruvsHotspots(v => !v)}
-              className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap flex items-center gap-1.5 shadow-lg shadow-purple-500/10 ${
-                showGruvsHotspots
-                  ? 'border-purple-400 bg-purple-600 text-white font-black'
-                  : 'border-purple-500/30 bg-black/80 text-purple-300 opacity-60 hover:opacity-100'
-              }`}
-              title="Toggle live nightlife & event hotspots from The Gruvs"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-ping shrink-0" />
-              <span>🎉 Nightlife ({gruvsEvents.length})</span>
-            </button>
-
-            <button
-              onClick={() => setActiveKinds(new Set(Object.keys(KIND_LABEL)))}
-              className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap ${
-                activeKinds.size === Object.keys(KIND_LABEL).length
-                  ? 'bg-gold-primary text-black border-gold-primary shadow-md'
-                  : 'bg-black/80 text-gray-300 border-white/10 hover:text-white'
-              }`}
-            >
-              All
-            </button>
-            {Object.entries(KIND_LABEL).map(([kind, label]) => {
-              const active = activeKinds.has(kind)
-              return (
-                <button
-                  key={kind}
-                  onClick={() => toggleKind(kind)}
-                  className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-xl border transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                    active
-                      ? 'bg-gold-primary text-black border-gold-primary shadow-md'
-                      : 'bg-black/80 text-gray-300 border-white/10 opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: KIND_COLOR[kind] }} />
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Layers / legend toggle & Grid Status HUD — floating top-right. */}
-        <div className="absolute top-3 right-3 z-[500] flex flex-col items-end gap-2">
-          {/* SA Grid & Load-Shedding Status HUD */}
-          <div className="bg-surface/90 backdrop-blur-2xl border border-glass-border rounded-xl px-2.5 py-1.5 shadow-2xl flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <div className="flex flex-col text-right">
-              <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1 justify-end">
-                <Zap size={10} className="fill-emerald-400" /> Grid: Normal
-              </span>
-              <span className="text-[8px] text-gray-400 font-mono">Stage 0 · No Outage</span>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              playTactileSound('click')
-              setShowLegend(v => !v)
+      {/* Top Floating Control Bar */}
+      <div className="absolute top-4 left-4 right-4 z-[500] flex flex-col sm:flex-row items-center justify-between gap-3 pointer-events-none">
+        {/* Search Input Box */}
+        <div className="w-full sm:w-80 pointer-events-auto">
+          <MapSearchBox
+            onSelectPlace={(lat, lon, label) => {
+              playTactileSound('tab')
+              setCenter({ lat, lon })
+              mapRef.current?.setView([lat, lon], 15)
             }}
-            className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden p-2.5 text-gray-300 hover:text-white shadow-2xl"
-            title="Legend and filters"
-            aria-label={showLegend ? 'Hide map legend and filters' : 'Show map legend and filters'}
-            aria-pressed={showLegend}
-          >
-            <Layers size={18} />
-          </button>
-          {showLegend && (
-            // Compact icon-only strip below ~380px wide (a phone in portrait
-            // with the map at full width); the full labelled key otherwise —
-            // the 190px fixed panel used to eat most of a phone-width map.
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden p-3 shadow-2xl w-[52px] sm:w-[200px]">
-              <p className="hidden sm:block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Map key — tap to filter</p>
-              {Object.entries(KIND_LABEL).map(([kind, label]) => {
-                const bounds = mapRef.current?.getBounds()
-                const count = zones.filter(z => z.kind === kind && (!bounds || bounds.contains([z.lat, z.lon]))).length
-                const active = activeKinds.has(kind)
-                // Referenced so this recomputes per pan/zoom via boundsTick;
-                // the value itself isn't rendered, it's just the dependency.
-                void boundsTick
-                return (
-                  <button
-                    key={kind}
-                    onClick={() => toggleKind(kind)}
-                    aria-pressed={active}
-                    aria-label={`${active ? 'Hide' : 'Show'} ${label} reports${count > 0 ? ` (${count} in view)` : ''}`}
-                    title={label}
-                    className={`w-full flex items-center gap-2 text-[11px] py-1.5 rounded-lg transition-opacity ${active ? 'text-gray-200' : 'text-gray-600 opacity-50'} hover:opacity-100`}
-                  >
-                    <div
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{ background: KIND_COLOR[kind], boxShadow: active ? `0 0 8px ${KIND_COLOR[kind]}` : 'none' }}
-                    />
-                    <span className="hidden sm:inline flex-1 text-left">{label}</span>
-                    {count > 0 && <span className="hidden sm:inline text-gray-500 font-bold">{count}</span>}
-                  </button>
-                )
-              })}
-              <label className="flex items-center gap-2 text-[10px] text-gray-400 pt-2 mt-1 border-t border-white/5 cursor-pointer py-1">
-                <input
-                  type="checkbox"
-                  checked={confirmedOnly}
-                  onChange={e => setConfirmedOnly(e.target.checked)}
-                  className="accent-gold-primary w-3 h-3 shrink-0"
-                  aria-label="Show confirmed and official reports only"
-                />
-                <span className="hidden sm:inline">Confirmed only</span>
-              </label>
-              <div className="hidden sm:flex items-center gap-2 text-[10px] text-gray-500 pt-1">
-                <div className="w-3 h-3 rounded-full shrink-0 bg-white/80 border border-white" />
-                Confirmed / official
-              </div>
-            </motion.div>
-          )}
-
-          <button
-            onClick={() => setShowToolsMenu(v => !v)}
-            className={`bg-black/80 backdrop-blur-xl border rounded-xl p-2.5 shadow-2xl ${drawer !== 'none' ? 'text-gold-primary border-gold-primary/40' : 'text-gray-300 border-white/10 hover:text-white'}`}
-            title="Tools: saved places, distances, alerts"
-            aria-label={showToolsMenu ? 'Hide map tools menu' : 'Show map tools menu'}
-            aria-pressed={showToolsMenu}
-          >
-            <Wrench size={18} />
-          </button>
-          {showToolsMenu && (
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden p-2 shadow-2xl w-[160px] flex flex-col gap-1">
-              {(['pins', 'matrix', 'geofence'] as const).map(d => (
-                <button
-                  key={d}
-                  onClick={() => { setDrawer(v => v === d ? 'none' : d); setShowToolsMenu(false) }}
-                  className={`text-left px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${drawer === d ? 'bg-gold-primary text-black' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`}
-                >
-                  {d === 'pins' ? 'Saved places' : d === 'matrix' ? 'Distances' : 'Alerts'}
-                </button>
-              ))}
-            </motion.div>
-          )}
-        </div>
-
-        {/* Bottom-right controls — grouped into two clusters rather than one
-            continuous stack of loose buttons: "map controls" (zoom/refresh)
-            and "location controls" (locate-me/theme) each get their own
-            rounded container, Google-Maps-style, so it's clear at a glance
-            which buttons act on the view vs. on you. */}
-        <div className="absolute bottom-3 right-3 z-[500] flex flex-col gap-2.5">
-          <div className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden shadow-2xl overflow-hidden flex flex-col divide-y divide-white/10">
-            <button onClick={() => zoom(1)} aria-label="Zoom in" className="p-2.5 text-gray-300 hover:text-white" title="Zoom in"><Plus size={16} /></button>
-            <button onClick={() => zoom(-1)} aria-label="Zoom out" className="p-2.5 text-gray-300 hover:text-white" title="Zoom out"><Minus size={16} /></button>
-            <button
-              onClick={() => center && loadZones(center.lat, center.lon)}
-              disabled={!center || loading}
-              aria-label={loading ? 'Refreshing reports' : 'Refresh reports'}
-              className="p-2.5 text-gray-300 hover:text-white disabled:opacity-40"
-              title="Refresh reports"
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            </button>
-          </div>
-
-          <div className="bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden shadow-2xl overflow-hidden flex flex-col divide-y divide-white/10">
-            {/* One-shot only — see the comment on handleCenterOnMe for why
-                this no longer starts live tracking as a side effect. */}
-            <button
-              onClick={() => {
-                playTactileSound('click')
-                handleCenterOnMe()
-              }}
-              disabled={locating}
-              aria-label="Center map on my location"
-              title="Center map on my location"
-              className="p-2.5 text-gray-300 hover:text-white transition-all disabled:opacity-60"
-            >
-              {locating ? <Loader size={16} className="animate-spin text-gold-primary" /> : <LocateFixed size={16} />}
-            </button>
-            <button
-              onClick={() => {
-                playTactileSound('tab')
-                setMapTheme(t => t === 'dark' ? 'light' : t === 'light' ? 'satellite' : 'dark')
-              }}
-              aria-label={`Basemap: ${mapTheme}. Tap to cycle Dark, Light, Satellite`}
-              title={`Basemap: ${mapTheme.toUpperCase()} (tap to switch)`}
-              className={`p-2.5 transition-all ${mapTheme === 'satellite' ? 'text-amber-400 bg-amber-400/10' : 'text-gray-300 hover:text-white'}`}
-            >
-              {mapTheme === 'dark' ? <Moon size={16} /> : mapTheme === 'light' ? <Sun size={16} /> : <Satellite size={16} />}
-            </button>
-            <button
-              onClick={() => {
-                playTactileSound('pop')
-                setShowIsochrones(v => !v)
-              }}
-              aria-label="Toggle 5m & 10m walking transit radius rings"
-              title={showIsochrones ? 'Walking Rings: Active (tap to hide)' : 'Walking Rings: Hidden (tap to show)'}
-              className={`p-2.5 transition-all ${showIsochrones ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-white'}`}
-            >
-              <Footprints size={16} />
-            </button>
-          </div>
-
-          {/* Explicit, always-visible live-sharing control — previously
-              reachable only by opening the Alerts drawer, where almost
-              nobody would find it. Same lifted sharing/livePosition state as
-              the full-description instance rendered inside that drawer
-              below, so the two never disagree; this is a second, more
-              discoverable place to flip the same switch, matching the
-              intent already written into LiveLocationToggle's own comment.
-              Deliberately its own pill rather than folded into either box
-              above — sharing your live position is a privacy-relevant
-              decision and shouldn't visually blend in with plain view
-              controls like zoom or theme. */}
-          <LiveLocationToggle
-            compact
-            userId={currentUserId}
-            sharing={locationSharing}
-            onSharingChange={setLocationSharing}
-            onPosition={setLivePosition}
           />
         </div>
 
-        {/* Stats chip — floating bottom-left. Counts the FILTERED set, not
-            the raw fetch — otherwise "12 nearby" while a filter has hidden
-            9 of them would just read as broken. */}
-        <div className="absolute bottom-3 left-3 z-[500] bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden px-3 py-2 shadow-2xl flex items-center gap-3 text-[10px] text-gray-300">
-          <span>{filteredZones.length}{filteredZones.length !== zones.length ? ` of ${zones.length}` : ''} nearby</span>
-          <span className="text-gray-600">·</span>
-          <span className="flex items-center gap-1"><Check size={10} className="text-green-500" /> {filteredZones.filter(z => z.status === 'confirmed' || z.status === 'official').length} confirmed</span>
-          {geofenceHits.length > 0 && (
-            <>
-              <span className="text-gray-600">·</span>
-              <span className="flex items-center gap-1 text-red-400"><Bell size={10} /> {geofenceHits.length} near your places</span>
-            </>
-          )}
+        {/* Vibe Category Filter Pills */}
+        <div className="flex items-center gap-1.5 bg-black/85 backdrop-blur-2xl p-1.5 rounded-2xl border border-white/15 shadow-2xl overflow-x-auto max-w-full pointer-events-auto no-scrollbar">
+          <button
+            onClick={() => { playTactileSound('tab'); setActiveVibeFilter('all') }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
+              activeVibeFilter === 'all'
+                ? 'bg-gold-primary text-black shadow-glow'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Sparkles size={13} />
+            <span>All Vibes</span>
+          </button>
+
+          <button
+            onClick={() => { playTactileSound('tab'); setActiveVibeFilter('nightlife') }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
+              activeVibeFilter === 'nightlife'
+                ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]'
+                : 'text-purple-300 hover:text-white hover:bg-purple-950/40'
+            }`}
+          >
+            <Flame size={13} className="text-purple-400" />
+            <span>Nightlife</span>
+          </button>
+
+          <button
+            onClick={() => { playTactileSound('tab'); setActiveVibeFilter('housing') }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
+              activeVibeFilter === 'housing'
+                ? 'bg-amber-500 text-black shadow-glow'
+                : 'text-amber-300 hover:text-white hover:bg-amber-950/40'
+            }`}
+          >
+            <Home size={13} className="text-amber-400" />
+            <span>Rooms</span>
+          </button>
+
+          <button
+            onClick={() => { playTactileSound('tab'); setActiveVibeFilter('safety') }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
+              activeVibeFilter === 'safety'
+                ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]'
+                : 'text-red-300 hover:text-white hover:bg-red-950/40'
+            }`}
+          >
+            <ShieldAlert size={13} className="text-red-400" />
+            <span>Safety</span>
+          </button>
         </div>
-
-        {locationDenied && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 text-xs text-gray-300 bg-surface backdrop-blur-3xl border border-glass-border rounded-2xl shadow-glass overflow-hidden p-2.5 shadow-2xl">
-            <ShieldAlert size={14} className="text-gold-primary shrink-0" />
-            Showing the whole world — zoom into your area for local reports.
-          </div>
-        )}
-
-        {/* Pending-point action card — floating bottom-center, appears after a click or search */}
-        {pendingPoint && (
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[500] w-[92%] max-w-sm">
-            <motion.div initial={{ opacity: 0, y: 50, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 50, scale: 0.95 }} className="bg-surface backdrop-blur-3xl border border-glass-border rounded-3xl shadow-glass overflow-hidden p-3.5 shadow-2xl space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-gray-300 truncate flex items-center gap-1.5"><MapPin size={13} className="text-green-500 shrink-0" /> {pendingPoint.label}</span>
-                <button onClick={() => { setPendingPoint(null); setShowReportForm(false) }} className="text-gray-500 hover:text-white shrink-0"><X size={14} /></button>
-              </div>
-
-              {!showReportForm ? (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setShowReportForm(true)}
-                    className="flex-1 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 text-red-400 font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <Ban size={12} /> Report closure
-                  </button>
-                  {currentUserId && (
-                    <button
-                      onClick={() => handleSavePin(pendingPoint.label)}
-                      className="flex-1 bg-gold-primary/10 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all"
-                    >
-                      Save place
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      playTactileSound('pop')
-                      setIsochroneOrigin({ lat: pendingPoint.lat, lon: pendingPoint.lon, label: pendingPoint.label })
-                      setShowIsochrones(true)
-                    }}
-                    className="flex-1 bg-green-500/10 hover:bg-green-500 hover:text-black border border-green-500/30 text-green-400 font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-1.5"
-                    title="Calculate 5m (400m) & 10m (800m) pedestrian transit reach"
-                  >
-                    <Footprints size={12} /> Walk Radius
-                  </button>
-                  <button
-                    onClick={() => addMatrixPoint({ id: `pt-${pendingPoint.lat}-${pendingPoint.lon}`, label: pendingPoint.label, lat: pendingPoint.lat, lon: pendingPoint.lon })}
-                    className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all"
-                  >
-                    Add to distances
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <select
-                      value={reportKind}
-                      onChange={e => setReportKind(e.target.value as ReportableZoneKind)}
-                      className="bg-black border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none focus:border-red-500/40"
-                    >
-                      {REPORTABLE_KINDS.map(k => <option key={k.kind} value={k.kind}>{k.label}</option>)}
-                    </select>
-                    <select
-                      value={reportDurationHours}
-                      onChange={e => setReportDurationHours(Number(e.target.value))}
-                      className="bg-black border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none focus:border-red-500/40"
-                    >
-                      {DURATION_OPTIONS.map(d => <option key={d.hours} value={d.hours}>{d.label}</option>)}
-                    </select>
-                  </div>
-                  <input
-                    value={reportNote}
-                    onChange={e => setReportNote(e.target.value)}
-                    placeholder="Any detail that helps (optional)"
-                    maxLength={500}
-                    className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-red-500/40"
-                  />
-                  {reportError && <p className="text-[10px] text-red-400">{reportError}</p>}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={submitClosureReport}
-                      disabled={reportSubmitting}
-                      className="flex-1 bg-red-500 hover:bg-red-600 text-white font-black px-3 py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
-                    >
-                      {reportSubmitting ? <Loader size={12} className="animate-spin" /> : <Ban size={12} />}
-                      {reportSubmitting ? 'Reporting…' : `Report for ${DURATION_OPTIONS.find(d => d.hours === reportDurationHours)?.label}`}
-                    </button>
-                    <button onClick={() => setShowReportForm(false)} className="text-gray-500 hover:text-white text-[10px] font-bold uppercase tracking-widest px-2">Cancel</button>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-
-        {voteError && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[500] flex items-center gap-2 text-xs text-red-300 bg-black/90 backdrop-blur-xl border border-red-500/30 rounded-xl p-2.5 shadow-2xl">
-            <span>{voteError}</span>
-            <button onClick={() => setVoteError(null)}><X size={14} /></button>
-          </div>
-        )}
-
-        {/* Slide-in tools drawer — right side modern slide-over */}
-        <AnimatePresence>
-          {drawer !== 'none' && (
-            <motion.div
-              initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="absolute top-0 right-0 bottom-0 w-full sm:w-[380px] z-[600] bg-black/90 backdrop-blur-3xl border-l border-white/15 overflow-y-auto p-5 shadow-2xl flex flex-col"
-            >
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
-                <span className="text-xs font-black uppercase tracking-widest text-gold-primary">
-                  {drawer === 'pins' ? 'Saved Locations' : drawer === 'matrix' ? 'Distance Comparison' : 'Zone Radar'}
-                </span>
-                <button
-                  onClick={() => setDrawer('none')}
-                  className="p-1.5 rounded-full bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white transition-all"
-                  aria-label="Close drawer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-                {drawer === 'pins' && (
-                  <SavedPinsPanel
-                    pending={pendingPoint}
-                    pins={savedPins}
-                    loading={pinsLoading}
-                    onSave={handleSavePin}
-                    onDelete={handleDeletePin}
-                    onJump={handleJumpToPin}
-                    onAddToMatrix={pin => addMatrixPoint({ id: pin.id, label: pin.label, lat: pin.lat, lon: pin.lon })}
-                  />
-                )}
-
-                {drawer === 'matrix' && (
-                  <DistanceMatrixPanel
-                    points={matrixPoints}
-                    onRemove={id => setMatrixPoints(prev => prev.filter(p => p.id !== id))}
-                  />
-                )}
-
-                {drawer === 'geofence' && (
-                  <div className="space-y-4">
-                    <p className="text-xs text-gray-400 leading-relaxed">
-                      Automatically detects reported incidents, road closures, and traffic within a chosen radius of your saved places.
-                    </p>
-                    <div className="p-3 bg-white/5 border border-white/10 rounded-2xl space-y-2">
-                      <div className="flex justify-between items-center text-xs font-bold text-gray-300">
-                        <span>Radar Radius</span>
-                        <span className="text-gold-primary font-black">{alertRadiusM >= 1000 ? `${(alertRadiusM/1000).toFixed(1)} km` : `${alertRadiusM} m`}</span>
-                      </div>
-                      <input
-                        type="range"
-                        min={100}
-                        max={10000}
-                        step={100}
-                        value={alertRadiusM}
-                        onChange={e => setAlertRadiusM(Number(e.target.value))}
-                        className="w-full accent-gold-primary cursor-pointer"
-                      />
-                    </div>
-                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <Bell size={18} className="text-red-400" />
-                        <div>
-                          <p className="text-xs font-bold text-white">Triggered Alerts</p>
-                          <p className="text-[10px] text-gray-400">Near your saved pins</p>
-                        </div>
-                      </div>
-                      <span className="text-xl font-black text-red-400">{geofenceHits.length}</span>
-                    </div>
-                    <div className="pt-2">
-                      <LiveLocationToggle userId={currentUserId} sharing={locationSharing} onSharingChange={setLocationSharing} onPosition={setLivePosition} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
+      {/* Floating Bottom Left: Drop Vibe CTA */}
+      <div className="absolute bottom-5 left-4 z-[500] flex items-center gap-2">
+        <button
+          onClick={() => {
+            playTactileSound('pop')
+            setShowDropVibeModal(true)
+          }}
+          className="px-4 py-3 rounded-2xl bg-gradient-to-r from-gold-primary to-amber-500 text-black font-black text-xs uppercase tracking-wider shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+        >
+          <Sparkles size={16} />
+          <span>+ Drop Vibe</span>
+        </button>
+
+        {pendingTapCoords?.label && (
+          <div className="hidden md:flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/10 px-3 py-2 rounded-2xl text-[11px] text-gray-300 max-w-xs truncate">
+            <MapPin size={13} className="text-gold-primary shrink-0" />
+            <span className="truncate">{pendingTapCoords.label}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Floating Bottom Right: Map & Position Controls */}
+      <div className="absolute bottom-5 right-4 z-[500] flex flex-col gap-2.5">
+        {/* Basemap Switcher (Dark / Voyager / Satellite) */}
+        <div className="bg-black/85 backdrop-blur-2xl border border-white/10 rounded-2xl p-1 shadow-2xl flex flex-col gap-1">
+          <button
+            onClick={() => { playTactileSound('click'); setMapTheme('dark') }}
+            className={`p-2 rounded-xl text-xs font-bold transition-all ${mapTheme === 'dark' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'}`}
+            title="Dark Cyberpunk Map"
+          >
+            <Compass size={16} />
+          </button>
+          <button
+            onClick={() => { playTactileSound('click'); setMapTheme('satellite') }}
+            className={`p-2 rounded-xl text-xs font-bold transition-all ${mapTheme === 'satellite' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'}`}
+            title="Satellite Imagery"
+          >
+            <Satellite size={16} />
+          </button>
+        </div>
+
+        {/* GPS Locate Me */}
+        <button
+          onClick={handleRecenter}
+          className="p-3 bg-black/85 hover:bg-black backdrop-blur-2xl border border-white/10 text-gold-primary hover:text-white rounded-2xl shadow-2xl transition-all active:scale-95 flex items-center justify-center"
+          title="Recenter to My GPS Location"
+        >
+          <LocateFixed size={18} />
+        </button>
+      </div>
+
+      {/* Interactive Bottom Sheet POI Details */}
+      <VibeBottomSheet
+        item={selectedVibeItem}
+        onClose={() => {
+          setSelectedVibeItem(null)
+          isochroneLayerRef.current?.clearLayers()
+        }}
+      />
+
+      {/* Quick Vibe Dropper Modal */}
+      <QuickVibeReportModal
+        isOpen={showDropVibeModal}
+        onClose={() => setShowDropVibeModal(false)}
+        currentCoords={pendingTapCoords || center}
+        onReportSuccess={() => {
+          if (center) loadData(center.lat, center.lon)
+        }}
+      />
+
+      {/* Global CSS for pulsing markers */}
       <style jsx global>{`
-        .res-geofence-pulse {
-          animation: res-pulse-ring 1.6s ease-out infinite;
+        .vibe-pulsing-marker {
+          animation: vibePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-        @keyframes res-pulse-ring {
-          0% { opacity: 0.9; }
-          70% { opacity: 0.15; }
-          100% { opacity: 0.9; }
-        }
-        /* A pulsing ring is decorative, not informational — the contested/
-           geofence marker underneath it already conveys the state, so it's
-           safe to just hold it at a steady visible opacity instead. */
-        @media (prefers-reduced-motion: reduce) {
-          .res-geofence-pulse {
-            animation: none;
-            opacity: 0.5;
+        @keyframes vibePulse {
+          0%, 100% {
+            opacity: 0.8;
+            transform: scale(1);
           }
-        }
-        /* Leaflet's scale control shares the bottom-left corner with our own
-           floating stats chip — pushed up clear of it rather than the two
-           overlapping. */
-        .leaflet-bottom.leaflet-left {
-          margin-bottom: 44px;
-        }
-        .leaflet-control-scale-line {
-          background: rgba(0,0,0,0.6);
-          border-color: rgba(255,255,255,0.4) !important;
-          color: #e5e5e5;
-          backdrop-filter: blur(4px);
-        }
-        /* Legally required, so it has to stay — but at the map's default
-           faint grey-on-dark it was barely legible, which isn't "present",
-           it's "technically present". */
-        .leaflet-control-attribution {
-          background: rgba(0,0,0,0.65) !important;
-          color: #c7c7c7 !important;
-        }
-        .leaflet-control-attribution a {
-          color: #e8c766 !important;
+          50% {
+            opacity: 0.2;
+            transform: scale(1.15);
+          }
         }
       `}</style>
     </div>

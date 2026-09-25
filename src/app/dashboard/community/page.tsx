@@ -503,11 +503,14 @@ export default function CommunityPage() {
           })}
           <button
             onClick={toggleVibeMap}
-            className={`md:hidden px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap ${
-              subTab === 'vibemap' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
+            className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap border ${
+              subTab === 'vibemap'
+                ? 'bg-gradient-to-r from-gold-primary to-amber-500 text-black border-gold-primary shadow-[0_0_25px_rgba(212,175,55,0.4)]'
+                : 'text-amber-300 hover:text-white bg-gold-primary/10 border-gold-primary/30 hover:bg-gold-primary/20'
             }`}
           >
-            <MapIcon size={13} /> VibeMap
+            <Sparkles size={13} className="text-gold-primary animate-pulse" />
+            <span>Vibe Radar</span>
           </button>
         </div>
 
