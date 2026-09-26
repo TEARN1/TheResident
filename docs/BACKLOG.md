@@ -33,11 +33,19 @@ that diff, so it can be reviewed as exactly what it is.
 twice. Service disruption is the stated consequence, and it is the reason the
 "delete old deployments" chore is no longer a chore.
 
-**3. Supabase changes the rules on 30 October**: tables created in `public`
-after that date need an explicit `GRANT`. Existing tables keep working. This
-project creates `res_` tables routinely, so every schema file written from now
-needs the grant or the table will be invisible to the API — the same silent
-failure shape as the RLS-enabled-no-policy tables below, arriving on a date.
+**3. ~~Supabase changes the rules on 30 October~~ — fixed.** New tables in
+`public` need an explicit `GRANT` from that date. The real exposure was not
+future tables but a *rebuild*: 59 tables were created by the schema files with
+no grant, so a restore after 30 October would have produced an app that reads
+empty with no error. Section 47 of `theresident_schema_part3.sql` now records
+every `res_` table's grants, generated from the live database, and
+`schemaGrants.test.ts` fails the build if a new table arrives without one.
+
+Still open from this: live tables grant `TRUNCATE`, `TRIGGER` and `REFERENCES`
+to `anon` and `authenticated` — leftovers of the old defaults. `TRUNCATE`
+bypasses RLS. Not reachable through PostgREST today, and deliberately not
+recorded in section 47, but revoking it on the live database is its own change
+and should be made on purpose.
 
 **4. `main` and `claude/app-not-working-io5l8f` have diverged into two
 incompatible apps.** 14 commits on main, 112 on the branch, from the same base
@@ -168,7 +176,10 @@ African phones on mobile data.
 routes redirect a guest to `/auth`, so it has been checking the login screen
 twelve times per run.
 
-**28. The schema of record drifts from the live database.** `SECURITY.md` once
+**28. The schema of record drifts from the live database.** *Checked
+exhaustively on 26 September: all 170 functions and 70 tables compared against
+production. One section (36, room vacancy watches) had never been applied; it
+now is, so the two match. Nothing yet stops it happening again.* `SECURITY.md` once
 claimed a whole feature was unapplied when all four of its tables were live.
 The habit of checking the database first is now in place; nothing enforces it.
 
