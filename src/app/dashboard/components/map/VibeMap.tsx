@@ -231,8 +231,8 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           id: ev.id,
           type: 'nightlife',
           title: ev.title,
-          subtitle: ev.location || 'The Gruvs Live Stage',
-          description: `Live nightlife event verified on The Gruvs network. Lineup, resident guestlist passes and drinks available.`,
+          subtitle: 'The Gruvs Live Stage',
+          description: `Live nightlife event verified on The Gruvs network. Resident guestlist passes and drink specials available.`,
           lat: eLat,
           lon: eLon,
           vibeScore: 94,
@@ -399,10 +399,10 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         {/* Search Input Box */}
         <div className="w-full sm:w-80 pointer-events-auto">
           <MapSearchBox
-            onSelectPlace={(lat, lon, label) => {
+            onSelect={(result) => {
               playTactileSound('tab')
-              setCenter({ lat, lon })
-              mapRef.current?.setView([lat, lon], 15)
+              setCenter({ lat: result.lat, lon: result.lon })
+              mapRef.current?.setView([result.lat, result.lon], 15)
             }}
           />
         </div>
