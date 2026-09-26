@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { performLogin } from '../../utils/authLogin'
-import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon, ExternalLink, Github, Scale } from 'lucide-react'
+import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon, ExternalLink, Github, Scale, Palette } from 'lucide-react'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 import Image from 'next/image'
 import MasterLegalPolicyModal from '../dashboard/components/shared/MasterLegalPolicyModal'
@@ -35,22 +35,18 @@ export default function AuthPage() {
   const router = useRouter()
   const dispatch = useDispatch<AppDispatch>()
 
-  // Shared across the WHOLE app now — 'residentTheme' in localStorage, the
-  // same key the dashboard reads/writes (see dashboard/layout.tsx,
-  // dashboard/profile/page.tsx). This used to be DOM-only here (never
-  // persisted), so a theme choice made on this page silently reverted the
-  // next time any page reloaded, and never touched the dashboard's own
-  // separate 'dashboardTheme' key at all.
-  const [theme, setTheme] = useState<'light' | 'night'>('night')
+  // Shared across the WHOLE app now — 'residentTheme' in localStorage
+  const [theme, setTheme] = useState<string>('minimal-green')
 
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('residentTheme') : null
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage/DOM on mount
-    setTheme(stored === 'light' ? 'light' : 'night')
+    if (stored) setTheme(stored)
   }, [])
 
   const toggleTheme = () => {
-    const nextTheme = theme === 'night' ? 'light' : 'night'
+    const themeCycle = ['minimal-green', 'crimson-cyber', 'liquid-glass', 'midnight-violet']
+    const currentIndex = themeCycle.indexOf(theme)
+    const nextTheme = themeCycle[(currentIndex + 1) % themeCycle.length]
     setTheme(nextTheme)
     if (typeof window !== 'undefined') {
       localStorage.setItem('residentTheme', nextTheme)
@@ -315,11 +311,10 @@ export default function AuthPage() {
       <button
         onClick={toggleTheme}
         style={themeToggleStyle}
-        title={theme === 'night' ? 'Switch to light theme' : 'Switch to dark theme'}
-        aria-label={theme === 'night' ? 'Switch to light theme' : 'Switch to dark theme'}
-        aria-pressed={theme === 'light'}
+        title="Switch color palette (Minimal Emerald, Crimson Cyber, Liquid Glass, Midnight Violet)"
+        aria-label="Switch color palette"
       >
-        {theme === 'night' ? <Sun size={16} /> : <Moon size={16} />}
+        <Palette size={16} />
       </button>
       
       {securityMessage && (

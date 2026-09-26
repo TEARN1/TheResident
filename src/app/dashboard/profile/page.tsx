@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import Image from 'next/image'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, ExternalLink, Github, Sparkles, QrCode } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, ExternalLink, Github, Sparkles, QrCode, Palette } from 'lucide-react'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
@@ -15,6 +15,7 @@ import ResidentIDCardModal from '../components/profile/ResidentIDCardModal'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import Card from '../../../components/ui/Card'
+import { APP_THEMES, type ThemeId, DEFAULT_THEME } from '../../../utils/themes'
 
 const LANGUAGES: { code: 'en' | 'zu' | 'xh' | 'af'; label: string }[] = [
   { code: 'en', label: 'English' },
@@ -47,17 +48,16 @@ export default function ProfilePage() {
     router.push('/auth')
   }
 
-  // Shared app-wide theme — 'residentTheme' in localStorage, the same key
-  // the root layout's pre-hydration script and the auth page now read/write
-  // too, so a choice made anywhere in the app applies everywhere. Persisted
-  // directly here since this page doesn't own the <html data-theme>
-  // attribute the layout does.
-  const [dashboardTheme, setDashboardThemeState] = useState<'night' | 'light'>('night')
+  // Shared app-wide theme supporting all 4 design palettes
+  const [dashboardTheme, setDashboardThemeState] = useState<string>(DEFAULT_THEME)
   useEffect(() => {
     const stored = localStorage.getItem('residentTheme')
-    setDashboardThemeState(stored === 'light' ? 'light' : 'night')
+    if (stored) {
+      setDashboardThemeState(stored)
+    }
   }, [])
-  const setDashboardTheme = (theme: 'night' | 'light') => {
+  const setDashboardTheme = (theme: string) => {
+    playTactileSound('tab')
     localStorage.setItem('residentTheme', theme)
     document.documentElement.setAttribute('data-theme', theme)
     setDashboardThemeState(theme)
@@ -216,25 +216,50 @@ export default function ProfilePage() {
   )
 
   const themeCard = (
-    <div className="glass-panel p-6 space-y-3">
-      <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
-        {dashboardTheme === 'night' ? <Moon size={16} /> : <Sun size={16} />} Appearance
-      </h2>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={() => setDashboardTheme('night')}
-          aria-pressed={dashboardTheme === 'night'}
-          className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${dashboardTheme === 'night' ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'}`}
-        >
-          <Moon size={14} /> Dark
-        </button>
-        <button
-          onClick={() => setDashboardTheme('light')}
-          aria-pressed={dashboardTheme === 'light'}
-          className={`p-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-2 ${dashboardTheme === 'light' ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black border-white/10 text-gray-300 hover:border-gold-primary/40'}`}
-        >
-          <Sun size={14} /> Light
-        </button>
+    <div className="glass-panel p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+          <Palette size={16} /> Theme &amp; Color Spectrum
+        </h2>
+        <span className="text-[9px] font-black uppercase tracking-wider bg-gold-primary/10 text-gold-primary px-2.5 py-0.5 rounded-full border border-gold-primary/30">
+          4 Palettes
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {APP_THEMES.map(theme => {
+          const isActive = dashboardTheme === theme.id || (theme.id === 'minimal-green' && dashboardTheme === 'night') || (theme.id === 'liquid-glass' && dashboardTheme === 'light')
+          return (
+            <button
+              key={theme.id}
+              type="button"
+              onClick={() => setDashboardTheme(theme.id)}
+              className={`p-3.5 rounded-2xl border text-left transition-all flex items-center gap-3 relative overflow-hidden group ${
+                isActive
+                  ? 'border-gold-primary bg-white/10 shadow-glow'
+                  : 'border-white/10 bg-black/40 hover:bg-white/5 hover:border-white/20'
+              }`}
+            >
+              <div
+                className="w-10 h-10 rounded-xl border border-white/20 flex items-center justify-center shrink-0 shadow-sm relative overflow-hidden"
+                style={{ background: theme.previewGradient }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/25 pointer-events-none" />
+                {isActive && <Check size={14} className="text-white drop-shadow-md relative z-10" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-white group-hover:text-gold-primary transition-colors truncate">
+                    {theme.name}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400 truncate mt-0.5">
+                  {theme.subtitle}
+                </p>
+              </div>
+            </button>
+          )
+        })}
       </div>
     </div>
   )

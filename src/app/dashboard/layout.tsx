@@ -9,7 +9,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Github, Scale
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Github, Scale, Palette
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -30,6 +30,8 @@ import CommandPalette from './components/navigation/CommandPalette'
 import FloatingEmergencySOS from './components/shared/FloatingEmergencySOS'
 import PWAInstallBanner from './components/shared/PWAInstallBanner'
 import MasterLegalPolicyModal from './components/shared/MasterLegalPolicyModal'
+import ThemeSwitcherModal from './components/shared/ThemeSwitcherModal'
+import { type ThemeId, DEFAULT_THEME } from '../../utils/themes'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 
@@ -39,6 +41,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const dispatch = useDispatch()
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [showLegalModal, setShowLegalModal] = useState(false)
+  const [showThemeModal, setShowThemeModal] = useState(false)
+  const [currentTheme, setCurrentTheme] = useState<string>(DEFAULT_THEME)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
   const notifMenuRef = useRef<HTMLDivElement>(null)
   // Browser autoplay policy blocks audio until a real user gesture — this
@@ -107,7 +111,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (typeof document !== 'undefined') {
       const stored = localStorage.getItem('residentTheme')
-      document.documentElement.setAttribute('data-theme', stored === 'light' ? 'light' : 'night')
+      const valid = ['minimal-green', 'crimson-cyber', 'liquid-glass', 'midnight-violet', 'light', 'night']
+      if (stored && valid.includes(stored)) {
+        document.documentElement.setAttribute('data-theme', stored)
+        setCurrentTheme(stored)
+      } else {
+        document.documentElement.setAttribute('data-theme', 'minimal-green')
+        setCurrentTheme('minimal-green')
+      }
     }
   }, [])
 
@@ -366,6 +377,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span>TEARN&apos;s Excellence</span>
             </a>
 
+            {/* Visual Theme Studio Trigger */}
+            <button
+              onClick={() => { setShowThemeModal(true); playTactileSound('tab') }}
+              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all shadow-sm group/theme"
+              title="Change visual theme and color palette"
+            >
+              <Palette size={13} className="text-gold-primary group-hover/theme:rotate-12 transition-transform" />
+              <span className="hidden sm:inline">Theme</span>
+            </button>
+
             {/* Platform Legal Shield & Governance Trigger */}
             <button
               onClick={() => { setShowLegalModal(true); playTactileSound('tab') }}
@@ -476,6 +497,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <MasterLegalPolicyModal
         isOpen={showLegalModal}
         onClose={() => setShowLegalModal(false)}
+      />
+      <ThemeSwitcherModal
+        isOpen={showThemeModal}
+        onClose={() => setShowThemeModal(false)}
+        currentTheme={currentTheme}
+        onSelectTheme={(themeId) => {
+          localStorage.setItem('residentTheme', themeId)
+          document.documentElement.setAttribute('data-theme', themeId)
+          setCurrentTheme(themeId)
+          setAlertNotification(`Theme updated to ${themeId}`)
+          setTimeout(() => setAlertNotification(null), 2500)
+        }}
       />
     </div>
   )

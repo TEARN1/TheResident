@@ -36,9 +36,14 @@ export default function RootLayout({
             __html: `
               try {
                 var t = localStorage.getItem('residentTheme');
-                document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'night');
+                var validThemes = ['minimal-green', 'crimson-cyber', 'liquid-glass', 'midnight-violet', 'light', 'night'];
+                if (t && validThemes.indexOf(t) !== -1) {
+                  document.documentElement.setAttribute('data-theme', t);
+                } else {
+                  document.documentElement.setAttribute('data-theme', 'minimal-green');
+                }
               } catch (e) {
-                document.documentElement.setAttribute('data-theme', 'night');
+                document.documentElement.setAttribute('data-theme', 'minimal-green');
               }
             `
           }}
