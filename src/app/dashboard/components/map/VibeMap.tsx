@@ -21,12 +21,15 @@ import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../../utils/gru
 import VibeBottomSheet, { type VibeItem } from './VibeBottomSheet'
 import QuickVibeReportModal from './QuickVibeReportModal'
 
-// High-definition basemaps
+// High-definition basemaps (100% free open CDN basemaps, no API keys or billing required)
 const TILE_SOURCES: Record<'dark' | 'light' | 'satellite', string> = {
   dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
   light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
   satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 }
+
+// Fallback tile source if CARTO or ArcGIS ever experiences an issue or rate limit
+const FALLBACK_TILE_SOURCE = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 
 type VibeCategoryFilter = 'all' | 'nightlife' | 'housing' | 'safety' | 'chill'
 

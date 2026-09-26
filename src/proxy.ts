@@ -133,7 +133,7 @@ export async function proxy(request: NextRequest) {
   const supabaseWsOrigin = supabaseOrigin.replace(/^https:/, 'wss:')
   response.headers.set(
     'Content-Security-Policy',
-    `default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: ${supabaseOrigin} https://images.unsplash.com https://avatars.githubusercontent.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ${supabaseOrigin} ${supabaseWsOrigin}; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`
+    `default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: ${supabaseOrigin} https://images.unsplash.com https://avatars.githubusercontent.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://*.arcgisonline.com https://server.arcgisonline.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ${supabaseOrigin} ${supabaseWsOrigin}; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`
   )
 
   return response
