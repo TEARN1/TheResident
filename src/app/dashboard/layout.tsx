@@ -323,7 +323,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           that only ever opened a settings panel had nothing left to hold. */}
 
       <div className="dashboard-main-content">
-        <header className="sticky top-0 z-40 h-16 bg-black/60 backdrop-blur-2xl border-b border-white/10 px-4 md:px-6 flex items-center justify-between transition-all">
+        <header className="sticky top-0 z-40 h-16 bg-black/60 backdrop-blur-2xl border-b border-white/15 px-4 md:px-6 flex items-center justify-between transition-all shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_-1px_1px_rgba(255,255,255,0.08)]">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary shadow-glow">
               <pageTitle.icon size={18} />
@@ -463,7 +463,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
-      <nav className="fixed bottom-3 left-3 right-3 max-w-lg mx-auto z-50 bg-black/70 backdrop-blur-3xl border border-white/15 rounded-3xl p-1.5 shadow-glass flex items-center justify-around">
+      <nav className="fixed bottom-3 left-3 right-3 max-w-lg mx-auto z-50 bg-black/80 backdrop-blur-3xl border border-white/20 rounded-3xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)] flex items-center justify-around transition-all">
         {navItems.map(item => {
           const isActive = pathname === item.href
           return (

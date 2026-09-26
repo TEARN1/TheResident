@@ -24,11 +24,26 @@ export default function ResidentIDCardModal({
   reputationScore = 480
 }: ResidentIDCardModalProps) {
   const [copied, setCopied] = useState(false)
+  const [rotateX, setRotateX] = useState(0)
+  const [rotateY, setRotateY] = useState(0)
 
   if (!isOpen || !user) return null
 
   const citizenNumber = `RES-GLOB-${user.id.slice(0, 8).toUpperCase()}`
   const residentName = user.name || 'Citizen Resident'
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX - rect.left - rect.width / 2
+    const y = e.clientY - rect.top - rect.height / 2
+    setRotateX(-y / 12)
+    setRotateY(x / 12)
+  }
+
+  const handleMouseLeave = () => {
+    setRotateX(0)
+    setRotateY(0)
+  }
 
   const handleShare = () => {
     playTactileSound('chime')
@@ -64,8 +79,16 @@ export default function ResidentIDCardModal({
             <span>Global Citizen Mobility Passport</span>
           </div>
 
-          {/* Holographic Luxury Card */}
-          <div className="w-full relative rounded-3xl p-6 bg-gradient-to-br from-[#1c1917] via-[#0c0a09] to-black border-2 border-gold-primary/50 shadow-2xl overflow-hidden text-left group">
+          {/* Holographic 3D Interactive Luxury Card */}
+          <div
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{
+              transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
+              transition: 'transform 0.15s ease-out'
+            }}
+            className="w-full relative rounded-3xl p-6 bg-gradient-to-br from-[#1c1917] via-[#0c0a09] to-black border-2 border-gold-primary/50 shadow-2xl overflow-hidden text-left group cursor-pointer"
+          >
             {/* Holographic Sheen */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-gold-primary/[0.08] to-amber-200/[0.12] pointer-events-none group-hover:opacity-100 transition-opacity" />
             <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-gold-primary/10 rounded-full blur-2xl" />
