@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, FileText, Download, ShieldCheck, CheckCircle2, AlertCircle, Building, Calendar, DollarSign } from 'lucide-react'
+import { X, FileText, Download, ShieldCheck, CheckCircle2, AlertCircle, Building, Calendar, DollarSign, Printer } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface SALeaseAgreementModalProps {
@@ -111,6 +111,81 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
+  }
+
+  const handlePrint = () => {
+    playTactileSound('chime')
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Lease Agreement - ${listingTitle}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #111; line-height: 1.6; }
+            h1 { font-size: 20px; text-transform: uppercase; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 4px; }
+            .jurisdiction { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 24px; text-transform: uppercase; }
+            .section { margin-bottom: 20px; }
+            .section-title { font-size: 14px; font-weight: 800; text-transform: uppercase; margin-bottom: 6px; }
+            .field-row { display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 4px 0; font-size: 13px; }
+            .signatures { display: flex; justify-content: space-between; margin-top: 50px; padding-top: 20px; }
+            .sig-line { width: 45%; border-top: 1px solid #111; padding-top: 6px; font-size: 12px; font-weight: bold; }
+            .footer { margin-top: 40px; font-size: 10px; color: #777; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }
+            @media print { body { padding: 20px; } }
+          </style>
+        </head>
+        <body>
+          <h1>Standard Residential Co-Living Lease Agreement</h1>
+          <div class="jurisdiction">Jurisdiction: ${selectedJur.flag} ${selectedJur.label} &bull; ${selectedJur.law}</div>
+
+          <div class="section">
+            <div class="section-title">1. Parties</div>
+            <div class="field-row"><span>Landlord / Lessor:</span><strong>${landlordName || 'Unspecified'}</strong></div>
+            <div class="field-row"><span>Tenant / Lessee:</span><strong>${tenantName || 'Unspecified'}</strong></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">2. Leased Premises</div>
+            <div class="field-row"><span>Property Unit:</span><strong>${listingTitle}</strong></div>
+            <div class="field-row"><span>Physical Address:</span><strong>${listingAddress}</strong></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">3. Duration &amp; Term</div>
+            <div class="field-row"><span>Commencement Date:</span><strong>${startDate}</strong></div>
+            <div class="field-row"><span>Initial Lease Term:</span><strong>${leaseMonths} Calendar Months</strong></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">4. Financial Covenants</div>
+            <div class="field-row"><span>Monthly Rental:</span><strong>${currency} ${monthlyRent.toLocaleString()}</strong></div>
+            <div class="field-row"><span>Security Deposit:</span><strong>${currency} ${depositAmount.toLocaleString()}</strong></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">5. Household &amp; Statutory Covenants</div>
+            <p style="font-size: 12px; color: #333;">
+              Quiet hours observed between 22:00 and 07:00. Tenant agrees to observe building safety protocols and household chore rota. Subletting is strictly prohibited without prior written consent. Both parties maintain full statutory protection under ${selectedJur.law}.
+            </p>
+          </div>
+
+          <div class="signatures">
+            <div class="sig-line">Landlord Signature &amp; Date</div>
+            <div class="sig-line">Tenant Signature &amp; Date</div>
+          </div>
+
+          <div class="footer">
+            Generated via The Resident Global Civic Platform &bull; TEARN Ecosystem Standards
+          </div>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
   }
 
   return (
@@ -283,6 +358,14 @@ DEPOSIT: ${currency} ${depositAmount.toLocaleString()}`}
                   className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 active:scale-98"
                 >
                   <Download size={14} /> Download (.txt)
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                  title="Print official lease agreement or save directly as PDF"
+                >
+                  <Printer size={14} className="text-gold-primary" />
+                  <span>Print / PDF</span>
                 </button>
                 <button
                   onClick={() => {
