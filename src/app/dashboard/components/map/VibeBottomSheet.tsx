@@ -93,7 +93,9 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
     }
   }
 
-  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}`
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lon}`
+  // Clean universal web/app directions fallback without confusing api query param
+  const cleanDirectionsUrl = `https://maps.google.com/?q=${item.lat},${item.lon}`
 
   return (
     <AnimatePresence>
@@ -185,7 +187,7 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
         {/* Actions */}
         <div className="flex items-center gap-2 pt-1">
           <a
-            href={googleMapsUrl}
+            href={cleanDirectionsUrl}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => playTactileSound('click')}
