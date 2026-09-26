@@ -242,18 +242,18 @@ export default function TrustCirclePage() {
         {results.length > 0 && (
           <div className="mt-4 space-y-2">
             {results.map(p => (
-              <div key={p.id} className="flex items-center justify-between p-3 bg-black/40 border border-white/5 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden">
+              <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-black/40 border border-white/5 rounded-xl gap-2.5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-gold-primary/10 flex items-center justify-center text-gold-primary text-xs font-black overflow-hidden shrink-0">
                     {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : (p.display_name || p.username || '?').charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-sm text-white font-medium">{p.display_name || p.username}</span>
-                  {p.is_verified && <ShieldCheck size={12} className="text-gold-primary" />}
+                  <span className="text-sm text-white font-medium truncate">{p.display_name || p.username}</span>
+                  {p.is_verified && <ShieldCheck size={12} className="text-gold-primary shrink-0" />}
                 </div>
                 <button
                   onClick={() => sendRequest(p.id)}
                   disabled={!!sentTo[p.id]}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-gold-primary/10 text-gold-primary border border-gold-primary/20 hover:bg-gold-primary hover:text-black transition-all disabled:opacity-50"
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-gold-primary/10 text-gold-primary border border-gold-primary/20 hover:bg-gold-primary hover:text-black transition-all disabled:opacity-50 self-end sm:self-auto"
                 >
                   {sentTo[p.id] ? <><Check size={12} /> Sent</> : <><UserPlus size={12} /> Request</>}
                 </button>

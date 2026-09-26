@@ -117,8 +117,8 @@ export default function ThreadPage() {
   ]
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto pb-32">
-      <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-3xl overflow-hidden shadow-glass flex flex-col h-[75vh]">
+    <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-12">
+      <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden shadow-glass flex flex-col h-[calc(100dvh-180px)] md:h-[75vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/2">
           <div className="flex items-center gap-3">
