@@ -210,17 +210,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         className: 'vibe-pulsing-marker'
       }).addTo(layer)
 
-      // Hotspot Icon
+      // Hotspot Icon with Liquid Glass Specular Styling
       const marker = L.marker([eLat, eLon], {
         icon: L.divIcon({
           className: '',
           html: `
-            <div style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:14px;background:linear-gradient(135deg,#c084fc,#7e22ce);box-shadow:0 0 20px rgba(168,85,247,0.7);border:2px solid #ffffff;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
-              <span style="font-size:16px;">🔥</span>
+            <div style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:16px;background:rgba(21,13,42,0.85);backdrop-filter:blur(16px);border:1.5px solid rgba(192,132,252,0.8);box-shadow:0 10px 25px rgba(0,0,0,0.6),inset 0 1px 1px rgba(255,255,255,0.4),0 0 18px rgba(192,132,252,0.45);cursor:pointer;transition:transform 0.2s cubic-bezier(0.16,1,0.3,1);" onmouseover="this.style.transform='scale(1.2) translateY(-2px)'" onmouseout="this.style.transform='scale(1)'">
+              <span style="font-size:16px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));">🔥</span>
             </div>
           `,
-          iconSize: [34, 34],
-          iconAnchor: [17, 17]
+          iconSize: [38, 38],
+          iconAnchor: [19, 19]
         })
       })
 
@@ -247,7 +247,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     })
   }, [gruvsEvents, center, activeVibeFilter])
 
-  // 6. Render Housing Layer (Price Chips & Walking Isochrones)
+  // 6. Render Housing Layer (Liquid Glass Price Pills & Walking Isochrones)
   useEffect(() => {
     const L = leafletRef.current
     const cluster = housingLayerRef.current
@@ -263,12 +263,13 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         icon: L.divIcon({
           className: '',
           html: `
-            <div style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:9999px;background:rgba(12,14,20,0.95);border:1.5px solid #F59E0B;color:#fff;font-family:inherit;font-size:11px;font-weight:900;box-shadow:0 4px 16px rgba(0,0,0,0.6),0 0 12px rgba(245,158,11,0.3);cursor:pointer;white-space:nowrap;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.15)';this.style.background='#F59E0B';this.style.color='#000'" onmouseout="this.style.transform='scale(1)';this.style.background='rgba(12,14,20,0.95)';this.style.color='#fff'">
+            <div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:9999px;background:rgba(5,31,32,0.85);backdrop-filter:blur(16px);border:1.5px solid rgba(142,182,155,0.7);color:#F0F7F4;font-family:inherit;font-size:11px;font-weight:900;letter-spacing:0.02em;box-shadow:0 8px 24px rgba(0,0,0,0.6),inset 0 1px 1px rgba(255,255,255,0.35),0 0 14px rgba(142,182,155,0.3);cursor:pointer;white-space:nowrap;transition:all 0.2s cubic-bezier(0.16,1,0.3,1);" onmouseover="this.style.transform='scale(1.15) translateY(-2px)';this.style.borderColor='#8EB69B';this.style.background='rgba(11,43,38,0.95)'" onmouseout="this.style.transform='scale(1)';this.style.borderColor='rgba(142,182,155,0.7)';this.style.background='rgba(5,31,32,0.85)'">
+              <span style="color:#8EB69B;">🏠</span>
               <span>${listing.currency || 'R'} ${listing.price.toLocaleString()}</span>
             </div>
           `,
-          iconSize: [64, 26],
-          iconAnchor: [32, 13]
+          iconSize: [80, 30],
+          iconAnchor: [40, 15]
         })
       })
 

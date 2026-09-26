@@ -752,7 +752,7 @@ export default function HousingPage() {
                 key={item.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/40 rounded-3xl overflow-hidden flex flex-col shadow-glass hover:shadow-glow transition-all duration-500 group"
+                className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/50 rounded-3xl overflow-hidden flex flex-col shadow-[0_10px_30px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.6),0_0_25px_var(--glow-color,rgba(142,182,155,0.25))] transition-all duration-500 group"
               >
                 <div className="relative h-60 bg-gray-950 overflow-hidden">
                   {item.images[0] ? (
