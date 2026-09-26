@@ -402,73 +402,86 @@ export default function HousingPage() {
           <p className="text-xs text-gray-400 font-medium mt-0.5">Explore verified rooms, compatible roommates, and managed properties.</p>
         </div>
 
-        <div className="flex bg-black/60 p-1.5 rounded-2xl border border-white/10 shadow-glass backdrop-blur-2xl w-full md:w-auto">
-          <button
-            onClick={() => setActiveTab('rooms')}
-            className={`flex-1 md:flex-none px-6 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-              activeTab === 'rooms' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Rooms
-          </button>
-          <button
-            onClick={() => setActiveTab('roommates')}
-            className={`flex-1 md:flex-none px-6 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-              activeTab === 'roommates' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Roommates
-          </button>
-          {currentUser?.role === 'landlord' && (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+          {/* Main View Tabs */}
+          <div className="flex bg-black/60 p-1 rounded-2xl border border-white/10 shadow-glass backdrop-blur-2xl">
             <button
-              onClick={() => setActiveTab('properties')}
-              className={`flex-1 md:flex-none px-6 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 ${
-                activeTab === 'properties' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+              onClick={() => setActiveTab('rooms')}
+              className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
+                activeTab === 'rooms' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
               }`}
             >
-              <Building2 size={14} /> My Properties
+              Rooms
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              playTactileSound('tab')
-              setLeaseModalListing({
-                id: 'custom-draft',
-                title: 'Urban Co-Living Suite',
-                suburb: 'Central District',
-                location: 'Central District',
-                price: 1200,
-                currency: 'USD'
-              })
-            }}
-            className="flex-1 md:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-400 hover:text-gold-primary hover:bg-white/5 border border-transparent hover:border-gold-primary/30"
-            title="Generate international legally compliant co-living lease agreement"
-          >
-            <FileText size={14} className="text-gold-primary" /> Lease Gen
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              playTactileSound('tab')
-              setShowSplitterModal(true)
-            }}
-            className="flex-1 md:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-400 hover:text-gold-primary hover:bg-white/5 border border-transparent hover:border-gold-primary/30"
-            title="Calculate and split household rent, electricity, and bills"
-          >
-            <Calculator size={14} className="text-gold-primary" /> Splitter
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              playTactileSound('tab')
-              setShowSnagModal(true)
-            }}
-            className="flex-1 md:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-400 hover:text-gold-primary hover:bg-white/5 border border-transparent hover:border-gold-primary/30"
-            title="Record move-in defects and generate official snag report"
-          >
-            <ClipboardList size={14} className="text-gold-primary" /> Snag List
-          </button>
+            <button
+              onClick={() => setActiveTab('roommates')}
+              className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
+                activeTab === 'roommates' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Roommates
+            </button>
+            {currentUser?.role === 'landlord' && (
+              <button
+                onClick={() => setActiveTab('properties')}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 ${
+                  activeTab === 'properties' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Building2 size={13} />
+                <span>Properties</span>
+              </button>
+            )}
+          </div>
+
+          {/* Civic Utility Action Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setLeaseModalListing({
+                  id: 'custom-draft',
+                  title: 'Urban Co-Living Suite',
+                  suburb: 'Central District',
+                  location: 'Central District',
+                  price: 1200,
+                  currency: 'USD'
+                })
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+              title="Generate international legally compliant co-living lease agreement"
+            >
+              <FileText size={13} className="text-gold-primary" />
+              <span>Lease Gen</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowSplitterModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+              title="Calculate and split household rent, electricity, and bills"
+            >
+              <Calculator size={13} className="text-gold-primary" />
+              <span>Splitter</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowSnagModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+              title="Record move-in defects and generate official snag report"
+            >
+              <ClipboardList size={13} className="text-gold-primary" />
+              <span>Snag List</span>
+            </button>
+          </div>
         </div>
       </header>
 

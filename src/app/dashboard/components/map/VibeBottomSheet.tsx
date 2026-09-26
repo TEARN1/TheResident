@@ -102,7 +102,7 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 150 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:w-96 z-[1000] bg-black/90 backdrop-blur-2xl border ${theme.border} rounded-3xl p-5 ${theme.glow} text-white shadow-2xl flex flex-col gap-3.5`}
+        className={`fixed bottom-20 md:bottom-6 left-3 right-3 md:left-auto md:right-6 md:w-96 z-[1000] bg-black/95 backdrop-blur-2xl border ${theme.border} rounded-3xl p-5 ${theme.glow} text-white shadow-2xl flex flex-col gap-3.5`}
       >
         {/* Top Header */}
         <div className="flex items-start justify-between gap-3">

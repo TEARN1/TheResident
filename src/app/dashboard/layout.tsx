@@ -332,7 +332,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
             {/* Global Spotlight Palette Trigger (Ctrl+K) */}
             <CommandPalette />
 
@@ -341,7 +341,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               href="https://thegruvs.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all shadow-sm group/gruvs"
+              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all shadow-sm group/gruvs"
               title="Visit The Gruvs (our sister live events & student nightlife platform)"
             >
               <Image
@@ -352,14 +352,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className="rounded-full object-cover group-hover/gruvs:rotate-12 transition-transform"
               />
               <span className="hidden sm:inline">The Gruvs</span>
-              <ExternalLink size={10} className="opacity-60" />
+              <ExternalLink size={10} className="hidden sm:inline opacity-60" />
             </a>
 
             <a
               href="https://github.com/TEARN1/TEARNs-Excellence"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all"
+              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all"
               title="Built with TEARNs Excellence Standards"
             >
               <Github size={12} className="text-gold-primary" />
@@ -369,11 +369,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Platform Legal Shield & Governance Trigger */}
             <button
               onClick={() => { setShowLegalModal(true); playTactileSound('tab') }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all shadow-sm"
+              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all shadow-sm"
               title="Platform Legal Shield, Neutrality Disclaimers & POPIA Governance"
             >
-              <Scale size={12} className="text-amber-400" />
-              <span className="hidden lg:inline">Legal Shield</span>
+              <Scale size={13} className="text-amber-400" />
+              <span className="hidden sm:inline">Legal Shield</span>
             </button>
 
             <div ref={notifMenuRef} className="relative">

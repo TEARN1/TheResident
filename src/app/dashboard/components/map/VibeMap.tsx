@@ -460,7 +460,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       </div>
 
       {/* Floating Bottom Left: Drop Vibe CTA */}
-      <div className="absolute bottom-5 left-4 z-[500] flex items-center gap-2">
+      <div className="absolute bottom-20 md:bottom-5 left-4 z-[500] flex items-center gap-2">
         <button
           onClick={() => {
             playTactileSound('pop')
@@ -481,7 +481,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       </div>
 
       {/* Floating Bottom Right: Map & Position Controls */}
-      <div className="absolute bottom-5 right-4 z-[500] flex flex-col gap-2.5">
+      <div className="absolute bottom-20 md:bottom-5 right-4 z-[500] flex flex-col gap-2.5">
         {/* Basemap Switcher (Dark / Voyager / Satellite) */}
         <div className="bg-black/85 backdrop-blur-2xl border border-white/10 rounded-2xl p-1 shadow-2xl flex flex-col gap-1">
           <button
