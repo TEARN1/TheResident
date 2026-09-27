@@ -345,18 +345,38 @@ export const marketItemToRow = (m: MarketItem): DbRow => ({
 
 const VENDOR_KINDS = ['spaza', 'airtime', 'gas', 'food', 'produce'] as const
 
+const vendorKind = (category: string): string =>
+  (VENDOR_KINDS as readonly string[]).includes(category.toLowerCase()) ? category.toLowerCase() : 'other'
+
 export const vendorToRow = (v: Vendor, userId: string): DbRow => ({
   id: toUUID(v.id),
   user_id: toUUID(userId),
   name: v.name,
-  kind: (VENDOR_KINDS as readonly string[]).includes(v.category.toLowerCase())
-    ? v.category.toLowerCase()
-    : 'other',
+  kind: vendorKind(v.category),
   phone: v.contactNumber || null,
   lat: v.lat || null,
   lon: v.lon || null,
   approach_photo_url: v.approachPhotoUrl || null,
-  micro_landmark: v.microLandmark || null
+  micro_landmark: v.microLandmark || null,
+  description: v.description || null,
+  suburb: v.suburb || null,
+  city: v.city || null,
+  hours: v.hours || null,
+  show_publicly: v.showPublicly === true
+})
+
+// Owner edits: only the fields the vendor form collects. Location,
+// verification and ownership are left alone.
+export const vendorEditToRow = (v: Vendor): DbRow => ({
+  name: v.name,
+  kind: vendorKind(v.category),
+  phone: v.contactNumber || null,
+  description: v.description || null,
+  suburb: v.suburb || null,
+  city: v.city || null,
+  hours: v.hours || null,
+  show_publicly: v.showPublicly === true,
+  updated_at: new Date().toISOString()
 })
 
 export const groupBuyToRow = (g: GroupBuy): DbRow => ({
@@ -462,7 +482,7 @@ export const SCHEMA_COLUMNS: Record<string, string[]> = {
   res_communities: ['id', 'name', 'kind', 'suburb', 'city', 'lat', 'lon', 'radius_m', 'is_private', 'created_by', 'created_at'],
   res_alerts: ['id', 'user_id', 'kind', 'title', 'description', 'lat', 'lon', 'community_id', 'suburb', 'city', 'severity', 'status', 'created_at', 'resolved_at'],
   res_market_items: ['id', 'user_id', 'title', 'description', 'category', 'price', 'currency', 'condition', 'images', 'status', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
-  res_vendors: ['id', 'user_id', 'name', 'kind', 'sells', 'hours', 'contact_via_dm', 'phone', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id'],
+  res_vendors: ['id', 'user_id', 'name', 'kind', 'sells', 'hours', 'contact_via_dm', 'phone', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id', 'description', 'show_publicly'],
   res_group_buys: ['id', 'organizer_id', 'title', 'description', 'target_quantity', 'current_quantity', 'display_price', 'currency', 'deadline', 'status', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
   res_group_buy_pledges: ['id', 'group_buy_id', 'user_id', 'quantity', 'note', 'created_at'],
   res_skills: ['id', 'user_id', 'title', 'category', 'description', 'rate_note', 'availability', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],

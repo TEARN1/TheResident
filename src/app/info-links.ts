@@ -2,6 +2,7 @@
 // page only has to be added here to be linked and listed for search engines.
 export const infoLinks = [
   { href: '/services', label: 'Local services' },
+  { href: '/shops', label: 'Local shops' },
   { href: '/about', label: 'About' },
   { href: '/how-it-works', label: 'How it works' },
   { href: '/faq', label: 'FAQ' },

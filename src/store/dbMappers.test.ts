@@ -149,6 +149,10 @@ test('phase 4 community payloads only use real schema columns', () => {
     status: 'active', rating: 5, reviewsCount: 0
   }, UID)
   assertKeysInSchema('res_vendors', vendor)
+  assertKeysInSchema('res_vendors', db.vendorEditToRow({
+    id: 'v-1', name: 'n', category: 'Spaza', description: 'd', contactNumber: '0',
+    status: 'active', rating: 5, reviewsCount: 0, suburb: 's', hours: '8-5', showPublicly: true
+  }))
   assert.strictEqual(vendor.kind, 'spaza')
 
   const gb = db.groupBuyToRow({

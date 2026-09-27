@@ -8,6 +8,7 @@ import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAl
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
 import UpgradeButton from '../shared/UpgradeButton'
+import VendorForm, { type VendorFormValues } from './VendorForm'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -24,6 +25,9 @@ interface MarketTabProps {
   onReport?: (subjectType: string, subjectId: string) => void
   isModerator?: boolean
   onModerate?: (subjectType: string, subjectId: string, action: 'hide' | 'unhide') => void
+  // Registers a shop (no id) or saves changes to the user's own (with id).
+  onSaveVendor?: (values: VendorFormValues, id?: string) => void
+  defaultSuburb?: string
 }
 
 type Section = 'market' | 'vendors' | 'groupbuys' | 'lostfound'
@@ -40,7 +44,9 @@ export default function MarketTab({
   onReunite,
   onReport,
   isModerator,
-  onModerate
+  onModerate,
+  onSaveVendor,
+  defaultSuburb
 }: MarketTabProps) {
   const [now] = useState(() => Date.now())
   const isFeatured = (item: MarketItem) => !!item.featuredUntil && new Date(item.featuredUntil).getTime() > now
@@ -50,6 +56,9 @@ export default function MarketTab({
   // anyway, just description/contactNumber/rating, so this expands what's
   // actually there rather than pretending a real product menu exists.
   const [expandedVendor, setExpandedVendor] = useState<string | null>(null)
+  // 'new' registers a shop; a Vendor edits that one; null hides the form.
+  const [vendorForm, setVendorForm] = useState<Vendor | 'new' | null>(null)
+  const myVendor = vendors.find(v => v.ownerId && v.ownerId === currentUserId)
   const [postTitle, setPostTitle] = useState('')
   const [postDesc, setPostDesc] = useState('')
   const [postPrice, setPostPrice] = useState('')
@@ -220,6 +229,16 @@ export default function MarketTab({
 
       {section === 'vendors' && (
         <div className="glass-panel p-6 space-y-4">
+           {onSaveVendor && (
+             <div className="flex justify-end">
+               <button
+                 onClick={() => setVendorForm(myVendor ?? 'new')}
+                 className="bg-white/5 hover:bg-white/10 text-gold-primary border border-gold-primary/20 px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2"
+               >
+                 {myVendor ? <>Edit my shop</> : <><Plus size={14}/> Register my shop</>}
+               </button>
+             </div>
+           )}
            {vendors.length === 0 ? (
               <div className="py-12 text-center text-gray-500">
                 <Store size={48} className="mx-auto mb-4 opacity-10" />
@@ -251,6 +270,8 @@ export default function MarketTab({
                        <div className="flex items-center gap-4 text-xs text-gray-500">
                           {v.contactNumber && <span>📞 {v.contactNumber}</span>}
                           <span>⭐ {v.rating.toFixed(1)} ({v.reviewsCount} reviews)</span>
+                          {v.hours && <span>🕒 {v.hours}</span>}
+                          {v.suburb && <span>📍 {v.suburb}</span>}
                        </div>
                     </div>
                   )}
@@ -383,6 +404,20 @@ export default function MarketTab({
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {vendorForm && onSaveVendor && (
+          <VendorForm
+            vendor={vendorForm === 'new' ? null : vendorForm}
+            defaultSuburb={defaultSuburb}
+            onClose={() => setVendorForm(null)}
+            onSave={values => {
+              onSaveVendor(values, vendorForm === 'new' ? undefined : vendorForm.id)
+              setVendorForm(null)
+            }}
+          />
         )}
       </AnimatePresence>
     </div>

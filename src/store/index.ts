@@ -585,6 +585,12 @@ export interface Vendor {
   microLandmark?: string
   lastVerifiedAt?: string
   verifiedByUserId?: string
+  ownerId?: string
+  suburb?: string
+  city?: string
+  hours?: string
+  // Owner opted in to the public /shops directory (and Google).
+  showPublicly?: boolean
 }
 
 export interface GroupBuy {
@@ -1525,6 +1531,11 @@ const communitySlice = createSlice({
     addVendor: (state, action: PayloadAction<Vendor>) => {
       state.vendors.push({ ...action.payload, id: toUUID(action.payload.id) })
     },
+    updateVendor: (state, action: PayloadAction<Vendor>) => {
+      const id = toUUID(action.payload.id)
+      const i = state.vendors.findIndex(v => toUUID(v.id) === id)
+      if (i !== -1) state.vendors[i] = { ...state.vendors[i], ...action.payload, id }
+    },
     addGroupBuy: (state, action: PayloadAction<GroupBuy>) => {
       state.groupBuys.push({ ...action.payload, id: toUUID(action.payload.id), createdBy: toUUID(action.payload.createdBy) })
     },
@@ -1724,6 +1735,7 @@ export const {
   addMarketItem,
   sellMarketItem,
   addVendor,
+  updateVendor,
   addGroupBuy,
   pledgeGroupBuy,
   setGroupBuyProgress,
@@ -2139,7 +2151,12 @@ export const fetchSupabaseData = createAsyncThunk(
         id: item.id,
         name: item.name,
         category: item.kind || '',
-        description: '',
+        description: item.description || '',
+        ownerId: item.user_id || undefined,
+        suburb: item.suburb || undefined,
+        city: item.city || undefined,
+        hours: item.hours || undefined,
+        showPublicly: item.show_publicly === true,
         contactNumber: item.phone || '',
         status: 'active' as Vendor['status'],
         rating: 5.0,
@@ -2734,6 +2751,11 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (addVendor.match(action) && currentUser) {
       syncLabel = 'your vendor listing'
       await dbUpdate('res_vendors', db.vendorToRow(action.payload, currentUser.id))
+    }
+
+    if (updateVendor.match(action)) {
+      syncLabel = 'your vendor changes'
+      await dbUpdate('res_vendors', db.vendorEditToRow(action.payload), 'id', toUUID(action.payload.id))
     }
 
     // 17. Sync Group Buys

@@ -32,3 +32,27 @@ where show_publicly;
 
 revoke all on public.res_public_services from public, anon, authenticated;
 grant select on public.res_public_services to anon, authenticated;
+
+-- Same for spaza shops and vendors. Also adds the description column the
+-- app's Vendor model always had but the table never stored.
+alter table public.res_vendors
+  add column if not exists description text,
+  add column if not exists show_publicly boolean not null default false;
+
+create or replace view public.res_public_vendors
+with (security_invoker = false) as
+select
+  id,
+  name,
+  kind,
+  sells,
+  hours,
+  description,
+  suburb,
+  city,
+  updated_at
+from public.res_vendors
+where show_publicly;
+
+revoke all on public.res_public_vendors from public, anon, authenticated;
+grant select on public.res_public_vendors to anon, authenticated;

@@ -330,6 +330,8 @@ create table if not exists public.res_vendors (
   city text,
   lat double precision,
   lon double precision,
+  description text,
+  show_publicly boolean not null default false, -- see theresident_public_services.sql
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
