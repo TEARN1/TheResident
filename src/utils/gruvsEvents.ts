@@ -23,6 +23,18 @@ export interface GruvsEvent {
    * layer formats them as-is.
    */
   startsAt: string
+  /**
+   * The venue's real position, when The Gruvs has one. Every upcoming event
+   * had coordinates when this was written (107 of 107), but they are optional
+   * here so an event without them is left off the map rather than placed
+   * somewhere invented. These are public venue locations, not anyone's
+   * position, so CONTRACT.md's rule against reading Gruvs profiles' lat/lon
+   * does not apply.
+   */
+  lat?: number
+  lon?: number
+  venue?: string
+  city?: string
 }
 
 const toStartsAt = (eventDate: string, eventTime: string | null): string =>
@@ -51,9 +63,21 @@ interface EventRow {
   title: string
   event_date: string
   event_time: string | null
+  lat: number | null
+  lon: number | null
+  latitude: number | null
+  longitude: number | null
+  venue_name: string | null
+  city: string | null
 }
 
-const SELECT = 'id, title, event_date, event_time'
+// `lat`/`lon` are the populated pair on the live table (107 of 107 upcoming);
+// `latitude`/`longitude` are a legacy duplicate filled on fewer rows, read
+// only as a fallback.
+const SELECT = 'id, title, event_date, event_time, lat, lon, latitude, longitude, venue_name, city'
+
+const finite = (n: number | null | undefined): number | undefined =>
+  typeof n === 'number' && Number.isFinite(n) ? n : undefined
 
 /** Upcoming, non-deleted events, soonest first. */
 export async function fetchUpcomingGruvsEvents(limit = 20): Promise<GruvsEvent[]> {
@@ -71,7 +95,11 @@ export async function fetchUpcomingGruvsEvents(limit = 20): Promise<GruvsEvent[]
   return ((data || []) as EventRow[]).map(e => ({
     id: e.id,
     title: e.title,
-    startsAt: toStartsAt(e.event_date, e.event_time)
+    startsAt: toStartsAt(e.event_date, e.event_time),
+    lat: finite(e.lat ?? e.latitude),
+    lon: finite(e.lon ?? e.longitude),
+    venue: e.venue_name || undefined,
+    city: e.city || undefined
   }))
 }
 

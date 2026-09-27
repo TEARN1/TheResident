@@ -150,7 +150,7 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
             <div className="overflow-hidden">
               <span className="text-[9px] text-gray-400 uppercase font-black tracking-wider block">Distance</span>
               <span className="text-xs font-bold text-white truncate block">
-                {item.distanceLabel || 'Nearby'}
+                {item.distanceLabel || 'Unknown'}
               </span>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
             <div className="overflow-hidden">
               <span className="text-[9px] text-gray-400 uppercase font-black tracking-wider block">Walking Time</span>
               <span className="text-xs font-bold text-emerald-400 truncate block">
-                {item.walkTimeMins ? `~${item.walkTimeMins} min walk` : '5-10 min walk'}
+                {item.walkTimeMins ? `~${item.walkTimeMins} min walk` : 'Too far to walk'}
               </span>
             </div>
           </div>

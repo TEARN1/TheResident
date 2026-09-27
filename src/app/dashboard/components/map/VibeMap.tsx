@@ -17,7 +17,8 @@ import { reverseGeocode } from '../../../../utils/geocode'
 import { supabase } from '../../../../utils/supabase'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import MapSearchBox from './MapSearchBox'
-import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../../utils/gruvsEvents'
+import { fetchUpcomingGruvsEvents, formatGruvsEventWhen, type GruvsEvent } from '../../../../utils/gruvsEvents'
+import { GRUVS } from '../../../../utils/sisterApps'
 import VibeBottomSheet, { type VibeItem } from './VibeBottomSheet'
 import QuickVibeReportModal from './QuickVibeReportModal'
 
@@ -88,7 +89,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     setLoading(true)
     try {
       const [events, zones] = await Promise.all([
-        fetchUpcomingGruvsEvents(20).catch(() => []),
+        fetchUpcomingGruvsEvents(60).catch(() => []),
         fetchSharedZones(lat, lon, 15000).catch(() => [])
       ])
       setGruvsEvents(events)
@@ -195,13 +196,15 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
     if (activeVibeFilter !== 'all' && activeVibeFilter !== 'nightlife') return
 
-    gruvsEvents.forEach((ev, idx) => {
-      const angle = (idx * (360 / Math.max(gruvsEvents.length, 1))) * (Math.PI / 180)
-      const distKm = 0.6 + (idx % 4) * 0.45
-      const dLat = (distKm / 111) * Math.cos(angle)
-      const dLon = (distKm / (111 * Math.cos(center.lat * (Math.PI / 180)))) * Math.sin(angle)
-      const eLat = center.lat + dLat
-      const eLon = center.lon + dLon
+    gruvsEvents.forEach(ev => {
+      // Each event goes where its venue actually is. This used to place every
+      // event on an invented ring 0.6–2km around the viewer's own position —
+      // chosen by list order, not venue — then quote a distance and walking
+      // time to that made-up point. An event without real coordinates is left
+      // off the map rather than put somewhere it isn't.
+      if (ev.lat === undefined || ev.lon === undefined) return
+      const eLat = ev.lat
+      const eLon = ev.lon
 
       // Pulsing Neon Halo
       L.circleMarker([eLat, eLon], {
@@ -230,19 +233,22 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       marker.on('click', () => {
         playTactileSound('pop')
         const distM = distanceMetres(center, { lat: eLat, lon: eLon })
+        // Only what The Gruvs actually holds: title, venue, city, date. No
+        // score, no guestlist or drink specials — none of those exist.
+        const where = [ev.venue, ev.city].filter(Boolean).join(', ')
         setSelectedVibeItem({
           id: ev.id,
           type: 'nightlife',
           title: ev.title,
-          subtitle: 'The Gruvs Live Stage',
-          description: `Live nightlife event verified on The Gruvs network. Resident guestlist passes and drink specials available.`,
+          subtitle: where || GRUVS.name,
+          description: `${formatGruvsEventWhen(ev.startsAt, { long: true })} · listed on ${GRUVS.name}.`,
           lat: eLat,
           lon: eLon,
-          vibeScore: 94,
-          badge: 'The Gruvs Nightlife',
+          badge: GRUVS.name,
           distanceLabel: distM < 1000 ? `${Math.round(distM)}m away` : `${(distM / 1000).toFixed(1)}km away`,
-          walkTimeMins: Math.round(distM / 80),
-          partnerLink: 'https://thegruvs.com'
+          // A walking time is only worth quoting when walking is plausible.
+          walkTimeMins: distM <= 3000 ? Math.round(distM / 80) : undefined,
+          partnerLink: GRUVS.url ?? undefined
         })
       })
 
@@ -307,13 +313,14 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           type: 'housing',
           title: listing.title,
           subtitle: listing.suburb || listing.location,
-          description: listing.description || 'Verified room listing on The Resident civic network.',
+          description: listing.description || 'Room listing on The Resident.',
           price: listing.price,
           currency: listing.currency,
           lat: listing.lat!,
           lon: listing.lon!,
-          vibeScore: 88,
-          badge: 'Verified Co-Living',
+          // No score and no "Verified" badge: nothing here verifies a listing,
+          // and a number with nothing behind it reads as a rating.
+          badge: 'Room listing',
           distanceLabel: distM < 1000 ? `${Math.round(distM)}m away` : `${(distM / 1000).toFixed(1)}km away`,
           walkTimeMins: Math.round(distM / 80)
         })
@@ -368,10 +375,9 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           type: 'safety',
           title: zone.label || (isRoadClosed ? 'Road Closed' : 'Street Caution'),
           subtitle: `Reported by ${zone.source_app === 'gruvs' ? 'The Gruvs' : 'The Resident'} Resident`,
-          description: zone.note || 'Active crowd-verified hazard. Please proceed with caution or choose an alternate route.',
+          description: zone.note || 'Reported by a resident. Take care, or choose another route.',
           lat: zone.lat,
           lon: zone.lon,
-          vibeScore: 60,
           badge: isRoadClosed ? 'Hazard Block' : 'Street Alert',
           distanceLabel: distM < 1000 ? `${Math.round(distM)}m away` : `${(distM / 1000).toFixed(1)}km away`,
           walkTimeMins: Math.round(distM / 80)

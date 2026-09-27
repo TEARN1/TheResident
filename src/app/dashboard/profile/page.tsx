@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import Image from 'next/image'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, ExternalLink, Github, Sparkles, QrCode, Palette } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, ExternalLink, Table2, Sparkles, QrCode, Palette } from 'lucide-react'
+import { GRUVS, TEARNS } from '../../../utils/sisterApps'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
@@ -468,16 +469,16 @@ export default function ProfilePage() {
 
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-black text-gold-primary uppercase tracking-wider flex items-center gap-2">
-            <Sparkles size={16} className="text-gold-primary" /> Connected Ecosystem &amp; Standards
+            <Sparkles size={16} className="text-gold-primary" /> Our other apps
           </h2>
           <span className="text-[9px] font-black uppercase tracking-wider bg-gold-primary/15 text-gold-primary px-2.5 py-0.5 rounded-full border border-gold-primary/30">
-            Unified
+            Same login
           </span>
         </div>
 
         <div className="space-y-3">
           <a
-            href="https://thegruvs.com"
+            href={GRUVS.url ?? undefined}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between p-3.5 rounded-2xl bg-black/50 hover:bg-black/80 border border-white/10 hover:border-gold-primary/40 transition-all group/gruvsCard"
@@ -494,35 +495,35 @@ export default function ProfilePage() {
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-bold text-white group-hover/gruvsCard:text-gold-primary transition-colors">The Gruvs Platform</span>
-                  <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">Active Partner</span>
+                  <span className="text-sm font-bold text-white group-hover/gruvsCard:text-gold-primary transition-colors">{GRUVS.name}</span>
                 </div>
-                <p className="text-[11px] text-gray-400">Nightlife, campus events &amp; verified resident community hub</p>
+                <p className="text-[11px] text-gray-400">{GRUVS.short}</p>
               </div>
             </div>
             <ExternalLink size={14} className="text-gray-500 group-hover/gruvsCard:text-gold-primary transition-colors shrink-0 ml-2" />
           </a>
 
+          {TEARNS.url && (
           <a
-            href="https://github.com/TEARN1/TEARNs-Excellence"
+            href={TEARNS.url}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between p-3.5 rounded-2xl bg-black/50 hover:bg-black/80 border border-white/10 hover:border-gold-primary/40 transition-all group/tearnsCard"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 text-white">
-                <Github size={20} className="text-gold-primary group-hover/tearnsCard:rotate-6 transition-transform" />
+                <Table2 size={20} className="text-gold-primary group-hover/tearnsCard:rotate-6 transition-transform" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-bold text-white group-hover/tearnsCard:text-gold-primary transition-colors">TEARN&apos;s Excellence</span>
-                  <span className="text-[9px] font-bold text-gold-primary bg-gold-primary/10 px-2 py-0.5 rounded-full border border-gold-primary/20">Open Standard</span>
+                  <span className="text-sm font-bold text-white group-hover/tearnsCard:text-gold-primary transition-colors">{TEARNS.name}</span>
                 </div>
-                <p className="text-[11px] text-gray-400">Engineering excellence framework &amp; architectural benchmark</p>
+                <p className="text-[11px] text-gray-400">{TEARNS.short}</p>
               </div>
             </div>
             <ExternalLink size={14} className="text-gray-500 group-hover/tearnsCard:text-gold-primary transition-colors shrink-0 ml-2" />
           </a>
+          )}
         </div>
       </Card>
 

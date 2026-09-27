@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ShieldCheck, QrCode, Download, Share2, Sparkles, Building, Award, CheckCircle2, Flame, ExternalLink } from 'lucide-react'
+import { GRUVS } from '../../../../utils/sisterApps'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface ResidentIDCardModalProps {
@@ -47,8 +48,12 @@ export default function ResidentIDCardModal({
 
   const handleShare = () => {
     playTactileSound('chime')
-    const passUrl = `https://the-resident.app/verify/${user.id}`
-    navigator.clipboard.writeText(passUrl)
+    // This used to copy https://the-resident.app/verify/<user id> — a domain
+    // nothing else in the app uses and that is not confirmed to be ours, and a
+    // /verify page that does not exist. A pass handed to building security
+    // pointed at an address anyone could register, carrying the user's id.
+    // Until a real verification page exists, the pass is shared as text.
+    navigator.clipboard.writeText(`${residentName} — Resident ID ${citizenNumber}, from The Resident`)
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
   }
@@ -147,22 +152,24 @@ export default function ResidentIDCardModal({
             </div>
           </div>
 
-          {/* Gruvs VIP Guestlist Cross-Promotion Banner */}
+          {/* The Gruvs. This used to promise "VIP access", queue-jumping and
+              discounted guestlists — perks that exist nowhere. What is true is
+              that the same login works there. */}
           <div className="w-full mt-4 p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/30 flex items-center justify-between gap-3 text-left">
             <div className="space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-purple-300 flex items-center gap-1">
-                <Sparkles size={11} /> The Gruvs VIP Access Linked
+                <Sparkles size={11} /> Same login on {GRUVS.name}
               </span>
               <p className="text-[11px] text-gray-400 leading-snug">
-                Your verified resident status unlocks queue-jump and discounted guestlist access on The Gruvs nightlife network.
+                {GRUVS.short}.
               </p>
             </div>
             <a
-              href="https://thegruvs.com"
+              href={GRUVS.url ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white shrink-0 transition-all shadow-md active:scale-95"
-              title="Open The Gruvs Guestlist"
+              title={`${GRUVS.cta} on ${GRUVS.name}`}
             >
               <ExternalLink size={14} />
             </a>
@@ -175,14 +182,14 @@ export default function ResidentIDCardModal({
               className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-gold-primary/20 flex items-center justify-center gap-2 active:scale-95"
             >
               <Share2 size={14} />
-              <span>{copied ? 'Pass Link Copied!' : 'Share Pass Link'}</span>
+              <span>{copied ? 'Pass copied!' : 'Copy pass details'}</span>
             </button>
             <button
               onClick={() => {
                 playTactileSound('pop')
                 const subject = encodeURIComponent(`Digital Resident ID Pass - ${residentName} (${citizenNumber})`)
                 const body = encodeURIComponent(
-                  `Hi Security / Host,\n\nPlease find my verified Digital Resident ID pass from The Resident platform:\n\nResident Name: ${residentName}\nCitizen ID: ${citizenNumber}\nVerification Link: https://the-resident.app/verify/${user.id}\nGruvs VIP Access: Active\n\nVerified Co-Living & Community Access.`
+                  `Hi Security / Host,\n\nPlease find my verified Digital Resident ID pass from The Resident platform:\n\nResident Name: ${residentName}\nCitizen ID: ${citizenNumber}\n\nSent from The Resident.`
                 )
                 window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
               }}

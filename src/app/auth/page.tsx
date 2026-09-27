@@ -7,7 +7,8 @@ import { motion } from 'framer-motion'
 import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { performLogin } from '../../utils/authLogin'
-import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon, ExternalLink, Github, Scale, Palette } from 'lucide-react'
+import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, Sun, Moon, ExternalLink, Table2, Scale, Palette } from 'lucide-react'
+import { GRUVS, TEARNS } from '../../utils/sisterApps'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 import Image from 'next/image'
 import MasterLegalPolicyModal from '../dashboard/components/shared/MasterLegalPolicyModal'
@@ -40,6 +41,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('residentTheme') : null
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage on mount
     if (stored) setTheme(stored)
   }, [])
 
@@ -798,12 +800,13 @@ export default function AuthPage() {
               }}
             >
               <GruvsMark />
-              <span>Explore The Gruvs</span>
+              <span>{GRUVS.cta} on {GRUVS.name}</span>
               <ExternalLink size={11} />
             </a>
+            {TEARNS.url && (<>
             <span style={{ color: 'rgba(255, 255, 255, 0.2)', fontSize: '0.75rem' }}>•</span>
             <a
-              href="https://github.com/TEARN1/TEARNs-Excellence"
+              href={TEARNS.url}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -816,10 +819,11 @@ export default function AuthPage() {
                 textDecoration: 'none'
               }}
             >
-              <Github size={13} color="var(--gold-primary)" />
-              <span>TEARN&apos;s Excellence</span>
+              <Table2 size={13} color="var(--gold-primary)" />
+              <span>{TEARNS.name}</span>
               <ExternalLink size={11} />
             </a>
+            </>)}
           </div>
           <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <button

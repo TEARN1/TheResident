@@ -9,7 +9,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Github, Scale, Palette
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -34,6 +34,7 @@ import ThemeSwitcherModal from './components/shared/ThemeSwitcherModal'
 import { type ThemeId, DEFAULT_THEME } from '../../utils/themes'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
+import { GRUVS, TEARNS } from '../../utils/sisterApps'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -114,6 +115,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const valid = ['minimal-green', 'crimson-cyber', 'liquid-glass', 'midnight-violet', 'light', 'night']
       if (stored && valid.includes(stored)) {
         document.documentElement.setAttribute('data-theme', stored)
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage on mount
         setCurrentTheme(stored)
       } else {
         document.documentElement.setAttribute('data-theme', 'minimal-green')
@@ -349,11 +351,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Ecosystem Badges: The Gruvs & TEARNs Excellence */}
             <a
-              href="https://thegruvs.com"
+              href={GRUVS.url ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all shadow-sm group/gruvs"
-              title="Visit The Gruvs (our sister live events & student nightlife platform)"
+              title={`${GRUVS.name}: ${GRUVS.short}`}
             >
               <Image
                 src="/gruvs-logo.png"
@@ -366,16 +368,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <ExternalLink size={10} className="hidden sm:inline opacity-60" />
             </a>
 
+            {TEARNS.url && (
             <a
-              href="https://github.com/TEARN1/TEARNs-Excellence"
+              href={TEARNS.url}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all"
-              title="Built with TEARNs Excellence Standards"
+              title={`${TEARNS.name}: ${TEARNS.short}`}
             >
-              <Github size={12} className="text-gold-primary" />
-              <span>TEARN&apos;s Excellence</span>
+              <Table2 size={12} className="text-gold-primary" />
+              <span>{TEARNS.name}</span>
             </a>
+            )}
 
             {/* Visual Theme Studio Trigger */}
             <button

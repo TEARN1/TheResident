@@ -4,9 +4,10 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, Home, Briefcase, Users, MessageSquare, ShieldCheck,
-  Sparkles, ExternalLink, Github, Zap, MapPin, X, ArrowRight, User
+  Search, Home, Briefcase, Users, MessageSquare,
+  Sparkles, ExternalLink, Table2, Zap, MapPin, X, ArrowRight, User
 } from 'lucide-react'
+import { GRUVS, TEARNS } from '../../../../utils/sisterApps'
 import Image from 'next/image'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
@@ -92,11 +93,11 @@ export default function CommandPalette() {
     // The Gruvs Nightlife Ecosystem
     {
       id: 'gruvs-events',
-      title: 'Explore Live Events on The Gruvs',
-      subtitle: 'Student festivals, nightlife sets & weekend club parties',
+      title: "What's on tonight on The Gruvs",
+      subtitle: GRUVS.short,
       category: 'The Gruvs Nightlife',
       icon: Sparkles,
-      action: () => { window.open('https://thegruvs.com', '_blank'); setOpen(false) },
+      action: () => { window.open(GRUVS.url ?? '', '_blank'); setOpen(false) },
       isExternal: true,
       badge: 'Sister App'
     },
@@ -106,30 +107,21 @@ export default function CommandPalette() {
       subtitle: 'Your Resident login works seamlessly across The Gruvs',
       category: 'The Gruvs Nightlife',
       icon: Zap,
-      action: () => { window.open('https://thegruvs.com', '_blank'); setOpen(false) },
+      action: () => { window.open(GRUVS.url ?? '', '_blank'); setOpen(false) },
       isExternal: true
     },
 
-    // TEARN's Excellence
-    {
-      id: 'tearns-repo',
-      title: 'TEARN’s Excellence Open Framework',
-      subtitle: 'Inspect the architectural blueprint & security standards',
-      category: 'TEARN’s Excellence',
-      icon: Github,
-      action: () => { window.open('https://github.com/TEARN1/TEARNs-Excellence', '_blank'); setOpen(false) },
+    // TEARN's Excellence — only listed once it has a real address.
+    ...(TEARNS.url ? [{
+      id: 'tearns-app',
+      title: "Practise spreadsheets on TEARN's Excellence",
+      subtitle: TEARNS.short,
+      category: 'TEARN’s Excellence' as const,
+      icon: Table2,
+      action: () => { window.open(TEARNS.url ?? '', '_blank'); setOpen(false) },
       isExternal: true,
-      badge: 'Benchmark'
-    },
-    {
-      id: 'tearns-inspect',
-      title: 'Sub-50ms Glass Architecture Specs',
-      subtitle: 'RLS security, edge caching and offline queue design',
-      category: 'TEARN’s Excellence',
-      icon: ShieldCheck,
-      action: () => { window.open('https://github.com/TEARN1/TEARNs-Excellence', '_blank'); setOpen(false) },
-      isExternal: true
-    }
+      badge: 'Sister App'
+    }] : [])
   ]
 
   const filteredItems = commandItems.filter(item =>
@@ -204,11 +196,11 @@ export default function CommandPalette() {
               <div className="px-5 py-2.5 bg-gradient-to-r from-purple-950/30 via-black to-gold-primary/10 border-b border-white/5 flex items-center justify-between text-[11px]">
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-gray-400 font-medium">3-App Network:</span>
+                  <span className="text-gray-400 font-medium">Our other apps:</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <a
-                    href="https://thegruvs.com"
+                    href={GRUVS.url ?? undefined}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-purple-300 hover:text-purple-200 font-bold transition-colors"
@@ -216,16 +208,18 @@ export default function CommandPalette() {
                     <span>The Gruvs</span>
                     <ExternalLink size={9} />
                   </a>
+                  {TEARNS.url && (<>
                   <span className="text-white/20">•</span>
                   <a
-                    href="https://github.com/TEARN1/TEARNs-Excellence"
+                    href={TEARNS.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-gold-primary hover:text-amber-300 font-bold transition-colors"
                   >
-                    <span>TEARN’s Excellence</span>
+                    <span>{TEARNS.name}</span>
                     <ExternalLink size={9} />
                   </a>
+                  </>)}
                 </div>
               </div>
 
