@@ -201,6 +201,8 @@ export interface HandymanService {
   description: string
   image: string
   reviewsCount: number
+  // Owner opted in to the public /services directory (and Google).
+  showPublicly?: boolean
 }
 
 export interface ServiceDispatch {
@@ -1860,7 +1862,8 @@ export const fetchSupabaseData = createAsyncThunk(
         priceEstimate: item.price_estimate || '',
         description: item.description || '',
         image: item.image || '',
-        reviewsCount: item.reviews_count || 0
+        reviewsCount: item.reviews_count || 0,
+        showPublicly: item.show_publicly === true
       }))))
     }
 

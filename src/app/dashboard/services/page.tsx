@@ -59,6 +59,7 @@ export default function ServicesPage() {
   const [bizCategory, setBizCategory] = useState<HandymanService['category']>('General Services')
   const [bizPhone, setBizPhone] = useState('')
   const [bizPrice, setBizPrice] = useState('')
+  const [bizPublic, setBizPublic] = useState(false)
   const [bizDesc, setBizDesc] = useState('')
   const [bizLocation, setBizLocation] = useState('')
   const [bizSuburb, setBizSuburb] = useState('')
@@ -217,7 +218,8 @@ export default function ServicesPage() {
       priceEstimate: bizPrice,
       description: bizDesc,
       image: 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?auto=format&fit=crop&w=600&q=80',
-      reviewsCount: 0
+      reviewsCount: 0,
+      showPublicly: bizPublic
     }
     dispatch(addService(newBiz))
     setShowBusinessRegModal(false)
@@ -654,6 +656,12 @@ export default function ServicesPage() {
                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Full Description</label>
                            <textarea value={bizDesc} onChange={e => setBizDesc(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-medium h-24 resize-none outline-none focus:border-gold-primary/40" placeholder="Describe your experience, tools, and availability..." />
                         </div>
+                        <label className="flex items-start gap-3 cursor-pointer">
+                           <input type="checkbox" checked={bizPublic} onChange={e => setBizPublic(e.target.checked)} className="mt-1 accent-[var(--gold-primary)]" />
+                           <span className="text-xs text-gray-400 leading-relaxed">
+                              <span className="text-white font-bold">Show my business on Google.</span> Your business name, category, suburb, description, rate and photo appear on a public page anyone can find. Your phone number and exact location stay private.
+                           </span>
+                        </label>
                      </div>
                      <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 active:scale-95 transition-all">Publish Business Card</button>
                   </form>

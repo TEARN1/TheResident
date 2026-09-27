@@ -140,6 +140,7 @@ create table if not exists public.res_handyman_services (
   description text,
   image text,
   reviews_count integer default 0,
+  show_publicly boolean not null default false, -- see theresident_public_services.sql
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

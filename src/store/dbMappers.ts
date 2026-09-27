@@ -186,7 +186,8 @@ export const serviceToRow = (service: HandymanService): DbRow => ({
   price_estimate: service.priceEstimate,
   description: service.description,
   image: service.image,
-  reviews_count: service.reviewsCount
+  reviews_count: service.reviewsCount,
+  show_publicly: service.showPublicly === true
 })
 
 export const dispatchToRow = (disp: ServiceDispatch): DbRow => ({
@@ -436,7 +437,7 @@ export const SCHEMA_COLUMNS: Record<string, string[]> = {
   res_listings: ['id', 'landlord_id', 'title', 'description', 'price', 'currency', 'location', 'suburb', 'city', 'lat', 'lon', 'safety_rating', 'safety_notes', 'landlord_lives_here', 'images', 'wifi', 'parking', 'bathroom', 'req_gender_pref', 'req_children_allowed', 'req_max_children', 'req_smoking_allowed', 'req_pets_allowed', 'status', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id', 'property_id', 'quick_post', 'listing_type', 'event_id', 'visible_until'],
   res_room_requests: ['id', 'tenant_id', 'listing_id', 'landlord_id', 'status', 'message', 'created_at'],
   res_lift_clubs: ['id', 'driver_id', 'origin', 'destination', 'origin_lat', 'origin_lon', 'dest_lat', 'dest_lon', 'departure_time', 'days', 'price_per_seat', 'currency', 'available_seats', 'total_seats', 'event_id', 'purpose', 'carries_parcels', 'created_at', 'updated_at'],
-  res_handyman_services: ['id', 'owner_id', 'business_name', 'category', 'location', 'suburb', 'city', 'lat', 'lon', 'rating', 'contact_number', 'website_url', 'price_estimate', 'description', 'image', 'reviews_count', 'created_at', 'updated_at'],
+  res_handyman_services: ['id', 'owner_id', 'business_name', 'category', 'location', 'suburb', 'city', 'lat', 'lon', 'rating', 'contact_number', 'website_url', 'price_estimate', 'description', 'image', 'reviews_count', 'show_publicly', 'created_at', 'updated_at'],
   res_service_dispatches: ['id', 'service_id', 'sender_id', 'message', 'status', 'proof_file_url', 'created_at'],
   res_utility_tokens: ['id', 'landlord_id', 'meter_label', 'price', 'currency', 'status', 'claimed_by', 'claimed_at', 'created_at'],
   res_tool_library: ['id', 'owner_id', 'title', 'description', 'price_per_day', 'currency', 'deposit', 'location', 'suburb', 'status', 'rented_by', 'rented_until', 'created_at', 'updated_at'],
