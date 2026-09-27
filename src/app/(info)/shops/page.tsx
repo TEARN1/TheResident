@@ -40,7 +40,7 @@ export default async function ShopsDirectory() {
       ) : (
         kinds.map(kind => (
           <section key={kind}>
-            <h2>{VENDOR_KIND_LABELS[kind] ?? kind}</h2>
+            <h2><Link href={`/shops/${kind}`} style={{ color: 'inherit', textDecoration: 'none' }}>{VENDOR_KIND_LABELS[kind] ?? kind}</Link></h2>
             <ul>
               {byKind.get(kind)!.map(v => (
                 <li key={v.id}>

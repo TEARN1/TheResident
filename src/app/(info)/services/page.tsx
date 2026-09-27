@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import styles from '../info.module.css'
-import { listPublicServices, serviceSlug, servicePlace } from '../../public-services'
+import { listPublicServices, serviceSlug, servicePlace, slugify } from '../../public-services'
 
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
@@ -41,7 +41,7 @@ export default async function ServicesDirectory() {
       ) : (
         categories.map(cat => (
           <section key={cat}>
-            <h2>{cat}</h2>
+            <h2><Link href={`/services/${slugify(cat)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{cat}</Link></h2>
             <ul>
               {byCategory.get(cat)!.map(s => (
                 <li key={s.id}>
