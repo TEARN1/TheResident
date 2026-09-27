@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ReduxProvider } from '../store/provider'
+import { siteUrl } from './site-url'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl()),
   title: 'The Resident Crew',
   description: 'Co-Living, Accommodations Trading & Community Portal for The Resident Crew — Connected with The Gruvs.',
   manifest: '/manifest.json',

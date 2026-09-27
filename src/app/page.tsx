@@ -10,6 +10,7 @@ import styles from './page.module.css'
 import { AppDispatch, RootState } from '../store'
 import { performLogin } from '../utils/authLogin'
 import { supabase } from '../utils/supabase'
+import { infoLinks } from './info-links'
 
 export default function Home() {
   const [showIosModal, setShowIosModal] = useState(false)
@@ -291,6 +292,11 @@ export default function Home() {
           </div>
         </div>
       )}
+      <footer style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 20px', padding: '24px 16px', fontSize: '0.85rem' }}>
+        {infoLinks.map(l => (
+          <Link key={l.href} href={l.href} style={{ color: 'inherit', opacity: 0.7 }}>{l.label}</Link>
+        ))}
+      </footer>
     </main>
   )
 }
