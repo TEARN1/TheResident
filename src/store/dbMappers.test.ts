@@ -55,6 +55,10 @@ test('base table payloads only use real schema columns', () => {
     id: 'svc-1', ownerId: UID, businessName: 'b', category: 'Plumbing', location: 'l', suburb: 's',
     rating: 5, contactNumber: '0', priceEstimate: 'R100', description: 'd', image: '', reviewsCount: 0
   }))
+  assertKeysInSchema('res_handyman_services', db.serviceEditToRow({
+    id: 'svc-1', ownerId: UID, businessName: 'b', category: 'Plumbing', location: 'l', suburb: 's',
+    rating: 5, contactNumber: '0', priceEstimate: 'R100', description: 'd', image: '', reviewsCount: 0, showPublicly: true
+  }))
   assertKeysInSchema('res_service_dispatches', db.dispatchToRow({
     id: 'disp-1', serviceId: 'svc-1', serviceName: 'x', senderId: UID, senderName: 'x',
     senderRole: 'tenant', message: 'm', status: 'pending', timestamp: '2026-01-01'

@@ -876,6 +876,11 @@ const networkingSlice = createSlice({
       service.ownerId = toUUID(service.ownerId)
       state.services.push(service)
     },
+    updateService: (state, action: PayloadAction<HandymanService>) => {
+      const id = toUUID(action.payload.id)
+      const i = state.services.findIndex(s => toUUID(s.id) === id)
+      if (i !== -1) state.services[i] = { ...state.services[i], ...action.payload, id }
+    },
     deleteService: (state, action: PayloadAction<string>) => {
       const serviceId = toUUID(action.payload)
       state.services = state.services.filter(s => toUUID(s.id) !== serviceId)
@@ -1673,6 +1678,7 @@ export const {
   addRoommateSeeker,
   addLiftClub,
   addService,
+  updateService,
   deleteService,
   bookSeat,
   setLiftSeats,
@@ -2557,6 +2563,11 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (addService.match(action)) {
       syncLabel = 'your business listing'
       await dbUpdate('res_handyman_services', db.serviceToRow(action.payload))
+    }
+
+    if (updateService.match(action)) {
+      syncLabel = 'your business changes'
+      await dbUpdate('res_handyman_services', db.serviceEditToRow(action.payload), 'id', toUUID(action.payload.id))
     }
 
     if (deleteService.match(action)) {

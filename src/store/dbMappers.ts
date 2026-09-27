@@ -190,6 +190,20 @@ export const serviceToRow = (service: HandymanService): DbRow => ({
   show_publicly: service.showPublicly === true
 })
 
+// Owner edits: only the fields the owner types in. Id, owner, rating and
+// review count are never rewritten from the client.
+export const serviceEditToRow = (service: HandymanService): DbRow => ({
+  business_name: service.businessName,
+  category: service.category,
+  location: service.location,
+  suburb: service.suburb,
+  contact_number: service.contactNumber,
+  price_estimate: service.priceEstimate,
+  description: service.description,
+  show_publicly: service.showPublicly === true,
+  updated_at: new Date().toISOString()
+})
+
 export const dispatchToRow = (disp: ServiceDispatch): DbRow => ({
   id: toUUID(disp.id),
   service_id: toUUID(disp.serviceId),

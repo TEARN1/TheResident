@@ -11,6 +11,7 @@ import {
   AppDispatch,
   bookSeat,
   addService,
+  updateService,
   addDispatch,
   addLiftClub,
   updateDispatchStatus,
@@ -60,6 +61,8 @@ export default function ServicesPage() {
   const [bizPhone, setBizPhone] = useState('')
   const [bizPrice, setBizPrice] = useState('')
   const [bizPublic, setBizPublic] = useState(false)
+  // Set while the business form is editing an existing listing.
+  const [editingBiz, setEditingBiz] = useState<HandymanService | null>(null)
   const [bizDesc, setBizDesc] = useState('')
   const [bizLocation, setBizLocation] = useState('')
   const [bizSuburb, setBizSuburb] = useState('')
@@ -204,8 +207,38 @@ export default function ServicesPage() {
     }
   }
 
+  const openBusinessForm = (biz: HandymanService | null) => {
+    setEditingBiz(biz)
+    setBizName(biz?.businessName ?? '')
+    setBizCategory(biz?.category ?? 'General Services')
+    setBizPhone(biz?.contactNumber ?? '')
+    setBizLocation(biz?.location ?? '')
+    setBizSuburb(biz?.suburb ?? '')
+    setBizPrice(biz?.priceEstimate ?? '')
+    setBizDesc(biz?.description ?? '')
+    setBizPublic(biz?.showPublicly === true)
+    setShowBusinessRegModal(true)
+  }
+
   const handleRegisterBusiness = (e: React.FormEvent) => {
     e.preventDefault()
+    if (editingBiz) {
+      dispatch(updateService({
+        ...editingBiz,
+        businessName: bizName,
+        category: bizCategory,
+        location: bizLocation,
+        suburb: bizSuburb,
+        contactNumber: bizPhone,
+        priceEstimate: bizPrice,
+        description: bizDesc,
+        showPublicly: bizPublic
+      }))
+      setEditingBiz(null)
+      setShowBusinessRegModal(false)
+      setAlertNotification('Business card updated!')
+      return
+    }
     const newBiz: HandymanService = {
       id: `biz-${Date.now()}`,
       ownerId: currentUser?.id || '',
@@ -401,7 +434,7 @@ export default function ServicesPage() {
                  </a>
               ) : (
                  <button
-                    onClick={() => setShowBusinessRegModal(true)}
+                    onClick={() => openBusinessForm(null)}
                     className="w-full lg:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
                  >
                     <Plus size={20} /> Advertise My Skills
@@ -480,7 +513,7 @@ export default function ServicesPage() {
                            </div>
                         )}
                         <button
-                           onClick={() => setSelectedBiz(srv)}
+                           onClick={() => srv.ownerId === currentUser?.id ? openBusinessForm(srv) : setSelectedBiz(srv)}
                            className="w-full bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black py-4 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
                         >
                            {srv.ownerId === currentUser?.id ? 'Manage My Card' : 'Hire Contractor'}
@@ -611,7 +644,7 @@ export default function ServicesPage() {
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBusinessRegModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden">
                   <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
-                     <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Business <span className="text-gold-primary">Onboarding</span></h3>
+                     <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">{editingBiz ? <>Edit <span className="text-gold-primary">Business</span></> : <>Business <span className="text-gold-primary">Onboarding</span></>}</h3>
                      <button onClick={() => setShowBusinessRegModal(false)} className="text-gray-500 hover:text-white"><X /></button>
                   </div>
                   <form onSubmit={handleRegisterBusiness} className="p-8 space-y-6">
@@ -663,7 +696,7 @@ export default function ServicesPage() {
                            </span>
                         </label>
                      </div>
-                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 active:scale-95 transition-all">Publish Business Card</button>
+                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 active:scale-95 transition-all">{editingBiz ? 'Save Changes' : 'Publish Business Card'}</button>
                   </form>
                </motion.div>
             </div>
