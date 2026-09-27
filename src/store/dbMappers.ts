@@ -186,7 +186,22 @@ export const serviceToRow = (service: HandymanService): DbRow => ({
   price_estimate: service.priceEstimate,
   description: service.description,
   image: service.image,
-  reviews_count: service.reviewsCount
+  reviews_count: service.reviewsCount,
+  show_publicly: service.showPublicly === true
+})
+
+// Owner edits: only the fields the owner types in. Id, owner, rating and
+// review count are never rewritten from the client.
+export const serviceEditToRow = (service: HandymanService): DbRow => ({
+  business_name: service.businessName,
+  category: service.category,
+  location: service.location,
+  suburb: service.suburb,
+  contact_number: service.contactNumber,
+  price_estimate: service.priceEstimate,
+  description: service.description,
+  show_publicly: service.showPublicly === true,
+  updated_at: new Date().toISOString()
 })
 
 export const dispatchToRow = (disp: ServiceDispatch): DbRow => ({
@@ -330,18 +345,38 @@ export const marketItemToRow = (m: MarketItem): DbRow => ({
 
 const VENDOR_KINDS = ['spaza', 'airtime', 'gas', 'food', 'produce'] as const
 
+const vendorKind = (category: string): string =>
+  (VENDOR_KINDS as readonly string[]).includes(category.toLowerCase()) ? category.toLowerCase() : 'other'
+
 export const vendorToRow = (v: Vendor, userId: string): DbRow => ({
   id: toUUID(v.id),
   user_id: toUUID(userId),
   name: v.name,
-  kind: (VENDOR_KINDS as readonly string[]).includes(v.category.toLowerCase())
-    ? v.category.toLowerCase()
-    : 'other',
+  kind: vendorKind(v.category),
   phone: v.contactNumber || null,
   lat: v.lat || null,
   lon: v.lon || null,
   approach_photo_url: v.approachPhotoUrl || null,
-  micro_landmark: v.microLandmark || null
+  micro_landmark: v.microLandmark || null,
+  description: v.description || null,
+  suburb: v.suburb || null,
+  city: v.city || null,
+  hours: v.hours || null,
+  show_publicly: v.showPublicly === true
+})
+
+// Owner edits: only the fields the vendor form collects. Location,
+// verification and ownership are left alone.
+export const vendorEditToRow = (v: Vendor): DbRow => ({
+  name: v.name,
+  kind: vendorKind(v.category),
+  phone: v.contactNumber || null,
+  description: v.description || null,
+  suburb: v.suburb || null,
+  city: v.city || null,
+  hours: v.hours || null,
+  show_publicly: v.showPublicly === true,
+  updated_at: new Date().toISOString()
 })
 
 export const groupBuyToRow = (g: GroupBuy): DbRow => ({
@@ -436,7 +471,7 @@ export const SCHEMA_COLUMNS: Record<string, string[]> = {
   res_listings: ['id', 'landlord_id', 'title', 'description', 'price', 'currency', 'location', 'suburb', 'city', 'lat', 'lon', 'safety_rating', 'safety_notes', 'landlord_lives_here', 'images', 'wifi', 'parking', 'bathroom', 'req_gender_pref', 'req_children_allowed', 'req_max_children', 'req_smoking_allowed', 'req_pets_allowed', 'status', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id', 'property_id', 'quick_post', 'listing_type', 'event_id', 'visible_until'],
   res_room_requests: ['id', 'tenant_id', 'listing_id', 'landlord_id', 'status', 'message', 'created_at'],
   res_lift_clubs: ['id', 'driver_id', 'origin', 'destination', 'origin_lat', 'origin_lon', 'dest_lat', 'dest_lon', 'departure_time', 'days', 'price_per_seat', 'currency', 'available_seats', 'total_seats', 'event_id', 'purpose', 'carries_parcels', 'created_at', 'updated_at'],
-  res_handyman_services: ['id', 'owner_id', 'business_name', 'category', 'location', 'suburb', 'city', 'lat', 'lon', 'rating', 'contact_number', 'website_url', 'price_estimate', 'description', 'image', 'reviews_count', 'created_at', 'updated_at'],
+  res_handyman_services: ['id', 'owner_id', 'business_name', 'category', 'location', 'suburb', 'city', 'lat', 'lon', 'rating', 'contact_number', 'website_url', 'price_estimate', 'description', 'image', 'reviews_count', 'show_publicly', 'created_at', 'updated_at'],
   res_service_dispatches: ['id', 'service_id', 'sender_id', 'message', 'status', 'proof_file_url', 'created_at'],
   res_utility_tokens: ['id', 'landlord_id', 'meter_label', 'price', 'currency', 'status', 'claimed_by', 'claimed_at', 'created_at'],
   res_tool_library: ['id', 'owner_id', 'title', 'description', 'price_per_day', 'currency', 'deposit', 'location', 'suburb', 'status', 'rented_by', 'rented_until', 'created_at', 'updated_at'],
@@ -447,7 +482,7 @@ export const SCHEMA_COLUMNS: Record<string, string[]> = {
   res_communities: ['id', 'name', 'kind', 'suburb', 'city', 'lat', 'lon', 'radius_m', 'is_private', 'created_by', 'created_at'],
   res_alerts: ['id', 'user_id', 'kind', 'title', 'description', 'lat', 'lon', 'community_id', 'suburb', 'city', 'severity', 'status', 'created_at', 'resolved_at'],
   res_market_items: ['id', 'user_id', 'title', 'description', 'category', 'price', 'currency', 'condition', 'images', 'status', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
-  res_vendors: ['id', 'user_id', 'name', 'kind', 'sells', 'hours', 'contact_via_dm', 'phone', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id'],
+  res_vendors: ['id', 'user_id', 'name', 'kind', 'sells', 'hours', 'contact_via_dm', 'phone', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at', 'approach_photo_url', 'micro_landmark', 'last_verified_at', 'verified_by_user_id', 'description', 'show_publicly'],
   res_group_buys: ['id', 'organizer_id', 'title', 'description', 'target_quantity', 'current_quantity', 'display_price', 'currency', 'deadline', 'status', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],
   res_group_buy_pledges: ['id', 'group_buy_id', 'user_id', 'quantity', 'note', 'created_at'],
   res_skills: ['id', 'user_id', 'title', 'category', 'description', 'rate_note', 'availability', 'community_id', 'suburb', 'city', 'lat', 'lon', 'created_at', 'updated_at'],

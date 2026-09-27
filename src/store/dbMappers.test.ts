@@ -55,6 +55,10 @@ test('base table payloads only use real schema columns', () => {
     id: 'svc-1', ownerId: UID, businessName: 'b', category: 'Plumbing', location: 'l', suburb: 's',
     rating: 5, contactNumber: '0', priceEstimate: 'R100', description: 'd', image: '', reviewsCount: 0
   }))
+  assertKeysInSchema('res_handyman_services', db.serviceEditToRow({
+    id: 'svc-1', ownerId: UID, businessName: 'b', category: 'Plumbing', location: 'l', suburb: 's',
+    rating: 5, contactNumber: '0', priceEstimate: 'R100', description: 'd', image: '', reviewsCount: 0, showPublicly: true
+  }))
   assertKeysInSchema('res_service_dispatches', db.dispatchToRow({
     id: 'disp-1', serviceId: 'svc-1', serviceName: 'x', senderId: UID, senderName: 'x',
     senderRole: 'tenant', message: 'm', status: 'pending', timestamp: '2026-01-01'
@@ -145,6 +149,10 @@ test('phase 4 community payloads only use real schema columns', () => {
     status: 'active', rating: 5, reviewsCount: 0
   }, UID)
   assertKeysInSchema('res_vendors', vendor)
+  assertKeysInSchema('res_vendors', db.vendorEditToRow({
+    id: 'v-1', name: 'n', category: 'Spaza', description: 'd', contactNumber: '0',
+    status: 'active', rating: 5, reviewsCount: 0, suburb: 's', hours: '8-5', showPublicly: true
+  }))
   assert.strictEqual(vendor.kind, 'spaza')
 
   const gb = db.groupBuyToRow({

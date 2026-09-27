@@ -201,6 +201,8 @@ export interface HandymanService {
   description: string
   image: string
   reviewsCount: number
+  // Owner opted in to the public /services directory (and Google).
+  showPublicly?: boolean
 }
 
 export interface ServiceDispatch {
@@ -583,6 +585,12 @@ export interface Vendor {
   microLandmark?: string
   lastVerifiedAt?: string
   verifiedByUserId?: string
+  ownerId?: string
+  suburb?: string
+  city?: string
+  hours?: string
+  // Owner opted in to the public /shops directory (and Google).
+  showPublicly?: boolean
 }
 
 export interface GroupBuy {
@@ -873,6 +881,11 @@ const networkingSlice = createSlice({
       service.id = toUUID(service.id)
       service.ownerId = toUUID(service.ownerId)
       state.services.push(service)
+    },
+    updateService: (state, action: PayloadAction<HandymanService>) => {
+      const id = toUUID(action.payload.id)
+      const i = state.services.findIndex(s => toUUID(s.id) === id)
+      if (i !== -1) state.services[i] = { ...state.services[i], ...action.payload, id }
     },
     deleteService: (state, action: PayloadAction<string>) => {
       const serviceId = toUUID(action.payload)
@@ -1518,6 +1531,11 @@ const communitySlice = createSlice({
     addVendor: (state, action: PayloadAction<Vendor>) => {
       state.vendors.push({ ...action.payload, id: toUUID(action.payload.id) })
     },
+    updateVendor: (state, action: PayloadAction<Vendor>) => {
+      const id = toUUID(action.payload.id)
+      const i = state.vendors.findIndex(v => toUUID(v.id) === id)
+      if (i !== -1) state.vendors[i] = { ...state.vendors[i], ...action.payload, id }
+    },
     addGroupBuy: (state, action: PayloadAction<GroupBuy>) => {
       state.groupBuys.push({ ...action.payload, id: toUUID(action.payload.id), createdBy: toUUID(action.payload.createdBy) })
     },
@@ -1671,6 +1689,7 @@ export const {
   addRoommateSeeker,
   addLiftClub,
   addService,
+  updateService,
   deleteService,
   bookSeat,
   setLiftSeats,
@@ -1716,6 +1735,7 @@ export const {
   addMarketItem,
   sellMarketItem,
   addVendor,
+  updateVendor,
   addGroupBuy,
   pledgeGroupBuy,
   setGroupBuyProgress,
@@ -1860,7 +1880,8 @@ export const fetchSupabaseData = createAsyncThunk(
         priceEstimate: item.price_estimate || '',
         description: item.description || '',
         image: item.image || '',
-        reviewsCount: item.reviews_count || 0
+        reviewsCount: item.reviews_count || 0,
+        showPublicly: item.show_publicly === true
       }))))
     }
 
@@ -2130,7 +2151,12 @@ export const fetchSupabaseData = createAsyncThunk(
         id: item.id,
         name: item.name,
         category: item.kind || '',
-        description: '',
+        description: item.description || '',
+        ownerId: item.user_id || undefined,
+        suburb: item.suburb || undefined,
+        city: item.city || undefined,
+        hours: item.hours || undefined,
+        showPublicly: item.show_publicly === true,
         contactNumber: item.phone || '',
         status: 'active' as Vendor['status'],
         rating: 5.0,
@@ -2556,6 +2582,11 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
       await dbUpdate('res_handyman_services', db.serviceToRow(action.payload))
     }
 
+    if (updateService.match(action)) {
+      syncLabel = 'your business changes'
+      await dbUpdate('res_handyman_services', db.serviceEditToRow(action.payload), 'id', toUUID(action.payload.id))
+    }
+
     if (deleteService.match(action)) {
       syncLabel = 'the business removal'
       await dbUpdate('res_handyman_services', null, 'id', toUUID(action.payload))
@@ -2720,6 +2751,11 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (addVendor.match(action) && currentUser) {
       syncLabel = 'your vendor listing'
       await dbUpdate('res_vendors', db.vendorToRow(action.payload, currentUser.id))
+    }
+
+    if (updateVendor.match(action)) {
+      syncLabel = 'your vendor changes'
+      await dbUpdate('res_vendors', db.vendorEditToRow(action.payload), 'id', toUUID(action.payload.id))
     }
 
     // 17. Sync Group Buys

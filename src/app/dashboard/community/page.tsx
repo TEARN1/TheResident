@@ -18,6 +18,8 @@ import {
   addDispute,
   updateDisputeStatus,
   addMarketItem,
+  addVendor,
+  updateVendor,
   addTool,
   pledgeGroupBuy,
   resolveLostFound,
@@ -609,6 +611,23 @@ export default function CommunityPage() {
                 currentUserId={currentUser?.id || ''}
                 formatCurrency={(a: number, c?: string) => formatCurrency(a, c || defaultCurrency)}
                 onReport={(subjectType, subjectId) => dispatch(reportContent({ subjectType, subjectId, reason: 'other' }))}
+                defaultSuburb={suburb}
+                onSaveVendor={(values, id) => {
+                  if (!currentUser) return
+                  const existing = id ? vendors.find(v => v.id === id) : undefined
+                  if (existing) {
+                    dispatch(updateVendor({ ...existing, ...values }))
+                  } else {
+                    dispatch(addVendor({
+                      id: `vendor-${Date.now()}`,
+                      ...values,
+                      ownerId: currentUser.id,
+                      status: 'active',
+                      rating: 5.0,
+                      reviewsCount: 0
+                    }))
+                  }
+                }}
                 onPostItem={(item) => {
                   if (!currentUser) return
                   dispatch(addMarketItem({
