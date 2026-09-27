@@ -1,10 +1,9 @@
-// The public origin used in sitemap.xml and robots.txt. Set
-// NEXT_PUBLIC_SITE_URL to the production domain; on Vercel it falls back to
-// the project's production URL.
+// The public origin used in sitemap.xml, robots.txt and canonical links.
+// NEXT_PUBLIC_SITE_URL overrides it (e.g. for a staging domain).
+const PRODUCTION_URL = 'https://theresidentcrew.com'
+
 export function siteUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL
   if (explicit) return explicit.replace(/\/+$/, '')
-  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  if (vercel) return `https://${vercel}`
-  return 'http://localhost:3000'
+  return process.env.NODE_ENV === 'production' ? PRODUCTION_URL : 'http://localhost:3000'
 }
