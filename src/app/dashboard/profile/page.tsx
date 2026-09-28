@@ -13,6 +13,7 @@ import type { i18nLang } from '../../../utils/i18n'
 import HomeAreaPanel from '../components/profile/HomeAreaPanel'
 import PushAlertsPanel from '../components/profile/PushAlertsPanel'
 import ClientErrorAdminPanel from '../components/profile/ClientErrorAdminPanel'
+import OpsConsolePanel from '../components/profile/OpsConsolePanel'
 import ReportQueueAdminPanel from '../components/profile/ReportQueueAdminPanel'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
@@ -551,6 +552,7 @@ export default function ProfilePage() {
       <HomeAreaPanel />
       <PushAlertsPanel />
       <ReportQueueAdminPanel />
+      <OpsConsolePanel />
       <ClientErrorAdminPanel />
 
       {themeCard}

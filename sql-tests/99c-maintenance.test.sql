@@ -8,7 +8,7 @@
 
 -- ── A run completes, and reports on every task ─────────────────────────────
 select 'a_run_reports_on_every_task' as check,
-  (select count(*) from public.res_run_maintenance()) = 8 as pass;
+  (select count(*) from public.res_run_maintenance()) = (select count(*) from res_automation_jobs where schedule = 'nightly' and key <> '*') as pass;
 
 select 'every_task_is_recorded_with_its_outcome' as check,
   (select count(*) from res_maintenance_runs) >= 8 as pass;
@@ -34,7 +34,7 @@ $$;
 delete from res_maintenance_runs;
 
 select 'a_failing_task_does_not_abort_the_run' as check,
-  (select count(*) from public.res_run_maintenance()) = 8 as pass;
+  (select count(*) from public.res_run_maintenance()) = (select count(*) from res_automation_jobs where schedule = 'nightly' and key <> '*') as pass;
 
 select 'the_failure_is_recorded_rather_than_swallowed' as check,
   exists (select 1 from res_maintenance_runs
@@ -82,7 +82,7 @@ drop function if exists public.res_release_stale_claims();
 delete from res_maintenance_runs;
 
 select 'a_missing_task_is_reported_not_fatal' as check,
-  (select count(*) from public.res_run_maintenance()) = 8 as pass;
+  (select count(*) from public.res_run_maintenance()) = (select count(*) from res_automation_jobs where schedule = 'nightly' and key <> '*') as pass;
 
 select 'a_missing_task_says_so' as check,
   (select error from res_maintenance_runs where task = 'res_release_stale_claims') = 'not installed' as pass;

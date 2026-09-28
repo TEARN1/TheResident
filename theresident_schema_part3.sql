@@ -1645,3 +1645,577 @@ begin
     execute format('revoke truncate, trigger, references on public.%I from anon, authenticated', t);
   end loop;
 end $$;
+
+
+-- ==========================================================================
+-- SECTION 49 — THE APP WATCHES ITSELF
+-- ==========================================================================
+--
+-- The nightly maintenance run (section in part2) did its work, but nothing
+-- governed it: no way to stop one job without a deploy, no limit on how much
+-- one run could change, and no record anywhere of "something looks wrong"
+-- except a failures count someone had to go and read. This section adds the
+-- control layer the automation plan (docs/AUTOMATION-PLAN.md) is built on:
+--
+--   res_automation_jobs  — every scheduled job, its on/off switch, its cap
+--   res_ops_findings     — one place for "a human should look at this"
+--   res_metrics_daily    — the numbers the plan is judged against
+--
+-- and four jobs that use it: alert escalation, the security-log scanner,
+-- the metrics rollup, and a self-check. Detection may act; punishment may
+-- not. Nothing here bans, hides or deletes a person's content.
+
+-- ── 1. Findings: "a human should look at this" ──────────────────────────────
+create table if not exists public.res_ops_findings (
+  id              uuid primary key default gen_random_uuid(),
+  source          text not null,
+  severity        text not null check (severity in ('info', 'warn', 'critical')),
+  summary         text not null,
+  details         jsonb not null default '{}'::jsonb,
+  first_seen      timestamptz not null default now(),
+  last_seen       timestamptz not null default now(),
+  occurrences     integer not null default 1,
+  acknowledged_at timestamptz,
+  acknowledged_by uuid references public.profiles(id) on delete set null
+);
+create index if not exists res_ops_findings_open_idx
+  on public.res_ops_findings (last_seen desc) where acknowledged_at is null;
+create index if not exists res_ops_findings_acknowledged_by_idx
+  on public.res_ops_findings (acknowledged_by);
+
+alter table public.res_ops_findings enable row level security;
+revoke all on public.res_ops_findings from anon, authenticated;
+grant select, insert, update, delete on public.res_ops_findings to service_role;
+
+-- Repeats of an open finding bump a counter instead of piling up rows: an
+-- hourly scanner that reports the same brute-force burst 24 times a day
+-- trains its reader to stop reading.
+create or replace function public.res_raise_finding(
+  p_source text, p_severity text, p_summary text, p_details jsonb default '{}'::jsonb
+) returns uuid
+language plpgsql security definer set search_path = public
+as $$
+declare v_id uuid;
+begin
+  update res_ops_findings
+     set last_seen = now(), occurrences = occurrences + 1, details = p_details,
+         severity = case when p_severity = 'critical' then 'critical' else severity end
+   where source = p_source and summary = p_summary and acknowledged_at is null
+  returning id into v_id;
+
+  if v_id is null then
+    insert into res_ops_findings (source, severity, summary, details)
+    values (p_source, p_severity, p_summary, coalesce(p_details, '{}'::jsonb))
+    returning id into v_id;
+  end if;
+  return v_id;
+end;
+$$;
+revoke all on function public.res_raise_finding(text, text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.res_raise_finding(text, text, text, jsonb) to service_role;
+
+-- ── 2. The job registry: every job, its switch, its cap ─────────────────────
+create table if not exists public.res_automation_jobs (
+  key             text primary key,
+  description     text not null,
+  schedule        text not null check (schedule in ('nightly', 'hourly', 'minutely')),
+  -- 0 observe · 1 flag for a human · 2 reversible action · 3 act then report
+  -- · 4 silent upkeep. Anything that punishes a person is capped at 1.
+  autonomy        smallint not null check (autonomy between 0 and 4),
+  enabled         boolean not null default true,
+  -- A run that changes more rows than this switches its own job off and
+  -- raises a critical finding. A bug that tries to pause every listing
+  -- pauses them once, and does not get a second night.
+  max_affected    integer,
+  disabled_reason text,
+  updated_at      timestamptz not null default now()
+);
+alter table public.res_automation_jobs enable row level security;
+revoke all on public.res_automation_jobs from anon, authenticated;
+grant select, insert, update, delete on public.res_automation_jobs to service_role;
+
+insert into public.res_automation_jobs (key, description, schedule, autonomy, max_affected) values
+  ('res_expire_stale_listings', 'Pause listings untouched for 37 days (one tap republishes)', 'nightly', 2, 500),
+  ('res_expire_market_items',   'Mark market items older than 60 days as gone',              'nightly', 2, 500),
+  ('res_expire_stale_alerts',   'Close alerts nobody answered in 6 hours, as unanswered',     'nightly', 2, 100),
+  ('res_auto_return_tools',     'Return tools stuck pending-return for 72 hours',             'nightly', 2, 200),
+  ('res_release_stale_claims',  'Release utility-token claims older than 24 hours',           'nightly', 2, 200),
+  ('res_expire_area_probations','Lapse area-billing probations that have ended',             'nightly', 2, 100),
+  ('res_prune_security_logs',   'Delete security log entries older than 180 days',            'nightly', 4, null),
+  ('res_prune_client_errors',   'Delete crash reports older than 90 days',                    'nightly', 4, null),
+  ('res_rollup_metrics',        'Record yesterday''s product numbers',                        'nightly', 0, null),
+  ('res_ops_self_check',        'Raise findings for jobs that keep failing or went quiet',    'nightly', 1, null),
+  ('res_scan_security_logs',    'Raise findings for attack patterns in the security log',     'hourly',  1, null),
+  ('res_escalate_alerts',       'Widen and escalate panic alerts nobody has answered',        'minutely',2, 50)
+on conflict (key) do nothing;
+
+-- The global stop: disables every job at once, for the day something is
+-- clearly wrong and you do not yet know what.
+insert into public.res_automation_jobs (key, description, schedule, autonomy)
+values ('*', 'Global stop — switch this off to halt every job', 'nightly', 0)
+on conflict (key) do nothing;
+
+create or replace function public.res_job_enabled(p_key text)
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select coalesce((select enabled from res_automation_jobs where key = '*'), true)
+     and coalesce((select enabled from res_automation_jobs where key = p_key), false);
+$$;
+revoke all on function public.res_job_enabled(text) from public, anon, authenticated;
+grant execute on function public.res_job_enabled(text) to service_role;
+
+-- ── 3. The runner, now governed by the registry ─────────────────────────────
+-- Same per-task isolation as before (one failure never stops the rest), plus:
+-- a disabled job is recorded as skipped, not silently absent, and a job that
+-- exceeds its cap turns itself off.
+create or replace function public.res_run_maintenance()
+returns table (task text, ok boolean, affected integer, error text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_job record;
+  v_affected integer;
+  v_started timestamptz;
+  v_error text;
+begin
+  for v_job in
+    select j.key, j.max_affected from res_automation_jobs j
+     where j.schedule = 'nightly' and j.key <> '*'
+     order by j.key
+  loop
+    v_started := clock_timestamp();
+    v_affected := null;
+    v_error := null;
+
+    if not public.res_job_enabled(v_job.key) then
+      v_error := 'skipped: disabled';
+    else
+      begin
+        execute format('select %I()', v_job.key) into v_affected;
+      exception
+        when undefined_function then v_error := 'not installed';
+        when others then v_error := left(sqlerrm, 500);
+      end;
+
+      if v_job.max_affected is not null and coalesce(v_affected, 0) > v_job.max_affected then
+        update res_automation_jobs
+           set enabled = false, updated_at = now(),
+               disabled_reason = format('changed %s rows, over its cap of %s', v_affected, v_job.max_affected)
+         where key = v_job.key;
+        perform public.res_raise_finding('runner', 'critical',
+          format('%s changed %s rows (cap %s) and has switched itself off', v_job.key, v_affected, v_job.max_affected),
+          jsonb_build_object('job', v_job.key, 'affected', v_affected, 'cap', v_job.max_affected));
+      end if;
+    end if;
+
+    insert into res_maintenance_runs (task, ok, affected, error, duration_ms)
+    values (v_job.key, v_error is null or v_error = 'skipped: disabled', v_affected, v_error,
+            (extract(epoch from (clock_timestamp() - v_started)) * 1000)::integer);
+
+    task := v_job.key;
+    ok := v_error is null or v_error = 'skipped: disabled';
+    affected := v_affected;
+    error := v_error;
+    return next;
+  end loop;
+end;
+$$;
+revoke all on function public.res_run_maintenance() from public, anon, authenticated;
+grant execute on function public.res_run_maintenance() to service_role;
+
+-- ── 4. Unanswered is not a false alarm ──────────────────────────────────────
+-- The old sweep closed any alert with no responder after 6 hours as
+-- 'false_alarm'. "Nobody came" is not evidence that nothing happened, and
+-- relabelling it erased the one number that shows whether escalation works.
+do $$
+declare c text;
+begin
+  select conname into c from pg_constraint
+   where conrelid = 'public.res_alerts'::regclass and contype = 'c'
+     and pg_get_constraintdef(oid) like '%false_alarm%';
+  if c is not null then
+    execute format('alter table public.res_alerts drop constraint %I', c);
+  end if;
+end $$;
+alter table public.res_alerts add constraint res_alerts_status_check
+  check (status in ('active', 'resolved', 'false_alarm', 'expired_unanswered'));
+
+alter table public.res_alerts add column if not exists escalation_level smallint not null default 0;
+alter table public.res_alerts add column if not exists escalated_at timestamptz;
+
+create or replace function public.res_expire_stale_alerts()
+returns integer language plpgsql security definer set search_path = public
+as $$
+declare v_count integer;
+begin
+  with stale as (
+    update res_alerts a
+       set status = 'expired_unanswered', resolved_at = now()
+     where a.status = 'active'
+       and a.created_at < now() - interval '6 hours'
+       and not exists (select 1 from res_alert_responders r where r.alert_id = a.id)
+    returning a.id, a.kind
+  ) select count(*) into v_count from stale;
+
+  if v_count > 0 then
+    perform public.res_raise_finding('res_expire_stale_alerts', 'critical',
+      format('%s alert(s) closed after 6 hours with nobody responding', v_count),
+      jsonb_build_object('count', v_count));
+  end if;
+  return v_count;
+end;
+$$;
+
+-- ── 5. Escalation: a panic alert nobody answers gets louder ─────────────────
+-- Runs every minute. The first broadcast (res_broadcast_alert) reaches the
+-- community, the suburb and everyone within 3 km. If nobody has responded:
+--   level 1 at 2 minutes — everyone with a home area within 10 km
+--   level 2 at 5 minutes — community admins and platform admins, plus a
+--                          critical finding
+-- It only ever adds recipients; it never closes, hides or changes the alert.
+create or replace function public.res_escalate_alerts()
+returns integer language plpgsql security definer set search_path = public
+as $$
+declare
+  v_alert record;
+  v_count integer := 0;
+begin
+  if not public.res_job_enabled('res_escalate_alerts') then
+    return 0;
+  end if;
+
+  for v_alert in
+    select a.* from res_alerts a
+     where a.status = 'active' and a.kind = 'panic'
+       and a.escalation_level < 2
+       and a.created_at > now() - interval '6 hours'
+       and not exists (select 1 from res_alert_responders r where r.alert_id = a.id)
+       and (   (a.escalation_level = 0 and a.created_at <= now() - interval '2 minutes')
+            or (a.escalation_level = 1 and a.created_at <= now() - interval '5 minutes'))
+     for update skip locked
+  loop
+    if v_alert.escalation_level = 0 then
+      insert into notifications (recipient_id, actor_id, type, title, body, message, data)
+      select ha.user_id, v_alert.user_id, 'res_alert_panic',
+             '🚨 No one has responded yet: ' || v_alert.title,
+             coalesce(v_alert.description, 'A neighbour within 10 km needs help.'),
+             coalesce(v_alert.description, 'A neighbour within 10 km needs help.'),
+             jsonb_build_object('alert_id', v_alert.id, 'escalation', 1)
+        from res_home_areas ha
+       where v_alert.lat is not null and v_alert.lon is not null
+         and ha.user_id <> v_alert.user_id
+         -- Haversine, in metres. Inline so this does not depend on
+         -- res_distance_m, which only exists in the production dump.
+         and 2 * 6371000 * asin(sqrt(
+               power(sin(radians(ha.lat - v_alert.lat) / 2), 2)
+             + cos(radians(v_alert.lat)) * cos(radians(ha.lat))
+             * power(sin(radians(ha.lon - v_alert.lon) / 2), 2))) between 3000 and 10000;
+    else
+      insert into notifications (recipient_id, actor_id, type, title, body, message, data)
+      select distinct uid, v_alert.user_id, 'res_alert_panic',
+             '🚨 UNANSWERED for 5 minutes: ' || v_alert.title,
+             'No neighbour has responded. Please check on this alert or contact emergency services.',
+             'No neighbour has responded. Please check on this alert or contact emergency services.',
+             jsonb_build_object('alert_id', v_alert.id, 'escalation', 2)
+        from (
+          select cm.user_id as uid from res_community_members cm
+           where v_alert.community_id is not null
+             and cm.community_id = v_alert.community_id
+             and cm.role in ('admin', 'founder')
+          union
+          select pa.user_id from res_platform_admins pa
+        ) t
+       where uid <> v_alert.user_id;
+
+      perform public.res_raise_finding('res_escalate_alerts', 'critical',
+        'Panic alert unanswered after 5 minutes',
+        jsonb_build_object('alert_id', v_alert.id, 'suburb', v_alert.suburb));
+    end if;
+
+    update res_alerts
+       set escalation_level = v_alert.escalation_level + 1, escalated_at = now()
+     where id = v_alert.id;
+    v_count := v_count + 1;
+  end loop;
+
+  return v_count;
+end;
+$$;
+revoke all on function public.res_escalate_alerts() from public, anon, authenticated;
+grant execute on function public.res_escalate_alerts() to service_role;
+
+-- ── 6. Security log scanner (hourly) ────────────────────────────────────────
+-- The weekly "skim the security log" chore in MAINTENANCE.md, with numbers.
+create or replace function public.res_scan_security_logs()
+returns integer language plpgsql security definer set search_path = public
+as $$
+declare
+  v_row record;
+  v_count integer := 0;
+begin
+  if not public.res_job_enabled('res_scan_security_logs') then
+    return 0;
+  end if;
+
+  -- Repeated failed sign-ins against one account.
+  for v_row in
+    select user_id, count(*) n from res_security_logs
+     where event_type = 'auth_failed' and created_at > now() - interval '1 hour'
+       and user_id is not null
+     group by user_id having count(*) > 10
+  loop
+    perform public.res_raise_finding('res_scan_security_logs',
+      case when v_row.n > 30 then 'critical' else 'warn' end,
+      'Repeated failed sign-ins on one account',
+      jsonb_build_object('user_id', v_row.user_id, 'last_hour', v_row.n));
+    v_count := v_count + 1;
+  end loop;
+
+  -- Anything the brute-force guard blocked.
+  select count(distinct user_id) n, count(*) total into v_row from res_security_logs
+   where event_type = 'brute_force_blocked' and created_at > now() - interval '1 hour';
+  if v_row.total > 0 then
+    perform public.res_raise_finding('res_scan_security_logs',
+      case when v_row.n >= 5 then 'critical' else 'warn' end,
+      'Brute-force attempts blocked',
+      jsonb_build_object('accounts', v_row.n, 'events', v_row.total));
+    v_count := v_count + 1;
+  end if;
+
+  -- Injection attempts: expected in small numbers, a finding in bursts.
+  select count(*) total into v_row from res_security_logs
+   where event_type in ('xss_blocked', 'sqli_blocked', 'upload_malware_blocked')
+     and created_at > now() - interval '1 hour';
+  if v_row.total >= 20 then
+    perform public.res_raise_finding('res_scan_security_logs', 'warn',
+      'Burst of blocked injection attempts', jsonb_build_object('last_hour', v_row.total));
+    v_count := v_count + 1;
+  end if;
+
+  -- Role changes are rare enough that each one is worth a glance.
+  select count(*) total into v_row from res_security_logs
+   where event_type = 'role_switched' and created_at > now() - interval '1 hour';
+  if v_row.total > 0 then
+    perform public.res_raise_finding('res_scan_security_logs', 'info',
+      'Account role switched', jsonb_build_object('last_hour', v_row.total));
+    v_count := v_count + 1;
+  end if;
+
+  return v_count;
+end;
+$$;
+revoke all on function public.res_scan_security_logs() from public, anon, authenticated;
+grant execute on function public.res_scan_security_logs() to service_role;
+
+-- ── 7. Daily metrics: the numbers the plan is judged against ────────────────
+-- Counts only. No row here can identify a person.
+create table if not exists public.res_metrics_daily (
+  day                         date primary key,
+  residents_total             integer not null,
+  residents_new               integer not null,
+  listings_open               integer not null,
+  listings_created            integer not null,
+  alerts_raised               integer not null,
+  alerts_unanswered           integer not null,
+  median_first_response_secs  integer,
+  reports_open                integer not null,
+  notifications_sent          integer not null,
+  client_errors               integer not null,
+  recorded_at                 timestamptz not null default now()
+);
+alter table public.res_metrics_daily enable row level security;
+revoke all on public.res_metrics_daily from anon, authenticated;
+grant select, insert, update, delete on public.res_metrics_daily to service_role;
+
+create or replace function public.res_rollup_metrics()
+returns integer language plpgsql security definer set search_path = public
+as $$
+declare
+  v_day date := (now() at time zone 'Africa/Johannesburg')::date - 1;
+  v_from timestamptz := v_day::timestamp at time zone 'Africa/Johannesburg';
+  v_to timestamptz := (v_day + 1)::timestamp at time zone 'Africa/Johannesburg';
+begin
+  insert into res_metrics_daily (
+    day, residents_total, residents_new, listings_open, listings_created,
+    alerts_raised, alerts_unanswered, median_first_response_secs,
+    reports_open, notifications_sent, client_errors)
+  select v_day,
+    (select count(*) from res_profiles),
+    (select count(*) from res_profiles where created_at >= v_from and created_at < v_to),
+    (select count(*) from res_listings where status = 'open' and not hidden),
+    (select count(*) from res_listings where created_at >= v_from and created_at < v_to),
+    (select count(*) from res_alerts where created_at >= v_from and created_at < v_to),
+    (select count(*) from res_alerts a where a.created_at >= v_from and a.created_at < v_to
+        and not exists (select 1 from res_alert_responders r where r.alert_id = a.id)),
+    (select percentile_cont(0.5) within group (order by extract(epoch from (first_r - a_created)))::integer
+       from (select a.created_at a_created, min(r.created_at) first_r
+               from res_alerts a join res_alert_responders r on r.alert_id = a.id
+              where a.created_at >= v_from and a.created_at < v_to
+              group by a.id, a.created_at) x),
+    (select count(*) from res_reports where status = 'open'),
+    (select count(*) from notifications where type like 'res\_%' and created_at >= v_from and created_at < v_to),
+    (select count(*) from res_client_errors where created_at >= v_from and created_at < v_to)
+  on conflict (day) do update set
+    residents_total = excluded.residents_total, residents_new = excluded.residents_new,
+    listings_open = excluded.listings_open, listings_created = excluded.listings_created,
+    alerts_raised = excluded.alerts_raised, alerts_unanswered = excluded.alerts_unanswered,
+    median_first_response_secs = excluded.median_first_response_secs,
+    reports_open = excluded.reports_open, notifications_sent = excluded.notifications_sent,
+    client_errors = excluded.client_errors, recorded_at = now();
+  return 1;
+end;
+$$;
+revoke all on function public.res_rollup_metrics() from public, anon, authenticated;
+grant execute on function public.res_rollup_metrics() to service_role;
+
+-- ── 8. Self-check: jobs that keep failing ───────────────────────────────────
+-- A job failing two nights running is a finding. (Whether the whole runner
+-- stopped cannot be detected from inside it — that check lives outside the
+-- database, in .github/workflows/ops-watchdog.yml.)
+create or replace function public.res_ops_self_check()
+returns integer language plpgsql security definer set search_path = public
+as $$
+declare
+  v_row record;
+  v_count integer := 0;
+begin
+  for v_row in
+    select r.task, count(*) filter (where not r.ok) fails,
+           (array_agg(r.error order by r.ran_at desc))[1] last_error
+      from res_maintenance_runs r
+     where r.ran_at > now() - interval '50 hours'
+     group by r.task
+    having count(*) filter (where not r.ok) >= 2
+  loop
+    perform public.res_raise_finding('res_ops_self_check', 'warn',
+      format('%s has failed %s times in two days', v_row.task, v_row.fails),
+      jsonb_build_object('task', v_row.task, 'last_error', v_row.last_error));
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
+end;
+$$;
+revoke all on function public.res_ops_self_check() from public, anon, authenticated;
+grant execute on function public.res_ops_self_check() to service_role;
+
+-- ── 9. The Ops Console's doors (platform admins only) ───────────────────────
+create or replace function public.res_ops_overview()
+returns jsonb language plpgsql stable security definer set search_path = public
+as $$
+begin
+  if not public.res_is_platform_admin() then
+    raise exception 'not_a_platform_admin';
+  end if;
+
+  return jsonb_build_object(
+    'jobs', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'key', j.key, 'description', j.description, 'schedule', j.schedule,
+        'autonomy', j.autonomy, 'enabled', j.enabled, 'max_affected', j.max_affected,
+        'disabled_reason', j.disabled_reason,
+        'last_run', s.last_run, 'last_ok', s.last_ok, 'last_affected', s.last_affected,
+        'last_error', s.last_error, 'failures_48h', coalesce(s.failures, 0))
+        order by j.key = '*' desc, j.schedule, j.key)
+      from res_automation_jobs j
+      left join lateral (
+        select max(r.ran_at) last_run,
+               (array_agg(r.ok order by r.ran_at desc))[1] last_ok,
+               (array_agg(r.affected order by r.ran_at desc))[1] last_affected,
+               (array_agg(r.error order by r.ran_at desc))[1] last_error,
+               count(*) filter (where not r.ok and r.ran_at > now() - interval '48 hours') failures
+          from res_maintenance_runs r where r.task = j.key
+      ) s on true), '[]'::jsonb),
+    'findings', coalesce((
+      select jsonb_agg(to_jsonb(f) order by
+               case f.severity when 'critical' then 0 when 'warn' then 1 else 2 end, f.last_seen desc)
+        from (select id, source, severity, summary, details, first_seen, last_seen, occurrences
+                from res_ops_findings where acknowledged_at is null
+               order by last_seen desc limit 100) f), '[]'::jsonb),
+    'metrics', coalesce((
+      select jsonb_agg(to_jsonb(m) order by m.day)
+        from (select * from res_metrics_daily order by day desc limit 14) m), '[]'::jsonb),
+    'last_nightly_run', (select max(ran_at) from res_maintenance_runs)
+  );
+end;
+$$;
+revoke all on function public.res_ops_overview() from public, anon;
+grant execute on function public.res_ops_overview() to authenticated, service_role;
+
+create or replace function public.res_ops_set_job_enabled(p_key text, p_enabled boolean)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  if not public.res_is_platform_admin() then
+    raise exception 'not_a_platform_admin';
+  end if;
+  update res_automation_jobs
+     set enabled = p_enabled, updated_at = now(),
+         disabled_reason = case when p_enabled then null else 'switched off by an admin' end
+   where key = p_key;
+  if not found then raise exception 'unknown job: %', p_key; end if;
+end;
+$$;
+revoke all on function public.res_ops_set_job_enabled(text, boolean) from public, anon;
+grant execute on function public.res_ops_set_job_enabled(text, boolean) to authenticated, service_role;
+
+create or replace function public.res_ops_ack_finding(p_id uuid)
+returns void language plpgsql security definer set search_path = public
+as $$
+begin
+  if not public.res_is_platform_admin() then
+    raise exception 'not_a_platform_admin';
+  end if;
+  update res_ops_findings set acknowledged_at = now(), acknowledged_by = auth.uid()
+   where id = p_id and acknowledged_at is null;
+end;
+$$;
+revoke all on function public.res_ops_ack_finding(uuid) from public, anon;
+grant execute on function public.res_ops_ack_finding(uuid) to authenticated, service_role;
+
+-- For the watchdog workflow: one small, non-sensitive answer to "is the
+-- nightly run alive", readable with the service role only.
+create or replace function public.res_ops_heartbeat()
+returns jsonb language sql stable security definer set search_path = public
+as $$
+  select jsonb_build_object(
+    'last_nightly_run', (select max(ran_at) from res_maintenance_runs),
+    'open_critical', (select count(*) from res_ops_findings
+                       where acknowledged_at is null and severity = 'critical'),
+    'global_stop', not coalesce((select enabled from res_automation_jobs where key = '*'), true));
+$$;
+revoke all on function public.res_ops_heartbeat() from public, anon, authenticated;
+grant execute on function public.res_ops_heartbeat() to service_role;
+
+-- ── 10. Close the grant drift found on 28 September ─────────────────────────
+-- Production granted res_prune_security_logs to `authenticated`; the repo has
+-- always said service_role only. The other two sweeps were missing from the
+-- section 41 lockdown list.
+do $$
+declare sig text;
+begin
+  foreach sig in array array[
+    'public.res_prune_security_logs()',
+    'public.res_prune_client_errors()',
+    'public.res_expire_area_probations()'
+  ] loop
+    if to_regprocedure(sig) is not null then
+      execute format('revoke all on function %s from public, anon, authenticated', sig);
+      execute format('grant execute on function %s to service_role', sig);
+    end if;
+  end loop;
+end $$;
+
+-- ── 11. Schedules ───────────────────────────────────────────────────────────
+-- Guarded: the throwaway test database has no pg_cron. cron.schedule with an
+-- existing job name updates it in place, so re-running this is safe.
+do $$
+begin
+  if to_regnamespace('cron') is not null then
+    perform cron.schedule('resident-escalate-alerts', '* * * * *',
+      'select public.res_escalate_alerts()');
+    perform cron.schedule('resident-scan-security-logs', '7 * * * *',
+      'select public.res_scan_security_logs()');
+  end if;
+end $$;

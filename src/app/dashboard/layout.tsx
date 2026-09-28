@@ -29,7 +29,6 @@ import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } fro
 import { unlockNotificationAudio } from '../../utils/notificationSounds'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
-import AutomationControlPanel from './components/shared/AutomationControlPanel'
 import UrgentBroadcastBanner from './components/shared/UrgentBroadcastBanner'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 
@@ -491,7 +490,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           triggers) — was mounted unconditionally, visible to every real user
           in production. First NODE_ENV gate in this codebase; there's no
           existing admin-role check to reuse instead. */}
-      {process.env.NODE_ENV !== 'production' && <AutomationControlPanel />}
     </div>
   )
 }
