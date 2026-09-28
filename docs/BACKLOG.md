@@ -41,11 +41,9 @@ empty with no error. Section 47 of `theresident_schema_part3.sql` now records
 every `res_` table's grants, generated from the live database, and
 `schemaGrants.test.ts` fails the build if a new table arrives without one.
 
-Still open from this: live tables grant `TRUNCATE`, `TRIGGER` and `REFERENCES`
-to `anon` and `authenticated` — leftovers of the old defaults. `TRUNCATE`
-bypasses RLS. Not reachable through PostgREST today, and deliberately not
-recorded in section 47, but revoking it on the live database is its own change
-and should be made on purpose.
+The leftover `TRUNCATE`, `TRIGGER` and `REFERENCES` grants to `anon` and
+`authenticated` — 354 of them, `TRUNCATE` bypassing RLS — were revoked on 28
+September (section 48). Nobody signed out can empty a table.
 
 **4. `main` and `claude/app-not-working-io5l8f` have diverged into two
 incompatible apps.** 14 commits on main, 112 on the branch, from the same base

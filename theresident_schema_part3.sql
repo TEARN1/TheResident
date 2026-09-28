@@ -1614,3 +1614,34 @@ grant select, insert, update on public.res_vendors to authenticated;
 grant select, insert, update, delete on public.res_vendors to service_role;
 grant select on public.res_room_vacancy_watches to authenticated;
 grant select, insert, update, delete on public.res_room_vacancy_watches to service_role;
+
+
+-- ==========================================================================
+-- SECTION 48 — NOBODY SIGNED OUT CAN EMPTY A TABLE
+-- ==========================================================================
+--
+-- Every res_ table granted TRUNCATE, TRIGGER and REFERENCES to `anon` and
+-- `authenticated` — 354 grants, all of them the footprint of Supabase's old
+-- default privileges rather than anything this project decided. TRUNCATE is
+-- the one that mattered: it empties a table in one statement and row level
+-- security does not apply to it. PostgREST exposes no TRUNCATE verb, so it was
+-- not reachable through the API — but it was one misconfiguration away.
+--
+-- Checked before revoking: no function in the schema truncates anything, and
+-- neither role creates tables or triggers, so none of the three is used.
+-- Applied to production on 28 September 2026; verified afterwards that 0
+-- such grants remain, guests can still browse listings, signed-in residents
+-- can still post one, and nobody signed out can empty the listings table.
+--
+-- Scoped to res_ tables: Gruvs-owned tables are not The Resident's to change.
+
+do $$
+declare t text;
+begin
+  for t in
+    select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r' and c.relname like 'res\_%'
+  loop
+    execute format('revoke truncate, trigger, references on public.%I from anon, authenticated', t);
+  end loop;
+end $$;
