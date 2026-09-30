@@ -1,0 +1,72 @@
+# Nightly off-platform backup (Tier 2, docs/DISASTER-RECOVERY.md), run for
+# you instead of by you.
+#
+# The dump is restored into a throwaway PostgreSQL before it is kept
+# (--verify), so this proves a BACKUP exists, not just a file. It is then
+# encrypted (it holds residents' personal data, POPIA) and kept as a workflow
+# artifact for 30 days: a different vendor and a different login from
+# Supabase, which is the whole point of Tier 2.
+#
+# Needs repository secrets:
+#   DATABASE_URL       Supabase → Project Settings → Database → URI
+#   BACKUP_PASSPHRASE  a long random string, stored ALSO somewhere offline.
+#                      Without it the backups cannot be opened — by anyone.
+#
+# To restore:  gpg -d theresident-*.sql.gz.gpg | gunzip | psql "$TARGET_URL"
+name: backup
+
+on:
+  schedule:
+    - cron: '11 1 * * *'   # 03:11 SAST, after the day's writes, before maintenance
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The server is PostgreSQL 17; an older pg_dump refuses to run.
+      - name: Install PostgreSQL 17 with PostGIS
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-17 postgresql-17-postgis-3
+
+      - name: Dump and verify
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGBIN: /usr/lib/postgresql/17/bin
+        run: bash scripts/backup-export.sh --verify out
+
+      - name: Encrypt
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          test -n "$BACKUP_PASSPHRASE" || { echo "BACKUP_PASSPHRASE is not set"; exit 1; }
+          for f in out/theresident-*.sql.gz; do
+            gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
+                --symmetric --cipher-algo AES256 -o "$f.gpg" "$f"
+            rm "$f"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: theresident-backup-${{ github.run_id }}
+          path: out/*.gpg
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Say so if it failed
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({ ...context.repo, labels: ['ops-watchdog'],
+              title: `Nightly backup failed — ${new Date().toISOString().slice(0, 10)}`,
+              body: `No verified backup was kept tonight. [Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})` })

@@ -1,0 +1,70 @@
+# After every production deploy: open the live site in a real browser, and if
+# it is broken, roll back to the previous deployment.
+#
+# Vercel reports each deployment to GitHub as a deployment_status event; this
+# runs the existing smoke test (scripts/smoke.mjs) against the URL Vercel
+# just deployed. A broken deploy then lives for minutes, not until someone
+# happens to open the site.
+#
+# Rollback needs repository secrets VERCEL_TOKEN, VERCEL_ORG_ID and
+# VERCEL_PROJECT_ID (Vercel → Account Settings → Tokens; the two ids are in
+# .vercel/project.json after `vercel link`). Without them, a failure opens an
+# issue instead of rolling back.
+name: verify-deploy
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verify:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Smoke-test the live deployment
+        id: smoke
+        env:
+          BASE_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+        run: node scripts/smoke.mjs
+
+      - name: Roll back
+        id: rollback
+        if: failure() && steps.smoke.outcome == 'failure'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "No VERCEL_TOKEN: not rolling back automatically."
+            exit 1
+          fi
+          npx --yes vercel@latest rollback --yes --token "$VERCEL_TOKEN"
+
+      - name: Report
+        if: failure()
+        uses: actions/github-script@v7
+        env:
+          ROLLED_BACK: ${{ steps.rollback.outcome == 'success' }}
+        with:
+          script: |
+            const rolled = process.env.ROLLED_BACK === 'true'
+            await github.rest.issues.create({ ...context.repo, labels: ['ops-watchdog'],
+              title: rolled ? 'A broken deploy was rolled back' : 'The live deploy is broken',
+              body: `Commit ${context.sha.slice(0, 7)} failed the browser smoke test on production.\n\n` +
+                (rolled ? 'The previous deployment has been restored. Fix forward, then redeploy.'
+                        : '**It is still live.** Roll back in Vercel, or set VERCEL_TOKEN so this happens automatically.') +
+                `\n\n[Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})` })

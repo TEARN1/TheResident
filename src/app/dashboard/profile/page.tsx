@@ -14,6 +14,7 @@ import HomeAreaPanel from '../components/profile/HomeAreaPanel'
 import PushAlertsPanel from '../components/profile/PushAlertsPanel'
 import ClientErrorAdminPanel from '../components/profile/ClientErrorAdminPanel'
 import OpsConsolePanel from '../components/profile/OpsConsolePanel'
+import DownloadMyDataButton from '../components/profile/DownloadMyDataButton'
 import ReportQueueAdminPanel from '../components/profile/ReportQueueAdminPanel'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
@@ -568,6 +569,7 @@ export default function ProfilePage() {
 
       {!guest && (
         <div className="glass-panel p-4 space-y-3 border-danger/10">
+          <DownloadMyDataButton />
           {!showDeleteConfirm ? (
             <button
               type="button"

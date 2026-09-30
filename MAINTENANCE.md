@@ -36,30 +36,19 @@ a loader callback depends only on stable props/ids, and anything it needs
 to read mid-fetch is a **local variable** (see `loadCareCircle` in
 `SafetyTab.tsx`) or a ref — never a piece of state that the same chain sets.
 
-## Weekly (~15 min)
-- **Take an off-platform backup: `./scripts/backup-export.sh`** (needs
-  `DATABASE_URL`). Tier 1 (Supabase PITR) protects the data while Supabase
-  is reachable; this is what survives losing the account itself. Move the
-  file somewhere that is not Supabase — a copy inside the thing you lost is
-  not a backup.
-- Check GitHub Actions CI status on the default branch.
-- Skim the security log for anything unexpected. Supabase dashboard →
-  SQL Editor (the service role bypasses RLS; there is intentionally no
-  select policy for normal users):
-
-  ```sql
-  select created_at, event_type, action, details, user_id
-  from public.res_security_logs
-  where created_at > now() - interval '7 days'
-  order by created_at desc
-  limit 200;
-  ```
-
-  Watch for `brute_force_blocked` and `auth_failed` clustering on one
-  account, unexpected `role_switched` entries, `xss_blocked` spikes, and
-  `org_broadcast_sent` from units you don't recognise. Also check for a rise
-  in `Sync failed` notifications, which now carry a real error message
-  instead of `[object Object]` (see `utils/errors.ts`).
+## Weekly (~5 min)
+- **Read the Monday `Ops digest` issue.** It replaces the three chores that
+  used to live here:
+  - the off-platform backup — `.github/workflows/backup.yml` now runs it
+    nightly, verified and encrypted, once its secrets are set;
+  - checking CI — failures open `ops-watchdog` issues;
+  - skimming the security log — `res_scan_security_logs()` checks it every
+    hour against the thresholds that used to be written here (repeated
+    `auth_failed` on one account, any `brute_force_blocked`, injection
+    bursts, `role_switched`) and raises a finding.
+- Acknowledge or act on anything in **Needs you** (Profile → Ops Console,
+  admins only). Every finding type has a runbook in
+  `docs/runbooks/ops-findings.md`.
 
 ## Monthly (~1 hour)
 - `npm audit` and a dependency bump pass.
@@ -68,9 +57,8 @@ to read mid-fetch is a **local variable** (see `loadCareCircle` in
   detection rules (never auto-actioned — human review only).
 - Re-run `npm run fuzzer` and confirm it's still 100% blocked across all
   attack categories.
-- Prune the security log if it's grown large: `select public.res_prune_security_logs();`
-  (drops entries older than 180 days — unbounded growth on a free tier is
-  its own outage).
+- ~~Prune the security log~~ — automatic: it is one of the nightly jobs, with
+  its own switch in the Ops Console.
 
 ## Quarterly (~half a day)
 - **Run the restore drill: `./scripts/restore-drill.sh`.** Fifteen minutes.
@@ -167,9 +155,13 @@ the schema of record is proven to rebuild from nothing, and every
 authorisation assertion from the security review is enforced continuously
 rather than whenever someone remembers.
 
-**Tier 2 is still the gap, and it is the one holding your data.** The script
-is finished and tested in both directions; nothing runs it. One cron line on
-any machine that has the connection string closes it:
+**Tier 2 now runs itself** — `.github/workflows/backup.yml`, nightly, as soon
+as the `DATABASE_URL` and `BACKUP_PASSPHRASE` repository secrets exist. Each
+dump is restored into a throwaway database before it is kept, encrypted, and
+held for 30 days as a GitHub artifact (a different vendor and login from
+Supabase). **Store the passphrase somewhere offline as well**: without it the
+backups cannot be opened by anyone, including you. A failed night opens an
+issue. The manual equivalent, if you prefer your own storage:
 
 ```
 0 3 * * 0 DATABASE_URL=... /path/scripts/backup-export.sh --verify --quiet /var/backups/resident

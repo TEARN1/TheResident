@@ -1,0 +1,42 @@
+# The weekly digest: one issue every Monday morning. If a person reads one
+# thing a week about how the app is running, it is this.
+#
+# Needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository secrets.
+name: ops-digest
+
+on:
+  schedule:
+    - cron: '43 4 * * 1'   # Monday 06:43 SAST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build the digest
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/ops-report.mjs digest > digest.md
+      - name: Post it, and close last week's
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = require('fs').readFileSync('digest.md', 'utf8')
+            const label = 'ops-digest'
+            const { data: old } = await github.rest.issues.listForRepo({
+              ...context.repo, state: 'open', labels: label })
+            for (const i of old) {
+              await github.rest.issues.update({ ...context.repo, issue_number: i.number, state: 'closed' })
+            }
+            const day = new Date().toISOString().slice(0, 10)
+            await github.rest.issues.create({ ...context.repo, labels: [label],
+              title: `Ops digest — ${day}`, body })

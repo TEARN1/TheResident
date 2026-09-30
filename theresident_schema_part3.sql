@@ -2219,3 +2219,71 @@ begin
       'select public.res_scan_security_logs()');
   end if;
 end $$;
+
+
+-- ==========================================================================
+-- SECTION 50 — "DOWNLOAD MY DATA"
+-- ==========================================================================
+--
+-- POPIA section 23 gives a resident the right to a copy of the personal
+-- information held about them. Deletion already exists (Profile → Delete
+-- Account); access did not, so the right was answered by email or not at all.
+--
+-- Returns every row across the res_ tables that the caller AUTHORED or OWNS,
+-- found by owner-column name so a table added later is covered without
+-- editing this function. Deliberately narrow:
+--
+--   * Only owner columns (user_id, author_id, …). NOT blocked_id: a resident
+--     must not learn from their export who has blocked them.
+--   * Not internal tables: security logs, rate-limit counters, crash reports
+--     and ops data are kept for protecting everyone, are listed in the
+--     privacy policy as retained, and would hand an attacker their own
+--     detection signals.
+create or replace function public.res_export_my_data()
+returns jsonb language plpgsql stable security definer set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_out jsonb := '{}'::jsonb;
+  v_col record;
+  v_rows jsonb;
+begin
+  if v_uid is null then raise exception 'not signed in'; end if;
+
+  perform res_check_rate_limit('export_my_data', 5, 3600);
+
+  v_out := jsonb_build_object(
+    'exported_at', now(),
+    'profile', (select to_jsonb(p) from res_profiles p where p.id = v_uid)
+  );
+
+  for v_col in
+    select c.table_name, c.column_name
+      from information_schema.columns c
+      join information_schema.tables t
+        on t.table_schema = c.table_schema and t.table_name = c.table_name and t.table_type = 'BASE TABLE'
+     where c.table_schema = 'public'
+       and c.table_name like 'res\_%'
+       and c.table_name not in ('res_profiles', 'res_security_logs', 'res_rate_limits',
+                                'res_client_errors', 'res_maintenance_runs', 'res_ops_findings',
+                                'res_automation_jobs', 'res_metrics_daily', 'res_platform_admins',
+                                'res_org_unit_audit')
+       and c.column_name in ('user_id', 'author_id', 'landlord_id', 'tenant_id', 'reporter_id',
+                             'blocker_id', 'created_by', 'responder_id', 'carer_id', 'owner_id')
+       and c.data_type = 'uuid'
+     order by c.table_name, c.column_name
+  loop
+    execute format('select coalesce(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) from public.%I t where t.%I = $1',
+                   v_col.table_name, v_col.column_name)
+      into v_rows using v_uid;
+    if jsonb_array_length(v_rows) > 0 then
+      v_out := v_out || jsonb_build_object(
+        v_col.table_name || '.' || v_col.column_name, v_rows);
+    end if;
+  end loop;
+
+  return v_out;
+end;
+$$;
+revoke all on function public.res_export_my_data() from public, anon;
+grant execute on function public.res_export_my_data() to authenticated, service_role;
