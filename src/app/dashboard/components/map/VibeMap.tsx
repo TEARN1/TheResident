@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
@@ -69,8 +70,21 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const [sharedZones, setSharedZones] = useState<SharedZone[]>([])
   const [pendingTapCoords, setPendingTapCoords] = useState<{ lat: number; lon: number; label?: string } | null>(null)
 
-  // 1. Initial Geolocation
+  const searchParams = useSearchParams()
+  const queryLat = searchParams ? parseFloat(searchParams.get('lat') || '') : NaN
+  const queryLon = searchParams ? parseFloat(searchParams.get('lon') || '') : NaN
+  const isBeaconMode = searchParams ? searchParams.get('beacon') === 'true' : false
+
+  // 1. Initial Geolocation (or focus directly if coordinates passed via beacon link)
   useEffect(() => {
+    if (!isNaN(queryLat) && !isNaN(queryLon)) {
+      setCenter({ lat: queryLat, lon: queryLon })
+      setIsGpsDefault(false)
+      setActiveHub(null)
+      setGeoResolved(true)
+      return
+    }
+
     if (!('geolocation' in navigator)) {
       setCenter({ lat: -26.1926, lon: 28.0305 }) // Braamfontein / Joburg default
       setIsGpsDefault(true)
@@ -93,7 +107,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       },
       { timeout: 7000 }
     )
-  }, [])
+  }, [queryLat, queryLon])
 
   // 2. Fetch Gruvs events & Shared community zones
   const loadData = async (lat: number, lon: number) => {
@@ -174,6 +188,32 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       chillLayerRef.current = L.layerGroup().addTo(map)
       isochroneLayerRef.current = L.layerGroup().addTo(map)
       userPinLayerRef.current = L.layerGroup().addTo(map)
+
+      // If arrived via Find Me Beacon, render glowing resident radar beacon
+      if (isBeaconMode && !isNaN(queryLat) && !isNaN(queryLon) && userPinLayerRef.current) {
+        L.circleMarker([queryLat, queryLon], {
+          radius: 26,
+          color: '#8EB69B',
+          fillColor: '#8EB69B',
+          fillOpacity: 0.28,
+          weight: 2,
+          className: 'vibe-pulsing-marker'
+        }).addTo(userPinLayerRef.current)
+
+        L.marker([queryLat, queryLon], {
+          icon: L.divIcon({
+            className: '',
+            html: `
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 12px;border-radius:20px;background:rgba(11,43,38,0.95);backdrop-filter:blur(16px);border:1.5px solid #8EB69B;box-shadow:0 0 25px rgba(142,182,155,0.7);color:#fff;font-weight:900;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap;">
+                <span style="font-size:14px;">📍</span>
+                <span>Resident Beacon</span>
+              </div>
+            `,
+            iconSize: [140, 36],
+            iconAnchor: [70, 18]
+          })
+        }).addTo(userPinLayerRef.current)
+      }
 
       mapRef.current = map
 
