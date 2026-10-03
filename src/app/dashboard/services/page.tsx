@@ -5,7 +5,8 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Droplets
+  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Droplets,
+  Flame, BatteryCharging, ShoppingBag, Wrench, Tag, Package, Navigation
 } from 'lucide-react'
 import {
   RootState,
@@ -43,6 +44,14 @@ const FlatpackAssemblyModal = dynamic(() => import('../components/services/Flatp
 const DepositSaverCleaningModal = dynamic(() => import('../components/services/DepositSaverCleaningModal'), { ssr: false })
 const RubbishClearanceModal = dynamic(() => import('../components/services/RubbishClearanceModal'), { ssr: false })
 const HandymanMilestoneEscrowModal = dynamic(() => import('../components/services/HandymanMilestoneEscrowModal'), { ssr: false })
+const GasCylinderRefillModal = dynamic(() => import('../components/residence/GasCylinderRefillModal'), { ssr: false })
+const GeneratorDieselPoolModal = dynamic(() => import('../components/residence/GeneratorDieselPoolModal'), { ssr: false })
+const SolarBatteryBridgeModal = dynamic(() => import('../components/residence/SolarBatteryBridgeModal'), { ssr: false })
+const ResHustleGigBoardModal = dynamic(() => import('../components/residence/ResHustleGigBoardModal'), { ssr: false })
+const ResShedToolLibraryModal = dynamic(() => import('../components/residence/ResShedToolLibraryModal'), { ssr: false })
+const ReverseAuctionBargainModal = dynamic(() => import('../components/social-dynamics/ReverseAuctionBargainModal'), { ssr: false })
+const GatekeeperParcelSafeModal = dynamic(() => import('../components/residence/GatekeeperParcelSafeModal'), { ssr: false })
+const TaxiHandSignGuideModal = dynamic(() => import('../components/social-dynamics/TaxiHandSignGuideModal'), { ssr: false })
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
 const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
@@ -77,6 +86,14 @@ export default function ServicesPage() {
   const [showDepositCleaningModal, setShowDepositCleaningModal] = useState(false)
   const [showRubbishModal, setShowRubbishModal] = useState(false)
   const [showHandymanEscrowModal, setShowHandymanEscrowModal] = useState(false)
+  const [showGasModal, setShowGasModal] = useState(false)
+  const [showDieselModal, setShowDieselModal] = useState(false)
+  const [showSolarBatteryModal, setShowSolarBatteryModal] = useState(false)
+  const [showHustleGigModal, setShowHustleGigModal] = useState(false)
+  const [showToolLibraryModal, setShowToolLibraryModal] = useState(false)
+  const [showReverseAuctionModal, setShowReverseAuctionModal] = useState(false)
+  const [showParcelSafeModal, setShowParcelSafeModal] = useState(false)
+  const [showTaxiGuideModal, setShowTaxiGuideModal] = useState(false)
 
   // Business Registration State
   const [showBusinessRegModal, setShowBusinessRegModal] = useState(false)
@@ -325,7 +342,7 @@ export default function ServicesPage() {
               key={t.id}
               onClick={() => setActiveTab(t.id as 'moving' | 'handymen' | 'lifts' | 'utilities')}
               className={`flex-1 md:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 whitespace-nowrap ${
-                activeTab === t.id ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+                activeTab === t.id ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
               }`}
             >
               <t.icon size={14} /> {t.label}
@@ -406,6 +423,86 @@ export default function ServicesPage() {
         >
           <Lock size={13} />
           <span>Trade Milestone Escrow</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowGasModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 shrink-0 transition"
+          title="9kg LPG Gas Cylinder Refill & Dispatch"
+        >
+          <Flame size={13} />
+          <span>Gas Refill</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowDieselModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 shrink-0 transition"
+          title="Communal Generator Diesel Fuel Pool & Meter"
+        >
+          <Zap size={13} />
+          <span>Generator Diesel</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowSolarBatteryModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
+          title="Solar Inverter Battery Outage Bridge"
+        >
+          <BatteryCharging size={13} />
+          <span>Solar Battery</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowHustleGigModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 shrink-0 transition"
+          title="Student Campus Micro-Gig Errand Board"
+        >
+          <ShoppingBag size={13} />
+          <span>Res Hustle Gigs</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowToolLibraryModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 transition"
+          title="P2P Communal Tool Library with Escrow Collateral"
+        >
+          <Wrench size={13} />
+          <span>Tool Shed</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowReverseAuctionModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0 transition"
+          title="Reverse Dutch Auction Bargain Bin - Price drops every 4 hours"
+        >
+          <Tag size={13} />
+          <span>Dutch Auction</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowParcelSafeModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0 transition"
+          title="Gatekeeper Parcel Safe - Secure Courier OTP Lockbox"
+        >
+          <Package size={13} />
+          <span>Parcel Safe</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowTaxiGuideModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 shrink-0 transition"
+          title="SA Minibus Taxi Hand Gesture Signs & Cash Fares"
+        >
+          <Navigation size={13} />
+          <span>Taxi Guide</span>
         </button>
       </div>
 
@@ -1069,6 +1166,54 @@ export default function ServicesPage() {
       <HandymanMilestoneEscrowModal
         isOpen={showHandymanEscrowModal}
         onClose={() => setShowHandymanEscrowModal(false)}
+      />
+
+      {/* 9kg LPG GAS CYLINDER REFILL & DISPATCH MODAL */}
+      <GasCylinderRefillModal
+        isOpen={showGasModal}
+        onClose={() => setShowGasModal(false)}
+      />
+
+      {/* COMMUNAL GENERATOR DIESEL FUEL POOL MODAL */}
+      <GeneratorDieselPoolModal
+        isOpen={showDieselModal}
+        onClose={() => setShowDieselModal(false)}
+      />
+
+      {/* SOLAR BATTERY INVERTER OUTAGE BRIDGE MODAL */}
+      <SolarBatteryBridgeModal
+        isOpen={showSolarBatteryModal}
+        onClose={() => setShowSolarBatteryModal(false)}
+      />
+
+      {/* RES HUSTLE STUDENT CAMPUS ERRAND GIG BOARD MODAL */}
+      <ResHustleGigBoardModal
+        isOpen={showHustleGigModal}
+        onClose={() => setShowHustleGigModal(false)}
+      />
+
+      {/* RES SHED COMMUNAL TOOL LIBRARY MODAL */}
+      <ResShedToolLibraryModal
+        isOpen={showToolLibraryModal}
+        onClose={() => setShowToolLibraryModal(false)}
+      />
+
+      {/* REVERSE DUTCH AUCTION BARGAIN BIN MODAL */}
+      <ReverseAuctionBargainModal
+        isOpen={showReverseAuctionModal}
+        onClose={() => setShowReverseAuctionModal(false)}
+      />
+
+      {/* GATEKEEPER PARCEL SAFE OTP LOCKBOX MODAL */}
+      <GatekeeperParcelSafeModal
+        isOpen={showParcelSafeModal}
+        onClose={() => setShowParcelSafeModal(false)}
+      />
+
+      {/* SA MINIBUS TAXI HAND GESTURE & FARES GUIDE MODAL */}
+      <TaxiHandSignGuideModal
+        isOpen={showTaxiGuideModal}
+        onClose={() => setShowTaxiGuideModal(false)}
       />
     </div>
   )

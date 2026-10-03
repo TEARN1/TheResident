@@ -43,6 +43,13 @@ const PushCallNotificationManager = dynamic(() => import('./components/messages/
 const WalkWithMeCompanionModal = dynamic(() => import('./components/trust-safety/WalkWithMeCompanionModal'), { ssr: false })
 const CPFPanicButtonModal = dynamic(() => import('./components/trust-safety/CPFPanicButtonModal'), { ssr: false })
 const WaterOutageRadarModal = dynamic(() => import('./components/trust-safety/WaterOutageRadarModal'), { ssr: false })
+const DynamicIslandHUD = dynamic(() => import('./components/hud/DynamicIslandHUD'), { ssr: false })
+const CommandPaletteModal = dynamic(() => import('./components/hud/CommandPaletteModal'), { ssr: false })
+const FloatingChatHead = dynamic(() => import('./components/hud/FloatingChatHead'), { ssr: false })
+const NightVisionRedMode = dynamic(() => import('./components/hud/NightVisionRedMode'), { ssr: false })
+const WeatherLoadsheddingOverlay = dynamic(() => import('./components/hud/WeatherLoadsheddingOverlay'), { ssr: false })
+const ResidentFMRadioPlayer = dynamic(() => import('./components/hud/ResidentFMRadioPlayer'), { ssr: false })
+const QuantumConfetti = dynamic(() => import('./components/shared/QuantumConfetti').then(m => m.QuantumConfetti), { ssr: false })
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -57,6 +64,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showWalkWithMe, setShowWalkWithMe] = useState(false)
   const [showCPFPanic, setShowCPFPanic] = useState(false)
   const [showWaterRadar, setShowWaterRadar] = useState(false)
+  const [showCommandPalette, setShowCommandPalette] = useState(false)
+  const [confettiActive, setConfettiActive] = useState(false)
   const notifMenuRef = useRef<HTMLDivElement>(null)
   // Browser autoplay policy blocks audio until a real user gesture — this
   // creates/resumes the shared AudioContext on the FIRST click or keypress
@@ -75,6 +84,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       window.removeEventListener('keydown', unlock)
     }
   }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setShowCommandPalette(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  const handleCommandPaletteAction = (actionKey: string) => {
+    setShowCommandPalette(false)
+    if (actionKey === 'panic') setShowCPFPanic(true)
+    else if (actionKey === 'water') setShowWaterRadar(true)
+    else if (actionKey === 'bakkie') router.push('/dashboard/services')
+    else if (actionKey === 'split') router.push('/dashboard/housing')
+    else if (actionKey === 'lease') router.push('/dashboard/housing')
+    else if (actionKey === 'walk') setShowWalkWithMe(true)
+    else if (actionKey === 'radio') playTactileSound('chime')
+  }
 
   // Guests previously got the "you should sign up" pitch as five separate
   // small nudges scattered across Housing, Services and Profile, each only
@@ -593,6 +624,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         isOpen={showWaterRadar}
         onClose={() => setShowWaterRadar(false)}
       />
+
+      {/* Dynamic Island Civic Status Capsule */}
+      <DynamicIslandHUD
+        onOpenPanic={() => setShowCPFPanic(true)}
+        onOpenBakkie={() => router.push('/dashboard/services')}
+        onOpenWaterRadar={() => setShowWaterRadar(true)}
+        onOpenTownHall={() => router.push('/dashboard/community')}
+      />
+
+      {/* Command Palette Cmd+K Modal */}
+      <CommandPaletteModal
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        onSelectAction={handleCommandPaletteAction}
+      />
+
+      {/* Floating Chat Head PIP Orb */}
+      <FloatingChatHead />
+
+      {/* Night Vision Red Light Mode */}
+      <NightVisionRedMode />
+
+      {/* Weather & Loadshedding Ambient Canvas Shimmer */}
+      <WeatherLoadsheddingOverlay isLoadshedding={true} isRaining={false} />
+
+      {/* Resident FM Radio Cassette Player */}
+      <ResidentFMRadioPlayer />
+
+      {/* Quantum Confetti Particle Burst */}
+      <QuantumConfetti active={confettiActive} onComplete={() => setConfettiActive(false)} />
     </div>
   )
 }
