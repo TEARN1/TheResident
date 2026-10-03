@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, Navigation, ExternalLink, Calendar, ShieldAlert, Sparkles, Building, Flame, Share2, CheckCircle2 } from 'lucide-react'
+import { X, MapPin, Navigation, Sparkles, Flame, Share2 } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import Link from 'next/link'
 
@@ -93,7 +93,6 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
     }
   }
 
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lon}`
   // Clean universal web/app directions fallback without confusing api query param
   const cleanDirectionsUrl = `https://maps.google.com/?q=${item.lat},${item.lon}`
 
@@ -190,7 +189,10 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
             href={cleanDirectionsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => playTactileSound('click')}
+            onClick={() => {
+              playTactileSound('click')
+              onDirections?.(item)
+            }}
             className={`flex-1 py-3 px-4 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 ${theme.btnBg} shadow-lg active:scale-95 transition-all`}
           >
             <Navigation size={14} /> Navigate Now

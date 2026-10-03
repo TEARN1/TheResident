@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ShieldCheck, QrCode, Download, Share2, Sparkles, Building, Award, CheckCircle2, Flame, ExternalLink } from 'lucide-react'
+import { X, ShieldCheck, QrCode, Share2, Sparkles, Building, Award, CheckCircle2, ExternalLink } from 'lucide-react'
 import { GRUVS } from '../../../../utils/sisterApps'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
@@ -27,6 +27,15 @@ export default function ResidentIDCardModal({
   const [copied, setCopied] = useState(false)
   const [rotateX, setRotateX] = useState(0)
   const [rotateY, setRotateY] = useState(0)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   if (!isOpen || !user) return null
 

@@ -20,8 +20,27 @@ export type SoundEffectType =
   | 'tab' 
   | 'alert'
 
+export function isTactileSoundMuted(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return localStorage.getItem('residentTactileMuted') === 'true'
+  } catch {
+    return false
+  }
+}
+
+export function setTactileSoundMuted(muted: boolean): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem('residentTactileMuted', String(muted))
+  } catch {
+    // Ignore storage quota
+  }
+}
+
 export function playTactileSound(type: SoundEffectType): void {
   try {
+    if (isTactileSoundMuted()) return
     const ctx = getAudioContext()
     if (!ctx) return
     if (ctx.state === 'suspended') void ctx.resume()

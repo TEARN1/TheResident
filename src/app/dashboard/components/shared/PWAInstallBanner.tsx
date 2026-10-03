@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Download, X, Smartphone, Share, PlusSquare, Sparkles, CheckCircle2 } from 'lucide-react'
+import { Download, X, Smartphone, Share, PlusSquare } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 /**
  * The `beforeinstallprompt` event, which is Chromium-only and therefore not in

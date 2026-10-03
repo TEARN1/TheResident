@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import Image from 'next/image'
-import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, Sparkles, ExternalLink, Table2, Zap, Car } from 'lucide-react'
+import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, ExternalLink, Table2, Zap, Car } from 'lucide-react'
 import { GRUVS, GRUVS_TOUCH_DOWN, TEARNS } from '../../../utils/sisterApps'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
@@ -745,7 +745,15 @@ export default function GossipPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gold-primary to-amber-600 flex items-center justify-center text-black font-black text-sm overflow-hidden shadow-sm">
                       {profileMap[post.author_id]?.avatar_url
-                        ? <img src={profileMap[post.author_id].avatar_url as string} alt="" className="w-full h-full object-cover" />
+                        ? (
+                            <Image
+                              src={profileMap[post.author_id].avatar_url as string}
+                              alt={nameOf(post.author_id)}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover"
+                            />
+                          )
                         : nameOf(post.author_id).charAt(0).toUpperCase()}
                     </div>
                     <div>

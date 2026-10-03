@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ClipboardList, X, CheckSquare, Square, Camera, AlertTriangle, ShieldCheck, Download, Plus, Trash2 } from 'lucide-react'
+import { ClipboardList, X, CheckSquare, Square, Download, Trash2 } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface SnagItem {

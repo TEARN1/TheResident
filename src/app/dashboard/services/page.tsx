@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 import {
   Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon
 } from 'lucide-react'
@@ -452,7 +453,7 @@ export default function ServicesPage() {
                <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-black/40 hover:border-gold-primary/40 transition-all duration-500 shadow-2xl">
                   <div className="h-44 bg-gray-900 relative overflow-hidden">
                      {srv.image ? (
-                       <img src={srv.image} alt={srv.businessName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" />
+                       <Image src={srv.image} alt={srv.businessName} fill className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
                      ) : (
                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
                          <ImageIcon size={32} className="text-gold-primary/20" />

@@ -1,20 +1,17 @@
 'use client'
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import React, { useEffect, useRef, useState } from 'react'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import {
-  Navigation, LocateFixed, RefreshCw, X, ShieldAlert, MapPin, Layers,
-  Plus, Minus, Sparkles, Satellite, Zap, Flame, Home, Coffee, AlertTriangle, Compass, Heart
+  LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Compass, Building2
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '../../../../store'
 import { fetchSharedZones, type SharedZone } from '../../../../utils/mapZones'
 import { distanceMetres } from '../../../../utils/logic'
 import { reverseGeocode } from '../../../../utils/geocode'
-import { supabase } from '../../../../utils/supabase'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import MapSearchBox from './MapSearchBox'
 import { fetchUpcomingGruvsEvents, formatGruvsEventWhen, type GruvsEvent } from '../../../../utils/gruvsEvents'
@@ -32,10 +29,18 @@ const TILE_SOURCES: Record<'dark' | 'light' | 'satellite', string> = {
 // Fallback tile source if CARTO or ArcGIS ever experiences an issue or rate limit
 const FALLBACK_TILE_SOURCE = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 
+export const SA_METRO_HUBS = [
+  { name: 'Braamfontein', city: 'JHB', lat: -26.1926, lon: 28.0305 },
+  { name: 'Maboneng', city: 'JHB', lat: -26.2045, lon: 28.0598 },
+  { name: 'Cape Town CBD', city: 'CPT', lat: -33.9249, lon: 18.4241 },
+  { name: 'Observatory', city: 'CPT', lat: -33.9372, lon: 18.4715 },
+  { name: 'Florida Rd', city: 'DUR', lat: -29.8398, lon: 31.0188 },
+  { name: 'Hatfield', city: 'PTA', lat: -25.7516, lon: 28.2380 }
+]
+
 type VibeCategoryFilter = 'all' | 'nightlife' | 'housing' | 'safety' | 'chill'
 
 export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }) {
-  const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const listings = useSelector((state: RootState) => state.listings.items)
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -56,7 +61,8 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const [activeVibeFilter, setActiveVibeFilter] = useState<VibeCategoryFilter>('all')
   const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null)
   const [geoResolved, setGeoResolved] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [isGpsDefault, setIsGpsDefault] = useState(false)
+  const [activeHub, setActiveHub] = useState<string | null>('Braamfontein')
   const [selectedVibeItem, setSelectedVibeItem] = useState<VibeItem | null>(null)
   const [showDropVibeModal, setShowDropVibeModal] = useState(false)
   const [gruvsEvents, setGruvsEvents] = useState<GruvsEvent[]>([])
@@ -67,6 +73,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   useEffect(() => {
     if (!('geolocation' in navigator)) {
       setCenter({ lat: -26.1926, lon: 28.0305 }) // Braamfontein / Joburg default
+      setIsGpsDefault(true)
       setGeoResolved(true)
       return
     }
@@ -74,10 +81,14 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     navigator.geolocation.getCurrentPosition(
       pos => {
         setCenter({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+        setIsGpsDefault(false)
+        setActiveHub(null)
         setGeoResolved(true)
       },
       () => {
         setCenter({ lat: -26.1926, lon: 28.0305 })
+        setIsGpsDefault(true)
+        setActiveHub('Braamfontein')
         setGeoResolved(true)
       },
       { timeout: 7000 }
@@ -86,7 +97,6 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
   // 2. Fetch Gruvs events & Shared community zones
   const loadData = async (lat: number, lon: number) => {
-    setLoading(true)
     try {
       const [events, zones] = await Promise.all([
         fetchUpcomingGruvsEvents(60).catch(() => []),
@@ -94,8 +104,8 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       ])
       setGruvsEvents(events)
       setSharedZones(zones)
-    } finally {
-      setLoading(false)
+    } catch {
+      // Silently handle offline or network hiccups
     }
   }
 
@@ -132,11 +142,26 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         preferCanvas: true
       }).setView([center.lat, center.lon], 14)
 
-      tileLayerRef.current = L.tileLayer(TILE_SOURCES[mapTheme], {
+      const tileLayer = L.tileLayer(TILE_SOURCES[mapTheme], {
         attribution: '&copy; CARTO &copy; OpenStreetMap',
         maxZoom: 20,
         subdomains: 'abcd'
-      }).addTo(map)
+      })
+
+      // Seamless tile error fallback: if CARTO or ArcGIS is unreachable, automatically swap to OSM
+      tileLayer.on('tileerror', (e: import('leaflet').TileErrorEvent) => {
+        const targetTile = e.tile as HTMLImageElement
+        if (targetTile && !targetTile.dataset.fallbackApplied) {
+          targetTile.dataset.fallbackApplied = 'true'
+          const { x, y, z } = e.coords
+          targetTile.src = FALLBACK_TILE_SOURCE
+            .replace('{z}', String(z))
+            .replace('{x}', String(x))
+            .replace('{y}', String(y))
+        }
+      })
+
+      tileLayerRef.current = tileLayer.addTo(map)
 
       // Initialize layers
       nightLayerRef.current = L.layerGroup().addTo(map)
@@ -180,6 +205,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     return () => {
       isCancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-time Leaflet canvas initialization once geolocation resolves
   }, [geoResolved])
 
   // 4. Update basemap tile URL smoothly
@@ -392,11 +418,26 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const handleRecenter = () => {
     playTactileSound('click')
     if (!navigator.geolocation || !mapRef.current) return
-    navigator.geolocation.getCurrentPosition(pos => {
-      const newCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude }
-      setCenter(newCoords)
-      mapRef.current?.setView([newCoords.lat, newCoords.lon], 15)
-    })
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const newCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude }
+        setCenter(newCoords)
+        setIsGpsDefault(false)
+        setActiveHub(null)
+        mapRef.current?.flyTo([newCoords.lat, newCoords.lon], 15, { duration: 1.2 })
+      },
+      () => {
+        setIsGpsDefault(true)
+      }
+    )
+  }
+
+  // 1-Tap SA Metro Hub Jump
+  const handleSelectHub = (hub: typeof SA_METRO_HUBS[0]) => {
+    playTactileSound('tab')
+    setActiveHub(hub.name)
+    setCenter({ lat: hub.lat, lon: hub.lon })
+    mapRef.current?.flyTo([hub.lat, hub.lon], 15, { duration: 1.2 })
   }
 
   return (
@@ -405,17 +446,19 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       <div ref={mapContainerRef} className="w-full h-full bg-[#0a0a0c]" />
 
       {/* Top Floating Control Bar */}
-      <div className="absolute top-4 left-4 right-4 z-[500] flex flex-col sm:flex-row items-center justify-between gap-3 pointer-events-none">
-        {/* Search Input Box */}
-        <div className="w-full sm:w-80 pointer-events-auto">
-          <MapSearchBox
-            onSelect={(result) => {
-              playTactileSound('tab')
-              setCenter({ lat: result.lat, lon: result.lon })
-              mapRef.current?.setView([result.lat, result.lon], 15)
-            }}
-          />
-        </div>
+      <div className="absolute top-4 left-4 right-4 z-[500] flex flex-col gap-2.5 pointer-events-none">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+          {/* Search Input Box */}
+          <div className="w-full sm:w-80 pointer-events-auto">
+            <MapSearchBox
+              onSelect={(result) => {
+                playTactileSound('tab')
+                setActiveHub(null)
+                setCenter({ lat: result.lat, lon: result.lon })
+                mapRef.current?.flyTo([result.lat, result.lon], 15, { duration: 1.2 })
+              }}
+            />
+          </div>
 
         {/* Vibe Category Filter Pills */}
         <div className="flex items-center gap-1.5 bg-black/85 backdrop-blur-2xl p-1.5 rounded-2xl border border-white/15 shadow-2xl overflow-x-auto max-w-full pointer-events-auto no-scrollbar">
@@ -469,6 +512,35 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         </div>
       </div>
 
+      {/* SA Metro Hubs Quick Jump Bar */}
+      <div className="w-full flex items-center justify-between gap-2 pointer-events-auto">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 shrink-0 flex items-center gap-1 bg-black/60 backdrop-blur-xl px-2.5 py-1 rounded-xl border border-white/10">
+            <Building2 size={12} className="text-gold-primary" /> Metro:
+          </span>
+          {SA_METRO_HUBS.map(hub => (
+            <button
+              key={hub.name}
+              onClick={() => handleSelectHub(hub)}
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold tracking-tight shrink-0 transition-all border ${
+                activeHub === hub.name
+                  ? 'bg-gold-primary text-black border-gold-primary shadow-glow font-black'
+                  : 'bg-black/75 text-gray-300 border-white/10 hover:border-white/30 hover:text-white backdrop-blur-xl'
+              }`}
+            >
+              {hub.name} <span className="text-[9px] opacity-70">({hub.city})</span>
+            </button>
+          ))}
+        </div>
+
+        {isGpsDefault && (
+          <div className="hidden lg:flex items-center gap-1.5 bg-amber-400/10 border border-amber-400/25 px-2.5 py-1 rounded-xl text-[10px] text-amber-300 font-bold shrink-0 backdrop-blur-xl">
+            <span>📍 Showing default hub. Tap GPS to locate.</span>
+          </div>
+        )}
+      </div>
+    </div>
+
       {/* Floating Bottom Left: Drop Vibe CTA */}
       <div className="absolute bottom-20 md:bottom-5 left-4 z-[500] flex items-center gap-2">
         <button
@@ -498,6 +570,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             onClick={() => { playTactileSound('click'); setMapTheme('dark') }}
             className={`p-2 rounded-xl text-xs font-bold transition-all ${mapTheme === 'dark' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'}`}
             title="Dark Cyberpunk Map"
+            aria-label="Dark Cyberpunk Map"
           >
             <Compass size={16} />
           </button>
@@ -505,6 +578,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             onClick={() => { playTactileSound('click'); setMapTheme('satellite') }}
             className={`p-2 rounded-xl text-xs font-bold transition-all ${mapTheme === 'satellite' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'}`}
             title="Satellite Imagery"
+            aria-label="Satellite Imagery"
           >
             <Satellite size={16} />
           </button>
@@ -515,6 +589,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           onClick={handleRecenter}
           className="p-3 bg-black/85 hover:bg-black backdrop-blur-2xl border border-white/10 text-gold-primary hover:text-white rounded-2xl shadow-2xl transition-all active:scale-95 flex items-center justify-center"
           title="Recenter to My GPS Location"
+          aria-label="Recenter to My GPS Location"
         >
           <LocateFixed size={18} />
         </button>

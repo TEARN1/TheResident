@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Megaphone, Calendar, Info, Heart, Share2, Check, Plus, X, EyeOff, Eye, Users, Sparkles, MapPin, Clock, UserX } from 'lucide-react'
+import { Megaphone, Calendar, Heart, Share2, Check, Plus, X, EyeOff, Eye, Users, Sparkles, MapPin, Clock, UserX } from 'lucide-react'
 import UpgradeButton from '../shared/UpgradeButton'
 import { formatGruvsEventWhen } from '../../../../utils/gruvsEvents'
 import { goldButtonClass } from '../../../../components/ui/GoldButton'

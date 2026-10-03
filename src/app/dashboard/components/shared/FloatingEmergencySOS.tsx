@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertCircle, PhoneCall, ShieldAlert, X, Radio, MapPin, CheckCircle2, ChevronRight } from 'lucide-react'
+import { PhoneCall, ShieldAlert, X, Radio, CheckCircle2, ChevronRight } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface EmergencyContact {

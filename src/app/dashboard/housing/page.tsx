@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Sparkles, ExternalLink, Radar, FileText, HeartHandshake, Calculator, ClipboardList
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, Radar, FileText, HeartHandshake, Calculator, ClipboardList
 } from 'lucide-react'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import {
@@ -17,7 +17,6 @@ import {
   selectMatchedRoommates,
   addRequest,
   addListing,
-  deleteListing,
   updateRequestStatus,
   isGuestUser
 } from '../../../store'
@@ -30,17 +29,17 @@ import TrustBadge from '../components/trust-safety/TrustBadge'
 import NextOfKinFlag from '../components/trust-safety/NextOfKinFlag'
 import ReviewForm from '../components/social/ReviewForm'
 import ReviewsList from '../components/social/ReviewsList'
+import dynamic from 'next/dynamic'
 import SavedSearches from '../components/housing/SavedSearches'
-import OpenInMapsButton from '../components/map/OpenInMapsButton'
 import Link from 'next/link'
-import UpgradeButton from '../components/shared/UpgradeButton'
 import PropertiesPanel, { type ResProperty } from '../components/housing/PropertiesPanel'
 import EmptyState from '../components/shared/EmptyState'
-import RoommateCompatibilityModal from '../components/housing/RoommateCompatibilityModal'
-import SALeaseAgreementModal from '../components/housing/SALeaseAgreementModal'
-import CoLivingExpenseSplitterModal from '../components/household/CoLivingExpenseSplitterModal'
-import TenantInspectionSnagListModal from '../components/housing/TenantInspectionSnagListModal'
-import { goldButtonClass } from '../../../components/ui/GoldButton'
+
+const RoommateCompatibilityModal = dynamic(() => import('../components/housing/RoommateCompatibilityModal'), { ssr: false })
+const SALeaseAgreementModal = dynamic(() => import('../components/housing/SALeaseAgreementModal'), { ssr: false })
+const CoLivingExpenseSplitterModal = dynamic(() => import('../components/household/CoLivingExpenseSplitterModal'), { ssr: false })
+const TenantInspectionSnagListModal = dynamic(() => import('../components/housing/TenantInspectionSnagListModal'), { ssr: false })
+
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
 // Top of the budget slider. Well above the real ceiling for a single room so
@@ -125,9 +124,6 @@ export default function HousingPage() {
   const [activeAuditRequest, setActiveAuditRequest] = useState<RoomRequest | null>(null)
   const [auditActionLoading, setAuditActionLoading] = useState<string | null>(null)
 
-  // Reviews toggle (per listing card)
-  const [reviewsOpenFor, setReviewsOpenFor] = useState<string | null>(null)
-
   // Lifestyle Compatibility Modal
   const [compatModalTarget, setCompatModalTarget] = useState<{ name: string; suburb: string } | null>(null)
 
@@ -139,14 +135,6 @@ export default function HousingPage() {
 
   // Move-in Snag List Modal
   const [showSnagModal, setShowSnagModal] = useState(false)
-
-  const [confirmDeleteListingId, setConfirmDeleteListingId] = useState<string | null>(null)
-  const handleDeleteListing = (id: string) => {
-    dispatch(deleteListing(id))
-    setConfirmDeleteListingId(null)
-    setAlertNotification('Listing removed.')
-    setTimeout(() => setAlertNotification(null), 3000)
-  }
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const allListings = useSelector((state: RootState) => state.listings.items)
@@ -783,6 +771,11 @@ export default function HousingPage() {
                       {item.listingType === 'guesthouse' && (
                         <span className="bg-purple-500/90 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
                           Guest House
+                        </span>
+                      )}
+                      {item.eventId && gruvsEventInfo[item.eventId] && (
+                        <span className="bg-purple-950/80 text-purple-200 border border-purple-500/30 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1">
+                          Near: {gruvsEventInfo[item.eventId].title}
                         </span>
                       )}
                     </div>

@@ -1,7 +1,15 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { ReduxProvider } from '../store/provider'
 import { siteUrl } from './site-url'
+
+export const viewport: Viewport = {
+  themeColor: '#051F20',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
