@@ -9,7 +9,8 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette,
+  BellRing, Compass, ShieldAlert, Droplets
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -35,6 +36,13 @@ import { DEFAULT_THEME } from '../../utils/themes'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 import { GRUVS, TEARNS } from '../../utils/sisterApps'
+import dynamic from 'next/dynamic'
+
+const DynamicSolarLighting = dynamic(() => import('./components/shared/DynamicSolarLighting'), { ssr: false })
+const PushCallNotificationManager = dynamic(() => import('./components/messages/PushCallNotificationManager'), { ssr: false })
+const WalkWithMeCompanionModal = dynamic(() => import('./components/trust-safety/WalkWithMeCompanionModal'), { ssr: false })
+const CPFPanicButtonModal = dynamic(() => import('./components/trust-safety/CPFPanicButtonModal'), { ssr: false })
+const WaterOutageRadarModal = dynamic(() => import('./components/trust-safety/WaterOutageRadarModal'), { ssr: false })
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -45,6 +53,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showThemeModal, setShowThemeModal] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<string>(DEFAULT_THEME)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
+  const [showPushCallManager, setShowPushCallManager] = useState(false)
+  const [showWalkWithMe, setShowWalkWithMe] = useState(false)
+  const [showCPFPanic, setShowCPFPanic] = useState(false)
+  const [showWaterRadar, setShowWaterRadar] = useState(false)
   const notifMenuRef = useRef<HTMLDivElement>(null)
   // Browser autoplay policy blocks audio until a real user gesture — this
   // creates/resumes the shared AudioContext on the FIRST click or keypress
@@ -401,6 +413,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="hidden sm:inline">Legal Shield</span>
             </button>
 
+            {/* VoIP Ringing & WebPush Trigger */}
+            <button
+              onClick={() => { setShowPushCallManager(true); playTactileSound('tab') }}
+              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 transition-all shadow-sm"
+              title="WebPush VoIP background ringing settings & luxury chime test"
+            >
+              <BellRing size={13} className="text-violet-400" />
+              <span className="hidden xl:inline">Call Push</span>
+            </button>
+
+            {/* Night Escort Companion Trigger */}
+            <button
+              onClick={() => { setShowWalkWithMe(true); playTactileSound('tab') }}
+              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-all shadow-sm"
+              title="Walk With Me: Virtual Night Companion & Fake Deflection Call"
+            >
+              <Compass size={13} className="text-emerald-400" />
+              <span className="hidden xl:inline">Walk Escort</span>
+            </button>
+
+            {/* Sector CPF & Police Panic Trigger */}
+            <button
+              onClick={() => { setShowCPFPanic(true); playTactileSound('alert') }}
+              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 transition-all shadow-sm"
+              title="Sector 3 CPF & Rapid Armed Response Direct Panic"
+            >
+              <ShieldAlert size={13} className="text-rose-400" />
+              <span className="hidden xl:inline">CPF Panic</span>
+            </button>
+
+            {/* Water Outage & Tanker Radar Trigger */}
+            <button
+              onClick={() => { setShowWaterRadar(true); playTactileSound('tab') }}
+              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all shadow-sm"
+              title="Municipal Water Cuts & Live Tanker Truck Radar"
+            >
+              <Droplets size={13} className="text-cyan-400" />
+              <span className="hidden xl:inline">Water Radar</span>
+            </button>
+
             <div ref={notifMenuRef} className="relative">
               <button
                 onClick={() => { setShowNotifMenu(!showNotifMenu); playTactileSound('click') }}
@@ -513,6 +565,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setAlertNotification(`Theme updated to ${themeId}`)
           setTimeout(() => setAlertNotification(null), 2500)
         }}
+      />
+
+      {/* Dynamic Ambient SA Solar Time Lighting Engine */}
+      <DynamicSolarLighting />
+
+      {/* VoIP Push Call Ringing Settings Modal */}
+      <PushCallNotificationManager
+        isOpen={showPushCallManager}
+        onClose={() => setShowPushCallManager(false)}
+      />
+
+      {/* Walk With Me Companion & Fake Call Modal */}
+      <WalkWithMeCompanionModal
+        isOpen={showWalkWithMe}
+        onClose={() => setShowWalkWithMe(false)}
+      />
+
+      {/* Sector 3 CPF Panic Dispatch Modal */}
+      <CPFPanicButtonModal
+        isOpen={showCPFPanic}
+        onClose={() => setShowCPFPanic(false)}
+      />
+
+      {/* Municipal Water Cut & Tanker Radar Modal */}
+      <WaterOutageRadarModal
+        isOpen={showWaterRadar}
+        onClose={() => setShowWaterRadar(false)}
       />
     </div>
   )

@@ -64,6 +64,8 @@ const VibeMap = dynamic(() => import('../components/map/VibeMap'), {
   ssr: false,
   loading: () => <div className="p-12 text-slate-400 font-bold text-center">Loading VibeMap client engine...</div>
 })
+const TextbookScannerExchangeModal = dynamic(() => import('../components/community/TextbookScannerExchangeModal'), { ssr: false })
+const GuardianLensModal = dynamic(() => import('../components/community/GuardianLensModal'), { ssr: false })
 
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
@@ -95,6 +97,10 @@ export default function CommunityPage() {
 
   // Create-community modal state (CommunitiesTab is presentation-only; the form lives here)
   const [showCreateCommunity, setShowCreateCommunity] = useState(false)
+
+  // Advanced Campus & Safety Modals
+  const [showTextbookModal, setShowTextbookModal] = useState(false)
+  const [showGuardianModal, setShowGuardianModal] = useState(false)
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const lang = useSelector((state: RootState) => state.ui.language)
@@ -514,6 +520,22 @@ export default function CommunityPage() {
             <Sparkles size={13} className="text-gold-primary animate-pulse" />
             <span>Vibe Radar</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setShowTextbookModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30"
+          >
+            <span>📚 Textbook Swap</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowGuardianModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30"
+          >
+            <span>🛡️ GuardianLens</span>
+          </button>
         </div>
 
         {/* Second-level tabs for active cluster */}
@@ -845,7 +867,20 @@ export default function CommunityPage() {
          )}
       </AnimatePresence>
 
+      {/* TEXTBOOK SCANNER & EXCHANGE MODAL */}
+      <TextbookScannerExchangeModal
+        isOpen={showTextbookModal}
+        onClose={() => setShowTextbookModal(false)}
+      />
+
+      {/* GUARDIAN LENS MODAL */}
+      <GuardianLensModal
+        isOpen={showGuardianModal}
+        onClose={() => setShowGuardianModal(false)}
+      />
+
       {lang === 'en' && null /* lang currently drives translations elsewhere; kept in scope for the sidebar language switch */}
     </div>
   )
 }
+

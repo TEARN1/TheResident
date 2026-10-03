@@ -33,6 +33,16 @@ import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents } from '../../../utils/gruvsEvents'
 import MovingLogisticsPortal from '../components/services/MovingLogisticsPortal'
 import PlumbingTradesModal from '../components/services/PlumbingTradesModal'
+import dynamic from 'next/dynamic'
+
+const MovingInventoryEstimatorModal = dynamic(() => import('../components/services/MovingInventoryEstimatorModal'), { ssr: false })
+const LiveBakkieRadarModal = dynamic(() => import('../components/services/LiveBakkieRadarModal'), { ssr: false })
+const DriverLicenseScannerModal = dynamic(() => import('../components/services/DriverLicenseScannerModal'), { ssr: false })
+const QuantumPartyShuttleModal = dynamic(() => import('../components/services/QuantumPartyShuttleModal'), { ssr: false })
+const FlatpackAssemblyModal = dynamic(() => import('../components/services/FlatpackAssemblyModal'), { ssr: false })
+const DepositSaverCleaningModal = dynamic(() => import('../components/services/DepositSaverCleaningModal'), { ssr: false })
+const RubbishClearanceModal = dynamic(() => import('../components/services/RubbishClearanceModal'), { ssr: false })
+const HandymanMilestoneEscrowModal = dynamic(() => import('../components/services/HandymanMilestoneEscrowModal'), { ssr: false })
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
 const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
@@ -57,6 +67,16 @@ export default function ServicesPage() {
   const [activeTab, setActiveTab] = useState<'moving' | 'handymen' | 'lifts' | 'utilities'>('moving')
   const [showPlumbingModal, setShowPlumbingModal] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
+
+  // Advanced Services & Moving Modals State
+  const [showEstimatorModal, setShowEstimatorModal] = useState(false)
+  const [showBakkieRadarModal, setShowBakkieRadarModal] = useState(false)
+  const [showLicenseScannerModal, setShowLicenseScannerModal] = useState(false)
+  const [showQuantumShuttleModal, setShowQuantumShuttleModal] = useState(false)
+  const [showFlatpackModal, setShowFlatpackModal] = useState(false)
+  const [showDepositCleaningModal, setShowDepositCleaningModal] = useState(false)
+  const [showRubbishModal, setShowRubbishModal] = useState(false)
+  const [showHandymanEscrowModal, setShowHandymanEscrowModal] = useState(false)
 
   // Business Registration State
   const [showBusinessRegModal, setShowBusinessRegModal] = useState(false)
@@ -313,6 +333,81 @@ export default function ServicesPage() {
           ))}
         </div>
       </header>
+
+      {/* Services Rapid Actions Bar */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+        <button
+          type="button"
+          onClick={() => setShowEstimatorModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 transition"
+        >
+          <Truck size={13} />
+          <span>m³ Inventory Estimator</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowBakkieRadarModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
+        >
+          <Clock size={13} />
+          <span>Live Bakkie Radar</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowLicenseScannerModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 transition"
+        >
+          <ShieldCheck size={13} />
+          <span>PDP / NATIS Disc Scan</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowQuantumShuttleModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0 transition"
+        >
+          <Car size={13} />
+          <span>Quantum Minibus Shuttle</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowFlatpackModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 transition"
+        >
+          <Briefcase size={13} />
+          <span>Flatpack Guild</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowDepositCleaningModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 shrink-0 transition"
+        >
+          <Droplets size={13} />
+          <span>Deposit-Saver Clean</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowRubbishModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
+        >
+          <Truck size={13} />
+          <span>Rubbish Clearance</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowHandymanEscrowModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0 transition"
+        >
+          <Lock size={13} />
+          <span>Trade Milestone Escrow</span>
+        </button>
+      </div>
 
       {/* 1. Moving & Bakkie Logistics Portal */}
       {activeTab === 'moving' && (
@@ -926,6 +1021,54 @@ export default function ServicesPage() {
         onSuccess={data => {
           setAlertNotification(`Emergency ${data.category} dispatch broadcasted to local pros!`)
         }}
+      />
+
+      {/* Moving Inventory & Volume Estimator Modal */}
+      <MovingInventoryEstimatorModal
+        isOpen={showEstimatorModal}
+        onClose={() => setShowEstimatorModal(false)}
+      />
+
+      {/* Live Bakkie GPS Radar Modal */}
+      <LiveBakkieRadarModal
+        isOpen={showBakkieRadarModal}
+        onClose={() => setShowBakkieRadarModal(false)}
+      />
+
+      {/* Driver License & PDP NATIS Scanner Modal */}
+      <DriverLicenseScannerModal
+        isOpen={showLicenseScannerModal}
+        onClose={() => setShowLicenseScannerModal(false)}
+      />
+
+      {/* Quantum Party Shuttle Minibus Pool Modal */}
+      <QuantumPartyShuttleModal
+        isOpen={showQuantumShuttleModal}
+        onClose={() => setShowQuantumShuttleModal(false)}
+      />
+
+      {/* Flatpack Furniture Assembly Guild Modal */}
+      <FlatpackAssemblyModal
+        isOpen={showFlatpackModal}
+        onClose={() => setShowFlatpackModal(false)}
+      />
+
+      {/* Deposit Saver Move-Out Cleaning Modal */}
+      <DepositSaverCleaningModal
+        isOpen={showDepositCleaningModal}
+        onClose={() => setShowDepositCleaningModal(false)}
+      />
+
+      {/* Rubbish & Clutter Clearance Modal */}
+      <RubbishClearanceModal
+        isOpen={showRubbishModal}
+        onClose={() => setShowRubbishModal(false)}
+      />
+
+      {/* Handyman Milestone Escrow Vault Modal */}
+      <HandymanMilestoneEscrowModal
+        isOpen={showHandymanEscrowModal}
+        onClose={() => setShowHandymanEscrowModal(false)}
       />
     </div>
   )

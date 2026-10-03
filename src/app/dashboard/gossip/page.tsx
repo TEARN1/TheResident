@@ -19,6 +19,10 @@ import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../utils/gruvsE
 import { playTactileSound } from '../../../utils/tactileSounds'
 
 const InstitutionalBroadcastsPortal = dynamic(() => import('../components/community/InstitutionalBroadcastsPortal'), { ssr: false })
+const AudioGossipRecorderModal = dynamic(() => import('../components/social/AudioGossipRecorderModal'), { ssr: false })
+const PlateShareFoodHubModal = dynamic(() => import('../components/social/PlateShareFoodHubModal'), { ssr: false })
+const AudioSpacesTownHallModal = dynamic(() => import('../components/social/AudioSpacesTownHallModal'), { ssr: false })
+const ResidentKarmaModal = dynamic(() => import('../components/social/ResidentKarmaModal'), { ssr: false })
 
 export type GossipCategory = 'all' | 'campus' | 'landlords' | 'gruvs' | 'roommates' | 'safety'
 
@@ -122,6 +126,12 @@ export default function GossipPage() {
 
   // Institutional Broadcasts Modal
   const [showInstitutionalModal, setShowInstitutionalModal] = useState(false)
+
+  // Advanced Social & Gossip Modals
+  const [showAudioGossipModal, setShowAudioGossipModal] = useState(false)
+  const [showPlateShareModal, setShowPlateShareModal] = useState(false)
+  const [showAudioSpacesModal, setShowAudioSpacesModal] = useState(false)
+  const [showResidentKarmaModal, setShowResidentKarmaModal] = useState(false)
 
   // Advanced Category & Search Filter
   const [activeCategory, setActiveCategory] = useState<GossipCategory>('all')
@@ -640,6 +650,53 @@ export default function GossipPage() {
         </button>
       </div>
 
+      {/* Advanced Social Hub Action Bar */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+        <button
+          type="button"
+          onClick={() => {
+            playTactileSound('pop')
+            setShowAudioGossipModal(true)
+          }}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 shrink-0 transition"
+        >
+          <span>🎙️ Voice Memo Disguise</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            playTactileSound('pop')
+            setShowPlateShareModal(true)
+          }}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 shrink-0 transition"
+        >
+          <span>🍲 PlateShare Food Hub</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            playTactileSound('pop')
+            setShowAudioSpacesModal(true)
+          }}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0 transition"
+        >
+          <span>📻 Live Town Hall Space</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            playTactileSound('pop')
+            setShowResidentKarmaModal(true)
+          }}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 transition"
+        >
+          <span>🏆 Street Credit & Karma</span>
+        </button>
+      </div>
+
       {/* TOPIC TABS & REAL-TIME SEARCH */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto pb-1">
@@ -1154,6 +1211,30 @@ export default function GossipPage() {
       <InstitutionalBroadcastsPortal
         isOpen={showInstitutionalModal}
         onClose={() => setShowInstitutionalModal(false)}
+      />
+
+      {/* AUDIO GOSSIP VOICE SCRAMBLER MODAL */}
+      <AudioGossipRecorderModal
+        isOpen={showAudioGossipModal}
+        onClose={() => setShowAudioGossipModal(false)}
+      />
+
+      {/* PLATESHARE FOOD HUB MODAL */}
+      <PlateShareFoodHubModal
+        isOpen={showPlateShareModal}
+        onClose={() => setShowPlateShareModal(false)}
+      />
+
+      {/* AUDIO SPACES TOWN HALL MODAL */}
+      <AudioSpacesTownHallModal
+        isOpen={showAudioSpacesModal}
+        onClose={() => setShowAudioSpacesModal(false)}
+      />
+
+      {/* RESIDENT KARMA & REPUTATION MODAL */}
+      <ResidentKarmaModal
+        isOpen={showResidentKarmaModal}
+        onClose={() => setShowResidentKarmaModal(false)}
       />
     </div>
   )

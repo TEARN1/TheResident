@@ -40,6 +40,12 @@ const SALeaseAgreementModal = dynamic(() => import('../components/housing/SALeas
 const CoLivingExpenseSplitterModal = dynamic(() => import('../components/household/CoLivingExpenseSplitterModal'), { ssr: false })
 const TenantInspectionSnagListModal = dynamic(() => import('../components/housing/TenantInspectionSnagListModal'), { ssr: false })
 const LandlordRoomManagerModal = dynamic(() => import('../components/housing/LandlordRoomManagerModal'), { ssr: false })
+const DepositEscrowVaultModal = dynamic(() => import('../components/housing/DepositEscrowVaultModal'), { ssr: false })
+const MoveInOutInspectionModal = dynamic(() => import('../components/housing/MoveInOutInspectionModal'), { ssr: false })
+const RentReceiptTaxModal = dynamic(() => import('../components/housing/RentReceiptTaxModal'), { ssr: false })
+const NSFASHousingModal = dynamic(() => import('../components/housing/NSFASHousingModal'), { ssr: false })
+const RoomSpatialRulerModal = dynamic(() => import('../components/housing/RoomSpatialRulerModal'), { ssr: false })
+import { HolographicTiltCard } from '../components/shared/HolographicTiltCard'
 
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
@@ -146,6 +152,13 @@ export default function HousingPage() {
 
   // Room Image Uploads State
   const [newImages, setNewImages] = useState<string[]>([])
+
+  // Advanced Housing Modals State
+  const [showDepositVaultModal, setShowDepositVaultModal] = useState(false)
+  const [showMoveInspectionModal, setShowMoveInspectionModal] = useState(false)
+  const [showRentReceiptModal, setShowRentReceiptModal] = useState(false)
+  const [showNSFASModal, setShowNSFASModal] = useState(false)
+  const [showSpatialRulerModal, setShowSpatialRulerModal] = useState(false)
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const allListings = useSelector((state: RootState) => state.listings.items)
@@ -508,6 +521,71 @@ export default function HousingPage() {
               <ClipboardList size={13} className="text-gold-primary" />
               <span>Snag List</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowDepositVaultModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-emerald-300 hover:text-emerald-400 bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/30 shrink-0"
+              title="RHA Act 50 Deposit Escrow Holding Pool & PayShap Payout"
+            >
+              <ShieldCheck size={13} className="text-emerald-400" />
+              <span>Escrow Vault</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowMoveInspectionModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+              title="Side-by-side Day 1 vs Move-out photo comparator"
+            >
+              <Camera size={13} className="text-gold-primary" />
+              <span>Inspection</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowRentReceiptModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+              title="SARS Tax proof of rent certificates"
+            >
+              <FileText size={13} className="text-gold-primary" />
+              <span>Tax Proof</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowNSFASModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-teal-300 hover:text-teal-400 bg-teal-950/30 hover:bg-teal-900/40 border border-teal-500/30 shrink-0"
+              title="NSFAS annual accommodation cap and DHET compliance calculator"
+            >
+              <Building2 size={13} className="text-teal-400" />
+              <span>NSFAS Cap</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowSpatialRulerModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-cyan-300 hover:text-cyan-400 bg-cyan-950/30 hover:bg-cyan-900/40 border border-cyan-500/30 shrink-0"
+              title="3D Room Spatial Ruler - Will My Bed Fit?"
+            >
+              <Radar size={13} className="text-cyan-400" />
+              <span>AR Ruler</span>
+            </button>
           </div>
         </div>
       </header>
@@ -792,12 +870,12 @@ export default function HousingPage() {
           ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {filteredListings.map((item) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/50 rounded-3xl overflow-hidden flex flex-col shadow-[0_10px_30px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.6),0_0_25px_var(--glow-color,rgba(142,182,155,0.25))] transition-all duration-500 group"
-              >
+              <HolographicTiltCard key={item.id} className="h-full">
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/50 rounded-3xl overflow-hidden flex flex-col shadow-[0_10px_30px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.6),0_0_25px_var(--glow-color,rgba(142,182,155,0.25))] transition-all duration-500 group h-full"
+                >
                 <div className="relative h-60 bg-gray-950 overflow-hidden">
                   {item.images[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -954,6 +1032,7 @@ export default function HousingPage() {
                   </div>
                 </div>
               </motion.div>
+            </HolographicTiltCard>
             ))}
           </div>
           )}
@@ -1418,6 +1497,36 @@ export default function HousingPage() {
         onClose={() => setShowRoomManagerModal(false)}
         propertyName={roomManagerPropertyInfo.name}
         propertyAddress={roomManagerPropertyInfo.address}
+      />
+
+      {/* RHA ACT 50 DEPOSIT ESCROW VAULT MODAL */}
+      <DepositEscrowVaultModal
+        isOpen={showDepositVaultModal}
+        onClose={() => setShowDepositVaultModal(false)}
+      />
+
+      {/* MOVE-IN / MOVE-OUT SIDE-BY-SIDE INSPECTION MODAL */}
+      <MoveInOutInspectionModal
+        isOpen={showMoveInspectionModal}
+        onClose={() => setShowMoveInspectionModal(false)}
+      />
+
+      {/* SARS TAX RECEIPT & PROOF OF RENT CERTIFICATE MODAL */}
+      <RentReceiptTaxModal
+        isOpen={showRentReceiptModal}
+        onClose={() => setShowRentReceiptModal(false)}
+      />
+
+      {/* NSFAS CAP & UNIVERSITY ACCREDITATION MODAL */}
+      <NSFASHousingModal
+        isOpen={showNSFASModal}
+        onClose={() => setShowNSFASModal(false)}
+      />
+
+      {/* 3D AR ROOM SPATIAL RULER MODAL */}
+      <RoomSpatialRulerModal
+        isOpen={showSpatialRulerModal}
+        onClose={() => setShowSpatialRulerModal(false)}
       />
     </div>
   )
