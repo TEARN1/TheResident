@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, Radar, FileText, HeartHandshake, Calculator, ClipboardList
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, Radar, FileText, HeartHandshake, Calculator, ClipboardList, Upload, Camera
 } from 'lucide-react'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import {
@@ -39,6 +39,7 @@ const RoommateCompatibilityModal = dynamic(() => import('../components/housing/R
 const SALeaseAgreementModal = dynamic(() => import('../components/housing/SALeaseAgreementModal'), { ssr: false })
 const CoLivingExpenseSplitterModal = dynamic(() => import('../components/household/CoLivingExpenseSplitterModal'), { ssr: false })
 const TenantInspectionSnagListModal = dynamic(() => import('../components/housing/TenantInspectionSnagListModal'), { ssr: false })
+const LandlordRoomManagerModal = dynamic(() => import('../components/housing/LandlordRoomManagerModal'), { ssr: false })
 
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
@@ -135,6 +136,16 @@ export default function HousingPage() {
 
   // Move-in Snag List Modal
   const [showSnagModal, setShowSnagModal] = useState(false)
+
+  // Landlord Multi-Room & Tenant Reviews Manager Modal
+  const [showRoomManagerModal, setShowRoomManagerModal] = useState(false)
+  const [roomManagerPropertyInfo, setRoomManagerPropertyInfo] = useState<{ name: string; address: string }>({
+    name: 'Main Residence Complex',
+    address: 'Johannesburg / Braamfontein'
+  })
+
+  // Room Image Uploads State
+  const [newImages, setNewImages] = useState<string[]>([])
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const allListings = useSelector((state: RootState) => state.listings.items)
@@ -245,6 +256,31 @@ export default function HousingPage() {
     : null
   const newListingLooksSuspicious = isSuspiciousPrice(newPrice, newListingPriceStats)
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const maxAllowed = 6 - newImages.length
+    if (maxAllowed <= 0) {
+      setAlertNotification('Maximum 6 room photos allowed.')
+      return
+    }
+    const chosen = Array.from(files).slice(0, maxAllowed)
+    chosen.forEach(file => {
+      if (!file.type.startsWith('image/')) return
+      if (file.size > 5 * 1024 * 1024) {
+        setAlertNotification('Photo too large (max 5MB)')
+        return
+      }
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setNewImages(prev => [...prev, reader.result as string])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
   const handleCreateListing = (e: React.FormEvent) => {
     e.preventDefault()
     const listing: Listing = {
@@ -260,7 +296,9 @@ export default function HousingPage() {
       landlordId: currentUser?.id || '',
       landlordName: currentUser?.name || '',
       landlordLivesHere: newLivesHere,
-      images: ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80'],
+      images: newImages.length > 0
+        ? newImages
+        : ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80'],
       amenities: { wifi: newWifi, parking: newParking, bathroom: newBathroom },
       requirements: {
         genderPreference: newGenderPref,
@@ -280,11 +318,12 @@ export default function HousingPage() {
     }
     dispatch(addListing(listing))
     setShowCreateModal(false)
+    setNewImages([])
     setNewPropertyId('')
     setNewQuickPost(false)
     setNewListingType('rent')
     setNewEventId('')
-    setAlertNotification('Property listed successfully!')
+    setAlertNotification('Property listed successfully with verified photos!')
   }
 
   // A signed-out guest has no id, so the request row it built was orphaned —
@@ -621,12 +660,29 @@ export default function HousingPage() {
              </div>
 
              {currentUser?.role === 'landlord' ? (
-                <button
-                   onClick={() => setShowCreateModal(true)}
-                   className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-7 py-3.5 rounded-2xl flex items-center justify-center gap-2.5 transition-all active:scale-95 shadow-glow uppercase tracking-wider text-xs shrink-0"
-                >
-                   <Plus size={18} /> List Property
-                </button>
+                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                  <button
+                     onClick={() => { setShowCreateModal(true); playTactileSound('pop') }}
+                     className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-glow uppercase tracking-wider text-xs"
+                  >
+                     <Plus size={18} /> List Property
+                  </button>
+                  <button
+                     type="button"
+                     onClick={() => {
+                       playTactileSound('tab')
+                       setRoomManagerPropertyInfo({
+                         name: 'My Property Portfolio',
+                         address: 'Managed Rental Units'
+                       })
+                       setShowRoomManagerModal(true)
+                     }}
+                     className="bg-white/5 hover:bg-gold-primary/10 border border-gold-primary/30 hover:border-gold-primary text-gold-primary font-black px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-wider text-xs"
+                     title="Manage multi-room units, photos, snags and review tenant feedback"
+                  >
+                     <ClipboardList size={16} /> Manage Rooms & Reviews
+                  </button>
+                </div>
              ) : (
                 <Link
                    href="/dashboard/profile"
@@ -874,6 +930,22 @@ export default function HousingPage() {
                       <Radar size={14} className="text-gold-primary animate-pulse" />
                       <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Radar</span>
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playTactileSound('tab')
+                        setRoomManagerPropertyInfo({
+                          name: item.title,
+                          address: `${item.suburb}, ${item.location}`
+                        })
+                        setShowRoomManagerModal(true)
+                      }}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary transition-all flex items-center gap-1.5 text-xs font-bold"
+                      title="Inspect room condition, photos, snags, and landlord reviews"
+                    >
+                      <ClipboardList size={14} className="text-gold-primary" />
+                      <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Rooms</span>
+                    </button>
                     {item.landlordLivesHere && (
                       <span className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 shrink-0" title="Landlord lives on property">
                         <Home size={14} className="text-gold-primary" />
@@ -1051,6 +1123,84 @@ export default function HousingPage() {
                            </select>
                         </div>
                      )}
+                     {/* Room Photos Upload Section */}
+                     <div className="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                           <div>
+                              <label className="text-[10px] text-gray-400 uppercase font-black tracking-widest flex items-center gap-1.5">
+                                 <Camera size={14} className="text-gold-primary" /> Room Photos ({newImages.length}/6)
+                              </label>
+                              <p className="text-[10px] text-gray-500">Upload photos of the bedroom, bathroom, cupboards and views.</p>
+                           </div>
+                           <label className="cursor-pointer bg-gold-primary hover:bg-gold-secondary text-black px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all shrink-0">
+                              <Upload size={13} />
+                              <span>Select Photos</span>
+                              <input
+                                 type="file"
+                                 multiple
+                                 accept="image/*"
+                                 onChange={handleImageFileChange}
+                                 className="hidden"
+                              />
+                           </label>
+                        </div>
+
+                        {/* Quick Presets */}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                           <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Quick Presets:</span>
+                           {[
+                              { label: '+ Sunny Bedroom', url: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80' },
+                              { label: '+ Clean Ensuite', url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80' },
+                              { label: '+ Modern Kitchen', url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80' },
+                              { label: '+ Private Balcony', url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80' }
+                           ].map(preset => (
+                              <button
+                                 key={preset.label}
+                                 type="button"
+                                 onClick={() => {
+                                    if (newImages.length >= 6) {
+                                       setAlertNotification('Max 6 photos allowed')
+                                       return
+                                    }
+                                    setNewImages(prev => [...prev, preset.url])
+                                    playTactileSound('pop')
+                                 }}
+                                 className="text-[10px] font-bold text-gray-300 hover:text-gold-primary bg-black/40 hover:bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 transition-all"
+                              >
+                                 {preset.label}
+                              </button>
+                           ))}
+                        </div>
+
+                        {/* Uploaded Photos Grid */}
+                        {newImages.length > 0 && (
+                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2">
+                              {newImages.map((img, idx) => (
+                                 <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-white/15 bg-black group shadow-sm">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={img} alt={`Room photo ${idx + 1}`} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                       <button
+                                          type="button"
+                                          onClick={() => {
+                                             setNewImages(prev => prev.filter((_, i) => i !== idx))
+                                             playTactileSound('pop')
+                                          }}
+                                          className="p-1.5 rounded-full bg-red-500/80 hover:bg-red-500 text-white shadow-md transition-transform hover:scale-110"
+                                          title="Remove photo"
+                                       >
+                                          <X size={13} />
+                                       </button>
+                                    </div>
+                                    <span className="absolute bottom-1 left-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[8px] font-black uppercase text-gold-primary">
+                                       {idx === 0 ? 'Cover Photo' : `#${idx + 1}`}
+                                    </span>
+                                 </div>
+                              ))}
+                           </div>
+                        )}
+                     </div>
+
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Bathroom Style</label>
@@ -1260,6 +1410,14 @@ export default function HousingPage() {
       <TenantInspectionSnagListModal
         isOpen={showSnagModal}
         onClose={() => setShowSnagModal(false)}
+      />
+
+      {/* LANDLORD MULTI-ROOM & TENANT ACCOUNTABILITY MANAGER MODAL */}
+      <LandlordRoomManagerModal
+        isOpen={showRoomManagerModal}
+        onClose={() => setShowRoomManagerModal(false)}
+        propertyName={roomManagerPropertyInfo.name}
+        propertyAddress={roomManagerPropertyInfo.address}
       />
     </div>
   )

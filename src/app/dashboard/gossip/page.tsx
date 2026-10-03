@@ -3,7 +3,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import Image from 'next/image'
-import { MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, ExternalLink, Table2, Zap, Car } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import {
+  MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, ExternalLink, Table2, Zap, Car,
+  Search, GraduationCap, BookOpen, EyeOff
+} from 'lucide-react'
 import { GRUVS, GRUVS_TOUCH_DOWN, TEARNS } from '../../../utils/sisterApps'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
@@ -13,6 +17,19 @@ import EmptyState from '../components/shared/EmptyState'
 import EventRidePoolerModal from '../components/community/EventRidePoolerModal'
 import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../utils/gruvsEvents'
 import { playTactileSound } from '../../../utils/tactileSounds'
+
+const InstitutionalBroadcastsPortal = dynamic(() => import('../components/community/InstitutionalBroadcastsPortal'), { ssr: false })
+
+export type GossipCategory = 'all' | 'campus' | 'landlords' | 'gruvs' | 'roommates' | 'safety'
+
+const CATEGORY_TABS: { key: GossipCategory; label: string; icon: string }[] = [
+  { key: 'all', label: 'All Buzz', icon: '🔥' },
+  { key: 'campus', label: 'Campus Tea', icon: '🏫' },
+  { key: 'landlords', label: 'Landlord Watch', icon: '🏠' },
+  { key: 'gruvs', label: 'Gruvs Events', icon: '🎉' },
+  { key: 'roommates', label: 'Roommates', icon: '💡' },
+  { key: 'safety', label: 'Safety & Power', icon: '⚡' }
+]
 
 interface GossipPost {
   id: string
@@ -102,6 +119,39 @@ export default function GossipPage() {
   const [commentPreviews, setCommentPreviews] = useState<Record<string, GossipComment[]>>({})
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({})
   const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({})
+
+  // Institutional Broadcasts Modal
+  const [showInstitutionalModal, setShowInstitutionalModal] = useState(false)
+
+  // Advanced Category & Search Filter
+  const [activeCategory, setActiveCategory] = useState<GossipCategory>('all')
+  const [searchKeyword, setSearchKeyword] = useState<string>('')
+
+  // Whistleblower / Anonymous Mode & Category for Post Composer
+  const [isAnonymous, setIsAnonymous] = useState(false)
+  const [composerCategory, setComposerCategory] = useState<GossipCategory>('campus')
+
+  // Interactive Vibe Reactions
+  const [postReactions, setPostReactions] = useState<Record<string, { lit: number; tea: number; redflag: number; real: number; dead: number; userReacted?: string }>>({})
+
+  const handleReact = (postId: string, type: 'lit' | 'tea' | 'redflag' | 'real' | 'dead') => {
+    playTactileSound('pop')
+    setPostReactions(prev => {
+      const cur = prev[postId] || { lit: 3, tea: 6, redflag: 1, real: 4, dead: 0 }
+      const isAlready = cur.userReacted === type
+      return {
+        ...prev,
+        [postId]: {
+          ...cur,
+          [type]: isAlready ? Math.max(0, cur[type] - 1) : cur[type] + 1,
+          userReacted: isAlready ? undefined : type
+        }
+      }
+    })
+  }
+
+  const isPostAnonymous = (body: string) => body.includes('[🕶️ ANONYMOUS RESIDENT]')
+  const cleanPostBody = (body: string) => body.replace(/\[🕶️ ANONYMOUS RESIDENT\]\s*/g, '')
 
   // Event Ride Pooler
   const [showRidePoolerModal, setShowRidePoolerModal] = useState(false)
@@ -328,12 +378,25 @@ export default function GossipPage() {
       setUploading(false)
     }
 
+    const categoryTag = composerCategory === 'campus' ? '#CampusTea'
+      : composerCategory === 'landlords' ? '#LandlordWatch'
+      : composerCategory === 'gruvs' ? '#TheGruvs'
+      : composerCategory === 'roommates' ? '#Roommates'
+      : '#CommunityWatch'
+
+    let formattedBody = composerBody.trim()
+    if (isAnonymous) {
+      formattedBody = `[🕶️ ANONYMOUS RESIDENT] [${categoryTag}] ${formattedBody}`
+    } else if (composerBody.trim()) {
+      formattedBody = `[${categoryTag}] ${formattedBody}`
+    }
+
     const { error: insertError } = await supabase
       .from('res_gossip_posts')
       .insert({
         author_id: myId,
         community_id: null,
-        body: composerBody.trim(),
+        body: formattedBody,
         media_url: uploadedUrl,
         media_type: uploadedType,
         background_style: uploadedUrl ? null : selectedBackground,
@@ -345,6 +408,7 @@ export default function GossipPage() {
       return
     }
     setComposerBody('')
+    setIsAnonymous(false)
     clearMedia()
     setSelectedBackground(null)
     setComposerExpanded(false)
@@ -401,6 +465,31 @@ export default function GossipPage() {
     setCommentPreviews(prev => ({ ...prev, [postId]: rows.slice(-2) }))
     setCommentLoading(prev => ({ ...prev, [postId]: false }))
   }
+
+  const filteredPosts = posts.filter(post => {
+    if (searchKeyword.trim()) {
+      const q = searchKeyword.toLowerCase()
+      const authorName = nameOf(post.author_id).toLowerCase()
+      const bodyMatches = post.body.toLowerCase().includes(q)
+      if (!bodyMatches && !authorName.includes(q)) return false
+    }
+    if (activeCategory === 'campus') {
+      return post.body.includes('#CampusTea') || post.body.toLowerCase().includes('campus') || post.body.toLowerCase().includes('student') || post.body.toLowerCase().includes('res') || post.body.toLowerCase().includes('lecture')
+    }
+    if (activeCategory === 'landlords') {
+      return post.body.includes('#LandlordWatch') || post.body.toLowerCase().includes('landlord') || post.body.toLowerCase().includes('rent') || post.body.toLowerCase().includes('deposit') || post.body.toLowerCase().includes('maintenance')
+    }
+    if (activeCategory === 'gruvs') {
+      return post.body.includes('#TheGruvs') || post.body.toLowerCase().includes('gruvs') || post.body.toLowerCase().includes('event') || post.body.toLowerCase().includes('party') || post.body.toLowerCase().includes('ticket')
+    }
+    if (activeCategory === 'roommates') {
+      return post.body.includes('#Roommates') || post.body.toLowerCase().includes('roommate') || post.body.toLowerCase().includes('kitchen') || post.body.toLowerCase().includes('chore') || post.body.toLowerCase().includes('dishes')
+    }
+    if (activeCategory === 'safety') {
+      return post.body.includes('#CommunityWatch') || post.body.toLowerCase().includes('power') || post.body.toLowerCase().includes('water') || post.body.toLowerCase().includes('loadshedding') || post.body.toLowerCase().includes('security')
+    }
+    return true
+  })
 
   return (
     <div className="space-y-6">
@@ -519,6 +608,73 @@ export default function GossipPage() {
         )}
       </div>
 
+      {/* INSTITUTIONAL BROADCASTS & CIRCULARS PORTAL BANNER */}
+      <div className="glass-panel p-5 bg-gradient-to-r from-amber-950/40 via-black/70 to-blue-950/30 border border-amber-500/30 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
+            <GraduationCap size={24} />
+          </div>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-black text-white uppercase tracking-tight">Institutional & School Circulars</h3>
+              <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
+                Official Directives
+              </span>
+            </div>
+            <p className="text-xs text-gray-300">
+              Direct official circulars from the <strong>Department of Education (DBE/GDE)</strong>, <strong>University Res Wardens</strong>, and <strong>School Teachers</strong> (homework schedules, exams, quiet hours).
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            playTactileSound('chime')
+            setShowInstitutionalModal(true)
+          }}
+          className="bg-amber-500 hover:bg-amber-400 text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-glow shrink-0 flex items-center gap-2"
+        >
+          <BookOpen size={14} />
+          <span>Open School & Uni Notices</span>
+        </button>
+      </div>
+
+      {/* TOPIC TABS & REAL-TIME SEARCH */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto pb-1">
+          {CATEGORY_TABS.map(tab => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setActiveCategory(tab.key)
+              }}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider shrink-0 transition-all border ${
+                activeCategory === tab.key
+                  ? 'bg-gold-primary text-black border-gold-primary shadow-glow'
+                  : 'bg-black/50 text-gray-400 border-white/10 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span className="mr-1">{tab.icon}</span>
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full sm:w-64 shrink-0">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            type="text"
+            value={searchKeyword}
+            onChange={e => setSearchKeyword(e.target.value)}
+            placeholder="Search gossip, tags or users..."
+            className="w-full bg-black/60 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-white outline-none focus:border-gold-primary/50"
+          />
+        </div>
+      </div>
+
       <div className="glass-panel p-6 relative overflow-hidden border-gold-primary/10">
         {/* A quiet gold glow behind the composer instead of a flat panel —
             the one place in the app people write something new deserves to
@@ -611,6 +767,55 @@ export default function GossipPage() {
         {composerExpanded && mediaError && <p className="text-[11px] text-red-400 mt-2">{mediaError}</p>}
 
         {composerExpanded && (
+          <div className="mt-3.5 space-y-2.5">
+            {/* Category selection */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest mr-1">Topic:</span>
+              {CATEGORY_TABS.filter(t => t.key !== 'all').map(t => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => {
+                    playTactileSound('tab')
+                    setComposerCategory(t.key)
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                    composerCategory === t.key
+                      ? 'bg-gold-primary text-black border-gold-primary shadow-glow font-black'
+                      : 'bg-black/50 border-white/10 text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <span className="mr-1">{t.icon}</span>
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Anonymous Whistleblower Checkbox */}
+            <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-gray-200 select-none">
+                <input
+                  type="checkbox"
+                  checked={isAnonymous}
+                  onChange={e => setIsAnonymous(e.target.checked)}
+                  className="accent-gold-primary w-4 h-4 rounded cursor-pointer"
+                />
+                <span className="flex items-center gap-1.5">
+                  <EyeOff size={14} className={isAnonymous ? 'text-gold-primary' : 'text-gray-400'} />
+                  <span className="text-white font-black">Post Anonymously</span>
+                  <span className="text-[10px] text-gray-400 font-normal hidden sm:inline">(Whistleblower protection — author ID & profile remain private)</span>
+                </span>
+              </label>
+              {isAnonymous && (
+                <span className="text-[9px] font-black uppercase tracking-wider bg-gold-primary/20 text-gold-primary px-2.5 py-0.5 rounded-full border border-gold-primary/40">
+                  Incognito 🕶️
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {composerExpanded && (
         <div className="flex items-center justify-between mt-3">
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
@@ -656,8 +861,11 @@ export default function GossipPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {posts.map(post => {
+          {filteredPosts.map(post => {
+            const isAnon = isPostAnonymous(post.body)
+            const cleanBody = cleanPostBody(post.body)
             const bgCss = !post.media_url ? backgroundCssFor(post.background_style) : null
+
             if (bgCss) {
               return (
                 <div key={post.id} className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/30 rounded-3xl overflow-hidden shadow-glass transition-all">
@@ -666,15 +874,24 @@ export default function GossipPage() {
                     style={{ backgroundImage: bgCss }}
                   >
                     <div className="absolute top-4 right-4">
-                      {post.author_id === myId
-                        ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-black/60 hover:bg-red-500 text-white rounded-full p-2 transition-all shadow-md"><Trash2 size={13} /></button>
-                        : <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
+                      {post.author_id === myId ? (
+                        <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-black/60 hover:bg-red-500 text-white rounded-full p-2 transition-all shadow-md"><Trash2 size={13} /></button>
+                      ) : !isAnon ? (
+                        <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />
+                      ) : null}
                     </div>
                     <p className="text-lg sm:text-xl font-black text-white text-center leading-relaxed whitespace-pre-wrap drop-shadow-lg max-w-lg">
-                      {post.body}
+                      {cleanBody}
                     </p>
                     <div className="absolute bottom-4 left-5 flex items-center gap-2">
-                      <span className="text-xs font-bold text-white drop-shadow">{nameOf(post.author_id)}</span>
+                      {isAnon ? (
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5 drop-shadow">
+                          <EyeOff size={13} className="text-gold-primary" />
+                          <span>Anonymous Resident 🕶️</span>
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-white drop-shadow">{nameOf(post.author_id)}</span>
+                      )}
                       <span className="text-[10px] text-white/70">· {new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <button
@@ -684,6 +901,38 @@ export default function GossipPage() {
                       {expanded[post.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       {expanded[post.id] ? 'Hide' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
                     </button>
+                  </div>
+
+                  {/* VIBE REACTIONS BAR */}
+                  <div className="px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 bg-white/[0.02]">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[
+                        { type: 'tea' as const, emoji: '👀', label: 'Tea', defaultCount: 4 },
+                        { type: 'lit' as const, emoji: '🔥', label: 'Lit', defaultCount: 2 },
+                        { type: 'redflag' as const, emoji: '🚩', label: 'Red Flag', defaultCount: 1 },
+                        { type: 'real' as const, emoji: '💯', label: 'Real', defaultCount: 5 },
+                        { type: 'dead' as const, emoji: '💀', label: 'Dead', defaultCount: 0 }
+                      ].map(r => {
+                        const cur = postReactions[post.id]
+                        const count = cur ? cur[r.type] : r.defaultCount
+                        const isChosen = cur?.userReacted === r.type
+                        return (
+                          <button
+                            key={r.type}
+                            type="button"
+                            onClick={() => handleReact(post.id, r.type)}
+                            className={`px-2.5 py-1 rounded-xl text-xs flex items-center gap-1.5 border transition-all active:scale-95 ${
+                              isChosen
+                                ? 'bg-gold-primary/20 border-gold-primary/60 text-gold-primary font-black shadow-sm'
+                                : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
+                            }`}
+                          >
+                            <span>{r.emoji}</span>
+                            <span className="text-[10px] font-bold">{count}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
 
                   {!expanded[post.id] && (commentPreviews[post.id]?.length ?? 0) > 0 && (
@@ -744,28 +993,41 @@ export default function GossipPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gold-primary to-amber-600 flex items-center justify-center text-black font-black text-sm overflow-hidden shadow-sm">
-                      {profileMap[post.author_id]?.avatar_url
-                        ? (
-                            <Image
-                              src={profileMap[post.author_id].avatar_url as string}
-                              alt={nameOf(post.author_id)}
-                              width={40}
-                              height={40}
-                              className="w-full h-full object-cover"
-                            />
-                          )
-                        : nameOf(post.author_id).charAt(0).toUpperCase()}
+                      {isAnon ? (
+                        <EyeOff size={18} className="text-black" />
+                      ) : profileMap[post.author_id]?.avatar_url ? (
+                        <Image
+                          src={profileMap[post.author_id].avatar_url as string}
+                          alt={nameOf(post.author_id)}
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        nameOf(post.author_id).charAt(0).toUpperCase()
+                      )}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-white">{nameOf(post.author_id)}</p>
+                      {isAnon ? (
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-bold text-white">Anonymous Resident</p>
+                          <span className="text-[9px] bg-gold-primary/20 text-gold-primary border border-gold-primary/30 px-1.5 py-0.5 rounded font-black">
+                            Incognito 🕶️
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-bold text-white">{nameOf(post.author_id)}</p>
+                      )}
                       <p className="text-[10px] text-gray-500 font-medium">{new Date(post.created_at).toLocaleString()}</p>
                     </div>
                   </div>
-                  {post.author_id === myId
-                    ? <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="text-gray-500 hover:text-red-400 p-1 transition-colors"><Trash2 size={15} /></button>
-                    : <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />}
+                  {post.author_id === myId ? (
+                    <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="text-gray-500 hover:text-red-400 p-1 transition-colors"><Trash2 size={15} /></button>
+                  ) : !isAnon ? (
+                    <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />
+                  ) : null}
                 </div>
-                {post.body && <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{post.body}</p>}
+                {cleanBody && <p className="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{cleanBody}</p>}
 
                 {post.media_url && post.media_type === 'image' && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -775,13 +1037,45 @@ export default function GossipPage() {
                   <video src={post.media_url} controls className="w-full max-h-96 rounded-2xl border border-white/10 shadow-md" />
                 )}
 
-                <button
-                  onClick={() => toggleExpand(post.id)}
-                  className="flex items-center gap-1.5 text-[11px] text-gold-primary font-bold mt-4 hover:underline"
-                >
-                  {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                  {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
-                </button>
+                {/* VIBE REACTIONS BAR */}
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-white/5">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[
+                      { type: 'tea' as const, emoji: '👀', label: 'Tea', defaultCount: 4 },
+                      { type: 'lit' as const, emoji: '🔥', label: 'Lit', defaultCount: 2 },
+                      { type: 'redflag' as const, emoji: '🚩', label: 'Red Flag', defaultCount: 1 },
+                      { type: 'real' as const, emoji: '💯', label: 'Real', defaultCount: 5 },
+                      { type: 'dead' as const, emoji: '💀', label: 'Dead', defaultCount: 0 }
+                    ].map(r => {
+                      const cur = postReactions[post.id]
+                      const count = cur ? cur[r.type] : r.defaultCount
+                      const isChosen = cur?.userReacted === r.type
+                      return (
+                        <button
+                          key={r.type}
+                          type="button"
+                          onClick={() => handleReact(post.id, r.type)}
+                          className={`px-2.5 py-1 rounded-xl text-xs flex items-center gap-1.5 border transition-all active:scale-95 ${
+                            isChosen
+                              ? 'bg-gold-primary/20 border-gold-primary/60 text-gold-primary font-black shadow-sm'
+                              : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          <span>{r.emoji}</span>
+                          <span className="text-[10px] font-bold">{count}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => toggleExpand(post.id)}
+                    className="flex items-center gap-1.5 text-[11px] text-gold-primary font-bold hover:underline"
+                  >
+                    {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
+                  </button>
+                </div>
 
                 {!expanded[post.id] && (commentPreviews[post.id]?.length ?? 0) > 0 && (
                   <div className="mt-2 space-y-1.5">
@@ -854,6 +1148,12 @@ export default function GossipPage() {
         isOpen={showRidePoolerModal}
         onClose={() => setShowRidePoolerModal(false)}
         upcomingEvents={upcomingGruvsEvents}
+      />
+
+      {/* INSTITUTIONAL BROADCASTS & CIRCULARS MODAL */}
+      <InstitutionalBroadcastsPortal
+        isOpen={showInstitutionalModal}
+        onClose={() => setShowInstitutionalModal(false)}
       />
     </div>
   )
