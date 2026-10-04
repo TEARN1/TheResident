@@ -5,7 +5,11 @@ import { cookies } from 'next/headers'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  // `next` is appended straight onto the origin, so it must be a plain
+  // same-site path. Values like "@evil.com" or ".evil.com" would otherwise
+  // turn `${origin}${next}` into a redirect to another host.
+  const rawNext = searchParams.get('next') ?? '/dashboard'
+  const next = /^\/(?![/\\])/.test(rawNext) ? rawNext : '/dashboard'
 
   if (code) {
     const cookieStore = await cookies()
