@@ -67,7 +67,9 @@ $function$;
 --    moderate it via res_moderate). The app only joins through the
 --    SECURITY DEFINER RPCs res_join_community, res_redeem_invite and
 --    res_create_community, which do not need this policy.
-drop policy if exists res_members_insert on public.res_community_members;
+-- Applied as `with check (false)` rather than a DROP so it is equivalent
+--    but non-destructive; the policy can simply be removed later.
+alter policy res_members_insert on public.res_community_members with check (false);
 
 -- 5. Moderation flags: owners could undo a moderator's hide, and landlords
 --    could clear the "priced far below the suburb median" scam warning, with
