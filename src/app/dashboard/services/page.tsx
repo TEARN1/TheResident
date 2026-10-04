@@ -3,8 +3,10 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon
+  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Droplets,
+  Flame, BatteryCharging, ShoppingBag, Wrench, Tag, Package, Navigation
 } from 'lucide-react'
 import {
   RootState,
@@ -30,6 +32,26 @@ import { directionsUrlForAddress } from '../../../utils/navigation'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents } from '../../../utils/gruvsEvents'
+import MovingLogisticsPortal from '../components/services/MovingLogisticsPortal'
+import PlumbingTradesModal from '../components/services/PlumbingTradesModal'
+import dynamic from 'next/dynamic'
+
+const MovingInventoryEstimatorModal = dynamic(() => import('../components/services/MovingInventoryEstimatorModal'), { ssr: false })
+const LiveBakkieRadarModal = dynamic(() => import('../components/services/LiveBakkieRadarModal'), { ssr: false })
+const DriverLicenseScannerModal = dynamic(() => import('../components/services/DriverLicenseScannerModal'), { ssr: false })
+const QuantumPartyShuttleModal = dynamic(() => import('../components/services/QuantumPartyShuttleModal'), { ssr: false })
+const FlatpackAssemblyModal = dynamic(() => import('../components/services/FlatpackAssemblyModal'), { ssr: false })
+const DepositSaverCleaningModal = dynamic(() => import('../components/services/DepositSaverCleaningModal'), { ssr: false })
+const RubbishClearanceModal = dynamic(() => import('../components/services/RubbishClearanceModal'), { ssr: false })
+const HandymanMilestoneEscrowModal = dynamic(() => import('../components/services/HandymanMilestoneEscrowModal'), { ssr: false })
+const GasCylinderRefillModal = dynamic(() => import('../components/residence/GasCylinderRefillModal'), { ssr: false })
+const GeneratorDieselPoolModal = dynamic(() => import('../components/residence/GeneratorDieselPoolModal'), { ssr: false })
+const SolarBatteryBridgeModal = dynamic(() => import('../components/residence/SolarBatteryBridgeModal'), { ssr: false })
+const ResHustleGigBoardModal = dynamic(() => import('../components/residence/ResHustleGigBoardModal'), { ssr: false })
+const ResShedToolLibraryModal = dynamic(() => import('../components/residence/ResShedToolLibraryModal'), { ssr: false })
+const ReverseAuctionBargainModal = dynamic(() => import('../components/social-dynamics/ReverseAuctionBargainModal'), { ssr: false })
+const GatekeeperParcelSafeModal = dynamic(() => import('../components/residence/GatekeeperParcelSafeModal'), { ssr: false })
+const TaxiHandSignGuideModal = dynamic(() => import('../components/social-dynamics/TaxiHandSignGuideModal'), { ssr: false })
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
 const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
@@ -51,8 +73,27 @@ const TIER_RANK: Record<'premium' | 'priority' | 'none', number> = { premium: 0,
 
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
-  const [activeTab, setActiveTab] = useState<'lifts' | 'handymen' | 'utilities'>('lifts')
+  const [activeTab, setActiveTab] = useState<'moving' | 'handymen' | 'lifts' | 'utilities'>('moving')
+  const [showPlumbingModal, setShowPlumbingModal] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
+
+  // Advanced Services & Moving Modals State
+  const [showEstimatorModal, setShowEstimatorModal] = useState(false)
+  const [showBakkieRadarModal, setShowBakkieRadarModal] = useState(false)
+  const [showLicenseScannerModal, setShowLicenseScannerModal] = useState(false)
+  const [showQuantumShuttleModal, setShowQuantumShuttleModal] = useState(false)
+  const [showFlatpackModal, setShowFlatpackModal] = useState(false)
+  const [showDepositCleaningModal, setShowDepositCleaningModal] = useState(false)
+  const [showRubbishModal, setShowRubbishModal] = useState(false)
+  const [showHandymanEscrowModal, setShowHandymanEscrowModal] = useState(false)
+  const [showGasModal, setShowGasModal] = useState(false)
+  const [showDieselModal, setShowDieselModal] = useState(false)
+  const [showSolarBatteryModal, setShowSolarBatteryModal] = useState(false)
+  const [showHustleGigModal, setShowHustleGigModal] = useState(false)
+  const [showToolLibraryModal, setShowToolLibraryModal] = useState(false)
+  const [showReverseAuctionModal, setShowReverseAuctionModal] = useState(false)
+  const [showParcelSafeModal, setShowParcelSafeModal] = useState(false)
+  const [showTaxiGuideModal, setShowTaxiGuideModal] = useState(false)
 
   // Business Registration State
   const [showBusinessRegModal, setShowBusinessRegModal] = useState(false)
@@ -292,15 +333,16 @@ export default function ServicesPage() {
 
         <div className="flex bg-black/60 p-1.5 rounded-2xl border border-white/10 shadow-glass backdrop-blur-2xl w-full md:w-auto overflow-x-auto no-scrollbar gap-1">
           {[
+            { id: 'moving', label: 'Moving & Bakkies', icon: Truck },
+            { id: 'handymen', label: 'Trades & Plumbing', icon: Briefcase },
             { id: 'lifts', label: 'Lifts', icon: Car },
-            { id: 'handymen', label: 'Skills', icon: Briefcase },
             { id: 'utilities', label: 'Utilities', icon: Zap },
           ].map(t => (
             <button
               key={t.id}
-              onClick={() => setActiveTab(t.id as 'lifts' | 'handymen' | 'utilities')}
-              className={`flex-1 md:flex-none px-6 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 whitespace-nowrap ${
-                activeTab === t.id ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+              onClick={() => setActiveTab(t.id as 'moving' | 'handymen' | 'lifts' | 'utilities')}
+              className={`flex-1 md:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 whitespace-nowrap ${
+                activeTab === t.id ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
               }`}
             >
               <t.icon size={14} /> {t.label}
@@ -308,6 +350,170 @@ export default function ServicesPage() {
           ))}
         </div>
       </header>
+
+      {/* Services Rapid Actions Bar */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+        <button
+          type="button"
+          onClick={() => setShowEstimatorModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 transition"
+        >
+          <Truck size={13} />
+          <span>m³ Inventory Estimator</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowBakkieRadarModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
+        >
+          <Clock size={13} />
+          <span>Live Bakkie Radar</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowLicenseScannerModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 transition"
+        >
+          <ShieldCheck size={13} />
+          <span>PDP / NATIS Disc Scan</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowQuantumShuttleModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0 transition"
+        >
+          <Car size={13} />
+          <span>Quantum Minibus Shuttle</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowFlatpackModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 transition"
+        >
+          <Briefcase size={13} />
+          <span>Flatpack Guild</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowDepositCleaningModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 shrink-0 transition"
+        >
+          <Droplets size={13} />
+          <span>Deposit-Saver Clean</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowRubbishModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
+        >
+          <Truck size={13} />
+          <span>Rubbish Clearance</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowHandymanEscrowModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0 transition"
+        >
+          <Lock size={13} />
+          <span>Trade Milestone Escrow</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowGasModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 shrink-0 transition"
+          title="9kg LPG Gas Cylinder Refill & Dispatch"
+        >
+          <Flame size={13} />
+          <span>Gas Refill</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowDieselModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 shrink-0 transition"
+          title="Communal Generator Diesel Fuel Pool & Meter"
+        >
+          <Zap size={13} />
+          <span>Generator Diesel</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowSolarBatteryModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
+          title="Solar Inverter Battery Outage Bridge"
+        >
+          <BatteryCharging size={13} />
+          <span>Solar Battery</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowHustleGigModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 shrink-0 transition"
+          title="Student Campus Micro-Gig Errand Board"
+        >
+          <ShoppingBag size={13} />
+          <span>Res Hustle Gigs</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowToolLibraryModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 transition"
+          title="P2P Communal Tool Library with Escrow Collateral"
+        >
+          <Wrench size={13} />
+          <span>Tool Shed</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowReverseAuctionModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0 transition"
+          title="Reverse Dutch Auction Bargain Bin - Price drops every 4 hours"
+        >
+          <Tag size={13} />
+          <span>Dutch Auction</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowParcelSafeModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0 transition"
+          title="Gatekeeper Parcel Safe - Secure Courier OTP Lockbox"
+        >
+          <Package size={13} />
+          <span>Parcel Safe</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowTaxiGuideModal(true)}
+          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 shrink-0 transition"
+          title="SA Minibus Taxi Hand Gesture Signs & Cash Fares"
+        >
+          <Navigation size={13} />
+          <span>Taxi Guide</span>
+        </button>
+      </div>
+
+      {/* 1. Moving & Bakkie Logistics Portal */}
+      {activeTab === 'moving' && (
+        <MovingLogisticsPortal
+          onSelectProvider={(phone, name) => {
+            setAlertNotification(`Connecting with ${name} (${phone})`)
+          }}
+        />
+      )}
 
       {activeTab === 'lifts' && (
         <div className="space-y-4">
@@ -413,8 +619,27 @@ export default function ServicesPage() {
       )}
 
       {activeTab === 'handymen' && (
-        <div className="space-y-12">
-           <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
+        <div className="space-y-8">
+          {/* Emergency Plumbing & Trades Dispatch Banner */}
+          <div className="flex flex-col sm:flex-row items-center justify-between p-5 rounded-3xl bg-blue-950/40 border border-blue-500/30 gap-4 shadow-glass">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-glow">
+                <Droplets size={22} />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-white uppercase tracking-tight">Need Emergency Plumbing or Repairs?</h4>
+                <p className="text-xs text-gray-300">Geyser leak, burst pipe, blocked drain, or electrical trip dispatched in 30 mins.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowPlumbingModal(true)}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-900/40 transition-all shrink-0 active:scale-95"
+            >
+              Request Emergency Trades
+            </button>
+          </div>
+
+          <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
               <div className="glass-panel p-6 bg-blue-500/5 border-blue-500/10 flex-1 flex flex-col md:flex-row gap-6 items-center shadow-2xl">
                  <div className="p-4 bg-blue-500/20 rounded-2xl shadow-xl shadow-blue-900/10">
                     <Star size={32} className="text-blue-400" />
@@ -452,7 +677,7 @@ export default function ServicesPage() {
                <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-black/40 hover:border-gold-primary/40 transition-all duration-500 shadow-2xl">
                   <div className="h-44 bg-gray-900 relative overflow-hidden">
                      {srv.image ? (
-                       <img src={srv.image} alt={srv.businessName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" />
+                       <Image src={srv.image} alt={srv.businessName} fill className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
                      ) : (
                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
                          <ImageIcon size={32} className="text-gold-primary/20" />
@@ -885,6 +1110,111 @@ export default function ServicesPage() {
             </motion.div>
          )}
       </AnimatePresence>
+
+      {/* Emergency Plumbing & Trades Dispatch Modal */}
+      <PlumbingTradesModal
+        isOpen={showPlumbingModal}
+        onClose={() => setShowPlumbingModal(false)}
+        onSuccess={data => {
+          setAlertNotification(`Emergency ${data.category} dispatch broadcasted to local pros!`)
+        }}
+      />
+
+      {/* Moving Inventory & Volume Estimator Modal */}
+      <MovingInventoryEstimatorModal
+        isOpen={showEstimatorModal}
+        onClose={() => setShowEstimatorModal(false)}
+      />
+
+      {/* Live Bakkie GPS Radar Modal */}
+      <LiveBakkieRadarModal
+        isOpen={showBakkieRadarModal}
+        onClose={() => setShowBakkieRadarModal(false)}
+      />
+
+      {/* Driver License & PDP NATIS Scanner Modal */}
+      <DriverLicenseScannerModal
+        isOpen={showLicenseScannerModal}
+        onClose={() => setShowLicenseScannerModal(false)}
+      />
+
+      {/* Quantum Party Shuttle Minibus Pool Modal */}
+      <QuantumPartyShuttleModal
+        isOpen={showQuantumShuttleModal}
+        onClose={() => setShowQuantumShuttleModal(false)}
+      />
+
+      {/* Flatpack Furniture Assembly Guild Modal */}
+      <FlatpackAssemblyModal
+        isOpen={showFlatpackModal}
+        onClose={() => setShowFlatpackModal(false)}
+      />
+
+      {/* Deposit Saver Move-Out Cleaning Modal */}
+      <DepositSaverCleaningModal
+        isOpen={showDepositCleaningModal}
+        onClose={() => setShowDepositCleaningModal(false)}
+      />
+
+      {/* Rubbish & Clutter Clearance Modal */}
+      <RubbishClearanceModal
+        isOpen={showRubbishModal}
+        onClose={() => setShowRubbishModal(false)}
+      />
+
+      {/* Handyman Milestone Escrow Vault Modal */}
+      <HandymanMilestoneEscrowModal
+        isOpen={showHandymanEscrowModal}
+        onClose={() => setShowHandymanEscrowModal(false)}
+      />
+
+      {/* 9kg LPG GAS CYLINDER REFILL & DISPATCH MODAL */}
+      <GasCylinderRefillModal
+        isOpen={showGasModal}
+        onClose={() => setShowGasModal(false)}
+      />
+
+      {/* COMMUNAL GENERATOR DIESEL FUEL POOL MODAL */}
+      <GeneratorDieselPoolModal
+        isOpen={showDieselModal}
+        onClose={() => setShowDieselModal(false)}
+      />
+
+      {/* SOLAR BATTERY INVERTER OUTAGE BRIDGE MODAL */}
+      <SolarBatteryBridgeModal
+        isOpen={showSolarBatteryModal}
+        onClose={() => setShowSolarBatteryModal(false)}
+      />
+
+      {/* RES HUSTLE STUDENT CAMPUS ERRAND GIG BOARD MODAL */}
+      <ResHustleGigBoardModal
+        isOpen={showHustleGigModal}
+        onClose={() => setShowHustleGigModal(false)}
+      />
+
+      {/* RES SHED COMMUNAL TOOL LIBRARY MODAL */}
+      <ResShedToolLibraryModal
+        isOpen={showToolLibraryModal}
+        onClose={() => setShowToolLibraryModal(false)}
+      />
+
+      {/* REVERSE DUTCH AUCTION BARGAIN BIN MODAL */}
+      <ReverseAuctionBargainModal
+        isOpen={showReverseAuctionModal}
+        onClose={() => setShowReverseAuctionModal(false)}
+      />
+
+      {/* GATEKEEPER PARCEL SAFE OTP LOCKBOX MODAL */}
+      <GatekeeperParcelSafeModal
+        isOpen={showParcelSafeModal}
+        onClose={() => setShowParcelSafeModal(false)}
+      />
+
+      {/* SA MINIBUS TAXI HAND GESTURE & FARES GUIDE MODAL */}
+      <TaxiHandSignGuideModal
+        isOpen={showTaxiGuideModal}
+        onClose={() => setShowTaxiGuideModal(false)}
+      />
     </div>
   )
 }

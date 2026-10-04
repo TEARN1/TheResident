@@ -1,10 +1,11 @@
 // The Resident — Low-Bandwidth 2G/3G PWA Service Worker (Cache-First & Offline Resilience)
-const CACHE_NAME = 'resident-v1'
+const CACHE_NAME = 'resident-v2'
 const STATIC_ASSETS = [
   '/',
   '/dashboard',
   '/manifest.json',
-  '/logo.png'
+  '/logo.png',
+  '/offline.html'
 ]
 
 // 1. Install event: Cache core offline shell assets
@@ -48,7 +49,8 @@ self.addEventListener('fetch', (event) => {
         // Return cached version immediately while fetching update in background
         fetch(event.request).then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse))
+            const responseToCache = networkResponse.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache))
           }
         }).catch(() => {/* Offline fallback active */})
 
@@ -80,7 +82,7 @@ self.addEventListener('fetch', (event) => {
       }).catch(() => {
         // Fallback for HTML page requests if completely offline
         if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('/dashboard')
+          return caches.match('/offline.html').then((offlineRes) => offlineRes || caches.match('/dashboard'))
         }
       })
     })

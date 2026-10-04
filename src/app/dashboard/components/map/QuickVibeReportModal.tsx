@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, AlertTriangle, Flame, ShieldCheck, Coffee, Ban, Navigation, Sparkles, CheckCircle2 } from 'lucide-react'
+import { X, AlertTriangle, Flame, Coffee, Ban, Sparkles, CheckCircle2 } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import { reportZone, type ReportableZoneKind } from '../../../../utils/mapZones'
 

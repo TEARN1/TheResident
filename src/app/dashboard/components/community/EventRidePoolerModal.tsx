@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Car, X, Users, MapPin, Calendar, Clock, DollarSign, Share2, Check, Sparkles, AlertCircle } from 'lucide-react'
+import { Car, X, Users, MapPin, Sparkles } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import { GruvsEvent } from '../../../../utils/gruvsEvents'
 
@@ -206,6 +206,20 @@ export default function EventRidePoolerModal({
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Ride / Vehicle Type</label>
+                  <select
+                    value={vehicle}
+                    onChange={e => setVehicle(e.target.value)}
+                    className="w-full bg-black border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500"
+                  >
+                    <option value="Uber / Bolt Shared">Uber / Bolt Shared</option>
+                    <option value="Uber XL Split">Uber XL Split</option>
+                    <option value="Personal Car Pool">Personal Car Pool</option>
+                    <option value="Campus Minibus Shuttle">Campus Minibus Shuttle</option>
+                  </select>
                 </div>
 
                 <button

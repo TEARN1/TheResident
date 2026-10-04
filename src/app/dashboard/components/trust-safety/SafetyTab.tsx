@@ -7,6 +7,7 @@ import { outageConsensus, type StatusReport } from '../../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
 import UpgradeButton from '../shared/UpgradeButton'
+import LoadsheddingMatrixWidget from './LoadsheddingMatrixWidget'
 
 interface CareProfile {
   id: string
@@ -233,6 +234,9 @@ export default function SafetyTab({
 
   return (
     <div className="space-y-8">
+      {/* Live Eskom Grid & Suburb Schedule Matrix */}
+      <LoadsheddingMatrixWidget />
+
       {/* Panic Section — deliberately two-step so a mis-tap can't page the neighbourhood */}
       <div className="glass-panel p-6 border-red-500/20 bg-red-500/5">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

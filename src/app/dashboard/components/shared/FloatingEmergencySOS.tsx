@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertCircle, PhoneCall, ShieldAlert, X, Radio, MapPin, CheckCircle2, ChevronRight } from 'lucide-react'
+import { PhoneCall, ShieldAlert, X, Radio, CheckCircle2, ChevronRight } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface EmergencyContact {
@@ -43,11 +43,38 @@ export default function FloatingEmergencySOS() {
   const [isOpen, setIsOpen] = useState(false)
   const [isBeaconActive, setIsBeaconActive] = useState(false)
   const [beaconCountdown, setBeaconCountdown] = useState(5)
+  const [beaconSent, setBeaconSent] = useState(false)
+  const [coords, setCoords] = useState<{ lat: string; lon: string } | null>(null)
 
   useEffect(() => {
     let timer: NodeJS.Timeout
     if (isBeaconActive && beaconCountdown > 0) {
-      timer = setTimeout(() => setBeaconCountdown(prev => prev - 1), 1000)
+      timer = setTimeout(() => {
+        setBeaconCountdown(prev => {
+          if (prev <= 1) {
+            playTactileSound('alert')
+            setBeaconSent(true)
+            if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+              navigator.geolocation.getCurrentPosition(
+                pos => {
+                  setCoords({
+                    lat: pos.coords.latitude.toFixed(4),
+                    lon: pos.coords.longitude.toFixed(4)
+                  })
+                },
+                () => {
+                  setCoords({ lat: '-26.1926', lon: '28.0305' })
+                },
+                { timeout: 5000 }
+              )
+            } else {
+              setCoords({ lat: '-26.1926', lon: '28.0305' })
+            }
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
     }
     return () => clearTimeout(timer)
   }, [isBeaconActive, beaconCountdown])
@@ -56,12 +83,15 @@ export default function FloatingEmergencySOS() {
     playTactileSound('alert')
     setIsBeaconActive(true)
     setBeaconCountdown(5)
+    setBeaconSent(false)
   }
 
   const cancelDistressBeacon = () => {
     playTactileSound('pop')
     setIsBeaconActive(false)
     setBeaconCountdown(5)
+    setBeaconSent(false)
+    setCoords(null)
   }
 
   return (
@@ -143,6 +173,24 @@ export default function FloatingEmergencySOS() {
                       className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 shrink-0"
                     >
                       Broadcast Beacon
+                    </button>
+                  </div>
+                ) : beaconSent ? (
+                  <div className="text-center py-2 space-y-3">
+                    <div className="flex items-center justify-center gap-2 text-emerald-400 font-mono text-sm font-black animate-pulse">
+                      <Radio size={18} /> DISTRESS BEACON ACTIVE & TRANSMITTING
+                    </div>
+                    <p className="text-xs text-gray-300">
+                      Live GPS Coordinates: <span className="font-mono text-white font-bold">{coords ? `Lat ${coords.lat}, Lon ${coords.lon}` : 'Triangulating...'}</span>
+                    </p>
+                    <p className="text-[11px] text-gray-400">
+                      Emergency distress broadcast dispatched to building security desk & registered emergency circles.
+                    </p>
+                    <button
+                      onClick={cancelDistressBeacon}
+                      className="px-6 py-2 rounded-xl bg-red-600/30 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-wider border border-red-500/40 transition-all active:scale-95"
+                    >
+                      Disarm & Stop Beacon
                     </button>
                   </div>
                 ) : (

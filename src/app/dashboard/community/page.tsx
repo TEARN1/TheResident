@@ -64,6 +64,18 @@ const VibeMap = dynamic(() => import('../components/map/VibeMap'), {
   ssr: false,
   loading: () => <div className="p-12 text-slate-400 font-bold text-center">Loading VibeMap client engine...</div>
 })
+const TextbookScannerExchangeModal = dynamic(() => import('../components/community/TextbookScannerExchangeModal'), { ssr: false })
+const GuardianLensModal = dynamic(() => import('../components/community/GuardianLensModal'), { ssr: false })
+const MidnightTuckshopModal = dynamic(() => import('../components/residence/MidnightTuckshopModal'), { ssr: false })
+const LaundryMachineQueueModal = dynamic(() => import('../components/residence/LaundryMachineQueueModal'), { ssr: false })
+const LaundryUVPredictorModal = dynamic(() => import('../components/residence/LaundryUVPredictorModal'), { ssr: false })
+const CommunalFridgeGuardModal = dynamic(() => import('../components/residence/CommunalFridgeGuardModal'), { ssr: false })
+const PastPapersVaultModal = dynamic(() => import('../components/residence/PastPapersVaultModal'), { ssr: false })
+const NoiseSentinelDecibelModal = dynamic(() => import('../components/residence/NoiseSentinelDecibelModal'), { ssr: false })
+const CoLivingChoreWheelModal = dynamic(() => import('../components/residence/CoLivingChoreWheelModal'), { ssr: false })
+const MoveInSurvivalQuestModal = dynamic(() => import('../components/residence/MoveInSurvivalQuestModal'), { ssr: false })
+const JoJoWaterPurityModal = dynamic(() => import('../components/residence/JoJoWaterPurityModal'), { ssr: false })
+const USSDOfflineFallbackModal = dynamic(() => import('../components/social-dynamics/USSDOfflineFallbackModal'), { ssr: false })
 
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
@@ -95,6 +107,20 @@ export default function CommunityPage() {
 
   // Create-community modal state (CommunitiesTab is presentation-only; the form lives here)
   const [showCreateCommunity, setShowCreateCommunity] = useState(false)
+
+  // Advanced Campus & Safety Modals
+  const [showTextbookModal, setShowTextbookModal] = useState(false)
+  const [showGuardianModal, setShowGuardianModal] = useState(false)
+  const [showTuckshopModal, setShowTuckshopModal] = useState(false)
+  const [showLaundryQueueModal, setShowLaundryQueueModal] = useState(false)
+  const [showLaundryUVModal, setShowLaundryUVModal] = useState(false)
+  const [showFridgeGuardModal, setShowFridgeGuardModal] = useState(false)
+  const [showPastPapersModal, setShowPastPapersModal] = useState(false)
+  const [showNoiseSentinelModal, setShowNoiseSentinelModal] = useState(false)
+  const [showChoreWheelModal, setShowChoreWheelModal] = useState(false)
+  const [showSurvivalQuestModal, setShowSurvivalQuestModal] = useState(false)
+  const [showJoJoPurityModal, setShowJoJoPurityModal] = useState(false)
+  const [showUSSDModal, setShowUSSDModal] = useState(false)
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const lang = useSelector((state: RootState) => state.ui.language)
@@ -468,7 +494,7 @@ export default function CommunityPage() {
           onClick={toggleVibeMap}
           title="VibeMap"
           aria-label="Toggle VibeMap"
-          className={`hidden md:inline-flex items-center justify-center w-11 h-11 rounded-2xl border shrink-0 transition-all ${subTab === 'vibemap' ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20' : 'bg-black/40 text-gray-500 border-white/5 hover:text-gold-primary hover:border-gold-primary/30'}`}
+          className={`hidden md:inline-flex items-center justify-center w-11 h-11 rounded-2xl border shrink-0 transition-all ${subTab === 'vibemap' ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black/40 text-gray-500 border-white/5 hover:text-gold-primary hover:border-gold-primary/30'}`}
         >
           <MapIcon size={18} />
         </button>
@@ -480,7 +506,7 @@ export default function CommunityPage() {
           <button
             onClick={() => goToTab('overview')}
             className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap ${
-              subTab === 'overview' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
+              subTab === 'overview' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
             }`}
           >
             <LayoutGrid size={13} /> Overview
@@ -493,7 +519,7 @@ export default function CommunityPage() {
                 key={cluster.id}
                 onClick={() => goToTab(cluster.tabs[0].id as typeof subTab)}
                 className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap ${
-                  active ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
+                  active ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
                 }`}
               >
                 <span className={`p-0.5 rounded ${active ? '' : cluster.accent}`}>
@@ -507,12 +533,118 @@ export default function CommunityPage() {
             onClick={toggleVibeMap}
             className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap border ${
               subTab === 'vibemap'
-                ? 'bg-gradient-to-r from-gold-primary to-amber-500 text-black border-gold-primary shadow-[0_0_25px_rgba(212,175,55,0.4)]'
+                ? 'bg-gradient-to-r from-gold-primary to-amber-500 text-black border-gold-primary'
                 : 'text-amber-300 hover:text-white bg-gold-primary/10 border-gold-primary/30 hover:bg-gold-primary/20'
             }`}
           >
             <Sparkles size={13} className="text-gold-primary animate-pulse" />
             <span>Vibe Radar</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowTextbookModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30"
+          >
+            <span>📚 Textbook Swap</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowGuardianModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30"
+          >
+            <span>🛡️ GuardianLens</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowTuckshopModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30"
+            title="Peer Midnight Tuckshop & Study Snack Pool"
+          >
+            <span>🍜 Tuckshop</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowLaundryQueueModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30"
+            title="Communal Laundry Machine Queue & Cycle Buzzer"
+          >
+            <span>🧺 Laundry Queue</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowLaundryUVModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"
+            title="Highveld UV Index & Drying Window Radar"
+          >
+            <span>☀️ Laundry UV Radar</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowFridgeGuardModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+            title="Communal Fridge Guard - Expiry & Free Food Claims"
+          >
+            <span>🧊 Fridge Guard</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowPastPapersModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30"
+            title="Past Exam Papers Vault & Quiet Study Bookings"
+          >
+            <span>📑 Past Papers Vault</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowNoiseSentinelModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30"
+            title="Noise Sentinel Corridor Decibel Meter & Quiet Beacons"
+          >
+            <span>🔊 Noise Sentinel</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowChoreWheelModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+            title="Co-Living Inertia Chore Wheel Spinner"
+          >
+            <span>🎡 Chore Wheel</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowSurvivalQuestModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+            title="Move-In Survival Quest - 7-Day Res Onboarding"
+          >
+            <span>🎒 Survival Quest</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowJoJoPurityModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30"
+            title="JoJo Water Tank Sensor Monitor - pH & TDS Purity"
+          >
+            <span>💧 JoJo Water Purity</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowUSSDModal(true)}
+            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30"
+            title="Offline Zero-Rated USSD / SMS Mode (*120*737#)"
+          >
+            <span>📱 USSD Offline</span>
           </button>
         </div>
 
@@ -525,7 +657,7 @@ export default function CommunityPage() {
                 onClick={() => goToTab(t.id as typeof subTab)}
                 className={`px-3 py-1.5 rounded-xl transition-all text-[11px] font-bold tracking-wide flex items-center gap-1.5 whitespace-nowrap border ${
                   subTab === t.id
-                    ? 'bg-white/15 text-white border-white/20 shadow-sm'
+                    ? 'bg-white/15 text-white border-white/20'
                     : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
                 }`}
               >
@@ -845,7 +977,80 @@ export default function CommunityPage() {
          )}
       </AnimatePresence>
 
+      {/* TEXTBOOK SCANNER & EXCHANGE MODAL */}
+      <TextbookScannerExchangeModal
+        isOpen={showTextbookModal}
+        onClose={() => setShowTextbookModal(false)}
+      />
+
+      {/* GUARDIAN LENS MODAL */}
+      <GuardianLensModal
+        isOpen={showGuardianModal}
+        onClose={() => setShowGuardianModal(false)}
+      />
+
+      {/* MIDNIGHT TUCKSHOP MODAL */}
+      <MidnightTuckshopModal
+        isOpen={showTuckshopModal}
+        onClose={() => setShowTuckshopModal(false)}
+      />
+
+      {/* LAUNDRY MACHINE QUEUE MODAL */}
+      <LaundryMachineQueueModal
+        isOpen={showLaundryQueueModal}
+        onClose={() => setShowLaundryQueueModal(false)}
+      />
+
+      {/* LAUNDRY UV PREDICTOR MODAL */}
+      <LaundryUVPredictorModal
+        isOpen={showLaundryUVModal}
+        onClose={() => setShowLaundryUVModal(false)}
+      />
+
+      {/* COMMUNAL FRIDGE GUARD MODAL */}
+      <CommunalFridgeGuardModal
+        isOpen={showFridgeGuardModal}
+        onClose={() => setShowFridgeGuardModal(false)}
+      />
+
+      {/* PAST EXAM PAPERS VAULT MODAL */}
+      <PastPapersVaultModal
+        isOpen={showPastPapersModal}
+        onClose={() => setShowPastPapersModal(false)}
+      />
+
+      {/* NOISE SENTINEL DECIBEL METER MODAL */}
+      <NoiseSentinelDecibelModal
+        isOpen={showNoiseSentinelModal}
+        onClose={() => setShowNoiseSentinelModal(false)}
+      />
+
+      {/* CO-LIVING CHORE WHEEL MODAL */}
+      <CoLivingChoreWheelModal
+        isOpen={showChoreWheelModal}
+        onClose={() => setShowChoreWheelModal(false)}
+      />
+
+      {/* MOVE-IN SURVIVAL QUEST ONBOARDING MODAL */}
+      <MoveInSurvivalQuestModal
+        isOpen={showSurvivalQuestModal}
+        onClose={() => setShowSurvivalQuestModal(false)}
+      />
+
+      {/* JOJO WATER TANK PURITY SENSOR MODAL */}
+      <JoJoWaterPurityModal
+        isOpen={showJoJoPurityModal}
+        onClose={() => setShowJoJoPurityModal(false)}
+      />
+
+      {/* ZERO-RATED USSD OFFLINE FALLBACK MODAL */}
+      <USSDOfflineFallbackModal
+        isOpen={showUSSDModal}
+        onClose={() => setShowUSSDModal(false)}
+      />
+
       {lang === 'en' && null /* lang currently drives translations elsewhere; kept in scope for the sidebar language switch */}
     </div>
   )
 }
+

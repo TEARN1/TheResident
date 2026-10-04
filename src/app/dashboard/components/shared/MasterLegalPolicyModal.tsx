@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShieldAlert, X, Scale, FileText, CheckCircle2, Lock, AlertTriangle, ChevronRight, Download } from 'lucide-react'
+import { ShieldAlert, X, Scale, CheckCircle2, AlertTriangle, Download } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 export interface LegalPolicyModalProps {

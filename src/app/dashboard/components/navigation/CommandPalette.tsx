@@ -4,11 +4,10 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, Home, Briefcase, Users, MessageSquare,
+  Search, Home, MessageSquare,
   Sparkles, ExternalLink, Table2, Zap, MapPin, X, ArrowRight, User
 } from 'lucide-react'
 import { GRUVS, TEARNS } from '../../../../utils/sisterApps'
-import Image from 'next/image'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface CommandItem {

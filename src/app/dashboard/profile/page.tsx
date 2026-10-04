@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import Image from 'next/image'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, Sun, Moon, ExternalLink, Table2, Sparkles, QrCode, Palette } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, ExternalLink, Table2, Sparkles, QrCode, Palette, Volume2, VolumeX } from 'lucide-react'
 import { GRUVS, TEARNS } from '../../../utils/sisterApps'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
@@ -13,10 +13,10 @@ import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
 import ResidentIDCardModal from '../components/profile/ResidentIDCardModal'
-import { playTactileSound } from '../../../utils/tactileSounds'
+import { playTactileSound, isTactileSoundMuted, setTactileSoundMuted } from '../../../utils/tactileSounds'
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import Card from '../../../components/ui/Card'
-import { APP_THEMES, type ThemeId, DEFAULT_THEME } from '../../../utils/themes'
+import { APP_THEMES, DEFAULT_THEME } from '../../../utils/themes'
 
 const LANGUAGES: { code: 'en' | 'zu' | 'xh' | 'af'; label: string }[] = [
   { code: 'en', label: 'English' },
@@ -62,6 +62,17 @@ export default function ProfilePage() {
     localStorage.setItem('residentTheme', theme)
     document.documentElement.setAttribute('data-theme', theme)
     setDashboardThemeState(theme)
+  }
+
+  const [mutedAudio, setMutedAudio] = useState(false)
+  useEffect(() => {
+    setMutedAudio(isTactileSoundMuted())
+  }, [])
+  const toggleMutedAudio = () => {
+    const next = !mutedAudio
+    setMutedAudio(next)
+    setTactileSoundMuted(next)
+    if (!next) playTactileSound('pop')
   }
 
   const [hasPlus, setHasPlus] = useState<boolean | null>(null)
@@ -265,6 +276,31 @@ export default function ProfilePage() {
     </div>
   )
 
+  const audioCard = (
+    <div className="glass-panel p-6 space-y-4 border-white/10">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {mutedAudio ? <VolumeX size={18} className="text-gray-400" /> : <Volume2 size={18} className="text-gold-primary" />}
+          <h2 className="text-sm font-black text-white uppercase tracking-widest">Tactile Sound Effects</h2>
+        </div>
+        <button
+          type="button"
+          onClick={toggleMutedAudio}
+          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+            !mutedAudio
+              ? 'bg-gold-primary text-black border-gold-primary shadow-glow'
+              : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
+          }`}
+        >
+          {!mutedAudio ? 'Enabled' : 'Muted'}
+        </button>
+      </div>
+      <p className="text-xs text-gray-400">
+        Lightweight Web Audio oscillators and micro-vibrations for tabs, taps, and alerts. Mute anytime for quiet environments.
+      </p>
+    </div>
+  )
+
   if (guest) {
     return (
       <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6 pb-24">
@@ -276,6 +312,7 @@ export default function ProfilePage() {
             <LogIn size={14} /> Create an account
           </Link>
         </div>
+        {audioCard}
         {themeCard}
         {languageCard}
       </div>
@@ -623,6 +660,7 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {audioCard}
       {themeCard}
       {languageCard}
 

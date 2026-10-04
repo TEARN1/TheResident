@@ -1,22 +1,61 @@
 {
   "name": "The Resident Co-Living Hub",
   "short_name": "Resident",
-  "description": "Informal co-living and community mapping platform",
+  "description": "Informal co-living, housing trading & community vibe mapping platform for South African residents",
   "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0a0a0a",
-  "theme_color": "#D4AF37",
+  "background_color": "#051F20",
+  "theme_color": "#8EB69B",
+  "categories": ["lifestyle", "utilities", "social"],
   "icons": [
     {
       "src": "/logo.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/logo.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "VibeMap Radar",
+      "short_name": "VibeMap",
+      "description": "Live student & resident vibe radar and shared zones",
+      "url": "/dashboard/community?tab=vibemap",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Find Housing",
+      "short_name": "Housing",
+      "description": "Browse verified co-living rooms and student rentals",
+      "url": "/dashboard/housing",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Emergency Panic SOS",
+      "short_name": "Panic SOS",
+      "description": "Trigger silent neighborhood emergency panic broadcast",
+      "url": "/dashboard/trust-circle",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Local Handyman & Services",
+      "short_name": "Services",
+      "description": "Book verified township & suburban handymen",
+      "url": "/dashboard/services",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }
   ]
 }

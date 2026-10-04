@@ -5,7 +5,8 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, Trash2, Sparkles, ExternalLink, Radar, FileText, HeartHandshake, Calculator, ClipboardList
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, Radar, FileText, HeartHandshake, Calculator, ClipboardList, Upload, Camera,
+  LayoutGrid, Compass, Sun, Scan, Film, ShieldAlert, Sparkles, CheckCircle2, Scale, Radio
 } from 'lucide-react'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import {
@@ -17,7 +18,6 @@ import {
   selectMatchedRoommates,
   addRequest,
   addListing,
-  deleteListing,
   updateRequestStatus,
   isGuestUser
 } from '../../../store'
@@ -30,17 +30,36 @@ import TrustBadge from '../components/trust-safety/TrustBadge'
 import NextOfKinFlag from '../components/trust-safety/NextOfKinFlag'
 import ReviewForm from '../components/social/ReviewForm'
 import ReviewsList from '../components/social/ReviewsList'
+import dynamic from 'next/dynamic'
 import SavedSearches from '../components/housing/SavedSearches'
-import OpenInMapsButton from '../components/map/OpenInMapsButton'
 import Link from 'next/link'
-import UpgradeButton from '../components/shared/UpgradeButton'
 import PropertiesPanel, { type ResProperty } from '../components/housing/PropertiesPanel'
 import EmptyState from '../components/shared/EmptyState'
-import RoommateCompatibilityModal from '../components/housing/RoommateCompatibilityModal'
-import SALeaseAgreementModal from '../components/housing/SALeaseAgreementModal'
-import CoLivingExpenseSplitterModal from '../components/household/CoLivingExpenseSplitterModal'
-import TenantInspectionSnagListModal from '../components/housing/TenantInspectionSnagListModal'
-import { goldButtonClass } from '../../../components/ui/GoldButton'
+
+const RoommateCompatibilityModal = dynamic(() => import('../components/housing/RoommateCompatibilityModal'), { ssr: false })
+const SALeaseAgreementModal = dynamic(() => import('../components/housing/SALeaseAgreementModal'), { ssr: false })
+const CoLivingExpenseSplitterModal = dynamic(() => import('../components/household/CoLivingExpenseSplitterModal'), { ssr: false })
+const TenantInspectionSnagListModal = dynamic(() => import('../components/housing/TenantInspectionSnagListModal'), { ssr: false })
+const LandlordRoomManagerModal = dynamic(() => import('../components/housing/LandlordRoomManagerModal'), { ssr: false })
+const DepositEscrowVaultModal = dynamic(() => import('../components/housing/DepositEscrowVaultModal'), { ssr: false })
+const MoveInOutInspectionModal = dynamic(() => import('../components/housing/MoveInOutInspectionModal'), { ssr: false })
+const RentReceiptTaxModal = dynamic(() => import('../components/housing/RentReceiptTaxModal'), { ssr: false })
+const NSFASHousingModal = dynamic(() => import('../components/housing/NSFASHousingModal'), { ssr: false })
+const RoomSpatialRulerModal = dynamic(() => import('../components/housing/RoomSpatialRulerModal'), { ssr: false })
+const RoomFloorplanCanvasModal = dynamic(() => import('../components/spatial/RoomFloorplanCanvasModal'), { ssr: false })
+const Panoramic360TourModal = dynamic(() => import('../components/spatial/Panoramic360TourModal'), { ssr: false })
+const ARSolarWindowSimulatorModal = dynamic(() => import('../components/spatial/ARSolarWindowSimulatorModal'), { ssr: false })
+const ARFurnitureBoundingBoxModal = dynamic(() => import('../components/spatial/ARFurnitureBoundingBoxModal'), { ssr: false })
+const LeaseTrapDetectorModal = dynamic(() => import('../components/identity/LeaseTrapDetectorModal'), { ssr: false })
+const UVBlacklightInspectorModal = dynamic(() => import('../components/identity/UVBlacklightInspectorModal'), { ssr: false })
+const StudentCardScannerModal = dynamic(() => import('../components/identity/StudentCardScannerModal'), { ssr: false })
+const LandlordDeedsCheckerModal = dynamic(() => import('../components/identity/LandlordDeedsCheckerModal'), { ssr: false })
+const NFCKeycardHandoverModal = dynamic(() => import('../components/identity/NFCKeycardHandoverModal'), { ssr: false })
+const RentCreditBureauModal = dynamic(() => import('../components/identity/RentCreditBureauModal'), { ssr: false })
+const ResidentPassportModal = dynamic(() => import('../components/identity/ResidentPassportModal'), { ssr: false })
+const RoomStoriesReelModal = dynamic(() => import('../components/social-dynamics/RoomStoriesReelModal'), { ssr: false })
+import { HolographicTiltCard } from '../components/shared/HolographicTiltCard'
+
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
 // Top of the budget slider. Well above the real ceiling for a single room so
@@ -125,9 +144,6 @@ export default function HousingPage() {
   const [activeAuditRequest, setActiveAuditRequest] = useState<RoomRequest | null>(null)
   const [auditActionLoading, setAuditActionLoading] = useState<string | null>(null)
 
-  // Reviews toggle (per listing card)
-  const [reviewsOpenFor, setReviewsOpenFor] = useState<string | null>(null)
-
   // Lifestyle Compatibility Modal
   const [compatModalTarget, setCompatModalTarget] = useState<{ name: string; suburb: string } | null>(null)
 
@@ -140,13 +156,34 @@ export default function HousingPage() {
   // Move-in Snag List Modal
   const [showSnagModal, setShowSnagModal] = useState(false)
 
-  const [confirmDeleteListingId, setConfirmDeleteListingId] = useState<string | null>(null)
-  const handleDeleteListing = (id: string) => {
-    dispatch(deleteListing(id))
-    setConfirmDeleteListingId(null)
-    setAlertNotification('Listing removed.')
-    setTimeout(() => setAlertNotification(null), 3000)
-  }
+  // Landlord Multi-Room & Tenant Reviews Manager Modal
+  const [showRoomManagerModal, setShowRoomManagerModal] = useState(false)
+  const [roomManagerPropertyInfo, setRoomManagerPropertyInfo] = useState<{ name: string; address: string }>({
+    name: 'Main Residence Complex',
+    address: 'Johannesburg / Braamfontein'
+  })
+
+  // Room Image Uploads State
+  const [newImages, setNewImages] = useState<string[]>([])
+
+  // Advanced Housing Modals State
+  const [showDepositVaultModal, setShowDepositVaultModal] = useState(false)
+  const [showMoveInspectionModal, setShowMoveInspectionModal] = useState(false)
+  const [showRentReceiptModal, setShowRentReceiptModal] = useState(false)
+  const [showNSFASModal, setShowNSFASModal] = useState(false)
+  const [showSpatialRulerModal, setShowSpatialRulerModal] = useState(false)
+  const [showFloorplanModal, setShowFloorplanModal] = useState(false)
+  const [showPanoramicModal, setShowPanoramicModal] = useState(false)
+  const [showARSolarModal, setShowARSolarModal] = useState(false)
+  const [showARBoundingModal, setShowARBoundingModal] = useState(false)
+  const [showRoomStoriesModal, setShowRoomStoriesModal] = useState(false)
+  const [showLeaseTrapModal, setShowLeaseTrapModal] = useState(false)
+  const [showUVBlacklightModal, setShowUVBlacklightModal] = useState(false)
+  const [showStudentCardModal, setShowStudentCardModal] = useState(false)
+  const [showDeedsCheckerModal, setShowDeedsCheckerModal] = useState(false)
+  const [showNFCKeycardModal, setShowNFCKeycardModal] = useState(false)
+  const [showCreditBureauModal, setShowCreditBureauModal] = useState(false)
+  const [showPassportModal, setShowPassportModal] = useState(false)
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const allListings = useSelector((state: RootState) => state.listings.items)
@@ -257,6 +294,31 @@ export default function HousingPage() {
     : null
   const newListingLooksSuspicious = isSuspiciousPrice(newPrice, newListingPriceStats)
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const maxAllowed = 6 - newImages.length
+    if (maxAllowed <= 0) {
+      setAlertNotification('Maximum 6 room photos allowed.')
+      return
+    }
+    const chosen = Array.from(files).slice(0, maxAllowed)
+    chosen.forEach(file => {
+      if (!file.type.startsWith('image/')) return
+      if (file.size > 5 * 1024 * 1024) {
+        setAlertNotification('Photo too large (max 5MB)')
+        return
+      }
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setNewImages(prev => [...prev, reader.result as string])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
   const handleCreateListing = (e: React.FormEvent) => {
     e.preventDefault()
     const listing: Listing = {
@@ -272,7 +334,9 @@ export default function HousingPage() {
       landlordId: currentUser?.id || '',
       landlordName: currentUser?.name || '',
       landlordLivesHere: newLivesHere,
-      images: ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80'],
+      images: newImages.length > 0
+        ? newImages
+        : ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80'],
       amenities: { wifi: newWifi, parking: newParking, bathroom: newBathroom },
       requirements: {
         genderPreference: newGenderPref,
@@ -292,11 +356,12 @@ export default function HousingPage() {
     }
     dispatch(addListing(listing))
     setShowCreateModal(false)
+    setNewImages([])
     setNewPropertyId('')
     setNewQuickPost(false)
     setNewListingType('rent')
     setNewEventId('')
-    setAlertNotification('Property listed successfully!')
+    setAlertNotification('Property listed successfully with verified photos!')
   }
 
   // A signed-out guest has no id, so the request row it built was orphaned —
@@ -408,7 +473,7 @@ export default function HousingPage() {
             <button
               onClick={() => setActiveTab('rooms')}
               className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-                activeTab === 'rooms' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+                activeTab === 'rooms' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
               }`}
             >
               Rooms
@@ -416,7 +481,7 @@ export default function HousingPage() {
             <button
               onClick={() => setActiveTab('roommates')}
               className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-                activeTab === 'roommates' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+                activeTab === 'roommates' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
               }`}
             >
               Roommates
@@ -425,7 +490,7 @@ export default function HousingPage() {
               <button
                 onClick={() => setActiveTab('properties')}
                 className={`flex-1 sm:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 ${
-                  activeTab === 'properties' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+                  activeTab === 'properties' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 <Building2 size={13} />
@@ -481,6 +546,227 @@ export default function HousingPage() {
               <ClipboardList size={13} className="text-gold-primary" />
               <span>Snag List</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowDepositVaultModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-emerald-300 hover:text-emerald-400 bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/30 shrink-0"
+              title="RHA Act 50 Deposit Escrow Holding Pool & PayShap Payout"
+            >
+              <ShieldCheck size={13} className="text-emerald-400" />
+              <span>Escrow Vault</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowMoveInspectionModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+              title="Side-by-side Day 1 vs Move-out photo comparator"
+            >
+              <Camera size={13} className="text-gold-primary" />
+              <span>Inspection</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowRentReceiptModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+              title="SARS Tax proof of rent certificates"
+            >
+              <FileText size={13} className="text-gold-primary" />
+              <span>Tax Proof</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowNSFASModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-teal-300 hover:text-teal-400 bg-teal-950/30 hover:bg-teal-900/40 border border-teal-500/30 shrink-0"
+              title="NSFAS annual accommodation cap and DHET compliance calculator"
+            >
+              <Building2 size={13} className="text-teal-400" />
+              <span>NSFAS Cap</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowSpatialRulerModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-cyan-300 hover:text-cyan-400 bg-cyan-950/30 hover:bg-cyan-900/40 border border-cyan-500/30 shrink-0"
+              title="3D Room Spatial Ruler - Will My Bed Fit?"
+            >
+              <Radar size={13} className="text-cyan-400" />
+              <span>AR Ruler</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowFloorplanModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-blue-300 hover:text-blue-400 bg-blue-950/30 hover:bg-blue-900/40 border border-blue-500/30 shrink-0"
+              title="2.5D Interactive Room Floorplan & Furniture Placer"
+            >
+              <LayoutGrid size={13} className="text-blue-400" />
+              <span>Floorplan</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowPanoramicModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-amber-300 hover:text-amber-400 bg-amber-950/30 hover:bg-amber-900/40 border border-amber-500/30 shrink-0"
+              title="360° Panoramic Virtual Room Tour with Spatial Hotspots"
+            >
+              <Compass size={13} className="text-amber-400" />
+              <span>360 Tour</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowARSolarModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-yellow-300 hover:text-yellow-400 bg-yellow-950/30 hover:bg-yellow-900/40 border border-yellow-500/30 shrink-0"
+              title="AR Winter vs Summer Sunlight Trajectory Simulator"
+            >
+              <Sun size={13} className="text-yellow-400" />
+              <span>AR Solar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowARBoundingModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-purple-300 hover:text-purple-400 bg-purple-950/30 hover:bg-purple-900/40 border border-purple-500/30 shrink-0"
+              title="AR LiDAR Camera 3D Furniture Bounding Box"
+            >
+              <Scan size={13} className="text-purple-400" />
+              <span>AR LiDAR</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowRoomStoriesModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-rose-300 hover:text-rose-400 bg-rose-950/30 hover:bg-rose-900/40 border border-rose-500/30 shrink-0"
+              title="Room Stories 9:16 Vertical Video Tour"
+            >
+              <Film size={13} className="text-rose-400" />
+              <span>Stories</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowLeaseTrapModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-red-300 hover:text-red-400 bg-red-950/30 hover:bg-red-900/40 border border-red-500/30 shrink-0"
+              title="Rental Housing Act 50 Illegal Lease Trap Scanner"
+            >
+              <ShieldAlert size={13} className="text-red-400" />
+              <span>Trap Scanner</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowUVBlacklightModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-violet-300 hover:text-violet-400 bg-violet-950/30 hover:bg-violet-900/40 border border-violet-500/30 shrink-0"
+              title="Virtual 395nm UV Blacklight Hygiene Torch"
+            >
+              <Sparkles size={13} className="text-violet-400" />
+              <span>UV Light</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowStudentCardModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-emerald-300 hover:text-emerald-400 bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/30 shrink-0"
+              title="Optical Hologram Student Card Scanner & OCR"
+            >
+              <CheckCircle2 size={13} className="text-emerald-400" />
+              <span>Student ID</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowDeedsCheckerModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-amber-300 hover:text-amber-400 bg-amber-950/30 hover:bg-amber-900/40 border border-amber-500/30 shrink-0"
+              title="Deeds Office & Municipal Rates Clearance Checker"
+            >
+              <Scale size={13} className="text-amber-400" />
+              <span>Deeds Check</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowNFCKeycardModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-indigo-300 hover:text-indigo-400 bg-indigo-950/30 hover:bg-indigo-900/40 border border-indigo-500/30 shrink-0"
+              title="Smart NFC Keycard & Handover Token"
+            >
+              <Radio size={13} className="text-indigo-400" />
+              <span>NFC Key</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowCreditBureauModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-sky-300 hover:text-sky-400 bg-sky-950/30 hover:bg-sky-900/40 border border-sky-500/30 shrink-0"
+              title="TransUnion & Experian Rent Credit Bureau Score Builder"
+            >
+              <Check size={13} className="text-sky-400" />
+              <span>Rent Score</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('tab')
+                setShowPassportModal(true)
+              }}
+              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gold-primary hover:text-amber-300 bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 shrink-0"
+              title="Verified Tenant Resume Passport Stamps"
+            >
+              <ShieldCheck size={13} className="text-gold-primary" />
+              <span>Passport</span>
+            </button>
           </div>
         </div>
       </header>
@@ -491,7 +777,7 @@ export default function HousingPage() {
             <button
               onClick={() => setFilterListingType('rent')}
               className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-                filterListingType === 'rent' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
+                filterListingType === 'rent' ? 'bg-white/15 text-white' : 'text-gray-400 hover:text-white'
               }`}
             >
               Rent
@@ -499,7 +785,7 @@ export default function HousingPage() {
             <button
               onClick={() => setFilterListingType('sale')}
               className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-                filterListingType === 'sale' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
+                filterListingType === 'sale' ? 'bg-white/15 text-white' : 'text-gray-400 hover:text-white'
               }`}
             >
               Buy
@@ -633,12 +919,29 @@ export default function HousingPage() {
              </div>
 
              {currentUser?.role === 'landlord' ? (
-                <button
-                   onClick={() => setShowCreateModal(true)}
-                   className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-7 py-3.5 rounded-2xl flex items-center justify-center gap-2.5 transition-all active:scale-95 shadow-glow uppercase tracking-wider text-xs shrink-0"
-                >
-                   <Plus size={18} /> List Property
-                </button>
+                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                  <button
+                     onClick={() => { setShowCreateModal(true); playTactileSound('pop') }}
+                     className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-glow uppercase tracking-wider text-xs"
+                  >
+                     <Plus size={18} /> List Property
+                  </button>
+                  <button
+                     type="button"
+                     onClick={() => {
+                       playTactileSound('tab')
+                       setRoomManagerPropertyInfo({
+                         name: 'My Property Portfolio',
+                         address: 'Managed Rental Units'
+                       })
+                       setShowRoomManagerModal(true)
+                     }}
+                     className="bg-white/5 hover:bg-gold-primary/10 border border-gold-primary/30 hover:border-gold-primary text-gold-primary font-black px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-wider text-xs"
+                     title="Manage multi-room units, photos, snags and review tenant feedback"
+                  >
+                     <ClipboardList size={16} /> Manage Rooms & Reviews
+                  </button>
+                </div>
              ) : (
                 <Link
                    href="/dashboard/profile"
@@ -748,12 +1051,12 @@ export default function HousingPage() {
           ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {filteredListings.map((item) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/50 rounded-3xl overflow-hidden flex flex-col shadow-[0_10px_30px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.6),0_0_25px_var(--glow-color,rgba(142,182,155,0.25))] transition-all duration-500 group"
-              >
+              <HolographicTiltCard key={item.id} className="h-full">
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/50 rounded-3xl overflow-hidden flex flex-col shadow-[0_10px_30px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.6),0_0_25px_var(--glow-color,rgba(142,182,155,0.25))] transition-all duration-500 group h-full"
+                >
                 <div className="relative h-60 bg-gray-950 overflow-hidden">
                   {item.images[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -783,6 +1086,11 @@ export default function HousingPage() {
                       {item.listingType === 'guesthouse' && (
                         <span className="bg-purple-500/90 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
                           Guest House
+                        </span>
+                      )}
+                      {item.eventId && gruvsEventInfo[item.eventId] && (
+                        <span className="bg-purple-950/80 text-purple-200 border border-purple-500/30 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1">
+                          Near: {gruvsEventInfo[item.eventId].title}
                         </span>
                       )}
                     </div>
@@ -881,6 +1189,22 @@ export default function HousingPage() {
                       <Radar size={14} className="text-gold-primary animate-pulse" />
                       <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Radar</span>
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playTactileSound('tab')
+                        setRoomManagerPropertyInfo({
+                          name: item.title,
+                          address: `${item.suburb}, ${item.location}`
+                        })
+                        setShowRoomManagerModal(true)
+                      }}
+                      className="p-2.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary transition-all flex items-center gap-1.5 text-xs font-bold"
+                      title="Inspect room condition, photos, snags, and landlord reviews"
+                    >
+                      <ClipboardList size={14} className="text-gold-primary" />
+                      <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Rooms</span>
+                    </button>
                     {item.landlordLivesHere && (
                       <span className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 shrink-0" title="Landlord lives on property">
                         <Home size={14} className="text-gold-primary" />
@@ -889,6 +1213,7 @@ export default function HousingPage() {
                   </div>
                 </div>
               </motion.div>
+            </HolographicTiltCard>
             ))}
           </div>
           )}
@@ -1058,6 +1383,84 @@ export default function HousingPage() {
                            </select>
                         </div>
                      )}
+                     {/* Room Photos Upload Section */}
+                     <div className="space-y-3 bg-white/5 p-4 rounded-2xl border border-white/5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                           <div>
+                              <label className="text-[10px] text-gray-400 uppercase font-black tracking-widest flex items-center gap-1.5">
+                                 <Camera size={14} className="text-gold-primary" /> Room Photos ({newImages.length}/6)
+                              </label>
+                              <p className="text-[10px] text-gray-500">Upload photos of the bedroom, bathroom, cupboards and views.</p>
+                           </div>
+                           <label className="cursor-pointer bg-gold-primary hover:bg-gold-secondary text-black px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all shrink-0">
+                              <Upload size={13} />
+                              <span>Select Photos</span>
+                              <input
+                                 type="file"
+                                 multiple
+                                 accept="image/*"
+                                 onChange={handleImageFileChange}
+                                 className="hidden"
+                              />
+                           </label>
+                        </div>
+
+                        {/* Quick Presets */}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                           <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Quick Presets:</span>
+                           {[
+                              { label: '+ Sunny Bedroom', url: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80' },
+                              { label: '+ Clean Ensuite', url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80' },
+                              { label: '+ Modern Kitchen', url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80' },
+                              { label: '+ Private Balcony', url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80' }
+                           ].map(preset => (
+                              <button
+                                 key={preset.label}
+                                 type="button"
+                                 onClick={() => {
+                                    if (newImages.length >= 6) {
+                                       setAlertNotification('Max 6 photos allowed')
+                                       return
+                                    }
+                                    setNewImages(prev => [...prev, preset.url])
+                                    playTactileSound('pop')
+                                 }}
+                                 className="text-[10px] font-bold text-gray-300 hover:text-gold-primary bg-black/40 hover:bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 transition-all"
+                              >
+                                 {preset.label}
+                              </button>
+                           ))}
+                        </div>
+
+                        {/* Uploaded Photos Grid */}
+                        {newImages.length > 0 && (
+                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2">
+                              {newImages.map((img, idx) => (
+                                 <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-white/15 bg-black group shadow-sm">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={img} alt={`Room photo ${idx + 1}`} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                       <button
+                                          type="button"
+                                          onClick={() => {
+                                             setNewImages(prev => prev.filter((_, i) => i !== idx))
+                                             playTactileSound('pop')
+                                          }}
+                                          className="p-1.5 rounded-full bg-red-500/80 hover:bg-red-500 text-white shadow-md transition-transform hover:scale-110"
+                                          title="Remove photo"
+                                       >
+                                          <X size={13} />
+                                       </button>
+                                    </div>
+                                    <span className="absolute bottom-1 left-1.5 bg-black/80 px-1.5 py-0.5 rounded text-[8px] font-black uppercase text-gold-primary">
+                                       {idx === 0 ? 'Cover Photo' : `#${idx + 1}`}
+                                    </span>
+                                 </div>
+                              ))}
+                           </div>
+                        )}
+                     </div>
+
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Bathroom Style</label>
@@ -1267,6 +1670,116 @@ export default function HousingPage() {
       <TenantInspectionSnagListModal
         isOpen={showSnagModal}
         onClose={() => setShowSnagModal(false)}
+      />
+
+      {/* LANDLORD MULTI-ROOM & TENANT ACCOUNTABILITY MANAGER MODAL */}
+      <LandlordRoomManagerModal
+        isOpen={showRoomManagerModal}
+        onClose={() => setShowRoomManagerModal(false)}
+        propertyName={roomManagerPropertyInfo.name}
+        propertyAddress={roomManagerPropertyInfo.address}
+      />
+
+      {/* RHA ACT 50 DEPOSIT ESCROW VAULT MODAL */}
+      <DepositEscrowVaultModal
+        isOpen={showDepositVaultModal}
+        onClose={() => setShowDepositVaultModal(false)}
+      />
+
+      {/* MOVE-IN / MOVE-OUT SIDE-BY-SIDE INSPECTION MODAL */}
+      <MoveInOutInspectionModal
+        isOpen={showMoveInspectionModal}
+        onClose={() => setShowMoveInspectionModal(false)}
+      />
+
+      {/* SARS TAX RECEIPT & PROOF OF RENT CERTIFICATE MODAL */}
+      <RentReceiptTaxModal
+        isOpen={showRentReceiptModal}
+        onClose={() => setShowRentReceiptModal(false)}
+      />
+
+      {/* NSFAS CAP & UNIVERSITY ACCREDITATION MODAL */}
+      <NSFASHousingModal
+        isOpen={showNSFASModal}
+        onClose={() => setShowNSFASModal(false)}
+      />
+
+      {/* 3D AR ROOM SPATIAL RULER MODAL */}
+      <RoomSpatialRulerModal
+        isOpen={showSpatialRulerModal}
+        onClose={() => setShowSpatialRulerModal(false)}
+      />
+
+      {/* 2.5D ROOM FLOORPLAN CANVAS MODAL */}
+      <RoomFloorplanCanvasModal
+        isOpen={showFloorplanModal}
+        onClose={() => setShowFloorplanModal(false)}
+      />
+
+      {/* 360 PANORAMIC VIRTUAL TOUR MODAL */}
+      <Panoramic360TourModal
+        isOpen={showPanoramicModal}
+        onClose={() => setShowPanoramicModal(false)}
+      />
+
+      {/* AR SOLAR SUNLIGHT TRAJECTORY MODAL */}
+      <ARSolarWindowSimulatorModal
+        isOpen={showARSolarModal}
+        onClose={() => setShowARSolarModal(false)}
+      />
+
+      {/* AR LIDAR FURNITURE BOUNDING BOX MODAL */}
+      <ARFurnitureBoundingBoxModal
+        isOpen={showARBoundingModal}
+        onClose={() => setShowARBoundingModal(false)}
+      />
+
+      {/* ROOM STORIES VIDEO TOUR MODAL */}
+      <RoomStoriesReelModal
+        isOpen={showRoomStoriesModal}
+        onClose={() => setShowRoomStoriesModal(false)}
+      />
+
+      {/* RENTAL HOUSING ACT LEASE TRAP DETECTOR MODAL */}
+      <LeaseTrapDetectorModal
+        isOpen={showLeaseTrapModal}
+        onClose={() => setShowLeaseTrapModal(false)}
+      />
+
+      {/* 395nm UV BLACKLIGHT HYGIENE INSPECTOR MODAL */}
+      <UVBlacklightInspectorModal
+        isOpen={showUVBlacklightModal}
+        onClose={() => setShowUVBlacklightModal(false)}
+      />
+
+      {/* OPTICAL STUDENT CARD OCR SCANNER MODAL */}
+      <StudentCardScannerModal
+        isOpen={showStudentCardModal}
+        onClose={() => setShowStudentCardModal(false)}
+      />
+
+      {/* DEEDS OFFICE & RATES CLEARANCE CHECKER MODAL */}
+      <LandlordDeedsCheckerModal
+        isOpen={showDeedsCheckerModal}
+        onClose={() => setShowDeedsCheckerModal(false)}
+      />
+
+      {/* SMART NFC KEYCARD HANDOVER TOKEN MODAL */}
+      <NFCKeycardHandoverModal
+        isOpen={showNFCKeycardModal}
+        onClose={() => setShowNFCKeycardModal(false)}
+      />
+
+      {/* TRANSUNION & EXPERIAN RENT CREDIT BUREAU MODAL */}
+      <RentCreditBureauModal
+        isOpen={showCreditBureauModal}
+        onClose={() => setShowCreditBureauModal(false)}
+      />
+
+      {/* VERIFIED RESIDENT PASSPORT STAMPS MODAL */}
+      <ResidentPassportModal
+        isOpen={showPassportModal}
+        onClose={() => setShowPassportModal(false)}
       />
     </div>
   )

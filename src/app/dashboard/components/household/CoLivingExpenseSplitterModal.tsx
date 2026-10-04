@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calculator, X, Plus, Trash2, Users, DollarSign, Share2, Copy, Check, Sparkles, PieChart } from 'lucide-react'
+import { Calculator, X, Plus, Trash2, Users, Copy, Check } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import { SUPPORTED_CURRENCIES } from '../../../../utils/currencies'
 
