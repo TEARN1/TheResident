@@ -1,0 +1,100 @@
+# Deploys main to V-Gruvs, our DigitalOcean host (the alternative to
+# Vercel), after the quality pipeline passes. The droplet starts the new
+# release beside the old one, switches nginx only once it answers (or rolls
+# it out in stages, if ROLLOUT is set on the droplet), watches real traffic
+# for five minutes and rolls back by itself if errors jump.
+#
+# Skips cleanly (green) until the VGRUVS_SSH_KEY secret is set: the private
+# key of the droplet's `deploy` user. Setup is in the_gruvs repo,
+# infra/vgruvs/README.md.
+#
+# NEXT_PUBLIC_* values are baked into the build, so set them here as repo
+# variables (or secrets): NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+# NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_CONTACT_EMAIL, NEXT_PUBLIC_MAPBOX_TOKEN,
+# NEXT_PUBLIC_OSRM_ROUTING_URL.
+#
+# The app reads no server-only secrets today: nothing in src/ uses
+# SUPABASE_SERVICE_ROLE_KEY, JWT_SECRET or VOUCHER_SIGNING_KEY (from
+# .env.example), so they stay off the droplet. The service-role key bypasses
+# every row-level security policy; put it only where code needs it. If server
+# code ever does, copy it here on each deploy the way Excellency does
+# (`vgruvs env theresident set KEY -`, the value on stdin).
+name: Deploy (V-Gruvs)
+
+on:
+  workflow_run:
+    workflows: ["The Resident - Automated CI/CD Quality Pipeline"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vgruvs
+  cancel-in-progress: false
+
+jobs:
+  # Seconds, so a repo without the key spends nothing on a build.
+  gate:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.guard.outputs.ready }}
+    steps:
+      - name: Skip without the deploy key
+        id: guard
+        env:
+          KEY: ${{ secrets.VGRUVS_SSH_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::notice::VGRUVS_SSH_KEY is not set, so nothing was deployed."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: gate
+    if: needs.gate.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    # Shows up under the repo's Environments, with a link to the live site.
+    environment:
+      name: production
+      url: https://theresidentcrew.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Name the release
+        id: release
+        run: echo "id=$(date -u +%Y%m%d-%H%M%S)-$(git rev-parse --short=10 HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Build the standalone server
+        run: npm ci && npm run build && bash scripts/vgruvs-release.sh
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          # Skew protection: pages ask for /_next/static/...?dpl=<release> and
+          # the droplet serves that exact release's files, even after a newer
+          # deploy; Next reloads a page that meets a newer release.
+          NEXT_DEPLOYMENT_ID: ${{ steps.release.outputs.id }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_CONTACT_EMAIL: ${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ vars.NEXT_PUBLIC_MAPBOX_TOKEN || secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          NEXT_PUBLIC_OSRM_ROUTING_URL: ${{ vars.NEXT_PUBLIC_OSRM_ROUTING_URL }}
+      - name: Ship to the droplet
+        env:
+          VGRUVS_SSH_KEY: ${{ secrets.VGRUVS_SSH_KEY }}
+          HOST: ${{ secrets.DROPLET_HOST }}
+          RELEASE: ${{ steps.release.outputs.id }}
+        run: |
+          VGRUVS_HOST="deploy@${HOST:-144.126.236.75}" \
+            bash scripts/vgruvs-deploy.sh theresident --from .next/vgruvs-release --release "$RELEASE"
+          {
+            echo "## Deployed to https://theresidentcrew.com"
+            echo "- Release: \`$RELEASE\`"
+            echo "- The droplet's autopilot watches real traffic for 5 minutes and rolls back by itself if errors jump."
+            echo "- Undo by hand: run the **Rollback (V-Gruvs)** workflow."
+          } >> "$GITHUB_STEP_SUMMARY"

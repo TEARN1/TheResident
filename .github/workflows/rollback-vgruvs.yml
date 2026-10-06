@@ -1,0 +1,48 @@
+# Undo a deploy on V-Gruvs from the Actions tab: back to the previous
+# release (or one you name), or, while a staged rollout is running, promote
+# it to everyone or stop it. Takes seconds: nothing is rebuilt.
+#
+# Needs the VGRUVS_SSH_KEY secret (the droplet's `deploy` user).
+name: Rollback (V-Gruvs)
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        options: [rollback, promote rollout, stop rollout]
+        default: rollback
+      release:
+        description: Release id to go back to (blank = the one before the live release)
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-vgruvs
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run it on the droplet
+        env:
+          KEY: ${{ secrets.VGRUVS_SSH_KEY }}
+          HOST: ${{ secrets.DROPLET_HOST }}
+          ACTION: ${{ inputs.action }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::Set the VGRUVS_SSH_KEY secret first (the_gruvs repo, infra/vgruvs/README.md)."; exit 1; }
+          if [ -n "$RELEASE" ] && ! printf '%s' "$RELEASE" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$'; then
+            echo "::error::That is not a release id."; exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/vgruvs && chmod 600 ~/.ssh/vgruvs
+          run() { ssh -i ~/.ssh/vgruvs -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new "deploy@${HOST:-144.126.236.75}" "$@"; }
+          case "$ACTION" in
+            rollback) run sudo /usr/local/bin/vgruvs rollback theresident $RELEASE ;;
+            "promote rollout") run sudo /usr/local/bin/vgruvs rollout theresident promote ;;
+            "stop rollout") run sudo /usr/local/bin/vgruvs rollout theresident abort ;;
+          esac
+          { echo "### Releases on the droplet (* = live)"; echo '```'; run sudo /usr/local/bin/vgruvs releases theresident; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
