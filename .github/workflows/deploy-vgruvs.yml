@@ -1,0 +1,73 @@
+# Deploys main to V-Gruvs, our DigitalOcean host (the alternative to
+# Vercel), after the quality pipeline passes. The droplet starts the new
+# release beside the old one, switches nginx only once it answers, and rolls
+# back by itself if the site stops answering.
+#
+# Skips cleanly (green) until the VGRUVS_SSH_KEY secret is set: the private
+# key of the droplet's `deploy` user. Setup is in the_gruvs repo,
+# infra/vgruvs/README.md.
+#
+# NEXT_PUBLIC_* values are baked into the build, so set them here as repo
+# variables (or secrets): NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+# NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_CONTACT_EMAIL, NEXT_PUBLIC_MAPBOX_TOKEN,
+# NEXT_PUBLIC_OSRM_ROUTING_URL. Server-only secrets (SUPABASE_SERVICE_ROLE_KEY,
+# JWT_SECRET, VOUCHER_SIGNING_KEY) go on the droplet instead:
+#   vgruvs env theresident set KEY 'value'
+name: Deploy (V-Gruvs)
+
+on:
+  workflow_run:
+    workflows: ["The Resident - Automated CI/CD Quality Pipeline"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vgruvs
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      # First, so a repo without the key spends seconds here, not a build.
+      - name: Skip without the deploy key
+        id: guard
+        env:
+          KEY: ${{ secrets.VGRUVS_SSH_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::notice::VGRUVS_SSH_KEY is not set, so nothing was deployed."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Build the standalone server
+        if: steps.guard.outputs.skip != 'true'
+        run: npm ci && npm run build && bash scripts/vgruvs-release.sh
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_CONTACT_EMAIL: ${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ vars.NEXT_PUBLIC_MAPBOX_TOKEN || secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
+          NEXT_PUBLIC_OSRM_ROUTING_URL: ${{ vars.NEXT_PUBLIC_OSRM_ROUTING_URL }}
+      - name: Ship to the droplet
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          VGRUVS_SSH_KEY: ${{ secrets.VGRUVS_SSH_KEY }}
+          HOST: ${{ secrets.DROPLET_HOST }}
+        run: |
+          VGRUVS_HOST="deploy@${HOST:-144.126.236.75}" \
+            bash scripts/vgruvs-deploy.sh theresident --from .next/vgruvs-release \
+            --release "$(date -u +%Y%m%d-%H%M%S)-$(git rev-parse --short=10 HEAD)"
+          echo "Deployed $(git rev-parse --short=10 HEAD) to https://theresidentcrew.com" >> "$GITHUB_STEP_SUMMARY"

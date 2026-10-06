@@ -1,5 +1,6 @@
 # Base image
-FROM node:18-alpine AS base
+# Next.js 16 needs Node >= 20.9 (package.json engines); 18 fails at the build.
+FROM node:22-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
