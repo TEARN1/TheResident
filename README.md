@@ -57,8 +57,10 @@ research behind it live in the the_gruvs repo, in `infra/vgruvs/`.
 
 **On the droplet:**
 
-- Server-only secrets are set there, not in GitHub:
-  `vgruvs env theresident set SUPABASE_SERVICE_ROLE_KEY '...'`.
+- No server-only secrets are needed: the app reads only `NEXT_PUBLIC_*`
+  values, which are baked into the build. Keep `SUPABASE_SERVICE_ROLE_KEY`
+  (it bypasses row-level security) off the droplet until server code needs
+  it; then copy it on each deploy, on stdin, as Excellency does.
 - Pages Next marks cacheable (static and ISR) are served by nginx's edge
   cache for visitors without a login cookie, and stay up if Next is down.
 - `vgruvs insights theresident` shows traffic and errors, and

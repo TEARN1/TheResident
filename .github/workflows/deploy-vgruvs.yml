@@ -11,9 +11,14 @@
 # NEXT_PUBLIC_* values are baked into the build, so set them here as repo
 # variables (or secrets): NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
 # NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_CONTACT_EMAIL, NEXT_PUBLIC_MAPBOX_TOKEN,
-# NEXT_PUBLIC_OSRM_ROUTING_URL. Server-only secrets (SUPABASE_SERVICE_ROLE_KEY,
-# JWT_SECRET, VOUCHER_SIGNING_KEY) go on the droplet instead:
-#   vgruvs env theresident set KEY 'value'
+# NEXT_PUBLIC_OSRM_ROUTING_URL.
+#
+# The app reads no server-only secrets today: nothing in src/ uses
+# SUPABASE_SERVICE_ROLE_KEY, JWT_SECRET or VOUCHER_SIGNING_KEY (from
+# .env.example), so they stay off the droplet. The service-role key bypasses
+# every row-level security policy; put it only where code needs it. If server
+# code ever does, copy it here on each deploy the way Excellency does
+# (`vgruvs env theresident set KEY -`, the value on stdin).
 name: Deploy (V-Gruvs)
 
 on:
