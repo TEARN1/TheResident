@@ -9,8 +9,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette,
-  BellRing, Compass, ShieldAlert, Droplets
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -36,20 +35,6 @@ import { DEFAULT_THEME } from '../../utils/themes'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 import { GRUVS, TEARNS } from '../../utils/sisterApps'
-import dynamic from 'next/dynamic'
-
-const DynamicSolarLighting = dynamic(() => import('./components/shared/DynamicSolarLighting'), { ssr: false })
-const PushCallNotificationManager = dynamic(() => import('./components/messages/PushCallNotificationManager'), { ssr: false })
-const WalkWithMeCompanionModal = dynamic(() => import('./components/trust-safety/WalkWithMeCompanionModal'), { ssr: false })
-const CPFPanicButtonModal = dynamic(() => import('./components/trust-safety/CPFPanicButtonModal'), { ssr: false })
-const WaterOutageRadarModal = dynamic(() => import('./components/trust-safety/WaterOutageRadarModal'), { ssr: false })
-const DynamicIslandHUD = dynamic(() => import('./components/hud/DynamicIslandHUD'), { ssr: false })
-const CommandPaletteModal = dynamic(() => import('./components/hud/CommandPaletteModal'), { ssr: false })
-const FloatingChatHead = dynamic(() => import('./components/hud/FloatingChatHead'), { ssr: false })
-const NightVisionRedMode = dynamic(() => import('./components/hud/NightVisionRedMode'), { ssr: false })
-const WeatherLoadsheddingOverlay = dynamic(() => import('./components/hud/WeatherLoadsheddingOverlay'), { ssr: false })
-const ResidentFMRadioPlayer = dynamic(() => import('./components/hud/ResidentFMRadioPlayer'), { ssr: false })
-const QuantumConfetti = dynamic(() => import('./components/shared/QuantumConfetti').then(m => m.QuantumConfetti), { ssr: false })
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -60,12 +45,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showThemeModal, setShowThemeModal] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<string>(DEFAULT_THEME)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
-  const [showPushCallManager, setShowPushCallManager] = useState(false)
-  const [showWalkWithMe, setShowWalkWithMe] = useState(false)
-  const [showCPFPanic, setShowCPFPanic] = useState(false)
-  const [showWaterRadar, setShowWaterRadar] = useState(false)
-  const [showCommandPalette, setShowCommandPalette] = useState(false)
-  const [confettiActive, setConfettiActive] = useState(false)
   const notifMenuRef = useRef<HTMLDivElement>(null)
   // Browser autoplay policy blocks audio until a real user gesture — this
   // creates/resumes the shared AudioContext on the FIRST click or keypress
@@ -84,28 +63,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       window.removeEventListener('keydown', unlock)
     }
   }, [])
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        setShowCommandPalette(prev => !prev)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
-
-  const handleCommandPaletteAction = (actionKey: string) => {
-    setShowCommandPalette(false)
-    if (actionKey === 'panic') setShowCPFPanic(true)
-    else if (actionKey === 'water') setShowWaterRadar(true)
-    else if (actionKey === 'bakkie') router.push('/dashboard/services')
-    else if (actionKey === 'split') router.push('/dashboard/housing')
-    else if (actionKey === 'lease') router.push('/dashboard/housing')
-    else if (actionKey === 'walk') setShowWalkWithMe(true)
-    else if (actionKey === 'radio') playTactileSound('chime')
-  }
 
   // Guests previously got the "you should sign up" pitch as five separate
   // small nudges scattered across Housing, Services and Profile, each only
@@ -444,46 +401,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="hidden sm:inline">Legal Shield</span>
             </button>
 
-            {/* VoIP Ringing & WebPush Trigger */}
-            <button
-              onClick={() => { setShowPushCallManager(true); playTactileSound('tab') }}
-              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 transition-all shadow-sm"
-              title="WebPush VoIP background ringing settings & luxury chime test"
-            >
-              <BellRing size={13} className="text-violet-400" />
-              <span className="hidden xl:inline">Call Push</span>
-            </button>
-
-            {/* Night Escort Companion Trigger */}
-            <button
-              onClick={() => { setShowWalkWithMe(true); playTactileSound('tab') }}
-              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-all shadow-sm"
-              title="Walk With Me: Virtual Night Companion & Fake Deflection Call"
-            >
-              <Compass size={13} className="text-emerald-400" />
-              <span className="hidden xl:inline">Walk Escort</span>
-            </button>
-
-            {/* Sector CPF & Police Panic Trigger */}
-            <button
-              onClick={() => { setShowCPFPanic(true); playTactileSound('alert') }}
-              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 transition-all shadow-sm"
-              title="Sector 3 CPF & Rapid Armed Response Direct Panic"
-            >
-              <ShieldAlert size={13} className="text-rose-400" />
-              <span className="hidden xl:inline">CPF Panic</span>
-            </button>
-
-            {/* Water Outage & Tanker Radar Trigger */}
-            <button
-              onClick={() => { setShowWaterRadar(true); playTactileSound('tab') }}
-              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all shadow-sm"
-              title="Municipal Water Cuts & Live Tanker Truck Radar"
-            >
-              <Droplets size={13} className="text-cyan-400" />
-              <span className="hidden xl:inline">Water Radar</span>
-            </button>
-
             <div ref={notifMenuRef} className="relative">
               <button
                 onClick={() => { setShowNotifMenu(!showNotifMenu); playTactileSound('click') }}
@@ -597,63 +514,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           setTimeout(() => setAlertNotification(null), 2500)
         }}
       />
-
-      {/* Dynamic Ambient SA Solar Time Lighting Engine */}
-      <DynamicSolarLighting />
-
-      {/* VoIP Push Call Ringing Settings Modal */}
-      <PushCallNotificationManager
-        isOpen={showPushCallManager}
-        onClose={() => setShowPushCallManager(false)}
-      />
-
-      {/* Walk With Me Companion & Fake Call Modal */}
-      <WalkWithMeCompanionModal
-        isOpen={showWalkWithMe}
-        onClose={() => setShowWalkWithMe(false)}
-      />
-
-      {/* Sector 3 CPF Panic Dispatch Modal */}
-      <CPFPanicButtonModal
-        isOpen={showCPFPanic}
-        onClose={() => setShowCPFPanic(false)}
-      />
-
-      {/* Municipal Water Cut & Tanker Radar Modal */}
-      <WaterOutageRadarModal
-        isOpen={showWaterRadar}
-        onClose={() => setShowWaterRadar(false)}
-      />
-
-      {/* Dynamic Island Civic Status Capsule */}
-      <DynamicIslandHUD
-        onOpenPanic={() => setShowCPFPanic(true)}
-        onOpenBakkie={() => router.push('/dashboard/services')}
-        onOpenWaterRadar={() => setShowWaterRadar(true)}
-        onOpenTownHall={() => router.push('/dashboard/community')}
-      />
-
-      {/* Command Palette Cmd+K Modal */}
-      <CommandPaletteModal
-        isOpen={showCommandPalette}
-        onClose={() => setShowCommandPalette(false)}
-        onSelectAction={handleCommandPaletteAction}
-      />
-
-      {/* Floating Chat Head PIP Orb */}
-      <FloatingChatHead />
-
-      {/* Night Vision Red Light Mode */}
-      <NightVisionRedMode />
-
-      {/* Weather & Loadshedding Ambient Canvas Shimmer */}
-      <WeatherLoadsheddingOverlay isLoadshedding={true} isRaining={false} />
-
-      {/* Resident FM Radio Cassette Player */}
-      <ResidentFMRadioPlayer />
-
-      {/* Quantum Confetti Particle Burst */}
-      <QuantumConfetti active={confettiActive} onComplete={() => setConfettiActive(false)} />
     </div>
   )
 }
