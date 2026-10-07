@@ -507,7 +507,7 @@ export default function CommunityPage() {
             onClick={toggleVibeMap}
             className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap border ${
               subTab === 'vibemap'
-                ? 'bg-gradient-to-r from-gold-primary to-amber-500 text-black border-gold-primary shadow-[0_0_25px_rgba(212,175,55,0.4)]'
+                ? 'bg-gradient-to-r from-gold-primary to-amber-500 text-black border-gold-primary shadow-[0_0_25px_rgb(var(--accent)/0.4)]'
                 : 'text-amber-300 hover:text-white bg-gold-primary/10 border-gold-primary/30 hover:bg-gold-primary/20'
             }`}
           >

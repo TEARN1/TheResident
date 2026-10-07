@@ -10,6 +10,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X, MapPin, ShieldCheck, ShieldAlert, ShieldQuestion, Upload, AlertTriangle, Home } from 'lucide-react'
 import { supabase } from '../../../../utils/supabase'
+import RoomManager from './RoomManager'
 import type { GeocodeResult } from '../../../../utils/geocode'
 import MapSearchBox from '../map/MapSearchBox'
 import type { Listing } from '../../../../store'
@@ -58,6 +59,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
   const [newTotalRooms, setNewTotalRooms] = useState<number>(2)
 
   const [verifyingFor, setVerifyingFor] = useState<ResProperty | null>(null)
+  const [managingRooms, setManagingRooms] = useState<ResProperty | null>(null)
   const [docUrl, setDocUrl] = useState('')
   const [uploading, setUploading] = useState(false)
   const [mismatchChecking, setMismatchChecking] = useState(false)
@@ -276,6 +278,12 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                   </div>
                 )}
 
+                <button
+                  onClick={() => setManagingRooms(p)}
+                  className="w-full bg-gold-primary text-black font-black py-3 rounded-2xl transition-all text-xs uppercase tracking-wider shadow-sm active:scale-98"
+                >
+                  Manage rooms & tenants
+                </button>
                 {p.doc_review_status === 'none' && (
                   <button
                     onClick={() => openVerify(p)}
@@ -400,6 +408,14 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
           </div>
         )}
       </AnimatePresence>
+
+      {managingRooms && (
+        <RoomManager
+          propertyId={managingRooms.id}
+          address={[managingRooms.address, managingRooms.suburb].filter(Boolean).join(', ')}
+          onClose={() => { setManagingRooms(null); loadOccupancy() }}
+        />
+      )}
     </div>
   )
 }

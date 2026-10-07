@@ -107,7 +107,7 @@ export default function QuickVibeReportModal({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md bg-black/95 border border-gold-primary/30 rounded-3xl p-6 shadow-[0_0_50px_rgba(212,175,55,0.2)] backdrop-blur-2xl overflow-hidden"
+          className="relative w-full max-w-md bg-black/95 border border-gold-primary/30 rounded-3xl p-6 shadow-[0_0_50px_rgb(var(--accent)/0.2)] backdrop-blur-2xl overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-5">

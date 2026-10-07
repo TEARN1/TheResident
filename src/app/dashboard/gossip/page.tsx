@@ -681,7 +681,7 @@ export default function GossipPage() {
             feel a little more alive than a bare textarea. */}
         <div
           className="absolute -top-24 -right-24 w-64 h-64 rounded-full opacity-[0.08] pointer-events-none"
-          style={{ background: 'radial-gradient(circle, #D4AF37 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, var(--gold-primary) 0%, transparent 70%)' }}
         />
         <div className="flex items-center gap-2 mb-4 relative">
           <div className="p-1.5 bg-gold-primary/10 rounded-lg">
@@ -706,7 +706,7 @@ export default function GossipPage() {
             onFocus={() => setComposerExpanded(true)}
             maxLength={2000}
             placeholder="Spotted something? Heard something? Say it here…"
-            className="w-full bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all relative"
+            className="w-full bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--accent)/0.08)] transition-all relative"
           />
         )}
         {composerExpanded && composerBody.length > 0 && (

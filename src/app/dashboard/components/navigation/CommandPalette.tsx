@@ -166,7 +166,7 @@ export default function CommandPalette() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="relative w-full max-w-xl bg-neutral-950/95 border border-gold-primary/30 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgba(212,175,55,0.15)] overflow-hidden z-10 backdrop-blur-3xl flex flex-col"
+              className="relative w-full max-w-xl bg-neutral-950/95 border border-gold-primary/30 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgb(var(--accent)/0.15)] overflow-hidden z-10 backdrop-blur-3xl flex flex-col"
             >
               {/* Input Header */}
               <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10">

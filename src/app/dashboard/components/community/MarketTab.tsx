@@ -304,7 +304,7 @@ export default function MarketTab({
                           <span className="text-gold-primary">{Math.round(pct)}%</span>
                        </div>
                        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden border border-white/5">
-                          <div className="h-full bg-gold-primary transition-all duration-1000 shadow-[0_0_10px_#D4AF37]" style={{ width: `${pct}%` }}></div>
+                          <div className="h-full bg-gold-primary transition-all duration-1000 shadow-[0_0_10px_rgb(var(--accent))]" style={{ width: `${pct}%` }}></div>
                        </div>
                     </div>
                     <button

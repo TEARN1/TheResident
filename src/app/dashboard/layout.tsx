@@ -25,7 +25,6 @@ import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } fro
 import { unlockNotificationAudio } from '../../utils/notificationSounds'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
-import AutomationControlPanel from './components/shared/AutomationControlPanel'
 import CommandPalette from './components/navigation/CommandPalette'
 import FloatingEmergencySOS from './components/shared/FloatingEmergencySOS'
 import PWAInstallBanner from './components/shared/PWAInstallBanner'
@@ -266,12 +265,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         ) : dataStatus === 'loading' ? (
           <div className="top-alert-banner">
-            <Loader size={18} color="#D4AF37" className="animate-spin" />
+            <Loader size={18} className="text-gold-primary animate-spin" />
             <span>Loading your community data…</span>
           </div>
         ) : pendingWrites > 0 ? (
           <div className="top-alert-banner">
-            <Wifi size={18} color="#D4AF37" />
+            <Wifi size={18} className="text-gold-primary" />
             <span>{pendingWrites} change{pendingWrites === 1 ? '' : 's'} waiting to sync — you&apos;re offline.</span>
           </div>
         ) : alertNotification ? (
@@ -291,7 +290,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           instead of being a third, ad hoc way of stacking banners. */}
       {currentUser && isGuestUser(currentUser) && !guestBannerDismissed ? (
         <div className="guest-summary-banner">
-          <Sparkles size={16} className="shrink-0" style={{ color: '#D4AF37' }} />
+          <Sparkles size={16} className="shrink-0" style={{ color: 'var(--gold-primary)' }} />
           <span>
             <strong>You&apos;re browsing as a guest.</strong> Sign up free to save listings, message neighbours, post to the feed, and build the trust circle other residents can see.
           </span>
@@ -302,7 +301,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       ) : nokStatus && !nokStatus.hasNextOfKin && !nokBannerDismissed ? (
         <div className="guest-summary-banner">
-          <ShieldCheck size={16} className="shrink-0" style={{ color: nokStatus.overdue ? '#ef4444' : '#D4AF37' }} />
+          <ShieldCheck size={16} className="shrink-0" style={{ color: nokStatus.overdue ? '#ef4444' : 'var(--gold-primary)' }} />
           <span>
             {nokStatus.overdue ? (
               <><strong>Your trust profile is incomplete.</strong> You haven&apos;t added a Next of Kin yet — your landlord can see this.</>
@@ -495,7 +494,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      <AutomationControlPanel />
       <FloatingEmergencySOS />
       <PWAInstallBanner />
       <MasterLegalPolicyModal

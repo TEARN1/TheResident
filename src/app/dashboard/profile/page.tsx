@@ -342,7 +342,7 @@ export default function ProfilePage() {
       <div className="glass-panel p-6 flex items-center gap-5 border-white/10 relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
 
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gold-primary via-amber-300 to-gold-secondary text-black flex items-center justify-center text-2xl font-black shrink-0 shadow-[0_0_20px_rgba(212,175,55,0.3)] relative">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gold-primary via-amber-300 to-gold-secondary text-black flex items-center justify-center text-2xl font-black shrink-0 shadow-[0_0_20px_rgb(var(--accent)/0.3)] relative">
           {currentUser.name.charAt(0)}
           <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-black" />
         </div>

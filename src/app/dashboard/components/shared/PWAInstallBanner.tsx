@@ -83,7 +83,7 @@ export default function PWAInstallBanner() {
         initial={{ y: 80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 80, opacity: 0 }}
-        className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-40 bg-black/90 backdrop-blur-2xl border border-gold-primary/30 p-4 rounded-3xl shadow-[0_0_40px_rgba(212,175,55,0.2)]"
+        className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-40 bg-black/90 backdrop-blur-2xl border border-gold-primary/30 p-4 rounded-3xl shadow-[0_0_40px_rgb(var(--accent)/0.2)]"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">

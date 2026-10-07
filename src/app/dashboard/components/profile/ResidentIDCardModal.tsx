@@ -74,7 +74,7 @@ export default function ResidentIDCardModal({
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-md bg-black/95 border border-gold-primary/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgba(212,175,55,0.25)] backdrop-blur-2xl overflow-hidden flex flex-col items-center text-center"
+          className="relative w-full max-w-md bg-black/95 border border-gold-primary/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgb(var(--accent)/0.25)] backdrop-blur-2xl overflow-hidden flex flex-col items-center text-center"
         >
           {/* Holographic Ambient Ray */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-gold-primary/15 rounded-full blur-3xl pointer-events-none" />

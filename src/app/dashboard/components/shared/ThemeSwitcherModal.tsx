@@ -47,13 +47,10 @@ export default function ThemeSwitcherModal({
               </div>
               <div>
                 <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center gap-2">
-                  <span>Visual Theme Studio</span>
-                  <span className="text-[9px] font-black uppercase tracking-wider bg-gold-primary/15 text-gold-primary px-2 py-0.5 rounded-full border border-gold-primary/30">
-                    Live Engine
-                  </span>
+                  <span>Theme</span>
                 </h3>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Select your preferred liquid glass aesthetic &amp; color spectrum
+                  Every screen recolours instantly.
                 </p>
               </div>
             </div>

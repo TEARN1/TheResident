@@ -103,7 +103,7 @@ export default function ToolLibraryTab({
 
         {communityTools.length === 0 ? (
           <div className="py-16 px-6 text-center text-gray-500 bg-white/[0.02] rounded-3xl border border-dashed border-white/10 relative overflow-hidden backdrop-blur-sm">
-             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gold-primary/10 border border-gold-primary/20 flex items-center justify-center text-gold-primary shadow-[0_0_30px_rgba(212,175,55,0.15)]">
+             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gold-primary/10 border border-gold-primary/20 flex items-center justify-center text-gold-primary shadow-[0_0_30px_rgb(var(--accent)/0.15)]">
                <Wrench size={32} />
              </div>
              <p className="text-base font-black uppercase tracking-widest text-white">Neighborhood Tool Shed is Empty</p>

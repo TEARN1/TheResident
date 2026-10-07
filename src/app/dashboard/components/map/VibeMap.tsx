@@ -588,7 +588,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
             playTactileSound('pop')
             setShowDropVibeModal(true)
           }}
-          className="px-4 py-3 rounded-2xl bg-gradient-to-r from-gold-primary to-amber-500 text-black font-black text-xs uppercase tracking-wider shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+          className="px-4 py-3 rounded-2xl bg-gradient-to-r from-gold-primary to-amber-500 text-black font-black text-xs uppercase tracking-wider shadow-[0_0_30px_rgb(var(--accent)/0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
         >
           <Sparkles size={16} />
           <span>+ Drop Vibe</span>
