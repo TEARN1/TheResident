@@ -25,7 +25,6 @@ import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } fro
 import { unlockNotificationAudio } from '../../utils/notificationSounds'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
-import AutomationControlPanel from './components/shared/AutomationControlPanel'
 import CommandPalette from './components/navigation/CommandPalette'
 import FloatingEmergencySOS from './components/shared/FloatingEmergencySOS'
 import PWAInstallBanner from './components/shared/PWAInstallBanner'
@@ -495,7 +494,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      <AutomationControlPanel />
       <FloatingEmergencySOS />
       <PWAInstallBanner />
       <MasterLegalPolicyModal

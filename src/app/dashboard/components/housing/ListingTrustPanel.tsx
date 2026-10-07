@@ -89,35 +89,35 @@ export default function ListingTrustPanel({ listingId, price, currency, suburb, 
 
   return (
     <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Before you pay</p>
+      <p className="m-0 text-[10px] font-black uppercase tracking-widest text-gray-500">Before you pay</p>
 
       <div className="flex items-start gap-2 text-xs">
         <ShieldCheck size={14} className="mt-0.5 shrink-0 text-gold-primary" />
         {priceCopy && stats ? (
-          <p className="text-gray-300">
+          <p className="m-0 text-gray-300">
             <span className={`font-bold ${priceCopy.tone}`}>{priceCopy.label}</span>{' '}
             Typical rent in {suburb}: {formatCurrency(stats.low, currency)} to {formatCurrency(stats.high, currency)}
             {' '}(median {formatCurrency(stats.median, currency)}, {stats.sample} listings). This one: {formatCurrency(price, currency)}.
           </p>
         ) : (
-          <p className="text-gray-500">Not enough listings in {suburb || 'this suburb'} yet to compare the price.</p>
+          <p className="m-0 text-gray-500">Not enough listings in {suburb || 'this suburb'} yet to compare the price.</p>
         )}
       </div>
 
       <div className="flex items-start gap-2 text-xs">
         <Star size={14} className="mt-0.5 shrink-0 text-gold-primary" />
         {safety && safety.sample > 0 ? (
-          <p className="text-gray-300">
+          <p className="m-0 text-gray-300">
             Tenants rated this place <span className="font-bold text-white">{safety.reviewed}/5</span> from {safety.sample} review{safety.sample === 1 ? '' : 's'}.
           </p>
         ) : (
-          <p className="text-gray-500">No tenant reviews yet. Ask to speak to a current tenant.</p>
+          <p className="m-0 text-gray-500">No tenant reviews yet. Ask to speak to a current tenant.</p>
         )}
       </div>
 
       <div className="flex items-start gap-2 text-xs">
         <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
-        <p className="text-gray-400">Never pay a deposit before viewing the room and meeting the landlord in person.</p>
+        <p className="m-0 text-gray-400">Never pay a deposit before viewing the room and meeting the landlord in person.</p>
       </div>
 
       {watching !== null && watching !== undefined && (
@@ -131,7 +131,7 @@ export default function ListingTrustPanel({ listingId, price, currency, suburb, 
           {watching ? 'Stop vacancy alerts' : 'Notify me when this room is free'}
         </button>
       )}
-      {watchNote && <p className="text-[11px] text-gray-400">{watchNote}</p>}
+      {watchNote && <p className="m-0 text-[11px] text-gray-400">{watchNote}</p>}
     </div>
   )
 }

@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Preflight is off (tailwind.config.ts), so a <button> with no background
+   utility fell back to the browser's light-grey default: inactive tabs
+   rendered as bright white pills on the dark theme. :where() keeps this at
+   zero specificity, so any Tailwind class or inline style still wins. */
+:where(button) {
+  background-color: transparent;
+  border: 0 solid;
+}
+
 :root {
   --background: #051F20;
   --foreground: #ededed;

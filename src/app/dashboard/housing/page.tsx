@@ -1302,7 +1302,7 @@ export default function HousingPage() {
                   <form onSubmit={handleApply} className="space-y-6">
                      <div className="space-y-2">
                         <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Message to Landlord</label>
-                        <textarea value={applyMessage} onChange={e => setApplyMessage(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-4 text-sm text-white h-32 resize-none outline-none focus:border-gold-primary/40" placeholder="Introduce yourself, mentioned your move-in date and any questions..." />
+                        <textarea value={applyMessage} onChange={e => setApplyMessage(e.target.value)} required className="w-full box-border bg-black border border-white/10 rounded-xl p-4 text-sm text-white h-32 resize-none outline-none focus:border-gold-primary/40" placeholder="Introduce yourself, mention your move-in date and any questions..." />
                      </div>
                      <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2">
                         Send Request <Send size={14} />
