@@ -51,7 +51,7 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
         }
       case 'housing':
         return {
-          glow: 'shadow-[0_0_50px_rgba(212,175,55,0.3)]',
+          glow: 'shadow-[0_0_50px_rgb(var(--accent)/0.3)]',
           border: 'border-gold-primary/40',
           badgeBg: 'bg-gold-primary/20 text-gold-primary border-gold-primary/40',
           accent: 'text-gold-primary',

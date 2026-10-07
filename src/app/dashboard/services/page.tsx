@@ -599,7 +599,7 @@ export default function ServicesPage() {
            <div className="bg-gold-primary/5 border border-gold-primary/20 p-8 rounded-[2rem] flex items-center gap-10 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-gold-primary/5 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
               <div className="flex items-center gap-6 relative z-10">
-                 <div className="p-5 bg-gold-primary rounded-3xl shadow-[0_0_30px_rgba(212,175,55,0.4)] animate-pulse">
+                 <div className="p-5 bg-gold-primary rounded-3xl shadow-[0_0_30px_rgb(var(--accent)/0.4)] animate-pulse">
                     <Zap size={40} className="text-black" />
                  </div>
                  <div className="space-y-1">

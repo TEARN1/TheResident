@@ -100,7 +100,7 @@ export default function RoommateCompatibilityModal({
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-lg bg-black/90 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(212,175,55,0.15)] backdrop-blur-2xl overflow-hidden"
+          className="relative w-full max-w-lg bg-black/90 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgb(var(--accent)/0.15)] backdrop-blur-2xl overflow-hidden"
         >
           {/* Background Ambient Glow */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />

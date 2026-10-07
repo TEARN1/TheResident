@@ -143,7 +143,7 @@ export default function NoticeBoardTab({
         {showForm && (
            <form
               onSubmit={onPostSubmit}
-              className="bg-black/40 border border-gold-primary/20 rounded-2xl p-6 mb-8 space-y-4 shadow-[0_0_20px_rgba(212,175,55,0.05)] animate-in fade-in slide-in-from-top-4 duration-300"
+              className="bg-black/40 border border-gold-primary/20 rounded-2xl p-6 mb-8 space-y-4 shadow-[0_0_20px_rgb(var(--accent)/0.05)] animate-in fade-in slide-in-from-top-4 duration-300"
            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {type !== 'event' && (
@@ -318,7 +318,7 @@ export default function NoticeBoardTab({
                 key={notice.id}
                 className={`glass-panel p-6 flex flex-col justify-between gap-5 transition-all duration-300 group relative overflow-hidden ${
                   isFeatured(notice)
-                    ? 'border-gold-primary/50 shadow-[0_0_24px_rgba(212,175,55,0.15)] bg-gradient-to-b from-gold-primary/10 via-black/40 to-black/30'
+                    ? 'border-gold-primary/50 shadow-[0_0_24px_rgb(var(--accent)/0.15)] bg-gradient-to-b from-gold-primary/10 via-black/40 to-black/30'
                     : 'border-white/10 hover:border-gold-primary/30 hover:shadow-xl hover:shadow-black/40'
                 }`}
               >
@@ -333,7 +333,7 @@ export default function NoticeBoardTab({
                         notice.type === 'event'
                           ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
                           : notice.type === 'landlord_announcement'
-                          ? 'bg-gold-primary/15 text-gold-primary border-gold-primary/30 shadow-[0_0_12px_rgba(212,175,55,0.2)]'
+                          ? 'bg-gold-primary/15 text-gold-primary border-gold-primary/30 shadow-[0_0_12px_rgb(var(--accent)/0.2)]'
                           : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
                       }`}>
                         {notice.type === 'landlord_announcement' ? 'Official Announcement' : notice.type}

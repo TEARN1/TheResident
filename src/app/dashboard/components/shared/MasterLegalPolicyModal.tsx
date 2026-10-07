@@ -87,7 +87,7 @@ Generated and enforced by The Resident Civic Operating System | TEARN Engineerin
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-2xl bg-black/95 border-2 border-gold-primary/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_80px_rgba(212,175,55,0.2)] backdrop-blur-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          className="relative w-full max-w-2xl bg-black/95 border-2 border-gold-primary/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_80px_rgb(var(--accent)/0.2)] backdrop-blur-2xl overflow-hidden flex flex-col max-h-[90vh]"
         >
           {/* Subtle Ambient Glow */}
           <div className="absolute top-0 right-0 w-60 h-60 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />

@@ -106,7 +106,7 @@ export default function ChoreSchedulerTab({
          <div className="absolute top-0 right-0 w-64 h-64 bg-gold-primary/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover/banner:bg-gold-primary/10 transition-all duration-1000" />
 
          <div className="flex items-center gap-6 relative z-10">
-            <div className="p-5 bg-gold-primary rounded-3xl shadow-[0_0_30px_rgba(212,175,55,0.3)] rotate-3 group-hover/banner:rotate-0 transition-transform duration-500">
+            <div className="p-5 bg-gold-primary rounded-3xl shadow-[0_0_30px_rgb(var(--accent)/0.3)] rotate-3 group-hover/banner:rotate-0 transition-transform duration-500">
                <Award size={40} className="text-black" />
             </div>
             <div className="space-y-1">
@@ -124,7 +124,7 @@ export default function ChoreSchedulerTab({
             <p className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-black mb-1">Status Rank</p>
             <p className="text-2xl font-black text-white italic tracking-tighter">ELITE RESIDENT</p>
             <div className="h-1 bg-gray-800 rounded-full mt-2 overflow-hidden w-32 ml-auto">
-               <div className="h-full bg-gold-primary w-4/5 shadow-[0_0_10px_#D4AF37]" />
+               <div className="h-full bg-gold-primary w-4/5 shadow-[0_0_10px_rgb(var(--accent))]" />
             </div>
          </div>
       </div>

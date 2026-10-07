@@ -120,7 +120,7 @@ export default function NotificationPrefsPanel() {
                 type="checkbox"
                 checked={prefs.muted_types.includes(t.value)}
                 onChange={() => toggleType(t.value)}
-                className="accent-[#D4AF37]"
+                className="accent-gold-primary"
               />
               {t.label}
             </label>
@@ -157,7 +157,7 @@ export default function NotificationPrefsPanel() {
           type="checkbox"
           checked={prefs.digest}
           onChange={e => setPrefs(prev => ({ ...prev, digest: e.target.checked }))}
-          className="accent-[#D4AF37]"
+          className="accent-gold-primary"
         />
         Send me a digest instead of individual notifications
       </label>

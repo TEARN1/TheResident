@@ -321,7 +321,7 @@ export default function AuthPage() {
       
       {securityMessage && (
         <div style={alertStyle}>
-          <Shield size={20} color="#D4AF37" />
+          <Shield size={20} className="text-gold-primary" />
           <span>{securityMessage}</span>
         </div>
       )}
@@ -447,7 +447,7 @@ export default function AuthPage() {
                       setErrorMessage(null)
                     }
                   }}
-                  style={{ background: 'none', border: 'none', color: '#D4AF37', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: '0 2px' }}
+                  style={{ background: 'none', border: 'none', color: 'var(--gold-primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: '0 2px' }}
                 >
                   {resetEmailSending ? 'Sending link…' : 'Forgot password?'}
                 </button>
@@ -712,8 +712,8 @@ export default function AuthPage() {
             <div style={{
               padding: '0.85rem',
               borderRadius: '1rem',
-              backgroundColor: 'rgba(212, 175, 55, 0.05)',
-              border: '1px solid rgba(212, 175, 55, 0.25)',
+              backgroundColor: 'rgb(var(--accent) / 0.05)',
+              border: '1px solid rgb(var(--accent) / 0.25)',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.5rem',
@@ -725,14 +725,14 @@ export default function AuthPage() {
                   id="termsAgreement"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  style={{ marginTop: '0.15rem', cursor: 'pointer', accentColor: '#D4AF37' }}
+                  style={{ marginTop: '0.15rem', cursor: 'pointer', accentColor: 'var(--gold-primary)' }}
                 />
                 <label htmlFor="termsAgreement" style={{ fontSize: '11px', color: '#D1D5DB', lineHeight: 1.45, cursor: 'pointer' }}>
                   I accept the{' '}
                   <button
                     type="button"
                     onClick={() => setShowPolicyModal(true)}
-                    style={{ color: '#D4AF37', textDecoration: 'underline', fontWeight: 'bold', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                    style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 'bold', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
                   >
                     Platform Liability Shield &amp; Terms
                   </button>
@@ -834,7 +834,7 @@ export default function AuthPage() {
                 alignItems: 'center',
                 gap: '5px',
                 fontSize: '0.7rem',
-                color: '#D4AF37',
+                color: 'var(--gold-primary)',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -913,7 +913,7 @@ export const glassPanelStyle: React.CSSProperties = {
   backdropFilter: 'blur(28px)',
   WebkitBackdropFilter: 'blur(28px)',
   border: '1px solid rgba(255, 255, 255, 0.12)',
-  boxShadow: '0 24px 60px -12px rgba(0, 0, 0, 0.8), 0 0 32px rgba(212, 175, 55, 0.12)',
+  boxShadow: '0 24px 60px -12px rgba(0, 0, 0, 0.8), 0 0 32px rgb(var(--accent) / 0.12)',
   borderRadius: '24px',
   padding: '2.5rem',
   color: 'var(--foreground)',
@@ -932,7 +932,7 @@ export const logoStyle: React.CSSProperties = {
   letterSpacing: '4px',
   fontWeight: 900,
   margin: '0 0 0.5rem 0',
-  textShadow: '0 0 24px rgba(212, 175, 55, 0.3)'
+  textShadow: '0 0 24px rgb(var(--accent) / 0.3)'
 }
 
 export const taglineStyle: React.CSSProperties = {
@@ -964,8 +964,8 @@ const tabContainerStyle: React.CSSProperties = {
 
 const activeTabStyle: React.CSSProperties = {
   flex: 1,
-  background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.12) 100%)',
-  border: '1px solid rgba(212, 175, 55, 0.4)',
+  background: 'linear-gradient(135deg, rgb(var(--accent) / 0.25) 0%, rgb(var(--accent) / 0.12) 100%)',
+  border: '1px solid rgb(var(--accent) / 0.4)',
   borderRadius: '12px',
   color: '#FFFFFF',
   padding: '0.75rem',
@@ -973,7 +973,7 @@ const activeTabStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   cursor: 'pointer',
   fontWeight: 800,
-  boxShadow: '0 4px 12px rgba(212, 175, 55, 0.15)',
+  boxShadow: '0 4px 12px rgb(var(--accent) / 0.15)',
   transition: 'all 0.3s ease'
 }
 
@@ -1144,7 +1144,7 @@ const alertStyle: React.CSSProperties = {
   background: 'rgba(10, 10, 10, 0.9)',
   backdropFilter: 'blur(20px)',
   WebkitBackdropFilter: 'blur(20px)',
-  border: '1px solid rgba(212, 175, 55, 0.4)',
+  border: '1px solid rgb(var(--accent) / 0.4)',
   borderRadius: '16px',
   padding: '1rem 1.5rem',
   color: '#FFFFFF',
@@ -1154,7 +1154,7 @@ const alertStyle: React.CSSProperties = {
   zIndex: 1000,
   fontSize: '0.85rem',
   fontWeight: 600,
-  boxShadow: '0 12px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.15)',
+  boxShadow: '0 12px 36px rgba(0, 0, 0, 0.6), 0 0 20px rgb(var(--accent) / 0.15)',
   width: '90%',
   maxWidth: '500px'
 }
@@ -1164,8 +1164,8 @@ const gruvsBannerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '12px',
-  background: 'rgba(212, 175, 55, 0.08)',
-  border: '1px solid rgba(212, 175, 55, 0.25)',
+  background: 'rgb(var(--accent) / 0.08)',
+  border: '1px solid rgb(var(--accent) / 0.25)',
   borderRadius: '16px',
   padding: '14px 16px',
   marginBottom: '16px',
@@ -1226,8 +1226,8 @@ const gruvsBtnStyle: React.CSSProperties = {
   width: '100%',
   padding: '0.85rem 1.25rem',
   marginBottom: '0.75rem',
-  background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.08) 100%)',
-  border: '1.5px solid rgba(212, 175, 55, 0.6)',
+  background: 'linear-gradient(135deg, rgb(var(--accent) / 0.2) 0%, rgb(var(--accent) / 0.08) 100%)',
+  border: '1.5px solid rgb(var(--accent) / 0.6)',
   borderRadius: '14px',
   color: 'var(--gold-primary)',
   fontSize: '0.88rem',
@@ -1235,6 +1235,6 @@ const gruvsBtnStyle: React.CSSProperties = {
   letterSpacing: '0.5px',
   cursor: 'pointer',
   transition: 'all 0.25s ease',
-  boxShadow: '0 0 16px rgba(212, 175, 55, 0.15)'
+  boxShadow: '0 0 16px rgb(var(--accent) / 0.15)'
 }
 
