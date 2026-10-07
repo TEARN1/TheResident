@@ -40,7 +40,6 @@ const RoommateCompatibilityModal = dynamic(() => import('../components/housing/R
 const SALeaseAgreementModal = dynamic(() => import('../components/housing/SALeaseAgreementModal'), { ssr: false })
 const CoLivingExpenseSplitterModal = dynamic(() => import('../components/household/CoLivingExpenseSplitterModal'), { ssr: false })
 const TenantInspectionSnagListModal = dynamic(() => import('../components/housing/TenantInspectionSnagListModal'), { ssr: false })
-const LandlordRoomManagerModal = dynamic(() => import('../components/housing/LandlordRoomManagerModal'), { ssr: false })
 
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
@@ -138,12 +137,6 @@ export default function HousingPage() {
   // Move-in Snag List Modal
   const [showSnagModal, setShowSnagModal] = useState(false)
 
-  // Landlord Multi-Room & Tenant Reviews Manager Modal
-  const [showRoomManagerModal, setShowRoomManagerModal] = useState(false)
-  const [roomManagerPropertyInfo, setRoomManagerPropertyInfo] = useState<{ name: string; address: string }>({
-    name: 'Main Residence Complex',
-    address: 'Johannesburg / Braamfontein'
-  })
 
   // Room Image Uploads State
   const [newImages, setNewImages] = useState<string[]>([])
@@ -690,16 +683,12 @@ export default function HousingPage() {
                      type="button"
                      onClick={() => {
                        playTactileSound('tab')
-                       setRoomManagerPropertyInfo({
-                         name: 'My Property Portfolio',
-                         address: 'Managed Rental Units'
-                       })
-                       setShowRoomManagerModal(true)
+                       setActiveTab('properties')
                      }}
                      className="bg-white/5 hover:bg-gold-primary/10 border border-gold-primary/30 hover:border-gold-primary text-gold-primary font-black px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-wider text-xs"
-                     title="Manage multi-room units, photos, snags and review tenant feedback"
+                     title="Your properties: rooms, tenants and vacancies"
                   >
-                     <ClipboardList size={16} /> Manage Rooms & Reviews
+                     <ClipboardList size={16} /> Manage rooms
                   </button>
                 </div>
              ) : (
@@ -945,22 +934,6 @@ export default function HousingPage() {
                       <Radar size={14} className="text-gold-primary animate-pulse" />
                       <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Radar</span>
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playTactileSound('tab')
-                        setRoomManagerPropertyInfo({
-                          name: item.title,
-                          address: `${item.suburb}, ${item.location}`
-                        })
-                        setShowRoomManagerModal(true)
-                      }}
-                      className="p-2.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary transition-all flex items-center gap-1.5 text-xs font-bold"
-                      title="Inspect room condition, photos, snags, and landlord reviews"
-                    >
-                      <ClipboardList size={14} className="text-gold-primary" />
-                      <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Rooms</span>
-                    </button>
                     {item.landlordLivesHere && (
                       <span className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 shrink-0" title="Landlord lives on property">
                         <Home size={14} className="text-gold-primary" />
@@ -1433,14 +1406,6 @@ export default function HousingPage() {
       <TenantInspectionSnagListModal
         isOpen={showSnagModal}
         onClose={() => setShowSnagModal(false)}
-      />
-
-      {/* LANDLORD MULTI-ROOM & TENANT ACCOUNTABILITY MANAGER MODAL */}
-      <LandlordRoomManagerModal
-        isOpen={showRoomManagerModal}
-        onClose={() => setShowRoomManagerModal(false)}
-        propertyName={roomManagerPropertyInfo.name}
-        propertyAddress={roomManagerPropertyInfo.address}
       />
     </div>
   )

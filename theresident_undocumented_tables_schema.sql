@@ -369,6 +369,69 @@ create policy res_infra_providers_select on public.res_infra_providers
 */
 
 -- ───────────────────────────────────────────────────────────────────────────
+-- res_rooms / res_room_occupants — per-room management inside a property.
+-- Written via SECURITY DEFINER RPCs (res_create_room, res_update_room,
+-- res_set_room_status, res_add_room_occupant, res_end_room_occupancy,
+-- res_advertise_room); the landlord's Room Manager reads them directly.
+-- Copied from the live project (2026-10-07), not reconstructed.
+-- ───────────────────────────────────────────────────────────────────────────
+create table if not exists public.res_rooms (
+  id uuid not null default uuid_generate_v4(),
+  property_id uuid not null,
+  landlord_id uuid not null,
+  label text not null,
+  photos text[] not null default '{}'::text[],
+  price numeric,
+  currency text not null default 'ZAR'::text,
+  advantages text,
+  disadvantages text,
+  price_note text,
+  status text not null default 'vacant'::text,
+  listing_id uuid,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint res_rooms_pkey primary key (id),
+  constraint res_rooms_landlord_id_fkey foreign key (landlord_id) references public.profiles(id) on delete cascade,
+  constraint res_rooms_listing_id_fkey foreign key (listing_id) references public.res_listings(id) on delete set null,
+  constraint res_rooms_property_id_fkey foreign key (property_id) references public.res_properties(id) on delete cascade,
+  constraint res_rooms_status_check check (status = any (array['vacant'::text, 'occupied'::text]))
+);
+create index if not exists res_rooms_property_idx on public.res_rooms (property_id);
+create index if not exists res_rooms_landlord_idx on public.res_rooms (landlord_id);
+create index if not exists res_rooms_listing_id_idx on public.res_rooms (listing_id);
+alter table public.res_rooms enable row level security;
+drop policy if exists res_rooms_all on public.res_rooms;
+create policy res_rooms_all on public.res_rooms for all to authenticated
+  using (landlord_id = (select auth.uid())) with check (landlord_id = (select auth.uid()));
+
+create table if not exists public.res_room_occupants (
+  id uuid not null default uuid_generate_v4(),
+  room_id uuid not null,
+  tenant_id uuid,
+  occupant_name_raw text,
+  moved_in_at timestamp with time zone not null default now(),
+  moved_out_at timestamp with time zone,
+  rent_amount numeric,
+  notes text,
+  visibility text not null default 'landlord_only'::text,
+  created_at timestamp with time zone not null default now(),
+  constraint res_room_occupants_pkey primary key (id),
+  constraint res_room_occupants_room_id_fkey foreign key (room_id) references public.res_rooms(id) on delete cascade,
+  constraint res_room_occupants_tenant_id_fkey foreign key (tenant_id) references public.profiles(id) on delete set null,
+  constraint res_room_occupants_person check ((tenant_id is not null) or (occupant_name_raw is not null)),
+  constraint res_room_occupants_visibility_check check (visibility = any (array['landlord_only'::text, 'shared_with_housemates'::text]))
+);
+create unique index if not exists res_room_occupants_current_idx on public.res_room_occupants (room_id, tenant_id)
+  where (tenant_id is not null) and (moved_out_at is null);
+create index if not exists res_room_occupants_tenant_idx on public.res_room_occupants (tenant_id) where (tenant_id is not null);
+create index if not exists res_room_occupants_room_idx on public.res_room_occupants (room_id);
+alter table public.res_room_occupants enable row level security;
+drop policy if exists res_room_occupants_select on public.res_room_occupants;
+create policy res_room_occupants_select on public.res_room_occupants for select to authenticated
+  using (res_owns_room(room_id) or (tenant_id = (select auth.uid()))
+         or ((visibility = 'shared_with_housemates'::text) and res_is_current_housemate(room_id)));
+
+-- ───────────────────────────────────────────────────────────────────────────
 -- res_room_vacancy_watches — "notify me when this room is free".
 -- Written via the SECURITY DEFINER RPCs res_watch_room_vacancy /
 -- res_unwatch_room_vacancy; the client reads its own rows to show whether
