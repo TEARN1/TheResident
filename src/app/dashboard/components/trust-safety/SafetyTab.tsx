@@ -7,7 +7,6 @@ import { outageConsensus, type StatusReport } from '../../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
 import UpgradeButton from '../shared/UpgradeButton'
-import LoadsheddingMatrixWidget from './LoadsheddingMatrixWidget'
 
 interface CareProfile {
   id: string
@@ -92,6 +91,18 @@ export default function SafetyTab({
   onReportStatus
 }: SafetyTabProps) {
   const [confirmPanic, setConfirmPanic] = useState(false)
+  // How many people the alert will actually reach, shown before it is sent
+  // (res_alert_reach_preview counts the same audience res_raise_alert uses).
+  // undefined = loading/unknown, so nothing is claimed until it is known.
+  const [panicReach, setPanicReach] = useState<number | undefined>(undefined)
+  useEffect(() => {
+    if (!confirmPanic || !supabase) return
+    let cancelled = false
+    supabase.rpc('res_alert_reach_preview', { p_suburb: suburb || null }).then(({ data, error }) => {
+      if (!cancelled && !error && typeof data === 'number') setPanicReach(data)
+    })
+    return () => { cancelled = true }
+  }, [confirmPanic, suburb])
   const [showIncidentForm, setShowIncidentForm] = useState(false)
   const [incidentTitle, setIncidentTitle] = useState('')
   const [incidentDesc, setIncidentDesc] = useState('')
@@ -234,9 +245,6 @@ export default function SafetyTab({
 
   return (
     <div className="space-y-8">
-      {/* Live Eskom Grid & Suburb Schedule Matrix */}
-      <LoadsheddingMatrixWidget />
-
       {/* Panic Section — deliberately two-step so a mis-tap can't page the neighbourhood */}
       <div className="glass-panel p-6 border-red-500/20 bg-red-500/5">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -252,7 +260,7 @@ export default function SafetyTab({
 
           {!confirmPanic ? (
             <button
-              onClick={() => setConfirmPanic(true)}
+              onClick={() => { setPanicReach(undefined); setConfirmPanic(true) }}
               className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-red-900/20 transition-all active:scale-95"
             >
               RAISE PANIC ALERT
@@ -277,6 +285,15 @@ export default function SafetyTab({
             </div>
           )}
         </div>
+
+        {confirmPanic && panicReach !== undefined && (
+          <p className={`mt-3 text-xs font-bold ${panicReach > 0 ? 'text-red-300' : 'text-amber-300'}`}>
+            {panicReach > 0
+              ? `This alert will notify ${panicReach} neighbour${panicReach === 1 ? '' : 's'} in ${suburb || 'your area'}.`
+              : `No neighbours in ${suburb || 'your area'} are on The Resident yet, so nobody will be notified.`}
+            {' '}In a life-threatening emergency, call 10111 (police) or 112 from any phone.
+          </p>
+        )}
 
         <button
           onClick={() => setShowIncidentForm(v => !v)}

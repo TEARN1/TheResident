@@ -367,3 +367,33 @@ drop policy if exists res_infra_providers_select on public.res_infra_providers;
 create policy res_infra_providers_select on public.res_infra_providers
   for select to authenticated using (true);
 */
+
+-- ───────────────────────────────────────────────────────────────────────────
+-- res_room_vacancy_watches — "notify me when this room is free".
+-- Written via the SECURITY DEFINER RPCs res_watch_room_vacancy /
+-- res_unwatch_room_vacancy; the client reads its own rows to show whether
+-- an alert is on (ListingTrustPanel). Copied from the live project
+-- (2026-10-07), not reconstructed.
+-- ───────────────────────────────────────────────────────────────────────────
+create table if not exists public.res_room_vacancy_watches (
+  id uuid not null default uuid_generate_v4(),
+  room_id uuid not null,
+  listing_id uuid not null,
+  user_id uuid not null,
+  created_at timestamp with time zone not null default now(),
+  constraint res_room_vacancy_watches_pkey primary key (id),
+  constraint res_room_vacancy_watches_listing_id_user_id_key unique (listing_id, user_id),
+  constraint res_room_vacancy_watches_listing_id_fkey foreign key (listing_id) references public.res_listings(id) on delete cascade,
+  constraint res_room_vacancy_watches_room_id_fkey foreign key (room_id) references public.res_rooms(id) on delete cascade,
+  constraint res_room_vacancy_watches_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade
+);
+
+create index if not exists res_room_vacancy_watches_listing_idx on public.res_room_vacancy_watches (listing_id);
+create index if not exists res_room_vacancy_watches_room_idx on public.res_room_vacancy_watches (room_id);
+create index if not exists res_room_vacancy_watches_user_idx on public.res_room_vacancy_watches (user_id);
+
+alter table public.res_room_vacancy_watches enable row level security;
+
+drop policy if exists res_room_vacancy_watches_select on public.res_room_vacancy_watches;
+create policy res_room_vacancy_watches_select on public.res_room_vacancy_watches
+  for select to authenticated using (user_id = auth.uid());

@@ -19,16 +19,6 @@ import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../utils/gruvsE
 import { playTactileSound } from '../../../utils/tactileSounds'
 
 const InstitutionalBroadcastsPortal = dynamic(() => import('../components/community/InstitutionalBroadcastsPortal'), { ssr: false })
-const AudioGossipRecorderModal = dynamic(() => import('../components/social/AudioGossipRecorderModal'), { ssr: false })
-const PlateShareFoodHubModal = dynamic(() => import('../components/social/PlateShareFoodHubModal'), { ssr: false })
-const AudioSpacesTownHallModal = dynamic(() => import('../components/social/AudioSpacesTownHallModal'), { ssr: false })
-const ResidentKarmaModal = dynamic(() => import('../components/social/ResidentKarmaModal'), { ssr: false })
-const RoommateSpiderRadarModal = dynamic(() => import('../components/social-dynamics/RoommateSpiderRadarModal'), { ssr: false })
-const PeacekeeperMediatorModal = dynamic(() => import('../components/social-dynamics/PeacekeeperMediatorModal'), { ssr: false })
-const FloorSecretCrushModal = dynamic(() => import('../components/social-dynamics/FloorSecretCrushModal'), { ssr: false })
-const LostAndFoundPhotoMatcherModal = dynamic(() => import('../components/social-dynamics/LostAndFoundPhotoMatcherModal'), { ssr: false })
-const PayShapTapToSettleModal = dynamic(() => import('../components/social-dynamics/PayShapTapToSettleModal'), { ssr: false })
-const NightWatchSafeRouteModal = dynamic(() => import('../components/social-dynamics/NightWatchSafeRouteModal'), { ssr: false })
 
 export type GossipCategory = 'all' | 'campus' | 'landlords' | 'gruvs' | 'roommates' | 'safety'
 
@@ -132,18 +122,6 @@ export default function GossipPage() {
 
   // Institutional Broadcasts Modal
   const [showInstitutionalModal, setShowInstitutionalModal] = useState(false)
-
-  // Advanced Social & Gossip Modals
-  const [showAudioGossipModal, setShowAudioGossipModal] = useState(false)
-  const [showPlateShareModal, setShowPlateShareModal] = useState(false)
-  const [showAudioSpacesModal, setShowAudioSpacesModal] = useState(false)
-  const [showResidentKarmaModal, setShowResidentKarmaModal] = useState(false)
-  const [showRadarModal, setShowRadarModal] = useState(false)
-  const [showMediatorModal, setShowMediatorModal] = useState(false)
-  const [showSecretCrushModal, setShowSecretCrushModal] = useState(false)
-  const [showLostFoundModal, setShowLostFoundModal] = useState(false)
-  const [showPayShapModal, setShowPayShapModal] = useState(false)
-  const [showNightWatchModal, setShowNightWatchModal] = useState(false)
 
   // Advanced Category & Search Filter
   const [activeCategory, setActiveCategory] = useState<GossipCategory>('all')
@@ -563,7 +541,7 @@ export default function GossipPage() {
                 href={GRUVS.url ?? undefined}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:brightness-110 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:brightness-110 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-purple-500/20"
               >
                 <span>{GRUVS.cta}</span>
                 <ExternalLink size={12} />
@@ -575,7 +553,7 @@ export default function GossipPage() {
                   playTactileSound('chime')
                   setShowRidePoolerModal(true)
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-200 hover:text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-200 hover:text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
                 title="Coordinate shared Uber/Bolt or carpool to Gruvs events"
               >
                 <Car size={13} className="text-pink-400" />
@@ -655,129 +633,10 @@ export default function GossipPage() {
             playTactileSound('chime')
             setShowInstitutionalModal(true)
           }}
-          className="bg-amber-500 hover:bg-amber-400 text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shrink-0 flex items-center gap-2"
+          className="bg-amber-500 hover:bg-amber-400 text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-glow shrink-0 flex items-center gap-2"
         >
           <BookOpen size={14} />
           <span>Open School & Uni Notices</span>
-        </button>
-      </div>
-
-      {/* Advanced Social Hub Action Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowAudioGossipModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 shrink-0 transition"
-        >
-          <span>🎙️ Voice Memo Disguise</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowPlateShareModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 shrink-0 transition"
-        >
-          <span>🍲 PlateShare Food Hub</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowAudioSpacesModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0 transition"
-        >
-          <span>📻 Live Town Hall Space</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowResidentKarmaModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 transition"
-        >
-          <span>🏆 Street Credit & Karma</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowRadarModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 transition"
-          title="5-Axis Roommate Spider Radar Compatibility Chart"
-        >
-          <span>🕸️ Roommate Radar</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowMediatorModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
-          title="Peacekeeper Neutral Conflict De-Escalation AI Bot"
-        >
-          <span>🕊️ Peacekeeper Bot</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowSecretCrushModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 shrink-0 transition"
-          title="Floor Secret Crush Double-Blind Mutual Match"
-        >
-          <span>💘 Floor Secret Crush</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowLostFoundModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 shrink-0 transition"
-          title="Lost & Found Visual Photo Matcher & Campus Claim Desk"
-        >
-          <span>🔍 Lost & Found AI</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowPayShapModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
-          title="PayShap Tap-To-Settle Instant Shared Debt Clearing"
-        >
-          <span>💳 PayShap Settle</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowNightWatchModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0 transition"
-          title="Night-Watch Safe-Route Pedestrian Escort & Streetlight Radar"
-        >
-          <span>🛡️ Safe Walk Escort</span>
         </button>
       </div>
 
@@ -794,7 +653,7 @@ export default function GossipPage() {
               }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider shrink-0 transition-all border ${
                 activeCategory === tab.key
-                  ? 'bg-gold-primary text-black border-gold-primary'
+                  ? 'bg-gold-primary text-black border-gold-primary shadow-glow'
                   : 'bg-black/50 text-gray-400 border-white/10 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -1295,66 +1154,6 @@ export default function GossipPage() {
       <InstitutionalBroadcastsPortal
         isOpen={showInstitutionalModal}
         onClose={() => setShowInstitutionalModal(false)}
-      />
-
-      {/* AUDIO GOSSIP VOICE SCRAMBLER MODAL */}
-      <AudioGossipRecorderModal
-        isOpen={showAudioGossipModal}
-        onClose={() => setShowAudioGossipModal(false)}
-      />
-
-      {/* PLATESHARE FOOD HUB MODAL */}
-      <PlateShareFoodHubModal
-        isOpen={showPlateShareModal}
-        onClose={() => setShowPlateShareModal(false)}
-      />
-
-      {/* AUDIO SPACES TOWN HALL MODAL */}
-      <AudioSpacesTownHallModal
-        isOpen={showAudioSpacesModal}
-        onClose={() => setShowAudioSpacesModal(false)}
-      />
-
-      {/* RESIDENT KARMA & REPUTATION MODAL */}
-      <ResidentKarmaModal
-        isOpen={showResidentKarmaModal}
-        onClose={() => setShowResidentKarmaModal(false)}
-      />
-
-      {/* 5-AXIS ROOMMATE SPIDER RADAR MODAL */}
-      <RoommateSpiderRadarModal
-        isOpen={showRadarModal}
-        onClose={() => setShowRadarModal(false)}
-      />
-
-      {/* PEACEKEEPER ROOMMATE CONFLICT DE-ESCALATION BOT MODAL */}
-      <PeacekeeperMediatorModal
-        isOpen={showMediatorModal}
-        onClose={() => setShowMediatorModal(false)}
-      />
-
-      {/* FLOOR SECRET CRUSH DOUBLE-BLIND MATCH MODAL */}
-      <FloorSecretCrushModal
-        isOpen={showSecretCrushModal}
-        onClose={() => setShowSecretCrushModal(false)}
-      />
-
-      {/* LOST & FOUND VISUAL PHOTO AI MATCHER MODAL */}
-      <LostAndFoundPhotoMatcherModal
-        isOpen={showLostFoundModal}
-        onClose={() => setShowLostFoundModal(false)}
-      />
-
-      {/* PAYSHAP TAP-TO-SETTLE CARDS MODAL */}
-      <PayShapTapToSettleModal
-        isOpen={showPayShapModal}
-        onClose={() => setShowPayShapModal(false)}
-      />
-
-      {/* NIGHT-WATCH SAFE-ROUTE PEDESTRIAN NAVIGATOR MODAL */}
-      <NightWatchSafeRouteModal
-        isOpen={showNightWatchModal}
-        onClose={() => setShowNightWatchModal(false)}
       />
     </div>
   )

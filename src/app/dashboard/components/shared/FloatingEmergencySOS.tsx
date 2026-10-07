@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { PhoneCall, ShieldAlert, X, Radio, CheckCircle2, ChevronRight } from 'lucide-react'
+import { PhoneCall, ShieldAlert, X, Radio, ChevronRight } from 'lucide-react'
+import { useDispatch } from 'react-redux'
 import { playTactileSound } from '../../../../utils/tactileSounds'
+import { raiseAlert } from '../../../../store/actions'
+import type { AppDispatch } from '../../../../store'
 
 interface EmergencyContact {
   label: string
@@ -30,12 +33,6 @@ const EMERGENCY_SERVICES: EmergencyContact[] = [
     number: '112',
     description: 'Free emergency call from any mobile network in SA',
     iconColor: 'text-amber-400'
-  },
-  {
-    label: 'Campus / Building Security Desk',
-    number: '0800000000',
-    description: 'Immediate resident concierge & gatehouse assistance',
-    iconColor: 'text-emerald-400'
   }
 ]
 
@@ -45,6 +42,11 @@ export default function FloatingEmergencySOS() {
   const [beaconCountdown, setBeaconCountdown] = useState(5)
   const [beaconSent, setBeaconSent] = useState(false)
   const [coords, setCoords] = useState<{ lat: string; lon: string } | null>(null)
+  // Outcome of the real res_raise_alert call: the beacon used to announce a
+  // dispatch that never happened, with a hardcoded Johannesburg fallback
+  // location. It now sends a genuine panic alert and reports what happened.
+  const [sendState, setSendState] = useState<'sending' | 'sent' | 'failed'>('sending')
+  const dispatch = useDispatch<AppDispatch>()
 
   useEffect(() => {
     let timer: NodeJS.Timeout
@@ -54,21 +56,28 @@ export default function FloatingEmergencySOS() {
           if (prev <= 1) {
             playTactileSound('alert')
             setBeaconSent(true)
+            setSendState('sending')
+            const send = (lat?: number, lon?: number) => {
+              dispatch(raiseAlert({
+                kind: 'panic',
+                title: 'SOS: immediate help needed',
+                description: 'Sent from the SOS button.',
+                severity: 'critical',
+                lat,
+                lon
+              })).unwrap().then(() => setSendState('sent'), () => setSendState('failed'))
+            }
             if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
               navigator.geolocation.getCurrentPosition(
                 pos => {
-                  setCoords({
-                    lat: pos.coords.latitude.toFixed(4),
-                    lon: pos.coords.longitude.toFixed(4)
-                  })
+                  setCoords({ lat: pos.coords.latitude.toFixed(4), lon: pos.coords.longitude.toFixed(4) })
+                  send(pos.coords.latitude, pos.coords.longitude)
                 },
-                () => {
-                  setCoords({ lat: '-26.1926', lon: '28.0305' })
-                },
+                () => send(),
                 { timeout: 5000 }
               )
             } else {
-              setCoords({ lat: '-26.1926', lon: '28.0305' })
+              send()
             }
             return 0
           }
@@ -77,7 +86,7 @@ export default function FloatingEmergencySOS() {
       }, 1000)
     }
     return () => clearTimeout(timer)
-  }, [isBeaconActive, beaconCountdown])
+  }, [isBeaconActive, beaconCountdown, dispatch])
 
   const triggerDistressBeacon = () => {
     playTactileSound('alert')
@@ -162,35 +171,45 @@ export default function FloatingEmergencySOS() {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="space-y-0.5">
                       <h4 className="text-xs font-black uppercase tracking-wider text-red-300 flex items-center gap-1.5">
-                        <Radio size={14} className="animate-pulse" /> Silent Distress Ping
+                        <Radio size={14} className="animate-pulse" /> Alert neighbours
                       </h4>
                       <p className="text-[11px] text-gray-400 leading-snug">
-                        Broadcasts your GPS coords to registered next-of-kin & building security.
+                        Sends a panic alert with your location to verified neighbours on The Resident.
                       </p>
                     </div>
                     <button
                       onClick={triggerDistressBeacon}
                       className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 shrink-0"
                     >
-                      Broadcast Beacon
+                      Send alert
                     </button>
                   </div>
                 ) : beaconSent ? (
                   <div className="text-center py-2 space-y-3">
-                    <div className="flex items-center justify-center gap-2 text-emerald-400 font-mono text-sm font-black animate-pulse">
-                      <Radio size={18} /> DISTRESS BEACON ACTIVE & TRANSMITTING
+                    <div className={`flex items-center justify-center gap-2 font-mono text-sm font-black ${sendState === 'failed' ? 'text-red-400' : 'text-emerald-400 animate-pulse'}`}>
+                      <Radio size={18} />
+                      {sendState === 'sending' && 'SENDING ALERT...'}
+                      {sendState === 'sent' && 'ALERT SENT'}
+                      {sendState === 'failed' && 'ALERT NOT SENT'}
                     </div>
-                    <p className="text-xs text-gray-300">
-                      Live GPS Coordinates: <span className="font-mono text-white font-bold">{coords ? `Lat ${coords.lat}, Lon ${coords.lon}` : 'Triangulating...'}</span>
-                    </p>
+                    {coords && (
+                      <p className="text-xs text-gray-300">
+                        Your location: <span className="font-mono text-white font-bold">{`${coords.lat}, ${coords.lon}`}</span>
+                      </p>
+                    )}
                     <p className="text-[11px] text-gray-400">
-                      Emergency distress broadcast dispatched to building security desk & registered emergency circles.
+                      {sendState === 'sent'
+                        ? 'Your alert is live for verified neighbours near you on The Resident.'
+                        : sendState === 'failed'
+                          ? 'The alert could not be sent. Call 10111 or 112 now.'
+                          : 'Sharing your alert with verified neighbours nearby...'}
+                      {' '}This does not contact the police: call 10111 or 112.
                     </p>
                     <button
                       onClick={cancelDistressBeacon}
                       className="px-6 py-2 rounded-xl bg-red-600/30 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-wider border border-red-500/40 transition-all active:scale-95"
                     >
-                      Disarm & Stop Beacon
+                      Close
                     </button>
                   </div>
                 ) : (
@@ -244,10 +263,7 @@ export default function FloatingEmergencySOS() {
 
               {/* Footer */}
               <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-[11px] text-gray-500">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <CheckCircle2 size={13} className="text-emerald-400" /> End-to-end encrypted
-                </span>
-                <span className="font-mono text-[10px] uppercase">Act 50 Safety Standard</span>
+                <span className="font-medium">In danger? Call 10111 (police) or 112 first.</span>
               </div>
             </motion.div>
           </div>

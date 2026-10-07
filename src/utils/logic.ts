@@ -247,6 +247,19 @@ export function isSuspiciousPrice(price: number, stats: PriceStats | null): bool
   return price < stats.median * 0.5
 }
 
+// Logic 10b: Where a price sits against real listings in the same suburb.
+// 'unknown' when there are too few comparable listings to say anything —
+// the card then shows no price badge rather than an invented "Fair".
+export type PriceVerdict = 'suspicious' | 'below' | 'fair' | 'above' | 'unknown'
+
+export function priceVerdict(price: number, stats: PriceStats | null): PriceVerdict {
+  if (!stats || !Number.isFinite(price) || price <= 0) return 'unknown'
+  if (isSuspiciousPrice(price, stats)) return 'suspicious'
+  if (price < stats.low) return 'below'
+  if (price > stats.high) return 'above'
+  return 'fair'
+}
+
 // Logic 11: Detect mentions of off-platform payment.
 const PAYMENT_PRESSURE = [
   /\b(eft|deposit|upfront|e-?wallet|western union|money ?gram)\b/i,
