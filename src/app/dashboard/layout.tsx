@@ -27,6 +27,7 @@ import { t } from '../../utils/i18n'
 import Link from 'next/link'
 import CommandPalette from './components/navigation/CommandPalette'
 import FloatingEmergencySOS from './components/shared/FloatingEmergencySOS'
+import PointerSpotlight from './components/shared/PointerSpotlight'
 import PWAInstallBanner from './components/shared/PWAInstallBanner'
 import MasterLegalPolicyModal from './components/shared/MasterLegalPolicyModal'
 import ThemeSwitcherModal from './components/shared/ThemeSwitcherModal'
@@ -251,6 +252,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="dashboard-wrapper">
+      <div className="ambient-backdrop" aria-hidden="true">
+        <div className="ambient-orb ambient-orb--a" />
+        <div className="ambient-orb ambient-orb--b" />
+        <div className="ambient-orb ambient-orb--c" />
+        <div className="ambient-grid" />
+      </div>
+      <PointerSpotlight />
       {/* These four could previously all be true at once — a loading spinner,
           a failed-table warning, an offline-queue count, and a one-off toast
           stacked three-deep above every page. Only one is ever the MOST
@@ -466,7 +474,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
-      <nav className="fixed bottom-3 left-3 right-3 max-w-lg mx-auto z-50 bg-black/80 backdrop-blur-3xl border border-white/20 rounded-3xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)] flex items-center justify-around transition-all">
+      <nav className="fixed bottom-3 left-3 right-3 max-w-lg mx-auto z-50 bg-black/55 backdrop-blur-3xl backdrop-saturate-150 border border-white/15 rounded-3xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)] flex items-center justify-around transition-all">
         {navItems.map(item => {
           const isActive = pathname === item.href
           return (
