@@ -18,10 +18,13 @@ reasonable window to fix it first.
   XXE, and validates JWTs, password strength, and file uploads. Verified
   by `npm run fuzzer` — 30,000+ simulated attacks across 16 categories,
   100% blocked. Run it after any change that touches user input handling.
-- **Stored XSS via Leaflet popups**: `VibeMap.tsx`'s `bindPopup()` sets raw
-  HTML (bypasses React's escaping) — all four popup types (zone reports,
-  saved pins, search results, listing pins) now run user-controlled text
-  through `encodeHTMLEntities` before interpolation.
+- **No user text as map HTML**: the VibeMap (MapLibre GL, `futureMapEngine.ts`)
+  never builds HTML from data. Prices and labels are drawn by the GPU as map
+  text, and the event light-beam labels set event titles and venues with
+  `textContent`; the only `innerHTML` is fixed markup. (The old Leaflet map
+  had to entity-encode user text going into `bindPopup()` HTML.) The CSP in
+  `src/proxy.ts` allows the map's tile hosts in `connect-src` and a `blob:`
+  worker (`worker-src`) for tile parsing, nothing more.
 - **Brute-force login protection**: 5 failed attempts locks an account for
   60 seconds (`registerFailedAttempt`/`lockedUntil` in `store/index.ts`),
   logged as `auth_failed` / `brute_force_blocked`.

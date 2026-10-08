@@ -1,0 +1,183 @@
+/*
+ * futureMap.css — the moving parts of the 3D VibeMap (VibeMap.tsx + futureMapEngine.ts).
+ *
+ * Everything that moves forever is a CSS animation on a handful of DOM markers,
+ * so it runs on the compositor and never makes MapLibre redraw the map. Every
+ * animation sits inside the reduced-motion query at the bottom: with
+ * "reduce motion" on, the map is still 3D and neon, it just holds still.
+ *
+ * Marker root classes (.fm-beam, .fm-radar, ...) never set `position` or
+ * animate `transform`: maplibre-gl.css positions markers absolutely and
+ * MapLibre moves them with an inline transform, so either would knock the
+ * marker off its spot. Motion goes on an inner element instead.
+ */
+
+.fm-map { --fm-hud: 0, 242, 255; background: #05070b; }
+.fm-map[data-map-theme='light'] { --fm-hud: 14, 116, 144; background: #e5e7eb; }
+
+/* ── Glass controls ─────────────────────────────────────────────────────── */
+/* position: relative anchors the rim below; an absolutely placed control wraps its .fm-glass in a positioned div instead. */
+.fm-glass {
+  position: relative;
+  isolation: isolate;
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 55%);
+}
+.fm-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.08) 30%, rgba(255, 255, 255, 0) 58%, rgba(255, 255, 255, 0.18));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* ── You: dot + sonar radar sized to the 15-minute walk ─────────────────── */
+.fm-me { width: 18px; height: 18px; border-radius: 50%; pointer-events: none; }
+.fm-me-core { position: absolute; inset: 0; border-radius: 50%; background: #38bdf8; border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25), 0 0 18px #38bdf8; }
+.fm-me-halo { position: absolute; inset: -9px; border-radius: 50%; background: rgba(56, 189, 248, 0.22); opacity: 0.9; }
+
+.fm-radar { border-radius: 50%; pointer-events: none; }
+.fm-map[data-map-theme='light'] .fm-radar { opacity: 0.55; }
+.fm-radar-sweep {
+  position: absolute; inset: 0; border-radius: 50%; display: none;
+  background: conic-gradient(from 0deg, transparent 0deg 285deg, var(--fm-radar-soft) 318deg, var(--fm-radar-strong) 359deg, transparent 360deg);
+}
+.fm-radar-ping { position: absolute; inset: 0; border-radius: 50%; display: none; border: 2px solid var(--fm-radar-line); opacity: 0; }
+.fm-radar-rim { position: absolute; inset: 0; border-radius: 50%; border: 1px dashed var(--fm-radar-line); opacity: 0.35; }
+
+/* ── Light beams over Gruvs events ──────────────────────────────────────── */
+.fm-beam { width: 34px; height: var(--fm-beam-h, 80px); cursor: pointer; --fm-beam: #c084fc; outline: none; }
+/* The marker root carries MapLibre's positioning transform, so entrance motion lives on this inner body. */
+.fm-beam-body { position: absolute; inset: 0; transform-origin: bottom center; }
+.fm-beam-pillar {
+  position: absolute; left: 50%; bottom: 6px; width: 3px; height: calc(100% - 6px); transform: translateX(-50%);
+  border-radius: 3px; overflow: hidden;
+  background: linear-gradient(to top, var(--fm-beam), rgba(255, 255, 255, 0));
+  box-shadow: 0 0 10px var(--fm-beam), 0 0 22px var(--fm-beam);
+}
+.fm-beam-packet {
+  position: absolute; left: 0; bottom: 0; width: 3px; height: 16px; border-radius: 3px; opacity: 0;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0), #fff, rgba(255, 255, 255, 0));
+}
+.fm-beam-orb {
+  position: absolute; left: 50%; top: -6px; width: 12px; height: 12px; border-radius: 50%; transform: translate3d(-50%, 0, 0);
+  background: radial-gradient(circle, #fff 0 30%, var(--fm-beam) 60%, rgba(0, 0, 0, 0) 72%);
+  box-shadow: 0 0 14px var(--fm-beam);
+}
+.fm-beam-base { position: absolute; left: 50%; bottom: -8px; width: 34px; height: 34px; margin-left: -17px; transform: scaleY(0.38); pointer-events: none; }
+.fm-beam-base > i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--fm-beam); opacity: 0; display: none; }
+.fm-beam-tag {
+  position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translate3d(-50%, 6px, 0) scale(0.92); opacity: 0;
+  padding: 5px 10px; border-radius: 12px; white-space: nowrap; pointer-events: none;
+  font: 800 11px/1.25 ui-sans-serif, system-ui, sans-serif; letter-spacing: 0.01em; color: #fff;
+  background: rgba(12, 8, 24, 0.82); border: 1px solid var(--fm-beam);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--fm-beam) 45%, transparent), 0 10px 24px rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.fm-beam-tag small { display: block; font-weight: 700; font-size: 9.5px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.08em; }
+.fm-beam:hover .fm-beam-tag,
+.fm-beam:focus-visible .fm-beam-tag,
+.fm-beam[data-focus='true'] .fm-beam-tag { opacity: 1; transform: translate3d(-50%, 0, 0) scale(1); }
+.fm-beam:focus-visible .fm-beam-orb { box-shadow: 0 0 0 3px #fff, 0 0 18px var(--fm-beam); }
+.fm-beam[data-hidden='true'] { display: none; }
+
+/* Sparks that flow along the route arcs. */
+.fm-spark { width: 7px; height: 7px; border-radius: 50%; pointer-events: none; background: #fff; box-shadow: 0 0 6px #fff, 0 0 12px var(--fm-spark, #c084fc), 0 0 22px var(--fm-spark, #c084fc); }
+
+/* ── Safety alerts: a warning sonar under the canvas-drawn icon ─────────── */
+.fm-hazard { width: 64px; height: 64px; pointer-events: none; --fm-hazard: #f59e0b; }
+.fm-hazard > i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--fm-hazard); opacity: 0; display: none; }
+
+/* ── Tap-to-drop pin and the Find-Me beacon ─────────────────────────────── */
+.fm-tap { width: 22px; height: 22px; pointer-events: none; }
+.fm-tap-body { position: absolute; inset: 0; }
+.fm-tap-core { position: absolute; inset: 4px; border-radius: 50%; background: #f59e0b; border: 2px solid #fde68a; box-shadow: 0 0 16px #f59e0b; }
+.fm-tap-body > i { position: absolute; inset: 0; border-radius: 50%; border: 2px solid #fbbf24; opacity: 0; display: none; }
+
+.fm-beacon-tag {
+  display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; white-space: nowrap; pointer-events: none;
+  background: rgba(11, 43, 38, 0.95); border: 1.5px solid #8eb69b; box-shadow: 0 0 25px rgba(142, 182, 155, 0.7);
+  color: #fff; font: 900 11px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: 0.5px; text-transform: uppercase;
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+}
+
+/* ── HUD: faint grid, scan line, corner brackets, vignette ──────────────── */
+.fm-hud { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
+.fm-hud-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45) 100%); }
+.fm-map[data-map-theme='light'] .fm-hud-vignette { background: radial-gradient(ellipse at center, transparent 60%, rgba(15, 23, 42, 0.12) 100%); }
+.fm-hud-grid {
+  position: absolute; inset: 0; opacity: 0.07;
+  background-image: linear-gradient(rgba(var(--fm-hud), 0.9) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--fm-hud), 0.9) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 35%, #000 100%);
+  mask-image: radial-gradient(ellipse at center, transparent 35%, #000 100%);
+}
+.fm-hud-scan {
+  position: absolute; left: 0; right: 0; top: 0; height: 20%; opacity: 0;
+  background: linear-gradient(to bottom, rgba(var(--fm-hud), 0), rgba(var(--fm-hud), 0.06) 70%, rgba(var(--fm-hud), 0.2) 99%, rgba(var(--fm-hud), 0));
+}
+.fm-hud-c { position: absolute; width: 22px; height: 22px; border-color: rgba(var(--fm-hud), 0.55); border-style: solid; border-width: 0; }
+.fm-hud-c.tl { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; border-top-left-radius: 6px; }
+.fm-hud-c.tr { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; border-top-right-radius: 6px; }
+.fm-hud-c.bl { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; border-bottom-left-radius: 6px; }
+.fm-hud-c.br { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; border-bottom-right-radius: 6px; }
+
+/* Compass: the needle turns with the map (set from VibeMap.tsx); tap → north up. */
+.fm-compass-dial { position: relative; display: block; width: 20px; height: 20px; }
+.fm-compass-n { position: absolute; top: -3px; left: 0; right: 0; text-align: center; font: 800 7px/8px ui-sans-serif, system-ui, sans-serif; color: #ff4d6d; }
+.fm-compass-needle {
+  position: absolute; left: 50%; top: 50%; width: 8px; height: 18px; margin: -8px 0 0 -4px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: linear-gradient(to bottom, #ff4d6d 0 50%, rgba(255, 255, 255, 0.85) 50%);
+}
+
+/* Telemetry chip: centre coordinates + what's on the map. */
+.fm-telemetry { font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; }
+.fm-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981; }
+
+/* MapLibre's own chrome, in the same glass. */
+.fm-map .maplibregl-ctrl-attrib.maplibregl-compact { background: rgba(0, 0, 0, 0.55); color: #cbd5e1; }
+.fm-map .maplibregl-ctrl-attrib a { color: #e2e8f0; }
+.fm-map[data-map-theme='light'] .maplibregl-ctrl-attrib.maplibregl-compact { background: rgba(255, 255, 255, 0.8); color: #334155; }
+.fm-map[data-map-theme='light'] .maplibregl-ctrl-attrib a { color: #0f172a; }
+.fm-map .maplibregl-canvas:focus-visible { outline: 2px solid rgba(var(--fm-hud), 0.7); outline-offset: -2px; }
+
+@keyframes fm-spin { to { transform: rotate(360deg); } }
+@keyframes fm-sonar { 0% { transform: scale(0.04); opacity: 0.85; } 70% { opacity: 0.25; } 100% { transform: scale(1); opacity: 0; } }
+@keyframes fm-packet { 0% { transform: translate3d(0, 0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate3d(0, calc(var(--fm-beam-h, 80px) * -1), 0); opacity: 0; } }
+@keyframes fm-orb { 0%, 100% { transform: translate3d(-50%, 0, 0) scale(1); opacity: 0.85; } 50% { transform: translate3d(-50%, -5px, 0) scale(1.25); opacity: 1; } }
+@keyframes fm-scan { 0% { transform: translate3d(0, -120%, 0); } 100% { transform: translate3d(0, 520%, 0); } }
+@keyframes fm-breathe { 0%, 100% { transform: scale(0.75); opacity: 0.9; } 50% { transform: scale(1.35); opacity: 0.25; } }
+@keyframes fm-rise { from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes fm-drop { 0% { transform: translate3d(0, -26px, 0) scale(0.6); opacity: 0; } 60% { transform: translate3d(0, 2px, 0) scale(1.1); opacity: 1; } 100% { transform: none; } }
+@keyframes fm-beam-in { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+@keyframes fm-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .fm-rise { animation: fm-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards; animation-delay: calc(var(--fm-i, 0) * 60ms); }
+  .fm-me-halo { animation: fm-breathe 2.4s ease-in-out infinite; }
+  .fm-radar-sweep { display: block; animation: fm-spin 4.8s linear infinite; }
+  .fm-radar-ping { display: block; animation: fm-sonar 3.6s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+  .fm-radar-ping:nth-child(3) { animation-delay: 1.2s; }
+  .fm-radar-ping:nth-child(4) { animation-delay: 2.4s; }
+  .fm-beam-body { animation: fm-beam-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards; animation-delay: var(--fm-beam-in, 0s); }
+  .fm-beam-packet { animation: fm-packet 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; animation-delay: var(--fm-beam-d, 0s); }
+  .fm-beam[data-pulse='live'] .fm-beam-packet { animation-duration: 1.1s; }
+  .fm-beam-orb { animation: fm-orb 2.2s ease-in-out infinite; }
+  .fm-beam-base > i { display: block; animation: fm-sonar 2.4s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+  .fm-beam-base > i:nth-child(2) { animation-delay: 1.2s; }
+  .fm-beam[data-pulse='live'] .fm-beam-base > i { animation-duration: 1.5s; }
+  .fm-hazard > i { display: block; animation: fm-sonar 2.8s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+  .fm-hazard > i:nth-child(2) { animation-delay: 1.4s; }
+  .fm-tap-body { animation: fm-drop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .fm-tap-body > i { display: block; animation: fm-sonar 1.8s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+  .fm-hud-scan { opacity: 1; animation: fm-scan 7s linear infinite; }
+  .fm-live-dot { animation: fm-blink 1.6s ease-in-out infinite; }
+}

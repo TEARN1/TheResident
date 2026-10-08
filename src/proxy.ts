@@ -131,9 +131,14 @@ export async function proxy(request: NextRequest) {
   // Supabase REST/auth/realtime/storage must be reachable from the dashboard.
   const supabaseOrigin = supabaseUrl ? new URL(supabaseUrl).origin : 'https://*.supabase.co'
   const supabaseWsOrigin = supabaseOrigin.replace(/^https:/, 'wss:')
+  // VibeMap (MapLibre GL) fetches its style, vector tiles, fonts and raster
+  // tiles with fetch(), so the map hosts belong in connect-src, and it parses
+  // tiles in a Web Worker it starts from a blob: URL (worker-src). Nominatim is
+  // the map's place search and tap-to-address lookup (utils/geocode.ts).
+  const mapHosts = 'https://tiles.openfreemap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com https://*.tile.openstreetmap.org'
   response.headers.set(
     'Content-Security-Policy',
-    `default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: ${supabaseOrigin} https://images.unsplash.com https://avatars.githubusercontent.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://*.arcgisonline.com https://server.arcgisonline.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ${supabaseOrigin} ${supabaseWsOrigin}; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`
+    `default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: ${supabaseOrigin} https://images.unsplash.com https://avatars.githubusercontent.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://*.arcgisonline.com https://server.arcgisonline.com https://tiles.openfreemap.org; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ${supabaseOrigin} ${supabaseWsOrigin} ${mapHosts} https://nominatim.openstreetmap.org; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`
   )
 
   return response

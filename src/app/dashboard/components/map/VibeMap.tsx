@@ -1,15 +1,33 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+/**
+ * VibeMap — The Resident's live map, in 3D.
+ *
+ * MapLibre GL (WebGL) with the same engine as The Gruvs' Vibe Map
+ * (futureMapEngine.ts): a neon 3D city under a dusk sky, light beams rising
+ * over tonight's Gruvs events, a sonar radar round you, route arcs with sparks
+ * running to what's near, warning sonar on safety alerts, a HUD and compass,
+ * and a cinematic fly-in. Rooms, events and alerts are drawn on the one GPU
+ * canvas (rooms cluster like before); only a capped handful of animated
+ * markers are DOM, moved by CSS (futureMap.css).
+ *
+ * Everything the Leaflet version did is still here: GPS or ?lat=&lon=&beacon=true,
+ * the SA metro hub jumps, search, the four filters, tap-to-drop with the
+ * address looked up, the 5/10-minute walking rings on a room, the bottom
+ * sheet, the Drop Vibe modal, dark / light / satellite basemaps with a
+ * fallback, and recenter.
+ */
+
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import 'leaflet/dist/leaflet.css'
-import 'leaflet.markercluster/dist/MarkerCluster.css'
-import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import './futureMap.css'
+import type { GeoJSONSource, Map as MLMap, MapGeoJSONFeature } from 'maplibre-gl'
 import {
-  LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Compass, Building2
+  LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Building2, Moon, Sun, Box
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
-import { RootState } from '../../../../store'
+import { RootState, type Listing } from '../../../../store'
 import { fetchSharedZones, type SharedZone } from '../../../../utils/mapZones'
 import { distanceMetres } from '../../../../utils/logic'
 import { reverseGeocode } from '../../../../utils/geocode'
@@ -19,16 +37,15 @@ import { fetchUpcomingGruvsEvents, formatGruvsEventWhen, type GruvsEvent } from 
 import { GRUVS } from '../../../../utils/sisterApps'
 import VibeBottomSheet, { type VibeItem } from './VibeBottomSheet'
 import QuickVibeReportModal from './QuickVibeReportModal'
-
-// High-definition basemaps (100% free open CDN basemaps, no API keys or billing required)
-const TILE_SOURCES: Record<'dark' | 'light' | 'satellite', string> = {
-  dark: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
-  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-}
-
-// Fallback tile source if CARTO or ArcGIS ever experiences an issue or rate limit
-const FALLBACK_TILE_SOURCE = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+import {
+  PULSE_COLOR, PULSE_HEIGHT, arcPoints, distanceKm, formatDistance, isochroneFeatures, pickStreams, rankHotspots,
+  type EventPulse, type LatLon,
+} from '../../../../utils/futureMap'
+import {
+  BUILDINGS, INTERACTIVE_LAYERS, LAYER_GROUPS, applyCity, cinematicIntro, createBeams, createHazards, createPin,
+  createRadar, createStreams, el, emptyFC, focusOrbit, installVibeLayers, rasterFallbackStyle, reducedMotion,
+  setLayersVisible, setSourceData, styleFor, type BeamItem, type Engine, type MapTheme, type StreamRoute,
+} from './futureMapEngine'
 
 export const SA_METRO_HUBS = [
   { name: 'Braamfontein', city: 'JHB', lat: -26.1926, lon: 28.0305 },
@@ -41,34 +58,66 @@ export const SA_METRO_HUBS = [
 
 type VibeCategoryFilter = 'all' | 'nightlife' | 'housing' | 'safety' | 'chill'
 
+const PULSE_LABEL: Record<EventPulse, string> = { live: 'On now', tonight: 'Tonight', soon: 'This week', later: 'Coming up' }
+const MAX_BEAMS = 12
+const TYPE_COLOR: Record<VibeItem['type'], string> = {
+  nightlife: '#c084fc', housing: '#D4AF37', safety: '#f59e0b', chill: '#22d3ee', poi: '#38bdf8'
+}
+
+type Fx = {
+  engine: Engine
+  loadStyle: (theme: MapTheme) => void
+  radar: ReturnType<typeof createRadar>
+  me: ReturnType<typeof createPin>
+  tap: ReturnType<typeof createPin>
+  beams: ReturnType<typeof createBeams>
+  streams: ReturnType<typeof createStreams>
+  hazards: ReturnType<typeof createHazards>
+}
+
+type MapActions = {
+  pickEvent: (id: string) => void
+  onMapClick: (feature: MapGeoJSONFeature | undefined, coords: LatLon) => void
+}
+
+const pointFC = <P extends Record<string, unknown>>(items: { lat: number; lon: number; props: P }[]) => ({
+  type: 'FeatureCollection' as const,
+  features: items.map(i => ({ type: 'Feature' as const, properties: i.props, geometry: { type: 'Point' as const, coordinates: [i.lon, i.lat] } })),
+})
+
 export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }) {
   const listings = useSelector((state: RootState) => state.listings.items)
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<import('leaflet').Map | null>(null)
-  const leafletRef = useRef<typeof import('leaflet') | null>(null)
-  const tileLayerRef = useRef<import('leaflet').TileLayer | null>(null)
-
-  // Dedicated Leaflet feature layers
-  const nightLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
-  const housingLayerRef = useRef<import('leaflet').MarkerClusterGroup | null>(null)
-  const safetyLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
-  const chillLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
-  const isochroneLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
-  const userPinLayerRef = useRef<import('leaflet').LayerGroup | null>(null)
+  const mapRef = useRef<MLMap | null>(null)
+  const fxRef = useRef<Fx | null>(null)
+  const actionsRef = useRef<MapActions | null>(null)
+  const compassRef = useRef<HTMLSpanElement>(null)
+  const coordsRef = useRef<HTMLSpanElement>(null)
+  // What the layers should show — read again whenever a style (re)loads.
+  const layerDataRef = useRef({ events: emptyFC(), housing: emptyFC(), safety: emptyFC(), iso: emptyFC() })
 
   // State
-  const [mapTheme, setMapTheme] = useState<'dark' | 'light' | 'satellite'>('dark')
+  const [mapTheme, setMapTheme] = useState<MapTheme>('dark')
+  const [show3D, setShow3D] = useState(true)
+  const themeRef = useRef<MapTheme>(mapTheme)
+  const show3DRef = useRef(show3D)
   const [activeVibeFilter, setActiveVibeFilter] = useState<VibeCategoryFilter>('all')
   const [center, setCenter] = useState<{ lat: number; lon: number } | null>(null)
+  const [userLoc, setUserLoc] = useState<LatLon | null>(null)
   const [geoResolved, setGeoResolved] = useState(false)
   const [isGpsDefault, setIsGpsDefault] = useState(false)
   const [activeHub, setActiveHub] = useState<string | null>('Braamfontein')
   const [selectedVibeItem, setSelectedVibeItem] = useState<VibeItem | null>(null)
+  const [isoCenter, setIsoCenter] = useState<LatLon | null>(null)
   const [showDropVibeModal, setShowDropVibeModal] = useState(false)
   const [gruvsEvents, setGruvsEvents] = useState<GruvsEvent[]>([])
+  const [eventsAt, setEventsAt] = useState(0)
   const [sharedZones, setSharedZones] = useState<SharedZone[]>([])
   const [pendingTapCoords, setPendingTapCoords] = useState<{ lat: number; lon: number; label?: string } | null>(null)
+  const [mapReady, setMapReady] = useState(false)
+  // Bumped on every style load: layers were (re)installed, so re-apply visibility.
+  const [styleEpoch, setStyleEpoch] = useState(0)
 
   const searchParams = useSearchParams()
   const queryLat = searchParams ? parseFloat(searchParams.get('lat') || '') : NaN
@@ -94,7 +143,9 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
     navigator.geolocation.getCurrentPosition(
       pos => {
-        setCenter({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+        const here = { lat: pos.coords.latitude, lon: pos.coords.longitude }
+        setCenter(here)
+        setUserLoc(here)
         setIsGpsDefault(false)
         setActiveHub(null)
         setGeoResolved(true)
@@ -117,6 +168,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         fetchSharedZones(lat, lon, 15000).catch(() => [])
       ])
       setGruvsEvents(events)
+      setEventsAt(Date.now())
       setSharedZones(zones)
     } catch {
       // Silently handle offline or network hiccups
@@ -128,331 +180,388 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     loadData(center.lat, center.lon)
   }, [center])
 
-  // 3. Leaflet Map Lifecycle
+  // 3. MapLibre lifecycle — created once geolocation resolves.
   useEffect(() => {
     if (!mapContainerRef.current || !center || !geoResolved) return
-    let isCancelled = false
+    let cancelled = false
+    let teardown = () => {}
+    const start = center
 
-    import('leaflet').then(async L => {
-      await import('leaflet.markercluster')
-      if (isCancelled || !mapContainerRef.current) return
+    import('maplibre-gl').then(mod => {
+      const container = mapContainerRef.current
+      if (cancelled || !container) return
+      const engine = ((mod as unknown as { default?: Engine }).default ?? mod) as Engine
 
-      leafletRef.current = L
-
-      // Delete default marker icons to avoid 404 asset bugs
-      delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: '',
-        iconUrl: '',
-        shadowUrl: ''
+      const map = new engine.Map({
+        container,
+        style: styleFor(themeRef.current),
+        center: [start.lon, start.lat],
+        zoom: 11.6,
+        pitch: 0,
+        maxPitch: 70,
+        attributionControl: { compact: true },
+        // Retina is plenty; 3x phones would triple the fill cost for nothing visible.
+        pixelRatio: Math.min(2, window.devicePixelRatio || 1),
+        fadeDuration: 180,
       })
-
-      if (mapRef.current) {
-        mapRef.current.remove()
-      }
-
-      const map = L.map(mapContainerRef.current, {
-        zoomControl: false,
-        preferCanvas: true
-      }).setView([center.lat, center.lon], 14)
-
-      const tileLayer = L.tileLayer(TILE_SOURCES[mapTheme], {
-        attribution: '&copy; CARTO &copy; OpenStreetMap',
-        maxZoom: 20,
-        subdomains: 'abcd'
-      })
-
-      // Seamless tile error fallback: if CARTO or ArcGIS is unreachable, automatically swap to OSM
-      tileLayer.on('tileerror', (e: import('leaflet').TileErrorEvent) => {
-        const targetTile = e.tile as HTMLImageElement
-        if (targetTile && !targetTile.dataset.fallbackApplied) {
-          targetTile.dataset.fallbackApplied = 'true'
-          const { x, y, z } = e.coords
-          targetTile.src = FALLBACK_TILE_SOURCE
-            .replace('{z}', String(z))
-            .replace('{x}', String(x))
-            .replace('{y}', String(y))
-        }
-      })
-
-      tileLayerRef.current = tileLayer.addTo(map)
-
-      // Initialize layers
-      nightLayerRef.current = L.layerGroup().addTo(map)
-      housingLayerRef.current = L.markerClusterGroup({
-        disableClusteringAtZoom: 16,
-        maxClusterRadius: 50,
-        spiderfyOnMaxZoom: true
-      }).addTo(map)
-      safetyLayerRef.current = L.layerGroup().addTo(map)
-      chillLayerRef.current = L.layerGroup().addTo(map)
-      isochroneLayerRef.current = L.layerGroup().addTo(map)
-      userPinLayerRef.current = L.layerGroup().addTo(map)
-
-      // If arrived via Find Me Beacon, render glowing resident radar beacon
-      if (isBeaconMode && !isNaN(queryLat) && !isNaN(queryLon) && userPinLayerRef.current) {
-        L.circleMarker([queryLat, queryLon], {
-          radius: 26,
-          color: '#8EB69B',
-          fillColor: '#8EB69B',
-          fillOpacity: 0.28,
-          weight: 2,
-          className: 'vibe-pulsing-marker'
-        }).addTo(userPinLayerRef.current)
-
-        L.marker([queryLat, queryLon], {
-          icon: L.divIcon({
-            className: '',
-            html: `
-              <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 12px;border-radius:20px;background:rgba(11,43,38,0.95);backdrop-filter:blur(16px);border:1.5px solid #8EB69B;box-shadow:0 0 25px rgba(142,182,155,0.7);color:#fff;font-weight:900;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap;">
-                <span style="font-size:14px;">📍</span>
-                <span>Resident Beacon</span>
-              </div>
-            `,
-            iconSize: [140, 36],
-            iconAnchor: [70, 18]
-          })
-        }).addTo(userPinLayerRef.current)
-      }
-
       mapRef.current = map
 
-      // Map tap handler
-      map.on('click', async (e: import('leaflet').LeafletMouseEvent) => {
-        playTactileSound('pop')
-        const coords = { lat: e.latlng.lat, lon: e.latlng.lng }
-        setPendingTapCoords(coords)
+      // If the vector basemap can't load, fall back to keyless CARTO raster.
+      const styleState = { pending: true, fellBack: false, timer: 0 }
+      const fallBack = () => {
+        if (!styleState.pending || styleState.fellBack) return
+        styleState.fellBack = true
+        map.setStyle(rasterFallbackStyle(themeRef.current), { diff: false })
+      }
+      const armTimer = () => {
+        window.clearTimeout(styleState.timer)
+        styleState.timer = window.setTimeout(fallBack, 12000)
+      }
+      armTimer()
+      map.on('error', () => { if (styleState.pending) fallBack() })
 
-        // Drop temporary glowing tap marker
-        if (userPinLayerRef.current) {
-          userPinLayerRef.current.clearLayers()
-          L.circleMarker([coords.lat, coords.lon], {
-            radius: 9,
-            color: '#D4AF37',
-            fillColor: '#F59E0B',
-            fillOpacity: 0.9,
-            weight: 2
-          }).addTo(userPinLayerRef.current)
-        }
+      const fx: Fx = {
+        engine,
+        loadStyle: theme => {
+          styleState.pending = true
+          styleState.fellBack = false
+          armTimer()
+          // diff: false — a diffed switch drops our layers without firing style.load.
+          map.setStyle(styleFor(theme), { diff: false })
+        },
+        radar: createRadar(engine, map, { color: '#38bdf8' }),
+        me: createPin(engine, map, el('fm-me', '<div class="fm-me-halo"></div><div class="fm-me-core"></div>')),
+        tap: createPin(engine, map, el('fm-tap', '<div class="fm-tap-body"><i></i><div class="fm-tap-core"></div></div>')),
+        beams: createBeams(engine, map, { onPress: id => actionsRef.current?.pickEvent(id) }),
+        streams: createStreams(engine, map),
+        hazards: createHazards(engine, map),
+      }
+      fx.me.el.setAttribute('aria-hidden', 'true')
+      fxRef.current = fx
 
-        const address = await reverseGeocode(coords.lat, coords.lon)
-        if (address) {
-          setPendingTapCoords(prev => prev ? { ...prev, label: address } : null)
-        }
+      // If arrived via Find Me Beacon, render the glowing resident radar beacon
+      let beacon: { destroy: () => void }[] = []
+      if (isBeaconMode && !isNaN(queryLat) && !isNaN(queryLon)) {
+        const spot = { lat: queryLat, lon: queryLon }
+        const ring = createRadar(engine, map, { color: '#8EB69B', radiusM: 600 })
+        ring.setLocation(spot)
+        const tag = el('fm-beacon-tag', '<span aria-hidden="true">📍</span><span>Resident Beacon</span>')
+        const label = createPin(engine, map, tag, { anchor: 'bottom', offset: [0, -14] })
+        label.set(spot)
+        beacon = [ring, label]
+      }
+
+      map.on('style.load', () => {
+        styleState.pending = false
+        window.clearTimeout(styleState.timer)
+        try {
+          installVibeLayers(map, layerDataRef.current)
+          fx.streams.install()
+          applyCity(map, themeRef.current, show3DRef.current)
+        } catch { /* a half-loaded fallback style: the next load retries */ }
+        setStyleEpoch(e => e + 1)
       })
+      map.once('load', () => cinematicIntro(map, start, show3DRef.current))
+
+      // Taps: a pin, room, cluster or alert opens it; empty ground drops a pin.
+      map.on('click', e => {
+        const layers = INTERACTIVE_LAYERS.filter(id => map.getLayer(id))
+        const hit = layers.length ? map.queryRenderedFeatures(e.point, { layers })[0] : undefined
+        actionsRef.current?.onMapClick(hit, { lat: e.lngLat.lat, lon: e.lngLat.lng })
+      })
+      for (const id of INTERACTIVE_LAYERS) {
+        map.on('mouseenter', id, () => { map.getCanvas().style.cursor = 'pointer' })
+        map.on('mouseleave', id, () => { map.getCanvas().style.cursor = '' })
+      }
+
+      // HUD: the compass turns with the map; the readout follows the centre.
+      const turn = () => {
+        if (compassRef.current) compassRef.current.style.transform = `rotate(${-map.getBearing()}deg)`
+      }
+      const readout = () => {
+        const c = map.getCenter()
+        if (coordsRef.current) {
+          coordsRef.current.textContent = `${Math.abs(c.lat).toFixed(4)}°${c.lat < 0 ? 'S' : 'N'} ${Math.abs(c.lng).toFixed(4)}°${c.lng < 0 ? 'W' : 'E'} · Z${map.getZoom().toFixed(1)}`
+        }
+      }
+      map.on('rotate', turn)
+      map.on('moveend', readout)
+      readout()
+
+      setMapReady(true)
+
+      teardown = () => {
+        window.clearTimeout(styleState.timer)
+        beacon.forEach(b => b.destroy())
+        fx.radar.destroy(); fx.me.destroy(); fx.tap.destroy()
+        fx.beams.destroy(); fx.streams.destroy(); fx.hazards.destroy()
+        map.remove()
+        mapRef.current = null
+        fxRef.current = null
+      }
     })
 
     return () => {
-      isCancelled = true
+      cancelled = true
+      teardown()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-time Leaflet canvas initialization once geolocation resolves
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-time map creation once geolocation resolves
   }, [geoResolved])
 
-  // 4. Update basemap tile URL smoothly
+  // 4. Basemap switch (a style switch drops custom layers; style.load re-adds them)
+  const appliedThemeRef = useRef<MapTheme>(mapTheme)
   useEffect(() => {
-    tileLayerRef.current?.setUrl(TILE_SOURCES[mapTheme])
-  }, [mapTheme])
+    themeRef.current = mapTheme
+    if (!mapReady || appliedThemeRef.current === mapTheme) return
+    appliedThemeRef.current = mapTheme
+    fxRef.current?.loadStyle(mapTheme)
+  }, [mapTheme, mapReady])
 
-  // 5. Render Nightlife Layer (The Gruvs Events)
+  // 5. Nightlife (The Gruvs events): dots for all, light beams on the soonest.
+  const hotspots = useMemo(() => rankHotspots(gruvsEvents, new Date(eventsAt || 0), Infinity), [gruvsEvents, eventsAt])
+  const eventById = useMemo(() => new Map(gruvsEvents.map(ev => [ev.id, ev])), [gruvsEvents])
+  const eventsFC = useMemo(
+    () => pointFC(hotspots.map(h => ({ lat: h.lat, lon: h.lon, props: { id: h.id, color: PULSE_COLOR[h.pulse] } }))),
+    [hotspots]
+  )
   useEffect(() => {
-    const L = leafletRef.current
-    const layer = nightLayerRef.current
-    if (!L || !layer || !center) return
-    layer.clearLayers()
+    layerDataRef.current.events = eventsFC
+    const map = mapRef.current
+    if (map) setSourceData(map, 'fm-events', eventsFC)
+    fxRef.current?.beams.update(hotspots.slice(0, MAX_BEAMS).map((h): BeamItem => {
+      const ev = eventById.get(h.id)
+      return {
+        id: h.id, lat: h.lat, lon: h.lon, pulse: h.pulse,
+        color: PULSE_COLOR[h.pulse], height: PULSE_HEIGHT[h.pulse],
+        title: ev?.title || 'Event',
+        subtitle: [PULSE_LABEL[h.pulse], ev?.venue].filter(Boolean).join(' · '),
+      }
+    }))
+  }, [eventsFC, hotspots, eventById, mapReady, styleEpoch])
 
-    if (activeVibeFilter !== 'all' && activeVibeFilter !== 'nightlife') return
+  // 6. Housing: clustered glass price pills.
+  const housingFC = useMemo(() => pointFC(
+    listings
+      .filter(l => typeof l.lat === 'number' && typeof l.lon === 'number')
+      .map(l => ({ lat: l.lat!, lon: l.lon!, props: { id: l.id, label: `${l.currency || 'R'} ${l.price.toLocaleString()}` } }))
+  ), [listings])
+  useEffect(() => {
+    layerDataRef.current.housing = housingFC
+    const map = mapRef.current
+    if (map) setSourceData(map, 'fm-housing', housingFC)
+  }, [housingFC, mapReady, styleEpoch])
 
-    gruvsEvents.forEach(ev => {
-      // Each event goes where its venue actually is. This used to place every
-      // event on an invented ring 0.6–2km around the viewer's own position —
-      // chosen by list order, not venue — then quote a distance and walking
-      // time to that made-up point. An event without real coordinates is left
-      // off the map rather than put somewhere it isn't.
-      if (ev.lat === undefined || ev.lon === undefined) return
-      const eLat = ev.lat
-      const eLon = ev.lon
+  // 7. Safety & caution alerts, with a warning sonar on the nearest few.
+  const safetyFC = useMemo(() => pointFC(sharedZones.map(z => {
+    const isRoadClosed = z.kind === 'road_closed'
+    return { lat: z.lat, lon: z.lon, props: { id: z.id, color: isRoadClosed ? '#ef4444' : '#f59e0b', icon: isRoadClosed ? 'fm-hazard-road' : 'fm-hazard-caution' } }
+  })), [sharedZones])
+  useEffect(() => {
+    layerDataRef.current.safety = safetyFC
+    const map = mapRef.current
+    if (map) setSourceData(map, 'fm-safety', safetyFC)
+    const origin = center
+    const nearest = origin
+      ? [...sharedZones].sort((a, b) => distanceKm(origin, a) - distanceKm(origin, b))
+      : sharedZones
+    fxRef.current?.hazards.update(nearest.map(z => ({ lat: z.lat, lon: z.lon, color: z.kind === 'road_closed' ? '#ef4444' : '#f59e0b' })))
+  }, [safetyFC, sharedZones, center, mapReady, styleEpoch])
 
-      // Pulsing Neon Halo
-      L.circleMarker([eLat, eLon], {
-        radius: 22,
-        color: '#c084fc',
-        fillColor: '#9333ea',
-        fillOpacity: 0.22,
-        weight: 1.5,
-        className: 'vibe-pulsing-marker'
-      }).addTo(layer)
+  // 8. Filters: show or hide whole layer groups (no rebuilding).
+  useEffect(() => {
+    const map = mapRef.current, fx = fxRef.current
+    if (!map || !fx) return
+    const show = (g: VibeCategoryFilter) => activeVibeFilter === 'all' || activeVibeFilter === g
+    setLayersVisible(map, LAYER_GROUPS.nightlife, show('nightlife'))
+    setLayersVisible(map, LAYER_GROUPS.housing, show('housing'))
+    setLayersVisible(map, LAYER_GROUPS.safety, show('safety'))
+    fx.beams.setVisible(show('nightlife'))
+    fx.hazards.setVisible(show('safety'))
+  }, [activeVibeFilter, mapReady, styleEpoch])
 
-      // Hotspot Icon with Liquid Glass Specular Styling
-      const marker = L.marker([eLat, eLon], {
-        icon: L.divIcon({
-          className: '',
-          html: `
-            <div style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:16px;background:rgba(21,13,42,0.85);backdrop-filter:blur(16px);border:1.5px solid rgba(192,132,252,0.8);box-shadow:0 10px 25px rgba(0,0,0,0.6),inset 0 1px 1px rgba(255,255,255,0.4),0 0 18px rgba(192,132,252,0.45);cursor:pointer;transition:transform 0.2s cubic-bezier(0.16,1,0.3,1);" onmouseover="this.style.transform='scale(1.2) translateY(-2px)'" onmouseout="this.style.transform='scale(1)'">
-              <span style="font-size:16px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));">🔥</span>
-            </div>
-          `,
-          iconSize: [38, 38],
-          iconAnchor: [19, 19]
-        })
-      })
+  // 9. Route streams: from you to the soonest events nearby, and to whatever you picked.
+  const routes = useMemo((): StreamRoute[] => {
+    if (!center) return []
+    const out: StreamRoute[] = []
+    if (activeVibeFilter === 'all' || activeVibeFilter === 'nightlife') {
+      for (const h of pickStreams(center, hotspots)) {
+        out.push({ pts: arcPoints(center, h), color: PULSE_COLOR[h.pulse], focus: selectedVibeItem?.id === h.id, km: h.km })
+      }
+    }
+    const pick = selectedVibeItem
+    if (pick && !out.some(r => r.focus)) {
+      const km = distanceKm(center, pick)
+      if (km > 0.03 && km <= 25) out.push({ pts: arcPoints(center, pick), color: TYPE_COLOR[pick.type], focus: true, km })
+    }
+    return out
+  }, [center, hotspots, selectedVibeItem, activeVibeFilter])
+  useEffect(() => { fxRef.current?.streams.update(routes) }, [routes, mapReady])
 
-      marker.on('click', () => {
-        playTactileSound('pop')
-        const distM = distanceMetres(center, { lat: eLat, lon: eLon })
-        // Only what The Gruvs actually holds: title, venue, city, date. No
-        // score, no guestlist or drink specials — none of those exist.
-        const where = [ev.venue, ev.city].filter(Boolean).join(', ')
-        setSelectedVibeItem({
-          id: ev.id,
-          type: 'nightlife',
-          title: ev.title,
-          subtitle: where || GRUVS.name,
-          description: `${formatGruvsEventWhen(ev.startsAt, { long: true })} · listed on ${GRUVS.name}.`,
-          lat: eLat,
-          lon: eLon,
-          badge: GRUVS.name,
-          distanceLabel: distM < 1000 ? `${Math.round(distM)}m away` : `${(distM / 1000).toFixed(1)}km away`,
-          // A walking time is only worth quoting when walking is plausible.
-          walkTimeMins: distM <= 3000 ? Math.round(distM / 80) : undefined,
-          partnerLink: GRUVS.url ?? undefined
-        })
-      })
+  // 10. Walking rings round a picked room.
+  useEffect(() => {
+    const iso = isochroneFeatures(isoCenter)
+    layerDataRef.current.iso = iso
+    const map = mapRef.current
+    if (map) setSourceData(map, 'fm-iso', iso)
+  }, [isoCenter, mapReady, styleEpoch])
 
-      marker.addTo(layer)
+  // 11. You: blue dot + radar sized to the 15-minute walk.
+  useEffect(() => {
+    fxRef.current?.radar.setLocation(userLoc)
+    fxRef.current?.me.set(userLoc)
+  }, [userLoc, mapReady])
+
+  // 12. 3D buildings on/off.
+  useEffect(() => {
+    show3DRef.current = show3D
+    const map = mapRef.current
+    if (map) setLayersVisible(map, [BUILDINGS], show3D)
+  }, [show3D, mapReady, styleEpoch])
+
+  // 13. Picking something flies to it and slowly orbits until you touch the map.
+  useEffect(() => {
+    const map = mapRef.current, fx = fxRef.current
+    if (!map || !fx) return
+    fx.beams.setFocus(selectedVibeItem?.type === 'nightlife' ? selectedVibeItem.id : null)
+    if (!selectedVibeItem) return
+    return focusOrbit(map, selectedVibeItem, { zoom: selectedVibeItem.type === 'housing' ? 15.2 : 16.2, show3D: show3DRef.current })
+  }, [selectedVibeItem, mapReady])
+
+  // ── Picks (same cards as before) ───────────────────────────────────────
+  const selectEvent = (ev: GruvsEvent) => {
+    if (!center || ev.lat === undefined || ev.lon === undefined) return
+    playTactileSound('pop')
+    const eLat = ev.lat
+    const eLon = ev.lon
+    const distM = distanceMetres(center, { lat: eLat, lon: eLon })
+    // Only what The Gruvs actually holds: title, venue, city, date. No
+    // score, no guestlist or drink specials — none of those exist.
+    const where = [ev.venue, ev.city].filter(Boolean).join(', ')
+    setIsoCenter(null)
+    setSelectedVibeItem({
+      id: ev.id,
+      type: 'nightlife',
+      title: ev.title,
+      subtitle: where || GRUVS.name,
+      description: `${formatGruvsEventWhen(ev.startsAt, { long: true })} · listed on ${GRUVS.name}.`,
+      lat: eLat,
+      lon: eLon,
+      badge: GRUVS.name,
+      distanceLabel: formatDistance(distM),
+      // A walking time is only worth quoting when walking is plausible.
+      walkTimeMins: distM <= 3000 ? Math.round(distM / 80) : undefined,
+      partnerLink: GRUVS.url ?? undefined
     })
-  }, [gruvsEvents, center, activeVibeFilter])
+  }
 
-  // 6. Render Housing Layer (Liquid Glass Price Pills & Walking Isochrones)
+  const selectListing = (listing: Listing) => {
+    if (!center || typeof listing.lat !== 'number' || typeof listing.lon !== 'number') return
+    playTactileSound('pop')
+    const spot = { lat: listing.lat, lon: listing.lon }
+    const distM = distanceMetres(center, spot)
+    setIsoCenter(spot) // 5- and 10-minute walking rings
+    setSelectedVibeItem({
+      id: listing.id,
+      type: 'housing',
+      title: listing.title,
+      subtitle: listing.suburb || listing.location,
+      description: listing.description || 'Room listing on The Resident.',
+      price: listing.price,
+      currency: listing.currency,
+      lat: spot.lat,
+      lon: spot.lon,
+      // No score and no "Verified" badge: nothing here verifies a listing,
+      // and a number with nothing behind it reads as a rating.
+      badge: 'Room listing',
+      distanceLabel: formatDistance(distM),
+      walkTimeMins: Math.round(distM / 80)
+    })
+  }
+
+  const selectZone = (zone: SharedZone) => {
+    if (!center) return
+    playTactileSound('pop')
+    const isRoadClosed = zone.kind === 'road_closed'
+    const distM = distanceMetres(center, zone)
+    setIsoCenter(null)
+    setSelectedVibeItem({
+      id: zone.id,
+      type: 'safety',
+      title: zone.label || (isRoadClosed ? 'Road Closed' : 'Street Caution'),
+      subtitle: `Reported by ${zone.source_app === 'gruvs' ? 'The Gruvs' : 'The Resident'} Resident`,
+      description: zone.note || 'Reported by a resident. Take care, or choose another route.',
+      lat: zone.lat,
+      lon: zone.lon,
+      badge: isRoadClosed ? 'Hazard Block' : 'Street Alert',
+      distanceLabel: formatDistance(distM),
+      walkTimeMins: Math.round(distM / 80)
+    })
+  }
+
+  // Map callbacks read the latest data and handlers through this ref.
   useEffect(() => {
-    const L = leafletRef.current
-    const cluster = housingLayerRef.current
-    if (!L || !cluster || !center) return
-    cluster.clearLayers()
-
-    if (activeVibeFilter !== 'all' && activeVibeFilter !== 'housing') return
-
-    listings.forEach(listing => {
-      if (typeof listing.lat !== 'number' || typeof listing.lon !== 'number') return
-
-      const marker = L.marker([listing.lat, listing.lon], {
-        icon: L.divIcon({
-          className: '',
-          html: `
-            <div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:9999px;background:rgba(5,31,32,0.85);backdrop-filter:blur(16px);border:1.5px solid rgba(142,182,155,0.7);color:#F0F7F4;font-family:inherit;font-size:11px;font-weight:900;letter-spacing:0.02em;box-shadow:0 8px 24px rgba(0,0,0,0.6),inset 0 1px 1px rgba(255,255,255,0.35),0 0 14px rgba(142,182,155,0.3);cursor:pointer;white-space:nowrap;transition:all 0.2s cubic-bezier(0.16,1,0.3,1);" onmouseover="this.style.transform='scale(1.15) translateY(-2px)';this.style.borderColor='#8EB69B';this.style.background='rgba(11,43,38,0.95)'" onmouseout="this.style.transform='scale(1)';this.style.borderColor='rgba(142,182,155,0.7)';this.style.background='rgba(5,31,32,0.85)'">
-              <span style="color:#8EB69B;">🏠</span>
-              <span>${listing.currency || 'R'} ${listing.price.toLocaleString()}</span>
-            </div>
-          `,
-          iconSize: [80, 30],
-          iconAnchor: [40, 15]
-        })
-      })
-
-      marker.on('click', () => {
-        playTactileSound('pop')
-        const distM = distanceMetres(center, { lat: listing.lat!, lon: listing.lon! })
-
-        // Draw walking radius rings on click
-        if (isochroneLayerRef.current) {
-          isochroneLayerRef.current.clearLayers()
-          L.circle([listing.lat!, listing.lon!], {
-            radius: 400, // 5 min
-            color: '#22c55e',
-            dashArray: '4 4',
-            fillColor: '#22c55e',
-            fillOpacity: 0.08,
-            weight: 1.5
-          }).addTo(isochroneLayerRef.current)
-
-          L.circle([listing.lat!, listing.lon!], {
-            radius: 800, // 10 min
-            color: '#06b6d4',
-            dashArray: '6 6',
-            fillColor: '#06b6d4',
-            fillOpacity: 0.04,
-            weight: 1.2
-          }).addTo(isochroneLayerRef.current)
+    actionsRef.current = {
+      pickEvent: id => {
+        const ev = eventById.get(id)
+        if (ev) selectEvent(ev)
+      },
+      onMapClick: (feature, coords) => {
+        const map = mapRef.current
+        if (feature) {
+          const id = String(feature.properties?.id ?? '')
+          switch (feature.layer.id) {
+            case 'fm-events-dot': {
+              const ev = eventById.get(id)
+              if (ev) selectEvent(ev)
+              return
+            }
+            case 'fm-housing-pill': {
+              const listing = listings.find(l => l.id === id)
+              if (listing) selectListing(listing)
+              return
+            }
+            case 'fm-safety-icon': {
+              const zone = sharedZones.find(z => z.id === id)
+              if (zone) selectZone(zone)
+              return
+            }
+            case 'fm-housing-cluster': {
+              playTactileSound('tab')
+              const clusterId = Number(feature.properties?.cluster_id)
+              const at = feature.geometry.type === 'Point' ? feature.geometry.coordinates as [number, number] : null
+              const src = map?.getSource('fm-housing') as GeoJSONSource | undefined
+              if (map && src && at && Number.isFinite(clusterId)) {
+                src.getClusterExpansionZoom(clusterId)
+                  .then(zoom => map.easeTo({ center: at, zoom: Math.min(18, zoom + 0.3), duration: reducedMotion() ? 0 : 700 }))
+                  .catch(() => {})
+              }
+              return
+            }
+          }
         }
 
-        setSelectedVibeItem({
-          id: listing.id,
-          type: 'housing',
-          title: listing.title,
-          subtitle: listing.suburb || listing.location,
-          description: listing.description || 'Room listing on The Resident.',
-          price: listing.price,
-          currency: listing.currency,
-          lat: listing.lat!,
-          lon: listing.lon!,
-          // No score and no "Verified" badge: nothing here verifies a listing,
-          // and a number with nothing behind it reads as a rating.
-          badge: 'Room listing',
-          distanceLabel: distM < 1000 ? `${Math.round(distM)}m away` : `${(distM / 1000).toFixed(1)}km away`,
-          walkTimeMins: Math.round(distM / 80)
-        })
-      })
-
-      marker.addTo(cluster)
-    })
-  }, [listings, center, activeVibeFilter])
-
-  // 7. Render Safety & Caution Layer
-  useEffect(() => {
-    const L = leafletRef.current
-    const layer = safetyLayerRef.current
-    if (!L || !layer || !center) return
-    layer.clearLayers()
-
-    if (activeVibeFilter !== 'all' && activeVibeFilter !== 'safety') return
-
-    sharedZones.forEach(zone => {
-      const isRoadClosed = zone.kind === 'road_closed'
-      const color = isRoadClosed ? '#ef4444' : '#f59e0b'
-
-      // Safety Halo
-      L.circleMarker([zone.lat, zone.lon], {
-        radius: 20,
-        color,
-        fillColor: color,
-        fillOpacity: 0.16,
-        weight: 1.5,
-        className: 'vibe-pulsing-marker'
-      }).addTo(layer)
-
-      // Marker
-      const marker = L.marker([zone.lat, zone.lon], {
-        icon: L.divIcon({
-          className: '',
-          html: `
-            <div style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:10px;background:${color};border:2px solid #fff;box-shadow:0 0 14px ${color};cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
-              <span style="font-size:13px;color:#fff;">${isRoadClosed ? '🚧' : '⚠️'}</span>
-            </div>
-          `,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        })
-      })
-
-      marker.on('click', () => {
+        // Empty ground: drop a glowing pin and look up the address.
         playTactileSound('pop')
-        const distM = distanceMetres(center, zone)
-        setSelectedVibeItem({
-          id: zone.id,
-          type: 'safety',
-          title: zone.label || (isRoadClosed ? 'Road Closed' : 'Street Caution'),
-          subtitle: `Reported by ${zone.source_app === 'gruvs' ? 'The Gruvs' : 'The Resident'} Resident`,
-          description: zone.note || 'Reported by a resident. Take care, or choose another route.',
-          lat: zone.lat,
-          lon: zone.lon,
-          badge: isRoadClosed ? 'Hazard Block' : 'Street Alert',
-          distanceLabel: distM < 1000 ? `${Math.round(distM)}m away` : `${(distM / 1000).toFixed(1)}km away`,
-          walkTimeMins: Math.round(distM / 80)
+        setPendingTapCoords(coords)
+        fxRef.current?.tap.set(null) // re-adding restarts the drop animation
+        fxRef.current?.tap.set(coords)
+        reverseGeocode(coords.lat, coords.lon).then(address => {
+          if (!address) return
+          // Only label the pin it was asked for, not a newer one.
+          setPendingTapCoords(prev => prev && prev.lat === coords.lat && prev.lon === coords.lon ? { ...prev, label: address } : prev)
         })
-      })
+      },
+    }
+  })
 
-      marker.addTo(layer)
+  const flyTo = (spot: LatLon, zoom = 15) => {
+    mapRef.current?.flyTo({
+      center: [spot.lon, spot.lat], zoom,
+      pitch: show3D ? 55 : 0,
+      duration: reducedMotion() ? 0 : 1600,
+      essential: true,
     })
-  }, [sharedZones, center, activeVibeFilter])
+  }
 
   // Recenter GPS Button
   const handleRecenter = () => {
@@ -462,9 +571,10 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       pos => {
         const newCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude }
         setCenter(newCoords)
+        setUserLoc(newCoords)
         setIsGpsDefault(false)
         setActiveHub(null)
-        mapRef.current?.flyTo([newCoords.lat, newCoords.lon], 15, { duration: 1.2 })
+        flyTo(newCoords)
       },
       () => {
         setIsGpsDefault(true)
@@ -477,33 +587,93 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     playTactileSound('tab')
     setActiveHub(hub.name)
     setCenter({ lat: hub.lat, lon: hub.lon })
-    mapRef.current?.flyTo([hub.lat, hub.lon], 15, { duration: 1.2 })
+    flyTo(hub)
   }
 
+  const toggle3D = () => {
+    playTactileSound('click')
+    const next = !show3D
+    setShow3D(next)
+    mapRef.current?.easeTo({ pitch: next ? 55 : 0, bearing: next ? mapRef.current.getBearing() : 0, duration: reducedMotion() ? 0 : 900 })
+  }
+
+  const pointNorth = () => {
+    playTactileSound('click')
+    mapRef.current?.easeTo({ bearing: 0, duration: reducedMotion() ? 0 : 600 })
+  }
+
+  const closeSheet = () => {
+    setSelectedVibeItem(null)
+    setIsoCenter(null)
+  }
+
+  const counts = {
+    events: hotspots.length,
+    rooms: housingFC.features.length,
+    alerts: sharedZones.length,
+  }
+
+  const themeButton = (theme: MapTheme, label: string, Icon: typeof Moon) => (
+    <button
+      onClick={() => { playTactileSound('click'); setMapTheme(theme) }}
+      className={`p-2 rounded-xl text-xs font-bold transition-all ${mapTheme === theme ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'}`}
+      title={label}
+      aria-label={label}
+      aria-pressed={mapTheme === theme}
+    >
+      <Icon size={16} />
+    </button>
+  )
+
   return (
-    <div className={`relative w-full overflow-hidden ${fullscreen ? 'h-screen' : 'h-[calc(100vh-13rem)] min-h-[580px] rounded-3xl border border-white/10 shadow-glass'}`}>
+    <div
+      className={`fm-map relative w-full overflow-hidden ${fullscreen ? 'h-screen' : 'h-[calc(100vh-13rem)] min-h-[580px] rounded-3xl border border-white/10 shadow-glass'}`}
+      // Not `data-theme`: that attribute is the app's palette switch (globals.css).
+      data-map-theme={mapTheme}
+    >
       {/* Map Target Canvas */}
-      <div ref={mapContainerRef} className="w-full h-full bg-[#0a0a0c]" />
+      {/* Sized by width/height, not `absolute inset-0`: maplibre-gl.css makes the container position: relative. */}
+      <div ref={mapContainerRef} className="w-full h-full" role="region" aria-label="Vibe map" />
+
+      {/* HUD: vignette, faint grid, scan line, corner brackets */}
+      <div className="fm-hud" aria-hidden="true">
+        <div className="fm-hud-vignette" />
+        {mapTheme !== 'light' && <div className="fm-hud-grid" />}
+        <div className="fm-hud-scan" />
+        <i className="fm-hud-c tl" /><i className="fm-hud-c tr" /><i className="fm-hud-c bl" /><i className="fm-hud-c br" />
+      </div>
+
+      {/* Boot screen until the first style has loaded */}
+      {styleEpoch === 0 && (
+        <div className="absolute inset-0 z-[3] flex items-center justify-center pointer-events-none">
+          <div className="fm-glass flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-black/70 border border-white/10 text-[11px] font-black uppercase tracking-[0.18em] text-gray-200">
+            <span className="fm-live-dot" style={{ background: '#22d3ee', boxShadow: '0 0 10px #22d3ee' }} />
+            {geoResolved ? 'Rendering 3D city' : 'Locating you'}
+          </div>
+        </div>
+      )}
 
       {/* Top Floating Control Bar */}
-      <div className="absolute top-4 left-4 right-4 z-[500] flex flex-col gap-2.5 pointer-events-none">
+      {/* Fullscreen: the community page puts its Exit button top-left, so start after it. */}
+      <div className={`absolute top-4 ${fullscreen ? 'left-[92px]' : 'left-4'} right-4 z-[500] flex flex-col gap-2.5 pointer-events-none`}>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
           {/* Search Input Box */}
-          <div className="w-full sm:w-80 pointer-events-auto">
+          <div className="w-full sm:w-80 pointer-events-auto fm-rise">
             <MapSearchBox
               onSelect={(result) => {
                 playTactileSound('tab')
                 setActiveHub(null)
                 setCenter({ lat: result.lat, lon: result.lon })
-                mapRef.current?.flyTo([result.lat, result.lon], 15, { duration: 1.2 })
+                flyTo(result)
               }}
             />
           </div>
 
         {/* Vibe Category Filter Pills */}
-        <div className="flex items-center gap-1.5 bg-black/85 backdrop-blur-2xl p-1.5 rounded-2xl border border-white/15 shadow-2xl overflow-x-auto max-w-full pointer-events-auto no-scrollbar">
+        <div className="fm-glass fm-rise flex items-center gap-1.5 bg-black/70 p-1.5 rounded-2xl border border-white/15 shadow-2xl overflow-x-auto max-w-full pointer-events-auto no-scrollbar" style={{ ['--fm-i' as string]: 1 }}>
           <button
             onClick={() => { playTactileSound('tab'); setActiveVibeFilter('all') }}
+            aria-pressed={activeVibeFilter === 'all'}
             className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
               activeVibeFilter === 'all'
                 ? 'bg-gold-primary text-black shadow-glow'
@@ -516,6 +686,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
           <button
             onClick={() => { playTactileSound('tab'); setActiveVibeFilter('nightlife') }}
+            aria-pressed={activeVibeFilter === 'nightlife'}
             className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
               activeVibeFilter === 'nightlife'
                 ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]'
@@ -528,6 +699,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
           <button
             onClick={() => { playTactileSound('tab'); setActiveVibeFilter('housing') }}
+            aria-pressed={activeVibeFilter === 'housing'}
             className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
               activeVibeFilter === 'housing'
                 ? 'bg-amber-500 text-black shadow-glow'
@@ -540,6 +712,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
           <button
             onClick={() => { playTactileSound('tab'); setActiveVibeFilter('safety') }}
+            aria-pressed={activeVibeFilter === 'safety'}
             className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 ${
               activeVibeFilter === 'safety'
                 ? 'bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]'
@@ -555,17 +728,19 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       {/* SA Metro Hubs Quick Jump Bar */}
       <div className="w-full flex items-center justify-between gap-2 pointer-events-auto">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 shrink-0 flex items-center gap-1 bg-black/60 backdrop-blur-xl px-2.5 py-1 rounded-xl border border-white/10">
+          <span className="fm-glass text-[10px] font-black uppercase tracking-wider text-gray-300 shrink-0 flex items-center gap-1 bg-black/60 px-2.5 py-1 rounded-xl border border-white/10">
             <Building2 size={12} className="text-gold-primary" /> Metro:
           </span>
-          {SA_METRO_HUBS.map(hub => (
+          {SA_METRO_HUBS.map((hub, i) => (
             <button
               key={hub.name}
               onClick={() => handleSelectHub(hub)}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold tracking-tight shrink-0 transition-all border ${
+              aria-pressed={activeHub === hub.name}
+              style={{ ['--fm-i' as string]: i + 2 }}
+              className={`fm-rise px-2.5 py-1 rounded-xl text-[11px] font-bold tracking-tight shrink-0 transition-all border ${
                 activeHub === hub.name
                   ? 'bg-gold-primary text-black border-gold-primary shadow-glow font-black'
-                  : 'bg-black/75 text-gray-300 border-white/10 hover:border-white/30 hover:text-white backdrop-blur-xl'
+                  : 'fm-glass bg-black/65 text-gray-300 border-white/10 hover:border-white/30 hover:text-white'
               }`}
             >
               {hub.name} <span className="text-[9px] opacity-70">({hub.city})</span>
@@ -581,6 +756,16 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       </div>
     </div>
 
+      {/* Telemetry: what's on the map, and where the map is looking */}
+      <div className="hidden md:block absolute left-4 bottom-[76px] z-[500] pointer-events-none">
+        <div className="fm-glass fm-telemetry flex items-center gap-2.5 px-3 py-2 rounded-xl bg-black/65 border border-white/10 text-gray-200">
+          <span className="fm-live-dot" aria-hidden="true" />
+          <span>{counts.events} EVENTS · {counts.rooms} ROOMS · {counts.alerts} ALERTS</span>
+          <span className="text-gray-600" aria-hidden="true">|</span>
+          <span ref={coordsRef} className="text-gray-400" />
+        </div>
+      </div>
+
       {/* Floating Bottom Left: Drop Vibe CTA */}
       <div className="absolute bottom-20 md:bottom-5 left-4 z-[500] flex items-center gap-2">
         <button
@@ -595,7 +780,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         </button>
 
         {pendingTapCoords?.label && (
-          <div className="hidden md:flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/10 px-3 py-2 rounded-2xl text-[11px] text-gray-300 max-w-xs truncate">
+          <div className="fm-glass hidden md:flex items-center gap-2 bg-black/70 border border-white/10 px-3 py-2 rounded-2xl text-[11px] text-gray-300 max-w-xs truncate">
             <MapPin size={13} className="text-gold-primary shrink-0" />
             <span className="truncate">{pendingTapCoords.label}</span>
           </div>
@@ -603,31 +788,42 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       </div>
 
       {/* Floating Bottom Right: Map & Position Controls */}
-      <div className="absolute bottom-20 md:bottom-5 right-4 z-[500] flex flex-col gap-2.5">
-        {/* Basemap Switcher (Dark / Voyager / Satellite) */}
-        <div className="bg-black/85 backdrop-blur-2xl border border-white/10 rounded-2xl p-1 shadow-2xl flex flex-col gap-1">
-          <button
-            onClick={() => { playTactileSound('click'); setMapTheme('dark') }}
-            className={`p-2 rounded-xl text-xs font-bold transition-all ${mapTheme === 'dark' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'}`}
-            title="Dark Cyberpunk Map"
-            aria-label="Dark Cyberpunk Map"
-          >
-            <Compass size={16} />
-          </button>
-          <button
-            onClick={() => { playTactileSound('click'); setMapTheme('satellite') }}
-            className={`p-2 rounded-xl text-xs font-bold transition-all ${mapTheme === 'satellite' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'}`}
-            title="Satellite Imagery"
-            aria-label="Satellite Imagery"
-          >
-            <Satellite size={16} />
-          </button>
+      <div className="absolute bottom-20 md:bottom-12 right-4 z-[500] flex flex-col items-end gap-2.5">
+        {/* Basemap Switcher (Neon / Day / Satellite) */}
+        <div className="fm-glass bg-black/70 border border-white/10 rounded-2xl p-1 shadow-2xl flex flex-col gap-1">
+          {themeButton('dark', 'Neon Night Map', Moon)}
+          {themeButton('light', 'Day Map', Sun)}
+          {themeButton('satellite', 'Satellite Imagery', Satellite)}
         </div>
+
+        {/* 3D city on/off */}
+        <button
+          onClick={toggle3D}
+          className={`fm-glass p-3 border rounded-2xl shadow-2xl transition-all active:scale-95 flex items-center justify-center ${show3D ? 'bg-gold-primary/15 border-gold-primary/50 text-gold-primary' : 'bg-black/70 border-white/10 text-gray-300 hover:text-white'}`}
+          title={show3D ? 'Flat 2D map' : '3D city'}
+          aria-label={show3D ? 'Switch to a flat 2D map' : 'Switch to the 3D city'}
+          aria-pressed={show3D}
+        >
+          <Box size={18} />
+        </button>
+
+        {/* Compass: turns with the map, tap for north up */}
+        <button
+          onClick={pointNorth}
+          className="fm-glass p-3 bg-black/70 border border-cyan-300/30 rounded-2xl shadow-[0_0_16px_rgba(0,242,255,0.18)] transition-all active:scale-95 flex items-center justify-center"
+          title="Point the map north"
+          aria-label="Point the map north"
+        >
+          <span ref={compassRef} className="fm-compass-dial" aria-hidden="true">
+            <span className="fm-compass-n">N</span>
+            <span className="fm-compass-needle" />
+          </span>
+        </button>
 
         {/* GPS Locate Me */}
         <button
           onClick={handleRecenter}
-          className="p-3 bg-black/85 hover:bg-black backdrop-blur-2xl border border-white/10 text-gold-primary hover:text-white rounded-2xl shadow-2xl transition-all active:scale-95 flex items-center justify-center"
+          className="fm-glass p-3 bg-black/70 hover:bg-black border border-white/10 text-gold-primary hover:text-white rounded-2xl shadow-2xl transition-all active:scale-95 flex items-center justify-center"
           title="Recenter to My GPS Location"
           aria-label="Recenter to My GPS Location"
         >
@@ -636,13 +832,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       </div>
 
       {/* Interactive Bottom Sheet POI Details */}
-      <VibeBottomSheet
-        item={selectedVibeItem}
-        onClose={() => {
-          setSelectedVibeItem(null)
-          isochroneLayerRef.current?.clearLayers()
-        }}
-      />
+      <VibeBottomSheet item={selectedVibeItem} onClose={closeSheet} />
 
       {/* Quick Vibe Dropper Modal */}
       <QuickVibeReportModal
@@ -653,23 +843,6 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
           if (center) loadData(center.lat, center.lon)
         }}
       />
-
-      {/* Global CSS for pulsing markers */}
-      <style jsx global>{`
-        .vibe-pulsing-marker {
-          animation: vibePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes vibePulse {
-          0%, 100% {
-            opacity: 0.8;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.2;
-            transform: scale(1.15);
-          }
-        }
-      `}</style>
     </div>
   )
 }
