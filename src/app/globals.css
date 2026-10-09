@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+<<<<<<< HEAD
 /* Preflight is off (tailwind.config.ts), so a <button> with no background
    utility fell back to the browser's light-grey default: inactive tabs
    rendered as bright white pills on the dark theme. :where() keeps this at
@@ -9,6 +10,27 @@
 :where(button) {
   background-color: transparent;
   border: 0 solid;
+=======
+:root {
+  --background: #051F20;
+  --foreground: #ededed;
+  --gold-primary: #8EB69B;
+  --gold-secondary: #235347;
+  --gold-dim: rgba(142, 182, 155, 0.16);
+  --glass-border: rgba(142, 182, 155, 0.2);
+  --card-bg: rgba(11, 43, 38, 0.65);
+  --input-bg: rgba(5, 31, 32, 0.7);
+  --glass-bg: rgba(11, 43, 38, 0.55);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --glow-color: rgba(142, 182, 155, 0.35);
+  --accent-teal: #8EB69B;
+  --accent-violet: #235347;
+  --accent-rose: #DAF1DE;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+>>>>>>> 1f4b5ab (feat: enable The Gruvs SSO login and overhaul residence modals responsiveness)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -129,12 +151,16 @@
   --accent-rose: rgb(var(--fg));
 }
 
+html,
 body {
+  max-width: 100vw;
+  overflow-x: hidden;
   color: var(--foreground);
   background: var(--background);
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 ::selection {
@@ -665,15 +691,31 @@ body {
 }
 
 /* Room for the fixed bottom bar so the last bit of page content is never
-   hidden behind it — the bar's own height varies slightly with the safe-area
-   inset, so this is a deliberately generous flat estimate rather than a
-   brittle exact match. */
+   hidden behind it — accounts for the safe-area inset on notch/island phones. */
 .dashboard-page-body {
-  padding-bottom: 5rem;
+  padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+  min-height: calc(100vh - 4rem);
+}
+
+/* Modal Responsive Sheet System:
+   Full width on small phones, bottom-sheet style with max-height constraint
+   and smooth inertial scrolling so users can always interact and close. */
+.modal-responsive-sheet {
+  max-height: min(88dvh, 88vh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 640px) {
+  .modal-responsive-sheet {
+    max-height: min(85dvh, 85vh);
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
 }
 
 @media (max-width: 1024px) {
-
   .dashboard-page-title span {
     display: none; /* icon only on small screens to save top-bar space */
   }

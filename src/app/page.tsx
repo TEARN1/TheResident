@@ -20,11 +20,22 @@ export default function Home() {
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginLoading, setLoginLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null)
+  const [gruvsMode, setGruvsMode] = useState(false)
 
   const dispatch = useDispatch<AppDispatch>()
   const router = useRouter()
   const failedAttempts = useSelector((state: RootState) => state.auth.failedAttempts)
   const lockedUntil = useSelector((state: RootState) => state.auth.lockedUntil)
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('sso') === 'gruvs' || params.get('from') === 'gruvs' || params.get('mode') === 'gruvs') {
+        setShowLogin(true)
+        setGruvsMode(true)
+      }
+    }
+  }, [])
 
   const handleInlineLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,17 +103,27 @@ export default function Home() {
               transition={{ duration: 0.2 }}
               className={`glass-panel ${styles.loginPopover}`}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', margin: 0 }}>Log In</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                  {gruvsMode ? 'Log In with The Gruvs' : 'Log In'}
+                </h3>
                 <button type="button" onClick={() => setShowLogin(false)} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}>
                   <X size={16} />
                 </button>
               </div>
+
+              {gruvsMode && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 0.75rem', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.35)', borderRadius: '8px', marginBottom: '0.75rem', fontSize: '0.72rem', color: '#e9d5ff' }}>
+                  <Image src="/gruvs-logo.png" alt="The Gruvs" width={18} height={18} style={{ borderRadius: '50%', flexShrink: 0 }} />
+                  <span><strong>One account:</strong> Sign in with your The Gruvs email &amp; password.</span>
+                </div>
+              )}
+
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="name@domain.com"
+                placeholder={gruvsMode ? "your-gruvs-email@domain.com" : "name@domain.com"}
                 required
                 style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: '#fff', fontSize: '0.85rem', marginBottom: '0.6rem', outline: 'none' }}
               />
@@ -110,7 +131,7 @@ export default function Home() {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="secure key..."
+                placeholder={gruvsMode ? "The Gruvs password..." : "secure key..."}
                 required
                 style={{ width: '100%', boxSizing: 'border-box', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.65rem 0.8rem', color: '#fff', fontSize: '0.85rem', marginBottom: '0.8rem', outline: 'none' }}
               />
@@ -123,27 +144,52 @@ export default function Home() {
                 className="btn-primary"
                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                {loginLoading ? <Loader size={14} className="animate-spin" /> : <LogIn size={14} />}
-                {loginLoading ? 'Logging in…' : 'Log In'}
+                {loginLoading ? <Loader size={14} className="animate-spin" /> : (
+                  gruvsMode ? <Image src="/gruvs-logo.png" alt="The Gruvs" width={14} height={14} style={{ borderRadius: '50%' }} /> : <LogIn size={14} />
+                )}
+                {loginLoading ? 'Logging in…' : (gruvsMode ? 'Log In with The Gruvs' : 'Log In')}
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0.7rem 0' }}>
                 <span style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }} />
                 <span style={{ fontSize: '0.65rem', color: '#666', letterSpacing: '1px' }}>OR</span>
                 <span style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }} />
               </div>
-              {/* Google temporarily pulled — Supabase provider isn't configured yet. */}
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setGruvsMode(v => !v)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    background: gruvsMode ? 'rgba(168, 85, 247, 0.25)' : 'rgba(168, 85, 247, 0.12)',
+                    border: gruvsMode ? '1px solid #a855f7' : '1px solid rgba(168, 85, 247, 0.35)',
+                    borderRadius: '8px',
+                    padding: '0.55rem',
+                    color: '#fff',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Image src="/gruvs-logo.png" alt="The Gruvs" width={16} height={16} style={{ borderRadius: '50%' }} />
+                  {gruvsMode ? 'Switch to Standard Login' : 'Sign in with The Gruvs'}
+                </button>
                 <button
                   type="button"
                   onClick={() => handleOAuth('facebook')}
                   disabled={oauthLoading !== null}
-                  style={{ flex: 1, background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.55rem', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+                  style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.55rem', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
                 >
                   {oauthLoading === 'facebook' ? '…' : 'Continue with Facebook'}
                 </button>
               </div>
               <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.8rem', textAlign: 'center' }}>
                 New here? <Link href="/auth" style={{ color: 'var(--gold-primary)' }}>Create an account</Link>
+                {' '}•{' '}
+                <Link href="/auth?mode=gruvs" style={{ color: '#c084fc' }}>Join via Gruvs</Link>
               </p>
             </motion.form>
           )}

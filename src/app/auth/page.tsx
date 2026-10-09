@@ -43,6 +43,14 @@ export default function AuthPage() {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('residentTheme') : null
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage on mount
     if (stored) setTheme(stored)
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('sso') === 'gruvs' || params.get('from') === 'gruvs' || params.get('provider') === 'gruvs' || params.get('mode') === 'gruvs' || params.get('gruvs') === 'true') {
+        setActiveTab('login')
+        setGruvsMode(true)
+      }
+    }
   }, [])
 
   const toggleTheme = () => {
@@ -136,10 +144,17 @@ export default function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password || !role) return
+    if (!email || !password) return
 
     setErrorMessage(null)
-    const result = await performLogin({ email, password, dispatch, failedAttempts, lockedUntil, fallbackRole: role })
+    const result = await performLogin({
+      email,
+      password,
+      dispatch,
+      failedAttempts,
+      lockedUntil,
+      fallbackRole: role ? (role as 'tenant' | 'landlord') : undefined
+    })
     if (!result.ok) {
       setErrorMessage(result.error)
       return
@@ -363,17 +378,33 @@ export default function AuthPage() {
         )}
 
         {gruvsMode && activeTab === 'login' && (
-          <div style={gruvsBannerStyle}>
+          <div style={{ ...gruvsBannerStyle, border: '1px solid rgba(168, 85, 247, 0.4)', background: 'rgba(168, 85, 247, 0.12)' }}>
             <GruvsMark />
             <span>
-              <strong>One account.</strong> Sign in with the same email &amp; password you use on
+              <strong>One account across both apps.</strong> Sign in with the same email &amp; password you use on
               The Gruvs — we&apos;ll set up your Resident profile automatically.
             </span>
           </div>
         )}
 
-        {/* Google temporarily pulled — Supabase provider isn't configured yet. */}
-        <div style={oauthRowStyle}>
+        {/* Unified Cross-App SSO & Social Logins */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem' }}>
+          <button
+            type="button"
+            onClick={handleGruvsSSO}
+            style={{
+              ...gruvsBtnStyle,
+              marginBottom: 0,
+              background: gruvsMode ? 'rgba(168, 85, 247, 0.28)' : 'linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(212, 175, 55, 0.12) 100%)',
+              borderColor: gruvsMode ? '#a855f7' : 'rgba(212, 175, 55, 0.45)',
+              color: '#FFFFFF',
+              boxShadow: 'none',
+            }}
+          >
+            <GruvsMark />
+            <span>Continue with The Gruvs</span>
+          </button>
+
           <button
             type="button"
             onClick={() => handleOAuth('facebook')}
@@ -383,29 +414,44 @@ export default function AuthPage() {
             {oauthLoading === 'facebook' ? 'Connecting…' : 'Continue with Facebook'}
           </button>
         </div>
+
+        {activeTab === 'signup' && (
+          <div style={{ ...gruvsBannerStyle, marginTop: '1rem', marginBottom: 0, background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
+            <GruvsMark />
+            <span>
+              <strong>Already on The Gruvs?</strong> You don&apos;t need to register again.{' '}
+              <button
+                type="button"
+                onClick={handleGruvsSSO}
+                style={{ background: 'none', border: 'none', color: 'var(--gold-primary)', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+              >
+                Sign in with The Gruvs
+              </button>
+            </span>
+          </div>
+        )}
+
         <div style={socialDividerStyle}>
           <span style={socialDividerLineStyle} />
-          <span style={socialDividerTextStyle}>or</span>
+          <span style={socialDividerTextStyle}>or with email</span>
           <span style={socialDividerLineStyle} />
         </div>
 
         {activeTab === 'login' ? (
           <form onSubmit={handleLogin} style={formStyle}>
             <div style={inputGroupStyle}>
-              <label style={labelStyle}>Access Role</label>
+              <label style={labelStyle}>Access Role (Optional)</label>
               <select
-                required
                 value={role}
                 onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
                 style={selectStyle}
               >
-                <option value="" disabled>Select your role…</option>
+                <option value="">Auto-detect from existing profile (or choose…)</option>
                 <option value="tenant">I am a Tenant looking for a Room</option>
                 <option value="landlord">I am a Landlord renting out Rooms</option>
               </select>
               <p style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
-                Only used to set up your account the very first time you sign in — ignored after that.
-                Got the wrong one? Fix it any time from Profile → Switch role.
+                Existing Gruvs &amp; Resident accounts keep their saved role. New here? Choose now or configure during onboarding.
               </p>
             </div>
 
@@ -470,7 +516,11 @@ export default function AuthPage() {
             )}
 
             <button type="submit" className="btn-primary" style={submitButtonStyle}>
-              Grant Access <Lock size={14} style={{ marginLeft: 8 }} />
+              {gruvsMode ? (
+                <>Log In with The Gruvs <Lock size={14} style={{ marginLeft: 8 }} /></>
+              ) : (
+                <>Grant Access <Lock size={14} style={{ marginLeft: 8 }} /></>
+              )}
             </button>
 
             <button
@@ -1234,7 +1284,6 @@ const gruvsBtnStyle: React.CSSProperties = {
   fontWeight: 800,
   letterSpacing: '0.5px',
   cursor: 'pointer',
-  transition: 'all 0.25s ease',
-  boxShadow: '0 0 16px rgb(var(--accent) / 0.15)'
+  transition: 'all 0.25s ease'
 }
 

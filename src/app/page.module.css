@@ -58,12 +58,28 @@
   padding: 1.75rem 4rem;
   z-index: 10;
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .navbar {
+    padding: 1.25rem 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .navbar {
+    padding: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
 }
 
 .logo {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.15em;
   color: var(--gold-primary);
   font-family: var(--font-heading);
   text-transform: uppercase;
@@ -71,7 +87,7 @@
 
 .navLinks {
   display: flex;
-  gap: 2.5rem;
+  gap: 1.5rem;
   align-items: center;
 }
 
@@ -94,9 +110,11 @@
   justify-content: center;
   align-items: center;
   text-align: center;
-  padding: 2rem;
+  padding: 2rem 1rem;
   position: relative;
   z-index: 5;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .badge {
@@ -113,27 +131,19 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-bottom: 1.75rem;
+  max-width: 90vw;
 }
 
 .title {
-  font-size: 4rem;
-  margin-bottom: 1.5rem;
-  line-height: 1.1;
+  font-size: clamp(2rem, 6vw, 4rem);
+  margin-bottom: 1.25rem;
+  line-height: 1.15;
   font-family: var(--font-heading);
   background: linear-gradient(120deg, #ffffff 30%, var(--gold-primary) 65%, var(--accent-violet) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-
-@media (max-width: 768px) {
-  .title {
-    font-size: 2.5rem;
-  }
-
-  .navbar {
-    padding: 1.5rem;
-  }
+  max-width: 95vw;
 }
 
 .goldText {
@@ -146,24 +156,36 @@
 }
 
 .subtitle {
-  font-size: 1.25rem;
+  font-size: clamp(0.95rem, 2.5vw, 1.25rem);
   color: #a0a0a0;
   max-width: 600px;
-  margin-bottom: 3rem;
+  margin-bottom: 2.5rem;
   line-height: 1.6;
   font-weight: 300;
+  padding: 0 0.5rem;
 }
 
 .ctaGroup {
   display: flex;
-  gap: 1.5rem;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .ctaGroup {
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+    gap: 0.85rem;
+  }
 }
 
 .featuresGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 2rem;
-  padding: 4rem 4rem 6rem 4rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1.75rem;
+  padding: 3rem 1.5rem 5rem 1.5rem;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -172,8 +194,15 @@
   position: relative;
 }
 
+@media (max-width: 640px) {
+  .featuresGrid {
+    padding: 2rem 1rem 4rem 1rem;
+    gap: 1.25rem;
+  }
+}
+
 .featureCard {
-  padding: 2.5rem;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -181,6 +210,13 @@
   border-top: 3px solid transparent;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .featureCard {
+    padding: 1.5rem;
+  }
 }
 
 .featureCard::before {
