@@ -348,12 +348,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Global Spotlight Palette Trigger (Ctrl+K) */}
             <CommandPalette />
 
+            {/* Futuristic Planetary Telemetry Capsule */}
+            <div className="hidden xl:inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono text-gray-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-bold text-gray-200">GRID: 99%</span>
+              <span className="text-white/20">|</span>
+              <span className="text-cyan-400 font-bold">DEFENSE: ARMED</span>
+            </div>
+
             {/* Ecosystem Badges: The Gruvs & TEARNs Excellence */}
             <a
               href={GRUVS.url ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all shadow-sm group/gruvs"
+              onClick={() => playTactileSound('tab')}
+              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all group/gruvs"
               title={`${GRUVS.name}: ${GRUVS.short}`}
             >
               <Image
@@ -372,6 +381,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               href={TEARNS.url}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => playTactileSound('tab')}
               className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-all"
               title={`${TEARNS.name}: ${TEARNS.short}`}
             >
@@ -382,8 +392,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Visual Theme Studio Trigger */}
             <button
+              type="button"
               onClick={() => { setShowThemeModal(true); playTactileSound('tab') }}
-              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all shadow-sm group/theme"
+              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all group/theme"
               title="Change visual theme and color palette"
             >
               <Palette size={13} className="text-gold-primary group-hover/theme:rotate-12 transition-transform" />
@@ -392,8 +403,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Platform Legal Shield & Governance Trigger */}
             <button
+              type="button"
               onClick={() => { setShowLegalModal(true); playTactileSound('tab') }}
-              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all shadow-sm"
+              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all"
               title="Platform Legal Shield, Neutrality Disclaimers & POPIA Governance"
             >
               <Scale size={13} className="text-amber-400" />
@@ -481,7 +493,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {isActive && (
                 <motion.div
                   layoutId="activeTabIndicator"
-                  className="absolute inset-0 bg-gold-primary rounded-2xl shadow-glow"
+                  className="absolute inset-0 bg-gold-primary rounded-2xl"
                   transition={{ type: 'spring', damping: 25, stiffness: 350 }}
                 />
               )}

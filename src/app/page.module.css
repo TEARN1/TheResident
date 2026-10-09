@@ -287,3 +287,87 @@
     width: auto;
   }
 }
+
+/* Futuristic Cybernetic Telemetry */
+.telemetryBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 2rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(10, 10, 16, 0.65);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  max-width: 95vw;
+}
+
+.telemetryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #d1d5db;
+}
+
+.telemetryPulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: pulseRadar 2s infinite ease-in-out;
+}
+
+@keyframes pulseRadar {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.6); opacity: 1; }
+}
+
+/* The Holy Trinity Ecosystem Showcase */
+.trinityContainer {
+  max-width: 1400px;
+  margin: 3rem auto 5rem auto;
+  padding: 0 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 5;
+}
+
+.trinityHeader {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.trinityGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 1.5rem;
+}
+
+.trinityCard {
+  background: rgba(8, 8, 14, 0.7);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.35s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.trinityCard:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-4px);
+}

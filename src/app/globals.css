@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-<<<<<<< HEAD
 /* Preflight is off (tailwind.config.ts), so a <button> with no background
    utility fell back to the browser's light-grey default: inactive tabs
    rendered as bright white pills on the dark theme. :where() keeps this at
@@ -10,27 +9,13 @@
 :where(button) {
   background-color: transparent;
   border: 0 solid;
-=======
+}
+
 :root {
-  --background: #051F20;
-  --foreground: #ededed;
-  --gold-primary: #8EB69B;
-  --gold-secondary: #235347;
-  --gold-dim: rgba(142, 182, 155, 0.16);
-  --glass-border: rgba(142, 182, 155, 0.2);
-  --card-bg: rgba(11, 43, 38, 0.65);
-  --input-bg: rgba(5, 31, 32, 0.7);
-  --glass-bg: rgba(11, 43, 38, 0.55);
-  --shadow-color: rgba(0, 0, 0, 0.5);
-  --glow-color: rgba(142, 182, 155, 0.35);
-  --accent-teal: #8EB69B;
-  --accent-violet: #235347;
-  --accent-rose: #DAF1DE;
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
   --sar: env(safe-area-inset-right, 0px);
->>>>>>> 1f4b5ab (feat: enable The Gruvs SSO login and overhaul residence modals responsiveness)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
