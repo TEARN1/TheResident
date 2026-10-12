@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Home, MessageSquare,
-  Sparkles, ExternalLink, Table2, Zap, MapPin, X, ArrowRight, User
+  Sparkles, ExternalLink, Table2, Zap, MapPin, X, ArrowRight, User, Layers
 } from 'lucide-react'
 import { GRUVS, TEARNS } from '../../../../utils/sisterApps'
 import { playTactileSound } from '../../../../utils/tactileSounds'
@@ -81,6 +81,14 @@ export default function CommandPalette() {
       action: () => { router.push('/dashboard/gossip'); setOpen(false) }
     },
     {
+      id: 'nav-departments',
+      title: 'Triangular Department Directives',
+      subtitle: 'Cascading notices: Education, Defense, Utilities & Universities',
+      category: 'App Navigation',
+      icon: Layers,
+      action: () => { router.push('/dashboard/community?tab=departments'); setOpen(false) }
+    },
+    {
       id: 'nav-profile',
       title: 'Citizen Profile & Verification',
       subtitle: 'Switch between Tenant & Landlord modes',
@@ -139,7 +147,7 @@ export default function CommandPalette() {
       {/* Floating launcher indicator in dashboard */}
       <button
         onClick={() => { setOpen(true); playTactileSound('pop') }}
-        className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all text-xs font-semibold shadow-sm"
+        className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all text-xs font-semibold"
         title="Open Command Palette (Ctrl+K)"
       >
         <Search size={13} className="text-gold-primary" />

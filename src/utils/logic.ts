@@ -404,7 +404,9 @@ export function shouldDeliver(
 // nothing here assumes any one country or region.
 
 const CURRENCY_FALLBACK_SYMBOL: Record<string, string> = {
-  ZAR: 'R', USD: '$', EUR: '€', GBP: '£', KES: 'KSh', NGN: '₦', GHS: 'GH₵'
+  ZAR: 'R', USD: '$', EUR: '€', GBP: '£', KES: 'KSh', NGN: '₦', GHS: 'GH₵',
+  CAD: 'CA$', AUD: 'A$', JPY: '¥', INR: '₹', BRL: 'R$', AED: 'AED', CHF: 'CHF',
+  SGD: 'S$', NZD: 'NZ$', MXN: 'MX$', CNY: '¥', ZMW: 'ZK', BWP: 'P', NAD: 'N$'
 }
 
 /** Formats an amount in its OWN currency — never guessed from a location string. */

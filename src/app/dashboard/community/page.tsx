@@ -6,7 +6,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, X, Shield, Users, Droplets, Lock,
-  LayoutGrid, AlertTriangle, ListChecks, Sparkles, DoorOpen, Map as MapIcon
+  LayoutGrid, AlertTriangle, ListChecks, Sparkles, DoorOpen, Map as MapIcon, Layers
 } from 'lucide-react'
 import {
   RootState,
@@ -57,6 +57,7 @@ import SharedResourcesTab from '../components/household/SharedResourcesTab'
 import CommunityAdminTab from '../components/community/CommunityAdminTab'
 import GruvsConnectionsWidget from '../components/social/GruvsConnectionsWidget'
 import OrgBroadcastsPanel from '../components/community/OrgBroadcastsPanel'
+import InstitutionalBroadcastsPortal from '../components/community/InstitutionalBroadcastsPortal'
 import dynamic from 'next/dynamic'
 import { formatCurrency, type StatusReport } from '../../../utils/logic'
 
@@ -68,8 +69,8 @@ const VibeMap = dynamic(() => import('../components/map/VibeMap'), {
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
   const searchParams = useSearchParams()
-  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'resources' | 'admin'>(
-    searchParams.get('tab') === 'vibemap' ? 'vibemap' : 'overview'
+  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'resources' | 'admin' | 'departments'>(
+    searchParams.get('tab') === 'vibemap' ? 'vibemap' : searchParams.get('tab') === 'departments' ? 'departments' : 'overview'
   )
   const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
   // Arriving via the top bar's "Map" quick-link (?tab=vibemap) means the
@@ -84,6 +85,7 @@ export default function CommunityPage() {
   // first mount, so a repeat visit needs this effect to still catch the param.
   useEffect(() => {
     if (searchParams.get('tab') === 'vibemap') { setSubTab('vibemap'); setMapFullscreen(true) }
+    else if (searchParams.get('tab') === 'departments') { setSubTab('departments'); setMapFullscreen(false) }
   }, [searchParams])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
@@ -380,6 +382,7 @@ export default function CommunityPage() {
       accent: 'text-sky-400 bg-sky-400/10',
       tabs: [
         { id: 'notices', label: 'Notices', icon: Megaphone },
+        { id: 'departments', label: 'Departments', icon: Layers },
         { id: 'communities', label: 'Groups', icon: Users },
       ],
     },
@@ -601,6 +604,9 @@ export default function CommunityPage() {
                  />
                 <OrgBroadcastsPanel />
               </div>
+            )}
+            {subTab === 'departments' && (
+              <InstitutionalBroadcastsPortal inline={true} />
             )}
             {subTab === 'market' && (
               <MarketTab

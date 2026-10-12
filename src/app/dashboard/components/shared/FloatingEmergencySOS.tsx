@@ -106,7 +106,7 @@ export default function FloatingEmergencySOS() {
   return (
     <>
       {/* Floating SOS Trigger Pill */}
-      <div className="fixed bottom-20 right-4 z-40">
+      <div className="fixed bottom-[calc(5.2rem+env(safe-area-inset-bottom,0px))] right-3 sm:right-6 z-40">
         <button
           type="button"
           onClick={() => {
@@ -130,7 +130,7 @@ export default function FloatingEmergencySOS() {
               initial={{ opacity: 0, y: 50, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 50, scale: 0.95 }}
-              className="relative w-full max-w-lg bg-black/95 border border-red-500/40 rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgba(239,68,68,0.25)] backdrop-blur-2xl overflow-hidden"
+              className="relative w-full max-w-lg max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black/95 border border-red-500/40 rounded-t-3xl sm:rounded-3xl p-5 sm:p-7 shadow-[0_0_60px_rgba(239,68,68,0.25)] backdrop-blur-2xl"
             >
               {/* Emergency Ambient Ray */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
