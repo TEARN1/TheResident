@@ -97,7 +97,7 @@ export default function MapSearchBox({ onSelect }: Props) {
           onChange={e => setQuery(e.target.value)}
           onFocus={() => (visibleResults.length > 0 || showRecent) && setOpen(true)}
           placeholder="Search places, suburbs, addresses..."
-          className="bg-transparent outline-none text-xs text-white placeholder:text-gray-400 w-full font-medium"
+          className="bg-transparent border-0 outline-none text-xs text-white placeholder:text-gray-400 w-full font-medium"
         />
         {query && (
           <button
