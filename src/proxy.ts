@@ -17,7 +17,11 @@ import { scanInput } from './utils/security'
 // Named and commented this way deliberately — the previous "rate limiting
 // simulator" wording read as a real control in SECURITY.md.
 const instanceThrottleMap = new Map<string, { count: number; resetTime: number }>()
-const INSTANCE_THROTTLE_MAX = 60 // per instance, per minute — best effort only
+// Every dashboard page load also prefetches the six bottom-nav routes, so
+// one page view is ~7 requests here. At 60/min a resident tapping through
+// eight pages in a minute got a raw JSON 429 page; 300 still stops a
+// single-connection flood but never trips on normal browsing.
+const INSTANCE_THROTTLE_MAX = 300 // per instance, per minute — best effort only
 const WINDOW_MS = 60 * 1000
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''

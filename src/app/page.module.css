@@ -22,6 +22,19 @@
   border-radius: 50%;
   filter: blur(120px);
   opacity: 0.55;
+  will-change: transform;
+  animation: blobDrift 24s ease-in-out infinite alternate;
+}
+
+.glowBottom { animation-duration: 30s; animation-direction: alternate-reverse; }
+.glowMid { animation-duration: 19s; }
+
+@keyframes blobDrift {
+  to { transform: translate3d(8%, 6%, 0) scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glowBlob { animation: none; }
 }
 
 .glowTop {

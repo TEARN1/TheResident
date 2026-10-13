@@ -43,14 +43,6 @@ export default function AuthPage() {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('residentTheme') : null
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage on mount
     if (stored) setTheme(stored)
-
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      if (params.get('sso') === 'gruvs' || params.get('from') === 'gruvs' || params.get('provider') === 'gruvs' || params.get('mode') === 'gruvs' || params.get('gruvs') === 'true') {
-        setActiveTab('login')
-        setGruvsMode(true)
-      }
-    }
   }, [])
 
   const toggleTheme = () => {
@@ -112,6 +104,18 @@ export default function AuthPage() {
   const [resetEmailSent, setResetEmailSent] = useState(false)
   // "Sign in with The Gruvs" mode — shows the one-account helper on the login form.
   const [gruvsMode, setGruvsMode] = useState(false)
+
+  // Arriving from The Gruvs (?sso=gruvs and friends) opens Log In in Gruvs
+  // mode. Declared after activeTab/gruvsMode: it used to sit above them and
+  // called both setters before they existed.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('sso') === 'gruvs' || params.get('from') === 'gruvs' || params.get('provider') === 'gruvs' || params.get('mode') === 'gruvs' || params.get('gruvs') === 'true') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the URL on mount
+      setActiveTab('login')
+      setGruvsMode(true)
+    }
+  }, [])
   const [passwordStrength, setPasswordStrength] = useState<{strong: boolean; score: number; feedback: string[]} | null>(null)
 
   const handlePasswordChange = (val: string) => {
