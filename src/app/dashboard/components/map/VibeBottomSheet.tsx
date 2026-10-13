@@ -127,6 +127,7 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
               playTactileSound('pop')
               onClose()
             }}
+            aria-label="Close"
             className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white transition-all shrink-0"
           >
             <X size={16} />
@@ -161,7 +162,8 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
             <div className="overflow-hidden">
               <span className="text-[9px] text-gray-400 uppercase font-black tracking-wider block">Walking Time</span>
               <span className="text-xs font-bold text-emerald-400 truncate block">
-                {item.walkTimeMins ? `~${item.walkTimeMins} min walk` : 'Too far to walk'}
+                {/* 0 means you're already there, not "too far" — only a missing time means too far. */}
+                {item.walkTimeMins === undefined ? 'Too far to walk' : item.walkTimeMins < 1 ? 'Under a minute' : `~${item.walkTimeMins} min walk`}
               </span>
             </div>
           </div>
