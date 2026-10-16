@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, Radar, FileText, HeartHandshake, Calculator, ClipboardList, Upload, Camera
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, FileText, HeartHandshake, Calculator, ClipboardList, Upload, Camera
 } from 'lucide-react'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import {
@@ -32,6 +32,10 @@ import ReviewsList from '../components/social/ReviewsList'
 import dynamic from 'next/dynamic'
 import SavedSearches from '../components/housing/SavedSearches'
 import ListingTrustPanel from '../components/housing/ListingTrustPanel'
+import HousingGetStarted from '../components/housing/HousingGetStarted'
+import ShareListingButton from '../components/housing/ShareListingButton'
+import { LAUNCH_AREA } from '../../../utils/launch'
+import { track } from '../../../utils/track'
 import Link from 'next/link'
 import PropertiesPanel, { type ResProperty } from '../components/housing/PropertiesPanel'
 import EmptyState from '../components/shared/EmptyState'
@@ -90,6 +94,9 @@ export default function HousingPage() {
   // distinguished by listing_type, same pattern as the quick-post merge above.
   const [filterListingType, setFilterListingType] = useState<'rent' | 'sale' | 'guesthouse'>('rent')
   const [filterParking, setFilterParking] = useState(false)
+  // "Stay near this event" deep link from The Gruvs (?event=<gruvs event id>):
+  // guest houses linked to that one event.
+  const [filterEventId, setFilterEventId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
 
   // Create Modal State
@@ -190,6 +197,40 @@ export default function HousingPage() {
   // session bootstrap). Guarded by a ref so it never yanks the tab back while
   // a landlord is deliberately browsing Rooms.
   const hasSteeredTab = React.useRef(false)
+
+  // Deep links, read once on arrival:
+  //   ?listing=<id>  a room shared on WhatsApp (via /rooms/<id>): open it
+  //   ?event=<id>    The Gruvs' "stay near this event": guest houses for it
+  //   ?tab=rooms|roommates|properties
+  // Declared before the role steering below so a deep link wins over it.
+  const pendingListingId = React.useRef<string | null>(null)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const listing = params.get('listing')
+    const event = params.get('event')
+    const tab = params.get('tab')
+    if (listing) pendingListingId.current = listing
+    if (event && /^[0-9a-zA-Z-]{1,64}$/.test(event)) {
+      hasSteeredTab.current = true
+      setActiveTab('rooms')
+      setFilterListingType('guesthouse')
+      setFilterEventId(event)
+    } else if (listing || tab === 'rooms' || tab === 'roommates' || tab === 'properties') {
+      hasSteeredTab.current = true
+      setActiveTab(tab === 'roommates' || tab === 'properties' ? tab : 'rooms')
+    }
+  }, [])
+
+  // The shared room opens once the listings it lives in have loaded.
+  useEffect(() => {
+    const id = pendingListingId.current
+    if (!id) return
+    const found = allListings.find(l => l.id === id)
+    if (!found) return
+    pendingListingId.current = null
+    setActiveListing(found)
+  }, [allListings])
+
   useEffect(() => {
     if (hasSteeredTab.current || !currentUser) return
     hasSteeredTab.current = true
@@ -222,13 +263,13 @@ export default function HousingPage() {
 
   useEffect(() => {
     let cancelled = false
-    const ids = [...new Set(allListings.map(l => l.eventId).filter((id): id is string => !!id))]
+    const ids = [...new Set([...allListings.map(l => l.eventId), filterEventId].filter((id): id is string => !!id))]
     if (ids.length === 0) return
     fetchGruvsEventsByIds(ids).then(info => {
       if (!cancelled) setGruvsEventInfo(prev => ({ ...prev, ...info }))
     })
     return () => { cancelled = true }
-  }, [allListings])
+  }, [allListings, filterEventId])
 
   const filteredListingsRaw = useSelector((state: RootState) => selectFilteredListings(
     state,
@@ -251,6 +292,7 @@ export default function HousingPage() {
     .filter(isVisible)
     .filter(l => !filterQuickPostOnly || l.quickPost)
     .filter(l => (l.listingType || 'rent') === filterListingType)
+    .filter(l => !filterEventId || l.eventId === filterEventId)
     .sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
 
   const filteredRoommates = useSelector((state: RootState) => selectMatchedRoommates(
@@ -303,14 +345,16 @@ export default function HousingPage() {
       currency: newCurrency,
       location: newLocation,
       suburb: newSuburb,
-      safetyRating: 'high',
-      safetyNotes: 'Verified community watch area.',
+      // Nobody has assessed the area yet, so claim nothing: tenant reviews
+      // (res_listing_safety) are what speak to safety, not the poster.
+      safetyRating: 'medium',
+      safetyNotes: '',
       landlordId: currentUser?.id || '',
       landlordName: currentUser?.name || '',
       landlordLivesHere: newLivesHere,
-      images: newImages.length > 0
-        ? newImages
-        : ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80'],
+      // No stock photo stand-in: a stranger's flat passed off as this room
+      // is exactly what rental scams do. Cards show a plain placeholder.
+      images: newImages,
       amenities: { wifi: newWifi, parking: newParking, bathroom: newBathroom },
       requirements: {
         genderPreference: newGenderPref,
@@ -329,13 +373,14 @@ export default function HousingPage() {
       visibleUntil: newListingType === 'guesthouse' ? GUESTHOUSE_SEASON_END : null
     }
     dispatch(addListing(listing))
+    track('listing_created', { type: newListingType, suburb: newSuburb || null, photos: newImages.length }, currentUser?.id)
     setShowCreateModal(false)
     setNewImages([])
     setNewPropertyId('')
     setNewQuickPost(false)
     setNewListingType('rent')
     setNewEventId('')
-    setAlertNotification('Property listed successfully with verified photos!')
+    setAlertNotification('Room listed. Share it on WhatsApp so people actually see it.')
   }
 
   // A signed-out guest has no id, so the request row it built was orphaned —
@@ -367,6 +412,7 @@ export default function HousingPage() {
       timestamp: new Date().toLocaleDateString()
     }
     dispatch(addRequest(request))
+    track('apply_sent', { type: activeListing.listingType || 'rent' }, currentUser?.id)
     setActiveListing(null)
     setApplyMessage('')
     setAlertNotification('Application sent to landlord.')
@@ -438,7 +484,7 @@ export default function HousingPage() {
       <header className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-xl font-black text-white uppercase tracking-tight">Find A <span className="text-gold-primary">Home</span></h2>
-          <p className="text-xs text-gray-400 font-medium mt-0.5">Explore verified rooms, compatible roommates, and managed properties.</p>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Real rooms posted by their landlords, compatible roommates, and your own properties.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
@@ -693,7 +739,7 @@ export default function HousingPage() {
                 </div>
              ) : (
                 <Link
-                   href="/dashboard/profile"
+                   href={isGuest ? '/auth?role=landlord' : '/dashboard/profile?role=landlord'}
                    className="bg-white/5 hover:bg-gold-primary/10 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary font-bold px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all text-xs shrink-0"
                    title="Want to list a room? Switch to Landlord mode in your profile."
                 >
@@ -793,9 +839,42 @@ export default function HousingPage() {
           {/* Listings Grid — previously if filters excluded everything this
               area just rendered a blank grid with no explanation, reading as
               a broken page rather than "your filters are too narrow". */}
-          {filteredListings.length === 0 ? (
+          {(filterEventId || (LAUNCH_AREA && !searchInputValue && allListings.length > 0)) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {filterEventId && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-[11px] font-bold text-purple-200">
+                  Stays near {gruvsEventInfo[filterEventId]?.title || 'this event'}
+                  <button type="button" onClick={() => setFilterEventId(null)} className="text-purple-300 hover:text-white" aria-label="Show all stays"><X size={12} /></button>
+                </span>
+              )}
+              {LAUNCH_AREA && !searchInputValue && allListings.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInputValue(LAUNCH_AREA)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gold-primary/30 bg-gold-primary/10 px-3 py-1.5 text-[11px] font-bold text-gold-primary hover:bg-gold-primary/20"
+                >
+                  <MapPin size={12} /> Now live in {LAUNCH_AREA}: show rooms there
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Listings Grid. No rooms at all is a different situation from
+              filters hiding them: the first says so honestly and offers a
+              way to change it, the second says to widen the filters. */}
+          {allListings.length === 0 ? (
+            <HousingGetStarted
+              isLandlord={currentUser?.role === 'landlord'}
+              isGuest={isGuest}
+              onListRoom={() => { setShowCreateModal(true); playTactileSound('pop') }}
+            />
+          ) : filteredListings.length === 0 ? (
             <div className="glass-panel">
-              <EmptyState icon={Home} title="No rooms match your filters" subtitle="Try widening your price ceiling or clearing a filter." />
+              {filterEventId ? (
+                <EmptyState icon={Home} title="No stays listed near this event yet" subtitle="Have a room nearby? List it as a guest house and link it to this event." />
+              ) : (
+                <EmptyState icon={Home} title="No rooms match your filters" subtitle="Try widening your price ceiling or clearing a filter." />
+              )}
             </div>
           ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
@@ -927,15 +1006,7 @@ export default function HousingPage() {
                       <FileText size={14} className="text-gold-primary" />
                       <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Lease</span>
                     </button>
-                    <Link
-                      href={`/dashboard/housing?tab=rooms&lat=${encodeURIComponent(item.location)}`}
-                      onClick={() => playTactileSound('click')}
-                      className="p-2.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary transition-all flex items-center gap-1.5 text-xs font-bold"
-                      title="View building coordinates & safety on VibeMap"
-                    >
-                      <Radar size={14} className="text-gold-primary animate-pulse" />
-                      <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Radar</span>
-                    </Link>
+                    <ShareListingButton listing={item} userId={currentUser?.id} />
                     {item.landlordLivesHere && (
                       <span className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 shrink-0" title="Landlord lives on property">
                         <Home size={14} className="text-gold-primary" />
@@ -1275,6 +1346,7 @@ export default function HousingPage() {
                     stats={statsFor(activeListing)}
                     verdict={priceVerdict(activeListing.price, statsFor(activeListing))}
                   />
+                  <ShareListingButton listing={activeListing} userId={currentUser?.id} variant="full" />
                   <form onSubmit={handleApply} className="space-y-6">
                      <div className="space-y-2">
                         <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Message to Landlord</label>

@@ -1,5 +1,6 @@
 import { configureStore, combineReducers, createSlice, PayloadAction, createAsyncThunk, createSelector } from '@reduxjs/toolkit'
 import { supabase } from '../utils/supabase'
+import { publicListingToListing, PUBLIC_LISTING_COLUMNS, type PublicListingRow } from '../utils/publicListings'
 import { resilientCall } from '../utils/resilientCall'
 import { getErrorMessage } from '../utils/errors'
 import { safeGetJSON, safeSetJSON, safeRemove } from '../utils/safeStorage'
@@ -357,8 +358,16 @@ export function isNoticeCurrentlyVisible(notice: NoticeEvent, now: number = Date
   return !!notice.paidVisibilityUntil && new Date(notice.paidVisibilityUntil).getTime() > now
 }
 
-// Example data so the app has something to show when browsing without a
-// live Supabase connection (e.g. local demo / guest mode).
+// Example data so the app has something to show when it runs WITHOUT a
+// database (local development, the offline demo). It used to be shown to
+// every guest on the live site too, presented as real rooms, alerts, market
+// items and neighbours, which for an anti-scam app is the worst possible
+// first impression. sampleData() keeps it for offline use only: with a live
+// database, state starts empty and only real rows ever appear.
+function sampleData<T>(rows: T[]): T[] {
+  return supabase ? [] : rows
+}
+
 const initialListings: Listing[] = [
   {
     id: 'listing-demo-1',
@@ -736,7 +745,7 @@ const authSlice = createSlice({
 const listingsSlice = createSlice({
   name: 'listings',
   initialState: {
-    items: initialListings
+    items: sampleData(initialListings)
   },
   reducers: {
     setListings: (state, action: PayloadAction<Listing[]>) => {
@@ -834,9 +843,9 @@ const securitySlice = createSlice({
 const networkingSlice = createSlice({
   name: 'networking',
   initialState: {
-    roommates: initialRoommates,
-    lifts: initialLifts,
-    services: initialServices,
+    roommates: sampleData(initialRoommates),
+    lifts: sampleData(initialLifts),
+    services: sampleData(initialServices),
     dispatches: [] as ServiceDispatch[],
     trafficReports: [] as TrafficReport[]
   },
@@ -963,7 +972,7 @@ const initialTokens: UtilityToken[] = [
 const utilitiesSlice = createSlice({
   name: 'utilities',
   initialState: {
-    tokens: initialTokens
+    tokens: sampleData(initialTokens)
   },
   reducers: {
     setTokens: (state, action: PayloadAction<UtilityToken[]>) => {
@@ -1271,21 +1280,21 @@ const initialNeighbourhoodStatus: NeighbourhoodStatus[] = [
 const communitySlice = createSlice({
   name: 'community',
   initialState: {
-    tools: initialTools,
-    chores: initialChores,
-    notices: initialNotices,
-    disputes: initialDisputes,
+    tools: sampleData(initialTools),
+    chores: sampleData(initialChores),
+    notices: sampleData(initialNotices),
+    disputes: sampleData(initialDisputes),
     reputationScores: {} as Record<string, number>,
-    communities: initialCommunities,
-    alerts: initialAlerts,
-    marketItems: initialMarketItems,
-    vendors: initialVendors,
-    groupBuys: initialGroupBuys,
-    skills: initialSkills,
-    lostFound: initialLostFound,
-    careCircle: initialCareCircle,
-    sharedResources: initialSharedResources,
-    neighbourhoodStatus: initialNeighbourhoodStatus,
+    communities: sampleData(initialCommunities),
+    alerts: sampleData(initialAlerts),
+    marketItems: sampleData(initialMarketItems),
+    vendors: sampleData(initialVendors),
+    groupBuys: sampleData(initialGroupBuys),
+    skills: sampleData(initialSkills),
+    lostFound: sampleData(initialLostFound),
+    careCircle: sampleData(initialCareCircle),
+    sharedResources: sampleData(initialSharedResources),
+    neighbourhoodStatus: sampleData(initialNeighbourhoodStatus),
     // Community ids the signed-in user actually belongs to, and a member count
     // per community — both derived from res_community_members, which nothing
     // previously read on the client (the "Communities" tab used to hardcode []).
@@ -1761,6 +1770,22 @@ export const {
 } = notificationsSlice.actions
 
 // Async Thunk to fetch live data from Supabase.
+// Guests (no session) can't read res_listings, so they get the open listings
+// from the res_public_listings view instead: real rooms, safe columns only.
+export const fetchPublicListings = createAsyncThunk(
+  'data/fetchPublicListings',
+  async (_, { dispatch }) => {
+    if (!supabase) return
+    const { data, error } = await supabase
+      .from('res_public_listings')
+      .select(PUBLIC_LISTING_COLUMNS)
+      .order('created_at', { ascending: false })
+      .limit(200)
+    if (error || !data) return
+    dispatch(setListings((data as unknown as PublicListingRow[]).map(publicListingToListing)))
+  }
+)
+
 // Column names follow resident_schema.sql; display names are resolved from the
 // shared profiles trust columns (CONTRACT.md §3) since res_* tables store UUIDs.
 export const fetchSupabaseData = createAsyncThunk(

@@ -145,6 +145,15 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [roleSwitching, setRoleSwitching] = useState(false)
+  // Arriving from Housing's "I have a room to rent" (?role=landlord): point
+  // at the Landlord Mode switch rather than flipping the role silently.
+  const [landlordHint, setLandlordHint] = useState(false)
+  const roleCardRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('role') !== 'landlord') return
+    setLandlordHint(true)
+    roleCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [])
 
   const handleSwitchRole = async (newRole: 'tenant' | 'landlord') => {
     if (!currentUser || guest || currentUser.role === newRole) return
@@ -370,7 +379,8 @@ export default function ProfilePage() {
       </div>
 
       {/* Account Mode / Role Switcher */}
-      <Card className="space-y-4 border-white/10 shadow-xl">
+      <div ref={roleCardRef}>
+      <Card className={`space-y-4 shadow-xl ${landlordHint && currentUser.role !== 'landlord' ? 'border-gold-primary/60 ring-2 ring-gold-primary/30' : 'border-white/10'}`}>
         <h2 className="text-xs font-black text-gold-primary uppercase tracking-wider flex items-center gap-2">
           <UserIcon size={16} /> Account Mode &amp; Role
         </h2>
@@ -405,7 +415,16 @@ export default function ProfilePage() {
             <span className="text-[10px] opacity-80 font-normal">List units &amp; manage tenants</span>
           </button>
         </div>
+        {landlordHint && currentUser.role !== 'landlord' && (
+          <p className="m-0 text-xs font-bold text-gold-primary">Tap Landlord Mode, then go back to Housing to list your room. Managing rooms is free.</p>
+        )}
+        {landlordHint && currentUser.role === 'landlord' && (
+          <Link href="/dashboard/housing" className="inline-flex items-center gap-1.5 text-xs font-black text-gold-primary uppercase tracking-wider">
+            You are a landlord now. List your room <ExternalLink size={12} />
+          </Link>
+        )}
       </Card>
+      </div>
 
       <Card className="space-y-3">
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">

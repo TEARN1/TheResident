@@ -9,6 +9,8 @@ import { supabase } from '../../utils/supabase'
 import { performLogin } from '../../utils/authLogin'
 import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, ExternalLink, Table2, Scale, Palette } from 'lucide-react'
 import { GRUVS, TEARNS } from '../../utils/sisterApps'
+import { safeNextPath } from '../../utils/launch'
+import { track } from '../../utils/track'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 import Image from 'next/image'
 import MasterLegalPolicyModal from '../dashboard/components/shared/MasterLegalPolicyModal'
@@ -30,6 +32,13 @@ function GruvsMark() {
       }}
     />
   )
+}
+
+// Where to land after signing in: the deep link the proxy bounced us from
+// (?next=/dashboard/housing?listing=...), or the dashboard.
+function afterAuthPath(): string {
+  if (typeof window === 'undefined') return '/dashboard'
+  return safeNextPath(new URLSearchParams(window.location.search).get('next'))
 }
 
 export default function AuthPage() {
@@ -114,6 +123,11 @@ export default function AuthPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the URL on mount
       setActiveTab('login')
       setGruvsMode(true)
+    } else if (params.get('role') === 'landlord') {
+      // "I have a room to rent" from Housing: the person already chose, so
+      // open Sign Up with Landlord picked (they can still change it).
+      setActiveTab('signup')
+      setRole('landlord')
     }
   }, [])
   const [passwordStrength, setPasswordStrength] = useState<{strong: boolean; score: number; feedback: string[]} | null>(null)
@@ -163,7 +177,7 @@ export default function AuthPage() {
       setErrorMessage(result.error)
       return
     }
-    router.push(result.needsOnboarding ? '/auth/onboarding' : '/dashboard')
+    router.push(result.needsOnboarding ? '/auth/onboarding' : afterAuthPath())
   }
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -248,8 +262,11 @@ export default function AuthPage() {
         type: 'auth_success',
         details: `Created account for ${sanitizedName}.`
       }))
+      // No user id: with email confirmation on there is no session yet, and
+      // the insert policy only accepts your own id or none.
+      track('signup', { role })
 
-      router.push('/dashboard')
+      router.push(afterAuthPath())
     }
   }
 
@@ -322,7 +339,7 @@ export default function AuthPage() {
       details: 'Browsing limits applied'
     }))
 
-    router.push('/dashboard')
+    router.push(afterAuthPath())
   }
 
   return (

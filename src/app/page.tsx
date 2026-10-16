@@ -16,6 +16,7 @@ import { supabase } from '../utils/supabase'
 import { infoLinks } from './info-links'
 import { GRUVS, GRUVS_TOUCH_DOWN, TEARNS } from '../utils/sisterApps'
 import { playTactileSound } from '../utils/tactileSounds'
+import { LAUNCH_AREA } from '../utils/launch'
 
 export default function HomePage() {
   const [showIosModal, setShowIosModal] = useState(false)
@@ -230,6 +231,12 @@ export default function HomePage() {
         
         {/* Planetary Telemetry Capsule */}
         <div className={styles.telemetryBar}>
+          {LAUNCH_AREA && (
+            <Link href="/dashboard/housing" className={styles.telemetryChip} style={{ color: '#fde68a', textDecoration: 'none' }}>
+              <span className={styles.telemetryPulse} style={{ background: '#f59e0b' }} />
+              <span>Now live in {LAUNCH_AREA}</span>
+            </Link>
+          )}
           <div className={styles.telemetryChip}>
             <span className={styles.telemetryPulse} style={{ background: '#22c55e' }} />
             <span>Civic Grid: Online</span>

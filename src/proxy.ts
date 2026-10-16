@@ -110,7 +110,13 @@ export async function proxy(request: NextRequest) {
     }
 
     if (!hasValidSession && !isGuest) {
+      // Remember the deep link (a room shared on WhatsApp, an event's
+      // "stay near it" link) so signing in or browsing as a guest lands
+      // there instead of the generic dashboard. Validated by safeNextPath.
+      const wanted = url.pathname + url.search
       url.pathname = '/auth'
+      url.search = ''
+      if (wanted !== '/dashboard') url.searchParams.set('next', wanted)
       return NextResponse.redirect(url)
     }
   }

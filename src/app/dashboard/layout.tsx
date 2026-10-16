@@ -18,9 +18,11 @@ import {
   AppDispatch,
   markAllNotificationsRead,
   GUEST_USER_ID,
-  isGuestUser
+  isGuestUser,
+  fetchPublicListings
 } from '../../store'
 import { supabase } from '../../utils/supabase'
+import { trackVisitOnce } from '../../utils/track'
 import { subscribeToRealtime, loadNotifications, markNotificationsReadInDb } from '../../store/realtime'
 import { unlockNotificationAudio } from '../../utils/notificationSounds'
 import { t } from '../../utils/i18n'
@@ -173,6 +175,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     bootstrapSession()
   }, [currentUser, router, dispatch])
+
+  // Guests can't read the private tables, so show them the real open rooms
+  // from the public view rather than nothing (or, as before, invented ones).
+  const isGuest = !!currentUser && isGuestUser(currentUser)
+  useEffect(() => {
+    if (isGuest) (dispatch as AppDispatch)(fetchPublicListings())
+  }, [isGuest, dispatch])
+
+  // One 'visit' per tab session, the top of the growth funnel (track.ts).
+  useEffect(() => {
+    if (currentUser) trackVisitOnce({ guest: isGuest })
+  }, [currentUser, isGuest])
 
   useEffect(() => {
     if (!currentUser || isGuestUser(currentUser)) return
