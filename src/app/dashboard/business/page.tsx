@@ -13,6 +13,7 @@ import { getTrustInfo, type TrustInfo } from '../../../utils/trust'
 import { PRICING, formatPrice } from '../../../utils/pricing'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import ReviewsList from '../components/social/ReviewsList'
+import AdminFunnelCard from '../components/shared/AdminFunnelCard'
 
 /**
  * "My Business" — one screen for anyone earning through the app (a landlord
@@ -62,7 +63,7 @@ export default function BusinessPage() {
 
   if (guest || (!isLandlord && !isProvider)) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto">
+      <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6">
         <div className="glass-panel p-10 text-center space-y-4">
           <Briefcase size={40} className="mx-auto text-gold-primary opacity-60" />
           <h2 className="text-xl font-bold text-white">Nothing to manage yet</h2>
@@ -82,6 +83,7 @@ export default function BusinessPage() {
             )}
           </div>
         </div>
+        {!guest && <AdminFunnelCard />}
       </div>
     )
   }
@@ -122,6 +124,8 @@ export default function BusinessPage() {
           {isLandlord && isProvider ? 'Landlord & Service Provider' : isLandlord ? 'Landlord' : myService?.businessName}
         </p>
       </div>
+
+      <AdminFunnelCard />
 
       {/* Visibility tier */}
       <div id="tiers" className="glass-panel p-6 space-y-4">

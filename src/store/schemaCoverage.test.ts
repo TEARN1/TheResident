@@ -52,7 +52,9 @@ function tablesDefinedInSchema(): Set<string> {
   for (const entry of readdirSync(REPO_ROOT)) {
     if (extname(entry) !== '.sql') continue
     const sql = readFileSync(join(REPO_ROOT, entry), 'utf8')
-    for (const match of sql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?public\.([a-z0-9_]+)/gi)) {
+    // A view (e.g. res_public_listings, the guest-safe slice of res_listings)
+    // is as versioned as a table: its definition, and so its exposure, lives here.
+    for (const match of sql.matchAll(/create\s+(?:or\s+replace\s+)?(?:table|view)\s+(?:if\s+not\s+exists\s+)?public\.([a-z0-9_]+)/gi)) {
       defined.add(match[1].toLowerCase())
     }
   }

@@ -423,6 +423,20 @@ export default function CommunityPage() {
   // Overview stat card jumping straight to Disputes).
   const activeCluster = clusters.find(c => c.tabs.some(t => t.id === subTab)) ?? null
 
+  // A brand-new suburb has nothing in most tabs, and a row of empty tabs
+  // reads as a dead app. Tabs with nothing in them yet fold behind a
+  // "+N quiet" chip (still one tap away, and the open tab always shows).
+  // Only tabs with a cheap, already-loaded count are folded; the core ones
+  // (Notices, Groups, Safety, Household, Departments, Resources) always show.
+  const [showQuietTabs, setShowQuietTabs] = useState(false)
+  const tabItemCounts: Partial<Record<string, number>> = {
+    market: marketItems.length + vendors.length + groupBuys.length + lostFound.length,
+    tools: communityTools.length,
+    disputes: communityDisputes.length,
+    chores: communityChores.length,
+  }
+  const isQuietTab = (id: string) => tabItemCounts[id] === 0
+
   // ── Overview stat cards ────────────────────────────────────────────────
   const activeAlertsCount = alerts.filter(a => a.status === 'active').length
   const myPendingChoresCount = communityChores.filter(c => c.roommateId === currentUser?.id && c.status !== 'completed').length
@@ -494,7 +508,11 @@ export default function CommunityPage() {
             return (
               <button
                 key={cluster.id}
-                onClick={() => goToTab(cluster.tabs[0].id as typeof subTab)}
+                onClick={() => {
+                  setShowQuietTabs(false)
+                  const first = cluster.tabs.find(t => !isQuietTab(t.id)) ?? cluster.tabs[0]
+                  goToTab(first.id as typeof subTab)
+                }}
                 className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap ${
                   active ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
                 }`}
@@ -522,7 +540,7 @@ export default function CommunityPage() {
         {/* Second-level tabs for active cluster */}
         {activeCluster && (
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 border-t border-white/10">
-            {activeCluster.tabs.map(t => (
+            {activeCluster.tabs.filter(t => showQuietTabs || t.id === subTab || !isQuietTab(t.id)).map(t => (
               <button
                 key={t.id}
                 onClick={() => goToTab(t.id as typeof subTab)}
@@ -538,6 +556,20 @@ export default function CommunityPage() {
                 {t.label}
               </button>
             ))}
+            {(() => {
+              const quiet = activeCluster.tabs.filter(t => t.id !== subTab && isQuietTab(t.id)).length
+              if (showQuietTabs || quiet === 0) return null
+              return (
+                <button
+                  type="button"
+                  onClick={() => setShowQuietTabs(true)}
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-bold text-gray-500 border border-dashed border-white/10 hover:text-gray-200 hover:border-white/20 whitespace-nowrap"
+                  title="Tabs with nothing posted yet"
+                >
+                  +{quiet} quiet
+                </button>
+              )
+            })()}
           </div>
         )}
       </div>
