@@ -83,11 +83,11 @@ export default function PWAInstallBanner() {
         initial={{ y: 80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 80, opacity: 0 }}
-        className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 sm:w-96 z-40 bg-black/90 backdrop-blur-2xl border border-gold-primary/30 p-4 rounded-3xl shadow-[0_0_40px_rgb(var(--accent)/0.2)]"
+        className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 sm:left-6 sm:right-auto sm:w-96 z-40 bg-black/90 backdrop-blur-2xl border border-gold-primary/30 p-4 rounded-3xl"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 flex items-center justify-center text-black font-black text-sm shadow-md shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 flex items-center justify-center text-black font-black text-sm shrink-0">
               <Smartphone size={20} />
             </div>
             <div>
@@ -123,7 +123,7 @@ export default function PWAInstallBanner() {
           <div className="mt-3 flex items-center gap-2">
             <button
               onClick={handleInstallClick}
-              className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5"
+              className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5"
             >
               <Download size={13} /> Add to Home Screen
             </button>

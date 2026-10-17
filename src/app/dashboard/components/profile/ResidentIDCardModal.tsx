@@ -74,7 +74,7 @@ export default function ResidentIDCardModal({
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-md bg-black/95 border border-gold-primary/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgb(var(--accent)/0.25)] backdrop-blur-2xl overflow-hidden flex flex-col items-center text-center"
+          className="relative w-full max-w-md max-h-[90dvh] overflow-y-auto custom-scrollbar bg-black/95 border border-gold-primary/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_60px_rgb(var(--accent)/0.25)] backdrop-blur-2xl flex flex-col items-center text-center"
         >
           {/* Holographic Ambient Ray */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-gold-primary/15 rounded-full blur-3xl pointer-events-none" />
@@ -177,7 +177,7 @@ export default function ResidentIDCardModal({
               href={GRUVS.url ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white shrink-0 transition-all shadow-md active:scale-95"
+              className="p-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white shrink-0 transition-all active:scale-95"
               title={`${GRUVS.cta} on ${GRUVS.name}`}
             >
               <ExternalLink size={14} />
@@ -188,7 +188,7 @@ export default function ResidentIDCardModal({
           <div className="w-full mt-5 flex flex-wrap gap-2">
             <button
               onClick={handleShare}
-              className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-gold-primary/20 flex items-center justify-center gap-2 active:scale-95"
+              className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-95"
             >
               <Share2 size={14} />
               <span>{copied ? 'Pass copied!' : 'Copy pass details'}</span>

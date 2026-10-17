@@ -152,7 +152,7 @@ export default function ActiveCallModal({
   // 1. Minimized Floating Phone Call Widget
   if (isMinimized) {
     return (
-      <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[9999] pointer-events-auto">
+      <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] right-4 md:bottom-6 md:right-6 z-[9999] pointer-events-auto">
         <motion.div
           initial={{ scale: 0.8, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -219,7 +219,7 @@ export default function ActiveCallModal({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-lg bg-[var(--card-bg,rgba(11,43,38,0.85))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-3xl sm:rounded-[32px] overflow-hidden shadow-2xl backdrop-blur-3xl flex flex-col justify-between min-h-[520px] max-h-[90vh]"
+          className="relative w-full max-w-lg bg-[var(--card-bg,rgba(11,43,38,0.85))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-3xl sm:rounded-[32px] overflow-hidden shadow-2xl backdrop-blur-3xl flex flex-col justify-between min-h-0 sm:min-h-[500px] max-h-[90dvh] overflow-y-auto custom-scrollbar"
         >
           {/* Top Bar with Status and Minimize */}
           <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-white/[0.02]">

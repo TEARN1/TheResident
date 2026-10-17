@@ -348,7 +348,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
                 </div>
                 <div className="pt-4 border-t border-white/5 flex gap-4">
                   <button type="button" onClick={() => setShowCreate(false)} className="flex-1 bg-white/5 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs">Cancel</button>
-                  <button type="submit" disabled={creating} className="flex-1 bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 disabled:opacity-50">
+                  <button type="submit" disabled={creating} className="flex-1 bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs disabled:opacity-50">
                     {creating ? 'Creating...' : 'Create Property'}
                   </button>
                 </div>
@@ -363,7 +363,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
         {verifyingFor && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setVerifyingFor(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-6">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6">
               <div className="flex justify-between items-center">
                 <div className="space-y-1">
                   <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Verify <span className="text-gold-primary">Address</span></h3>
@@ -400,7 +400,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
               <button
                 onClick={submitVerification}
                 disabled={!docUrl || submittingVerification}
-                className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl disabled:opacity-50"
+                className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs disabled:opacity-50"
               >
                 {submittingVerification ? 'Submitting...' : 'Submit for Review'}
               </button>

@@ -113,7 +113,7 @@ export default function RoomManager({ propertyId, address, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div onClick={onClose} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-      <div className="glass-panel relative z-10 w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-black border border-white/10 p-5 sm:p-7 space-y-5">
+      <div className="glass-panel relative z-10 w-full max-w-2xl max-h-[90dvh] overflow-y-auto custom-scrollbar rounded-t-3xl sm:rounded-3xl bg-black border border-white/10 p-5 sm:p-7 space-y-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="m-0 text-lg font-black text-white">Rooms</h3>

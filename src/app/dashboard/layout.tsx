@@ -351,12 +351,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="w-9 h-9 rounded-xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary shadow-glow">
               <pageTitle.icon size={18} />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-black text-sm tracking-wide text-white uppercase">{pageTitle.name}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-black text-sm tracking-wide text-white uppercase truncate max-w-[110px] sm:max-w-none">{pageTitle.name}</span>
               {!isGuestUser(currentUser) && (
                 <Link
                   href="/dashboard/profile"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 text-gold-primary border border-gold-primary/30 hover:bg-gold-primary/20 transition-all"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 text-gold-primary border border-gold-primary/30 hover:bg-gold-primary/20 transition-all shrink-0"
                   title={`Mode: ${currentUser.role}. Tap to switch.`}
                 >
                   {currentUser.role === 'landlord' ? <Briefcase size={10} /> : <Home size={10} />}
@@ -427,7 +427,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               type="button"
               onClick={() => { setShowLegalModal(true); playTactileSound('tab') }}
-              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all"
+              className="hidden sm:inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all"
               title="Platform Legal Shield, Neutrality Disclaimers & POPIA Governance"
             >
               <Scale size={13} className="text-amber-400" />
@@ -452,7 +452,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute top-full right-0 mt-3 w-80 max-h-96 bg-black/90 backdrop-blur-3xl border border-white/15 rounded-2xl shadow-glass overflow-hidden z-50 p-4 space-y-3"
+                    className="absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] sm:w-80 max-h-96 overflow-y-auto custom-scrollbar bg-black/90 backdrop-blur-3xl border border-white/15 rounded-2xl shadow-glass z-50 p-4 space-y-3"
                   >
                     <div className="flex justify-between items-center pb-2 border-b border-white/10">
                       <span className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-1.5">
@@ -495,12 +495,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="dashboard-page-body pb-28">
+        <main className="dashboard-page-body pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))]">
           {children}
         </main>
       </div>
 
-      <nav className="fixed bottom-3 left-3 right-3 max-w-lg mx-auto z-50 bg-black/55 backdrop-blur-3xl backdrop-saturate-150 border border-white/15 rounded-3xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)] flex items-center justify-around transition-all">
+      <nav className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] left-3 right-3 max-w-lg mx-auto z-50 bg-black/55 backdrop-blur-3xl backdrop-saturate-150 border border-white/15 rounded-3xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)] flex items-center justify-around transition-all">
         {navItems.map(item => {
           const isActive = pathname === item.href
           return (

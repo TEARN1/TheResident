@@ -806,7 +806,7 @@ export default function CommunityPage() {
         {showCreateCommunity && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCreateCommunity(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-6">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">New <span className="text-gold-primary">Community</span></h3>
                 <button onClick={() => setShowCreateCommunity(false)} className="text-gray-500 hover:text-white"><X /></button>
@@ -841,7 +841,7 @@ export default function CommunityPage() {
         {showDisputeModal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowDisputeModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-6">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">File a <span className="text-gold-primary">Dispute</span></h3>
                 <button onClick={() => setShowDisputeModal(false)} className="text-gray-500 hover:text-white"><X /></button>
@@ -871,14 +871,14 @@ export default function CommunityPage() {
                initial={{ y: 100, opacity: 0 }}
                animate={{ y: 0, opacity: 1 }}
                exit={{ y: 100, opacity: 0 }}
-               className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
+               className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] md:bottom-20 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-5 sm:px-8 py-3.5 sm:py-4 rounded-2xl flex items-center gap-3 sm:gap-4 max-w-[calc(100vw-2rem)] w-auto min-w-[280px] sm:min-w-[320px]"
             >
-               <div className="p-2 bg-green-500/20 rounded-full text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Shield size={24} /></div>
-               <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">Update</p>
-                  <p className="text-sm font-black text-white italic tracking-tight uppercase">{alertNotification}</p>
+               <div className="p-2 bg-green-500/20 rounded-full text-green-500"><Shield size={24} /></div>
+               <div className="space-y-0.5 min-w-0">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Update</p>
+                  <p className="text-sm font-black text-white italic tracking-tight uppercase truncate">{alertNotification}</p>
                </div>
-               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-700 hover:text-white transition-colors"><X size={16} /></button>
+               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-500 hover:text-white transition-colors shrink-0"><X size={16} /></button>
             </motion.div>
          )}
       </AnimatePresence>

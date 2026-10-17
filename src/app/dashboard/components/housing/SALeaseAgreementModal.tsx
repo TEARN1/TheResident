@@ -195,7 +195,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgb(var(--accent)/0.15)] backdrop-blur-2xl overflow-hidden"
+          className="relative w-full max-w-xl max-h-[90dvh] overflow-y-auto custom-scrollbar bg-black/95 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgb(var(--accent)/0.15)] backdrop-blur-2xl"
         >
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -210,7 +210,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
 
               {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 flex items-center justify-center text-black shadow-lg">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 flex items-center justify-center text-black">
               <FileText size={24} />
             </div>
             <div>
@@ -250,7 +250,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
                         }}
                         className={`p-2 rounded-xl text-left border transition-all text-xs flex items-center gap-2 ${
                           isSelected
-                            ? 'bg-gold-primary/20 border-gold-primary text-white shadow-[0_0_15px_rgb(var(--accent)/0.2)]'
+                            ? 'bg-gold-primary/20 border-gold-primary text-white'
                             : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
                         }`}
                       >
@@ -355,7 +355,7 @@ DEPOSIT: ${currency} ${depositAmount.toLocaleString()}`}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={handleDownload}
-                  className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 active:scale-98"
+                  className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-98"
                 >
                   <Download size={14} /> Download (.txt)
                 </button>

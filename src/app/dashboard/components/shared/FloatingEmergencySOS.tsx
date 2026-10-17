@@ -106,14 +106,14 @@ export default function FloatingEmergencySOS() {
   return (
     <>
       {/* Floating SOS Trigger Pill */}
-      <div className="fixed bottom-[calc(5.2rem+env(safe-area-inset-bottom,0px))] right-3 sm:right-6 z-40">
+      <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] right-3 sm:right-6 z-40">
         <button
           type="button"
           onClick={() => {
             playTactileSound('alert')
             setIsOpen(true)
           }}
-          className="group flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-red-600/90 hover:bg-red-600 text-white font-black text-xs uppercase tracking-wider shadow-[0_0_25px_rgba(239,68,68,0.4)] backdrop-blur-md border border-red-500/40 transition-all hover:scale-105 active:scale-95"
+          className="group flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-red-600/90 hover:bg-red-600 text-white font-black text-xs uppercase tracking-wider backdrop-blur-md border border-red-500/40 transition-all hover:scale-105 active:scale-95"
           title="Emergency Help & South African Distress SOS"
         >
           <div className="w-2 h-2 rounded-full bg-white animate-ping" />
@@ -130,7 +130,7 @@ export default function FloatingEmergencySOS() {
               initial={{ opacity: 0, y: 50, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 50, scale: 0.95 }}
-              className="relative w-full max-w-lg max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black/95 border border-red-500/40 rounded-t-3xl sm:rounded-3xl p-5 sm:p-7 shadow-[0_0_60px_rgba(239,68,68,0.25)] backdrop-blur-2xl"
+              className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto custom-scrollbar bg-black/95 border border-red-500/40 rounded-t-3xl sm:rounded-3xl p-5 sm:p-7 shadow-[0_0_60px_rgba(239,68,68,0.25)] backdrop-blur-2xl"
             >
               {/* Emergency Ambient Ray */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -149,7 +149,7 @@ export default function FloatingEmergencySOS() {
 
               {/* Header */}
               <div className="flex items-center gap-3.5 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-rose-400 flex items-center justify-center text-white shadow-lg shadow-red-600/30">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 to-rose-400 flex items-center justify-center text-white">
                   <ShieldAlert size={26} />
                 </div>
                 <div>

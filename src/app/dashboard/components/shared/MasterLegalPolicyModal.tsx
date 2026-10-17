@@ -87,7 +87,7 @@ Generated and enforced by The Resident Civic Operating System | TEARN Engineerin
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-2xl bg-black/95 border-2 border-gold-primary/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_80px_rgb(var(--accent)/0.2)] backdrop-blur-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          className="relative w-full max-w-2xl bg-black/95 border-2 border-gold-primary/40 rounded-3xl p-6 sm:p-8 shadow-[0_0_80px_rgb(var(--accent)/0.2)] backdrop-blur-2xl overflow-hidden flex flex-col max-h-[90dvh]"
         >
           {/* Subtle Ambient Glow */}
           <div className="absolute top-0 right-0 w-60 h-60 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -123,7 +123,7 @@ Generated and enforced by The Resident Civic Operating System | TEARN Engineerin
             <button
               onClick={() => { playTactileSound('tab'); setActiveTab('disclaimer') }}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                activeTab === 'disclaimer' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+                activeTab === 'disclaimer' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
               }`}
             >
               Platform Shield
@@ -131,7 +131,7 @@ Generated and enforced by The Resident Civic Operating System | TEARN Engineerin
             <button
               onClick={() => { playTactileSound('tab'); setActiveTab('terms') }}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                activeTab === 'terms' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+                activeTab === 'terms' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
               }`}
             >
               Terms of Service
@@ -139,7 +139,7 @@ Generated and enforced by The Resident Civic Operating System | TEARN Engineerin
             <button
               onClick={() => { playTactileSound('tab'); setActiveTab('conduct') }}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                activeTab === 'conduct' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+                activeTab === 'conduct' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
               }`}
             >
               Zero Scam Policy
@@ -147,7 +147,7 @@ Generated and enforced by The Resident Civic Operating System | TEARN Engineerin
             <button
               onClick={() => { playTactileSound('tab'); setActiveTab('privacy') }}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                activeTab === 'privacy' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
+                activeTab === 'privacy' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
               }`}
             >
               POPIA &amp; GDPR

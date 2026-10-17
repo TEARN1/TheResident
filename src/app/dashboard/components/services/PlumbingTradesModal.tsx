@@ -89,7 +89,7 @@ export default function PlumbingTradesModal({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-lg bg-[var(--card-bg,rgba(11,43,38,0.95))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-2xl max-h-[90vh] overflow-y-auto custom-scrollbar"
+          className="relative w-full max-w-lg bg-[var(--card-bg,rgba(11,43,38,0.95))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-2xl max-h-[90dvh] overflow-y-auto custom-scrollbar"
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -286,7 +286,7 @@ export default function PlumbingTradesModal({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-900/40 transition-all active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider transition-all active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <Send size={14} />
                   <span>{submitting ? 'Broadcasting to Local Pros...' : 'Broadcast Emergency Dispatch'}</span>

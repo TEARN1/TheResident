@@ -65,7 +65,7 @@ export default function VendorForm({ vendor, defaultSuburb, onSave, onClose }: P
           </h3>
           <button onClick={onClose} className="p-2 text-gray-500 hover:text-white transition-colors"><X /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80dvh] overflow-y-auto custom-scrollbar">
           <input value={v.name} onChange={e => set('name', e.target.value)} required maxLength={80} placeholder="Shop name, e.g. Mama Thandi's Spaza" className={inputClass} />
           <select value={v.category} onChange={e => set('category', e.target.value)} className={inputClass}>
             {KINDS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}

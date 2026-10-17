@@ -365,7 +365,7 @@ export default function MarketTab({
                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Post an <span className="text-gold-primary">Item</span></h3>
                 <button onClick={resetForm} className="p-2 text-gray-500 hover:text-white transition-colors"><X /></button>
               </div>
-              <form onSubmit={handleSubmitItem} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <form onSubmit={handleSubmitItem} className="p-6 space-y-4 max-h-[80dvh] overflow-y-auto custom-scrollbar">
                 <p className="text-xs text-gray-500">Leave the price blank to give it away. Payment happens between you and the buyer — never through the app.</p>
 
                 <div>

@@ -40,7 +40,7 @@ export default function IncomingCallBanner({
 
   return (
     <AnimatePresence>
-      <div className="fixed top-4 inset-x-0 z-[10000] flex justify-center px-4 pointer-events-none">
+      <div className="fixed top-[calc(1rem+env(safe-area-inset-top,0px))] inset-x-0 z-[10000] flex justify-center px-4 pointer-events-none">
         <motion.div
           initial={{ opacity: 0, y: -40, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -89,7 +89,7 @@ export default function IncomingCallBanner({
                 playTactileSound('alert')
                 onDecline()
               }}
-              className="p-3 rounded-2xl bg-red-600/20 hover:bg-red-600 border border-red-500/40 text-red-300 hover:text-white transition-all active:scale-95 shadow-md flex items-center justify-center"
+              className="p-3 rounded-2xl bg-red-600/20 hover:bg-red-600 border border-red-500/40 text-red-300 hover:text-white transition-all active:scale-95 flex items-center justify-center"
               title="Decline Call"
               aria-label="Decline Call"
             >
@@ -100,7 +100,7 @@ export default function IncomingCallBanner({
                 playTactileSound('success')
                 onAccept(incomingCall)
               }}
-              className="p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black transition-all active:scale-95 shadow-glow flex items-center justify-center animate-bounce"
+              className="p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black transition-all active:scale-95 flex items-center justify-center animate-bounce"
               title="Accept Call"
               aria-label="Accept Call"
             >

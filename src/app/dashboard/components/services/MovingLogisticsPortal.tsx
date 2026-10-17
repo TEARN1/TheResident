@@ -552,7 +552,7 @@ export default function MovingLogisticsPortal({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-[var(--card-bg,rgba(11,43,38,0.95))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-2xl space-y-4"
+              className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto custom-scrollbar bg-[var(--card-bg,rgba(11,43,38,0.95))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-2xl space-y-4"
             >
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <div className="flex items-center gap-2">
@@ -636,7 +636,7 @@ export default function MovingLogisticsPortal({
                   <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full py-3 rounded-2xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider shadow-glow transition-all active:scale-98 flex items-center justify-center gap-2"
+                      className="w-full py-3 rounded-2xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all active:scale-98 flex items-center justify-center gap-2"
                     >
                       <Package size={15} />
                       <span>Confirm & Dispatch Move Request</span>

@@ -675,12 +675,12 @@ export default function ServicesPage() {
          {showBusinessRegModal && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBusinessRegModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10">
                   <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">{editingBiz ? <>Edit <span className="text-gold-primary">Business</span></> : <>Business <span className="text-gold-primary">Onboarding</span></>}</h3>
                      <button onClick={() => setShowBusinessRegModal(false)} className="text-gray-500 hover:text-white"><X /></button>
                   </div>
-                  <form onSubmit={handleRegisterBusiness} className="p-8 space-y-6">
+                  <form onSubmit={handleRegisterBusiness} className="p-6 sm:p-8 space-y-6">
                      <div className="space-y-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Business or Skill Name</label>
@@ -729,7 +729,7 @@ export default function ServicesPage() {
                            </span>
                         </label>
                      </div>
-                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 active:scale-95 transition-all">{editingBiz ? 'Save Changes' : 'Publish Business Card'}</button>
+                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs active:scale-95 transition-all">{editingBiz ? 'Save Changes' : 'Publish Business Card'}</button>
                   </form>
                </motion.div>
             </div>
@@ -740,7 +740,7 @@ export default function ServicesPage() {
          {selectedBiz && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedBiz(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-8">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6 sm:space-y-8">
                   <div className="flex justify-between items-center">
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Hire <span className="text-gold-primary">Contractor</span></h3>
@@ -757,7 +757,7 @@ export default function ServicesPage() {
                         <p className="text-[10px] text-gold-primary font-black uppercase tracking-widest mb-1 flex items-center gap-2"><Info size={12}/> Security Tip</p>
                         <p className="text-[10px] text-gray-500 leading-relaxed font-bold">Payments are handled offline. Request a quote after the contractor inspects the site.</p>
                      </div>
-                     <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+                     <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all">
                         Dispatch Callout <Send size={14} />
                      </button>
                   </form>
@@ -771,12 +771,12 @@ export default function ServicesPage() {
          {showLiftModal && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLiftModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden max-h-[90vh] overflow-y-auto">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10">
                   <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Post a <span className="text-gold-primary">Lift</span></h3>
                      <button onClick={() => setShowLiftModal(false)} className="text-gray-500 hover:text-white"><X /></button>
                   </div>
-                  <form onSubmit={handleCreateLift} className="p-8 space-y-6">
+                  <form onSubmit={handleCreateLift} className="p-6 sm:p-8 space-y-6">
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Origin</label>
@@ -820,7 +820,7 @@ export default function ServicesPage() {
                            ))}
                         </select>
                      </div>
-                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 active:scale-95 transition-all">Post Lift Club</button>
+                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs active:scale-95 transition-all">Post Lift Club</button>
                   </form>
                </motion.div>
             </div>
@@ -832,7 +832,7 @@ export default function ServicesPage() {
          {moveAssistTarget && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoveAssistTarget(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-6">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6">
                   <div className="flex justify-between items-center">
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Request <span className="text-gold-primary">Move Assist</span></h3>
@@ -864,7 +864,7 @@ export default function ServicesPage() {
                            <p className="text-[10px] text-red-400 leading-relaxed font-bold">{moveAssistError}</p>
                         </div>
                      )}
-                     <button type="submit" disabled={moveAssistSubmitting} className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50">
+                     <button type="submit" disabled={moveAssistSubmitting} className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50">
                         {moveAssistSubmitting ? 'Sending…' : 'Send Move-Assist Request'} <Send size={14} />
                      </button>
                   </form>
@@ -878,8 +878,8 @@ export default function ServicesPage() {
          {showProofModal && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowProofModal(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-md bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 text-center space-y-6">
-                  <div className="w-20 h-20 bg-gold-primary/10 rounded-full flex items-center justify-center mx-auto shadow-2xl">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-md max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 text-center space-y-6">
+                  <div className="w-20 h-20 bg-gold-primary/10 rounded-full flex items-center justify-center mx-auto">
                      <ShieldCheck size={40} className="text-gold-primary" />
                   </div>
                   <div className="space-y-2">
@@ -889,7 +889,7 @@ export default function ServicesPage() {
                   <div className="pt-4 flex flex-col gap-3">
                      <button
                        onClick={() => { dispatch(updateDispatchStatus({ dispatchId: showProofModal.id, status: 'completed' })); setShowProofModal(null); setAlertNotification('Order marked as Completed!') }}
-                       className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/10 active:scale-95 transition-all"
+                       className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs active:scale-95 transition-all"
                      >
                         Confirm & Complete
                      </button>
@@ -907,14 +907,14 @@ export default function ServicesPage() {
                initial={{ y: 100, opacity: 0 }}
                animate={{ y: 0, opacity: 1 }}
                exit={{ y: 100, opacity: 0 }}
-               className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
+               className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] md:bottom-20 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-5 sm:px-8 py-3.5 sm:py-4 rounded-2xl flex items-center gap-3 sm:gap-4 max-w-[calc(100vw-2rem)] w-auto min-w-[280px] sm:min-w-[320px]"
             >
-               <div className="p-2 bg-green-500/20 rounded-full text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check size={24} /></div>
-               <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">Notification</p>
-                  <p className="text-sm font-black text-white italic tracking-tight uppercase">{alertNotification}</p>
+               <div className="p-2 bg-green-500/20 rounded-full text-green-500"><Check size={24} /></div>
+               <div className="space-y-0.5 min-w-0">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Notification</p>
+                  <p className="text-sm font-black text-white italic tracking-tight uppercase truncate">{alertNotification}</p>
                </div>
-               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-700 hover:text-white transition-colors"><X size={16} /></button>
+               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-500 hover:text-white transition-colors shrink-0"><X size={16} /></button>
             </motion.div>
          )}
       </AnimatePresence>

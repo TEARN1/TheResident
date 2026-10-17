@@ -1099,7 +1099,7 @@ export default function HousingPage() {
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">List Your <span className="text-gold-primary">Property</span></h3>
                      <button onClick={() => setShowCreateModal(false)} className="p-2 text-gray-500 hover:text-white transition-colors"><X /></button>
                   </div>
-                  <form onSubmit={handleCreateListing} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                  <form onSubmit={handleCreateListing} className="p-6 space-y-6 max-h-[80dvh] overflow-y-auto custom-scrollbar">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Listing Title</label>
@@ -1330,7 +1330,7 @@ export default function HousingPage() {
          {activeListing && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveListing(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-8">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6 sm:space-y-8">
                   <div className="flex justify-between items-center">
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Apply for <span className="text-gold-primary">Room</span></h3>
@@ -1352,7 +1352,7 @@ export default function HousingPage() {
                         <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Message to Landlord</label>
                         <textarea value={applyMessage} onChange={e => setApplyMessage(e.target.value)} required className="w-full box-border bg-black border border-white/10 rounded-xl p-4 text-sm text-white h-32 resize-none outline-none focus:border-gold-primary/40" placeholder="Introduce yourself, mention your move-in date and any questions..." />
                      </div>
-                     <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2">
+                     <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-2">
                         Send Request <Send size={14} />
                      </button>
                   </form>
@@ -1366,12 +1366,12 @@ export default function HousingPage() {
          {activeAuditRequest && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveAuditRequest(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10">
                   <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Tenant <span className="text-gold-primary">Audit</span></h3>
                      <button onClick={() => setActiveAuditRequest(null)} className="text-gray-500 hover:text-white"><X /></button>
                   </div>
-                  <div className="p-8 space-y-8">
+                  <div className="p-6 sm:p-8 space-y-6 sm:space-y-8">
                      <div className="flex gap-6 items-start">
                         <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center text-2xl font-black text-gold-primary border border-white/5 shadow-inner">{activeAuditRequest.tenantName.charAt(0)}</div>
                         <div className="space-y-1.5">
@@ -1437,14 +1437,14 @@ export default function HousingPage() {
                initial={{ y: 100, opacity: 0 }}
                animate={{ y: 0, opacity: 1 }}
                exit={{ y: 100, opacity: 0 }}
-               className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
+               className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] md:bottom-20 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-5 sm:px-8 py-3.5 sm:py-4 rounded-2xl flex items-center gap-3 sm:gap-4 max-w-[calc(100vw-2rem)] w-auto min-w-[280px] sm:min-w-[320px]"
             >
-               <div className="p-2 bg-green-500/20 rounded-full text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"><ShieldCheck size={24} /></div>
-               <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">Success</p>
-                  <p className="text-sm font-black text-white italic tracking-tight uppercase">{alertNotification}</p>
+               <div className="p-2 bg-green-500/20 rounded-full text-green-500"><ShieldCheck size={24} /></div>
+               <div className="space-y-0.5 min-w-0">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Success</p>
+                  <p className="text-sm font-black text-white italic tracking-tight uppercase truncate">{alertNotification}</p>
                </div>
-               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-700 hover:text-white transition-colors"><X size={16} /></button>
+               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-500 hover:text-white transition-colors shrink-0"><X size={16} /></button>
             </motion.div>
          )}
       </AnimatePresence>

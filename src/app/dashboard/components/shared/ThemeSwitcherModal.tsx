@@ -37,7 +37,7 @@ export default function ThemeSwitcherModal({
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-xl bg-black/95 border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          className="relative w-full max-w-xl bg-black/95 border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden flex flex-col max-h-[90dvh]"
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-5 border-b border-white/10 shrink-0">
@@ -75,7 +75,7 @@ export default function ThemeSwitcherModal({
                   }}
                   className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
                     isActive
-                      ? 'border-gold-primary bg-white/[0.06] shadow-glow scale-[1.01]'
+                      ? 'border-gold-primary bg-white/[0.06] scale-[1.01]'
                       : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/20'
                   }`}
                 >

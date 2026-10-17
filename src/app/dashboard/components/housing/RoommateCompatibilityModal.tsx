@@ -100,7 +100,7 @@ export default function RoommateCompatibilityModal({
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-lg bg-black/90 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgb(var(--accent)/0.15)] backdrop-blur-2xl overflow-hidden"
+          className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto custom-scrollbar bg-black/90 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgb(var(--accent)/0.15)] backdrop-blur-2xl"
         >
           {/* Background Ambient Glow */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -115,7 +115,7 @@ export default function RoommateCompatibilityModal({
 
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-400 flex items-center justify-center text-black shadow-lg">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-400 flex items-center justify-center text-black">
               <HeartHandshake size={24} />
             </div>
             <div>

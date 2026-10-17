@@ -427,7 +427,7 @@ export default function InstitutionalBroadcastsPortal({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-lg bg-neutral-950 border border-white/20 rounded-3xl p-5 sm:p-6 space-y-4"
+        className="w-full max-w-lg max-h-[90dvh] overflow-y-auto custom-scrollbar bg-neutral-950 border border-white/20 rounded-3xl p-5 sm:p-6 space-y-4"
       >
         <div className="flex justify-between items-center pb-2 border-b border-white/10">
           <h4 className="text-sm font-black text-white uppercase tracking-tight">Issue Official Department Directive</h4>
