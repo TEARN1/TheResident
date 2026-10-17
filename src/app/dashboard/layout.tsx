@@ -9,7 +9,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette, Radio
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -260,9 +260,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // routes — without this, visiting either would show the wrong tab (or
   // none) highlighted as "current" in the top bar title.
   const pageTitle =
+    pathname === '/dashboard' ? { name: 'Command Bridge', href: '/dashboard', icon: Radio } :
     pathname === '/dashboard/trust-circle' ? { name: 'Next of Kin', href: pathname, icon: ShieldCheck } :
     pathname === '/dashboard/business' ? { name: 'My Business', href: pathname, icon: Briefcase } :
-    navItems.find(item => item.href === pathname) || navItems[0]
+    navItems.find(item => item.href === pathname) || { name: 'Command Bridge', href: '/dashboard', icon: Radio }
 
   return (
     <div className="dashboard-wrapper">
@@ -347,26 +348,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div className="dashboard-main-content">
         <header className="sticky top-0 z-40 h-16 bg-black/60 backdrop-blur-2xl border-b border-white/15 px-4 md:px-6 flex items-center justify-between transition-all shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_-1px_1px_rgba(255,255,255,0.08)]">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary shadow-glow">
+          <Link
+            href="/dashboard"
+            onClick={() => playTactileSound('tab')}
+            className="flex items-center gap-3 group"
+            title="Planetary Command Bridge"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary shadow-glow group-hover:scale-105 transition-transform shrink-0">
               <pageTitle.icon size={18} />
             </div>
             <div className="flex items-center gap-2 min-w-0">
-              <span className="font-black text-sm tracking-wide text-white uppercase truncate max-w-[110px] sm:max-w-none">{pageTitle.name}</span>
+              <span className="font-black text-sm tracking-wide text-white uppercase truncate max-w-[110px] sm:max-w-none group-hover:text-gold-primary transition-colors">{pageTitle.name}</span>
               {!isGuestUser(currentUser) && (
-                <Link
-                  href="/dashboard/profile"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 text-gold-primary border border-gold-primary/30 hover:bg-gold-primary/20 transition-all shrink-0"
-                  title={`Mode: ${currentUser.role}. Tap to switch.`}
+                <span
+                  className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 text-gold-primary border border-gold-primary/30 shrink-0"
+                  title={`Mode: ${currentUser.role}`}
                 >
                   {currentUser.role === 'landlord' ? <Briefcase size={10} /> : <Home size={10} />}
                   <span>{currentUser.role}</span>
-                </Link>
+                </span>
               )}
             </div>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+            {/* Direct Link to Command Bridge */}
+            <Link
+              href="/dashboard"
+              onClick={() => playTactileSound('tab')}
+              className={`hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                pathname === '/dashboard'
+                  ? 'bg-gold-primary/20 text-gold-primary border-gold-primary/40'
+                  : 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border-white/10'
+              }`}
+              title="Planetary Command Bridge"
+            >
+              <Radio size={12} className={pathname === '/dashboard' ? 'text-gold-primary animate-pulse' : 'text-gray-400'} />
+              <span>Bridge</span>
+            </Link>
+
             {/* Global Spotlight Palette Trigger (Ctrl+K) */}
             <CommandPalette />
 

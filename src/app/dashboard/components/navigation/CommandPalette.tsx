@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Home, MessageSquare,
-  Sparkles, ExternalLink, Table2, Zap, MapPin, X, ArrowRight, User, Layers
+  Sparkles, ExternalLink, Table2, Zap, MapPin, X, ArrowRight, User, Layers, Radio
 } from 'lucide-react'
 import { GRUVS, TEARNS } from '../../../../utils/sisterApps'
 import { playTactileSound } from '../../../../utils/tactileSounds'
@@ -57,12 +57,20 @@ export default function CommandPalette() {
   const commandItems: CommandItem[] = [
     // App Navigation
     {
+      id: 'nav-bridge',
+      title: 'Planetary Command Bridge',
+      subtitle: 'Global telemetry, 3D radar preview, department directives & hub switcher',
+      category: 'App Navigation',
+      icon: Radio,
+      action: () => { router.push('/dashboard'); setOpen(false) }
+    },
+    {
       id: 'nav-map',
       title: 'VibeMap & Neighborhood Radars',
-      subtitle: 'Explore incident zones, verified pins & street walkability',
+      subtitle: 'Explore incident zones, verified pins & street walkability in 3D',
       category: 'App Navigation',
       icon: MapPin,
-      action: () => { router.push('/dashboard/housing'); setOpen(false) }
+      action: () => { router.push('/dashboard/community?tab=vibemap'); setOpen(false) }
     },
     {
       id: 'nav-rooms',
