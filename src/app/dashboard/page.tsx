@@ -10,13 +10,14 @@ import {
   Users, Home, Briefcase, Car, Scale, ArrowUpRight, Search, Activity,
   Sparkles, ExternalLink, MapPin, Send, RefreshCw, Smartphone,
   GraduationCap, HeartPulse, Bus, Bell, ChevronRight, Lock, CheckCircle2,
-  Table2, Key, Wrench, Eye
+  Table2, Key, Wrench, Eye, Terminal, X, CornerDownRight, ArrowRight
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState } from '../../store'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { GRUVS, TEARNS, GRUVS_TOUCH_DOWN } from '../../utils/sisterApps'
 import { fetchUpcomingGruvsEvents, formatGruvsEventWhen, type GruvsEvent } from '../../utils/gruvsEvents'
+import { analyzeMunicipalQuery, type ConciergeAnalysis } from '../../utils/conciergeEngine'
 import InstitutionalBroadcastsPortal from './components/community/InstitutionalBroadcastsPortal'
 
 interface PlanetaryHub {
@@ -146,44 +147,47 @@ export default function PlanetaryCommandBridge() {
     setActiveHub(hub)
   }
 
-  const handleOmniSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!omniQuery.trim()) return
-    playTactileSound('pop')
-    setIsSearching(true)
-    const q = omniQuery.toLowerCase()
+  const [conciergeResult, setConciergeResult] = useState<ConciergeAnalysis | null>(null)
 
+  const handleRunConcierge = (queryText: string) => {
+    if (!queryText.trim()) return
+    setIsSearching(true)
+    playTactileSound('click')
+
+    // Pure deterministic algorithmic execution (zero external AI cost, zero cloud latency)
+    const analysis = analyzeMunicipalQuery(queryText, activeHub.name)
     setTimeout(() => {
       setIsSearching(false)
-      if (q.includes('room') || q.includes('rent') || q.includes('house') || q.includes('lease') || q.includes('flat')) {
-        router.push('/dashboard/housing')
-      } else if (q.includes('directive') || q.includes('broadcast') || q.includes('department') || q.includes('school') || q.includes('education')) {
-        setShowCascadeModal(true)
-      } else if (q.includes('trade') || q.includes('plumber') || q.includes('electrician') || q.includes('move') || q.includes('lift')) {
-        router.push('/dashboard/services')
-      } else if (q.includes('map') || q.includes('radar') || q.includes('vibe') || q.includes('outage') || q.includes('load shedding')) {
-        router.push('/dashboard/community?tab=vibemap')
-      } else if (q.includes('dispute') || q.includes('market') || q.includes('spaza') || q.includes('community')) {
-        router.push('/dashboard/community')
-      } else if (q.includes('event') || q.includes('music') || q.includes('gruvs') || q.includes('concert')) {
-        if (GRUVS.url) window.open(GRUVS.url, '_blank')
-      } else if (q.includes('excel') || q.includes('budget') || q.includes('skill') || q.includes('tearn')) {
-        if (TEARNS.url) window.open(TEARNS.url, '_blank')
-      } else if (q.includes('profile') || q.includes('passport') || q.includes('id') || q.includes('trust')) {
-        router.push('/dashboard/profile')
-      } else {
-        router.push(`/dashboard/housing?q=${encodeURIComponent(omniQuery)}`)
-      }
-    }, 400)
+      setConciergeResult(analysis)
+      playTactileSound(analysis.tactileSound)
+    }, 180)
+  }
+
+  const handleOmniSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    handleRunConcierge(omniQuery)
+  }
+
+  const handleExecuteAction = (action: ConciergeAnalysis['actions'][number]) => {
+    playTactileSound('pop')
+    if (action.actionType === 'modal' && action.modalKey === 'cascade') {
+      setShowCascadeModal(true)
+    } else if (action.actionType === 'external' && action.externalUrl) {
+      window.open(action.externalUrl, '_blank')
+    } else if (action.path) {
+      router.push(action.path)
+    }
   }
 
   const quickPrompts = [
-    { label: 'Find Verified Rooms', query: 'rooms near university' },
-    { label: 'Department Directives', query: 'education department circulars' },
-    { label: 'Emergency Plumber', query: 'emergency plumbing dispatch' },
-    { label: '3D Vibe Radar', query: 'open live vibe radar map' },
-    { label: 'Tonight on The Gruvs', query: 'gruvs nightlife concerts' },
-    { label: 'Co-Living Audit Challenge', query: 'tearns excellence co-living budget' }
+    { label: 'Unlawful Lockout / RHA', query: 'landlord changed the lock and locked me out' },
+    { label: 'Bakkie Under R400', query: 'I need a bakkie in Braamfontein under R400' },
+    { label: 'Panic / Dark Street SOS', query: 'someone is following me on a dark street, help!' },
+    { label: 'Verified Rooms & WiFi', query: 'single room in Auckland Park under 2500' },
+    { label: 'Department Directives', query: 'department of education circular on matric timetable' },
+    { label: 'Power Grid Outage', query: 'power outage in Melville load shedding' },
+    { label: 'Tonight on The Gruvs', query: 'amapiano live music concert tonight' },
+    { label: 'Co-Living Rent Split', query: 'how to use excel formula to split rent between roommates' }
   ]
 
   return (
@@ -309,7 +313,7 @@ export default function PlanetaryCommandBridge() {
               type="button"
               onClick={() => {
                 setOmniQuery(p.query)
-                playTactileSound('tab')
+                handleRunConcierge(p.query)
               }}
               className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-semibold text-gray-300 hover:text-white shrink-0 transition-all active:scale-95"
             >
@@ -317,6 +321,140 @@ export default function PlanetaryCommandBridge() {
             </button>
           ))}
         </div>
+
+        {/* Reactive Algorithmic Municipal Concierge (Zero-Cost Deterministic Engine) */}
+        <AnimatePresence>
+          {conciergeResult && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+              className="mt-4 rounded-2xl bg-neutral-900/90 border-2 border-gold-primary/40 backdrop-blur-xl p-4 sm:p-5 space-y-4 relative overflow-hidden"
+            >
+              {/* Corner Accent Brackets */}
+              <div className="absolute top-2 left-2 w-2.5 h-2.5 border-t-2 border-l-2 border-gold-primary" />
+              <div className="absolute top-2 right-2 w-2.5 h-2.5 border-t-2 border-r-2 border-gold-primary" />
+              <div className="absolute bottom-2 left-2 w-2.5 h-2.5 border-b-2 border-l-2 border-gold-primary" />
+              <div className="absolute bottom-2 right-2 w-2.5 h-2.5 border-b-2 border-r-2 border-gold-primary" />
+
+              {/* Header HUD Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gold-primary/15 border border-gold-primary/30 flex items-center justify-center text-gold-primary">
+                    <Terminal size={14} className="animate-pulse" />
+                  </div>
+                  <div>
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-gold-primary font-black block">
+                      Deterministic Civil Algorithm // Zero Cloud Cost
+                    </span>
+                    <span className="text-xs font-black text-white uppercase tracking-tight">
+                      {conciergeResult.categoryLabel}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold">
+                    {conciergeResult.confidenceScore}% CONFIDENCE
+                  </span>
+                  <span className="hidden sm:inline font-mono text-[10px] text-gray-500">
+                    {conciergeResult.ruleApplied}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConciergeResult(null)
+                      playTactileSound('pop')
+                    }}
+                    className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Diagnosis & Rule Synthesis */}
+              <div className="space-y-1.5">
+                <h4 className="text-sm sm:text-base font-black text-white italic tracking-tight uppercase">
+                  {conciergeResult.headline}
+                </h4>
+                <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-normal">
+                  {conciergeResult.diagnosis}
+                </p>
+              </div>
+
+              {/* Extracted Parameters Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                {conciergeResult.params.map((param, pIdx) => (
+                  <div key={pIdx} className="p-2.5 rounded-xl bg-black/50 border border-white/10 space-y-0.5">
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-gray-400 block">
+                      {param.key}
+                    </span>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-mono text-xs font-black text-white truncate">
+                        {param.value}
+                      </span>
+                      {param.badge && (
+                        <span className={`text-[8px] font-mono px-1.5 py-0.2 rounded font-black shrink-0 ${
+                          param.badge.includes('WARNING') || param.badge.includes('HIGH') || param.badge.includes('URGENT')
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            : 'bg-gold-primary/20 text-gold-primary border border-gold-primary/40'
+                        }`}>
+                          {param.badge}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tactical Action Protocol (Plan) */}
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 space-y-1.5">
+                <span className="font-mono text-[9px] uppercase tracking-widest text-gray-400 font-bold block flex items-center gap-1.5">
+                  <CheckCircle2 size={11} className="text-emerald-400" /> Algorithmic Action Protocol:
+                </span>
+                <ul className="space-y-1 text-xs text-gray-300">
+                  {conciergeResult.actionPlan.map((step, sIdx) => (
+                    <li key={sIdx} className="flex items-start gap-2">
+                      <span className="font-mono text-[10px] text-gold-primary font-bold">{sIdx + 1}.</span>
+                      <span className="leading-snug">{step}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Executable Action Triggers (Strict Zero-Shadow Policy) */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {conciergeResult.actions.map((act, aIdx) => (
+                  <button
+                    key={aIdx}
+                    type="button"
+                    onClick={() => handleExecuteAction(act)}
+                    className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 ${
+                      act.primary
+                        ? 'bg-gold-primary hover:bg-gold-secondary text-black'
+                        : 'bg-white/10 hover:bg-white/15 border border-white/20 text-white'
+                    }`}
+                  >
+                    <span>{act.label}</span>
+                    {act.actionType === 'external' ? <ExternalLink size={13} /> : <ArrowRight size={13} />}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConciergeResult(null)
+                    playTactileSound('click')
+                  }}
+                  className="px-3 py-2 text-xs font-mono text-gray-400 hover:text-white transition-all ml-auto"
+                >
+                  Dismiss Triage
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
       {/* ── 3. RADAR & TRIANGULAR DIRECTIVES DUAL COCKPIT ─────────────────── */}
