@@ -310,29 +310,49 @@ export default function HousingPage() {
     : null
   const newListingLooksSuspicious = isSuspiciousPrice(newPrice, newListingPriceStats)
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Room photos go to storage and the listing keeps their URLs. They used to
+  // be stored inline as base64 (up to 30MB in one row), which made every
+  // listings fetch heavy and gave WhatsApp previews nothing to show.
+  const [photosUploading, setPhotosUploading] = useState(0)
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
-    const maxAllowed = 6 - newImages.length
+    const maxAllowed = 6 - newImages.length - photosUploading
     if (maxAllowed <= 0) {
       setAlertNotification('Maximum 6 room photos allowed.')
       return
     }
     const chosen = Array.from(files).slice(0, maxAllowed)
-    chosen.forEach(file => {
-      if (!file.type.startsWith('image/')) return
+    e.target.value = ''
+    for (const file of chosen) {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        setAlertNotification('Use JPG, PNG or WebP photos.')
+        continue
+      }
       if (file.size > 5 * 1024 * 1024) {
         setAlertNotification('Photo too large (max 5MB)')
-        return
+        continue
       }
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setNewImages(prev => [...prev, reader.result as string])
-        }
+      if (!supabase || !currentUser?.id) {
+        // Demo mode (no backend): keep a local preview only.
+        const url = URL.createObjectURL(file)
+        setNewImages(prev => [...prev, url])
+        continue
       }
-      reader.readAsDataURL(file)
-    })
+      setPhotosUploading(n => n + 1)
+      try {
+        const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+        const path = `${currentUser.id}/rooms/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+        const { error } = await supabase.storage.from('gossip-media').upload(path, file, { contentType: file.type })
+        if (error) throw error
+        const { data } = supabase.storage.from('gossip-media').getPublicUrl(path)
+        setNewImages(prev => [...prev, data.publicUrl])
+      } catch {
+        setAlertNotification('A photo failed to upload. Check your connection and try again.')
+      } finally {
+        setPhotosUploading(n => n - 1)
+      }
+    }
   }
 
   const handleCreateListing = (e: React.FormEvent) => {
@@ -945,9 +965,11 @@ export default function HousingPage() {
                       <span className="text-base font-black text-gold-primary tracking-tight">
                         {formatCurrency(item.price, item.currency)}
                       </span>
-                      <span className="text-[9px] text-gray-400 font-black uppercase">
-                        /{item.listingType === 'guesthouse' ? 'night' : 'mo'}
-                      </span>
+                      {item.listingType !== 'sale' && (
+                        <span className="text-[9px] text-gray-400 font-black uppercase">
+                          /{item.listingType === 'guesthouse' ? 'night' : 'mo'}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1001,7 +1023,7 @@ export default function HousingPage() {
                       type="button"
                       onClick={() => { playTactileSound('chime'); setLeaseModalListing(item) }}
                       className="p-2.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary transition-all flex items-center gap-1.5 text-xs font-bold"
-                      title="Generate official South African Lease Agreement (Act 50)"
+                      title="Lease template (Rental Housing Act 50 of 1999)"
                     >
                       <FileText size={14} className="text-gold-primary" />
                       <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Lease</span>
@@ -1196,7 +1218,7 @@ export default function HousingPage() {
                            </div>
                            <label className="cursor-pointer bg-gold-primary hover:bg-gold-secondary text-black px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all shrink-0">
                               <Upload size={13} />
-                              <span>Select Photos</span>
+                              <span>{photosUploading > 0 ? 'Uploading…' : 'Select Photos'}</span>
                               <input
                                  type="file"
                                  multiple
@@ -1207,32 +1229,14 @@ export default function HousingPage() {
                            </label>
                         </div>
 
-                        {/* Quick Presets */}
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                           <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Quick Presets:</span>
-                           {[
-                              { label: '+ Sunny Bedroom', url: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80' },
-                              { label: '+ Clean Ensuite', url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80' },
-                              { label: '+ Modern Kitchen', url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80' },
-                              { label: '+ Private Balcony', url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80' }
-                           ].map(preset => (
-                              <button
-                                 key={preset.label}
-                                 type="button"
-                                 onClick={() => {
-                                    if (newImages.length >= 6) {
-                                       setAlertNotification('Max 6 photos allowed')
-                                       return
-                                    }
-                                    setNewImages(prev => [...prev, preset.url])
-                                    playTactileSound('pop')
-                                 }}
-                                 className="text-[10px] font-bold text-gray-300 hover:text-gold-primary bg-black/40 hover:bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 transition-all"
-                              >
-                                 {preset.label}
-                              </button>
-                           ))}
-                        </div>
+                        {/* No stock "presets": a stranger's photos on a room listing is
+                            exactly how rental scams work. Real photos or none. */}
+                        {photosUploading > 0 && (
+                           <p className="m-0 text-[10px] font-bold text-gold-primary">Uploading {photosUploading} photo{photosUploading === 1 ? '' : 's'}…</p>
+                        )}
+                        {newImages.length === 0 && photosUploading === 0 && (
+                           <p className="m-0 text-[10px] text-amber-400/90">Rooms with real photos get far more replies, and tenants trust them more. Add at least one if you can.</p>
+                        )}
 
                         {/* Uploaded Photos Grid */}
                         {newImages.length > 0 && (
@@ -1317,7 +1321,7 @@ export default function HousingPage() {
                      </div>
                      <div className="pt-4 border-t border-white/5 flex gap-4">
                         <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 bg-white/5 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs">Cancel</button>
-                        <button type="submit" className="flex-1 bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20">Publish Listing</button>
+                        <button type="submit" disabled={photosUploading > 0} className="flex-1 bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 disabled:opacity-50">{photosUploading > 0 ? 'Uploading photos…' : 'Publish Listing'}</button>
                      </div>
                   </form>
                </motion.div>
@@ -1347,6 +1351,19 @@ export default function HousingPage() {
                     verdict={priceVerdict(activeListing.price, statsFor(activeListing))}
                   />
                   <ShareListingButton listing={activeListing} userId={currentUser?.id} variant="full" />
+                  {isGuest ? (
+                    // Said up front instead of after a guest has typed a whole
+                    // message. Signing up returns them to this same room.
+                    <div className="space-y-3 text-center">
+                      <p className="m-0 text-xs text-gray-400">A landlord needs to know who is asking, so requests need a free account.</p>
+                      <Link
+                        href={`/auth?signup=1&next=${encodeURIComponent(`/dashboard/housing?listing=${activeListing.id}`)}`}
+                        className="no-underline w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                      >
+                        Sign up to request this room <Send size={14} />
+                      </Link>
+                    </div>
+                  ) : (
                   <form onSubmit={handleApply} className="space-y-6">
                      <div className="space-y-2">
                         <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Message to Landlord</label>
@@ -1356,6 +1373,7 @@ export default function HousingPage() {
                         Send Request <Send size={14} />
                      </button>
                   </form>
+                  )}
                </motion.div>
             </div>
          )}

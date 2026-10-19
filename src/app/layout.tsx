@@ -14,7 +14,19 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: 'The Resident Crew',
-  description: 'Co-Living, Accommodations Trading & Community Portal for The Resident Crew — Connected with The Gruvs.',
+  description: 'Find a room you can trust: real rooms from real landlords, with a fair-price check on every one. Plus SOS alerts, local services and trade with your neighbours.',
+  // Link previews (WhatsApp, Facebook, X). The image is app/opengraph-image.tsx.
+  openGraph: {
+    type: 'website',
+    siteName: 'The Resident',
+    title: 'The Resident: find a room you can trust',
+    description: 'Real rooms from real landlords, a fair-price check on every one, and neighbours who have your back.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'The Resident: find a room you can trust',
+    description: 'Real rooms from real landlords, a fair-price check on every one, and neighbours who have your back.',
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

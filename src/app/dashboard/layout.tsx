@@ -102,6 +102,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const dataStatus = useSelector((state: RootState) => state.ui.dataStatus)
   const failedTables = useSelector((state: RootState) => state.ui.failedTables)
   const pendingWrites = useSelector((state: RootState) => state.ui.offlineQueue.length)
+  // Live counts for the top bar (it used to say "GRID: 99% | DEFENSE: ARMED",
+  // which measured nothing). Zero is shown as zero.
+  const roomsListed = useSelector((state: RootState) => state.listings.items.length)
+  const activeAlerts = useSelector((state: RootState) => state.community.alerts.filter(a => a.status === 'active').length)
 
   // A real light mode left active by the auth/landing pages' own toggle
   // used to leak in here and render a half-styled mess, because the
@@ -393,9 +397,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Futuristic Planetary Telemetry Capsule */}
             <div className="hidden xl:inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono text-gray-300">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-bold text-gray-200">GRID: 99%</span>
+              <span className="font-bold text-gray-200">ROOMS: {roomsListed}</span>
               <span className="text-white/20">|</span>
-              <span className="text-cyan-400 font-bold">DEFENSE: ARMED</span>
+              <span className={`font-bold ${activeAlerts > 0 ? 'text-red-400' : 'text-cyan-400'}`}>ALERTS: {activeAlerts}</span>
             </div>
 
             {/* Ecosystem Badges: The Gruvs & TEARNs Excellence */}

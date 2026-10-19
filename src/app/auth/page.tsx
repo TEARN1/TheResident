@@ -128,6 +128,9 @@ export default function AuthPage() {
       // open Sign Up with Landlord picked (they can still change it).
       setActiveTab('signup')
       setRole('landlord')
+    } else if (params.get('signup') === '1') {
+      // A guest tapping "Sign up to request this room" lands on Sign Up.
+      setActiveTab('signup')
     }
   }, [])
   const [passwordStrength, setPasswordStrength] = useState<{strong: boolean; score: number; feedback: string[]} | null>(null)
@@ -329,7 +332,9 @@ export default function AuthPage() {
       }
     }
 
-    document.cookie = `guest-mode=1; path=/; max-age=3600`
+    // 30 days: it only lets someone browse public data (RLS still applies),
+    // and the old 1-hour expiry bounced guests to the login screen mid-browse.
+    document.cookie = `guest-mode=1; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`
     
     dispatch(resetFailedAttempts(email))
     dispatch(loginUser(visitorUser))
