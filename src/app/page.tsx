@@ -237,17 +237,20 @@ export default function HomePage() {
               <span>Now live in {LAUNCH_AREA}</span>
             </Link>
           )}
+          {/* What the app does, not invented system status: these used to
+              read "Civic Grid: Online" / "Defense Mesh: Armed", which
+              described nothing real. */}
           <div className={styles.telemetryChip}>
             <span className={styles.telemetryPulse} style={{ background: '#22c55e' }} />
-            <span>Civic Grid: Online</span>
+            <span>Fair-price check on every room</span>
           </div>
           <div className={styles.telemetryChip}>
             <Radio size={12} className="text-cyan-400" />
-            <span>Defense Mesh: Armed</span>
+            <span>SOS to your neighbours</span>
           </div>
           <div className={styles.telemetryChip}>
             <Zap size={12} className="text-amber-400" />
-            <span>Outage Watch: Live</span>
+            <span>Outage &amp; safety alerts</span>
           </div>
           <a
             href={GRUVS.url ?? undefined}
@@ -258,7 +261,7 @@ export default function HomePage() {
             style={{ color: '#d8b4fe', textDecoration: 'none' }}
           >
             <Sparkles size={12} className="text-purple-400" />
-            <span>Gruvs Radar: Synced</span>
+            <span>Linked with The Gruvs</span>
           </a>
         </div>
 
@@ -268,8 +271,8 @@ export default function HomePage() {
           transition={{ duration: 0.9, ease: 'easeOut' }}
           className={styles.title}
         >
-          The Planetary Operating System<br />
-          <span className={styles.goldText}>for Physical Life</span>.
+          Find a room you can trust.<br />
+          <span className={styles.goldText}>Know the street you live on.</span>
         </motion.h1>
 
         <motion.p
@@ -278,8 +281,9 @@ export default function HomePage() {
           transition={{ delay: 0.3, duration: 0.9 }}
           className={styles.subtitle}
         >
-          Shelter without scams. Mutual aid and emergency defense.
-          Vetted neighborhood trade artisans. Interlocked with <strong>The Gruvs</strong> nightlife and <strong>TEARN&apos;s Excellence</strong> workplace mastery.
+          Real rooms posted by their landlords, each with a fair-price check, so you can spot a scam before you pay.
+          Plus SOS alerts, local services and trade with your neighbours{LAUNCH_AREA ? <>, starting in <strong>{LAUNCH_AREA}</strong></> : null}.
+          Part of the planetary network with <strong>The Gruvs</strong> and <strong>TEARN&apos;s Excellence</strong>.
         </motion.p>
 
         <motion.div
@@ -289,12 +293,32 @@ export default function HomePage() {
           className={styles.ctaGroup}
         >
           <Link
-            href="/auth"
+            href="/dashboard/housing"
             onClick={() => playTactileSound('click')}
             className="btn-primary"
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 28px', fontSize: '0.98rem', fontWeight: 800 }}
           >
-            Enter Civic Portal <ArrowRight size={17} />
+            Find a room <ArrowRight size={17} />
+          </Link>
+          <Link
+            href="/auth?role=landlord"
+            onClick={() => playTactileSound('click')}
+            className="btn-secondary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(212, 175, 55, 0.12)',
+              border: '1px solid rgba(212, 175, 55, 0.45)',
+              color: '#fde68a',
+              padding: '12px 24px',
+              borderRadius: '12px',
+              fontSize: '0.95rem',
+              fontWeight: 800,
+              textDecoration: 'none'
+            }}
+          >
+            List a room free
           </Link>
           <Link
             href="/auth?mode=gruvs"

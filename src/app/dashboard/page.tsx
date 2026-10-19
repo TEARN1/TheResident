@@ -228,11 +228,12 @@ export default function PlanetaryCommandBridge() {
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 font-mono text-[10px] sm:text-xs text-gray-300 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-              <span>NODES: <strong>{activeHub.meshNodes}</strong></span>
+              {/* Real count, not the hub's made-up meshNodes figure. */}
+              <span>ROOMS LISTED: <strong>{listings.length}</strong></span>
             </div>
             <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 font-mono text-[10px] sm:text-xs text-amber-300 flex items-center gap-1.5">
               <ShieldCheck size={13} className="text-amber-400" />
-              <span>DEFENSE: <strong>ARMED ({activeHub.emergencyNumber})</strong></span>
+              <span>EMERGENCY: <strong>{activeHub.emergencyNumber}</strong></span>
             </div>
           </div>
         </div>

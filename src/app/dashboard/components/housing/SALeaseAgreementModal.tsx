@@ -82,7 +82,7 @@ JURISDICTION: ${selectedJur.flag} ${selectedJur.label.toUpperCase()} (${selected
 
 4. FINANCIAL COVENANTS:
    Monthly Rental:    ${currency} ${monthlyRent.toLocaleString()} per calendar month, payable in advance on or before the 1st of each month.
-   Security Deposit:  ${currency} ${depositAmount.toLocaleString()} held under official statutory protection regulations.
+   Security Deposit:  ${currency} ${depositAmount.toLocaleString()} held and refunded as required by ${selectedJur.law}.
 
 5. HOUSEHOLD RULES & COMMUNITY CONDUCT:
    - Quiet hours observed 22:00 - 07:00.
@@ -224,6 +224,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
               <p className="text-xs text-gray-400">
                 {selectedJur.law}
               </p>
+              <p className="text-[10px] text-gray-500 mt-0.5">A starting template, not legal advice. Both parties should read it before signing.</p>
             </div>
           </div>
 
@@ -362,7 +363,7 @@ DEPOSIT: ${currency} ${depositAmount.toLocaleString()}`}
                 <button
                   onClick={handlePrint}
                   className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                  title="Print official lease agreement or save directly as PDF"
+                  title="Print the lease or save it as a PDF"
                 >
                   <Printer size={14} className="text-gold-primary" />
                   <span>Print / PDF</span>
