@@ -7,8 +7,7 @@ import { motion } from 'framer-motion'
 import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { performLogin } from '../../utils/authLogin'
-import { Shield, User as UserIcon, Lock, Users, CheckCircle, AlertTriangle, ExternalLink, Table2, Scale, Palette } from 'lucide-react'
-import { GRUVS, TEARNS } from '../../utils/sisterApps'
+import { Shield, CheckCircle, AlertTriangle } from 'lucide-react'
 import { safeNextPath } from '../../utils/launch'
 import { track } from '../../utils/track'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
@@ -45,25 +44,8 @@ export default function AuthPage() {
   const router = useRouter()
   const dispatch = useDispatch<AppDispatch>()
 
-  // Shared across the WHOLE app now — 'residentTheme' in localStorage
-  const [theme, setTheme] = useState<string>('minimal-green')
-
-  useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('residentTheme') : null
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage on mount
-    if (stored) setTheme(stored)
-  }, [])
-
-  const toggleTheme = () => {
-    const themeCycle = ['minimal-green', 'crimson-cyber', 'liquid-glass', 'midnight-violet']
-    const currentIndex = themeCycle.indexOf(theme)
-    const nextTheme = themeCycle[(currentIndex + 1) % themeCycle.length]
-    setTheme(nextTheme)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('residentTheme', nextTheme)
-      document.documentElement.setAttribute('data-theme', nextTheme)
-    }
-  }
+  // (The theme switcher that sat in the corner here is gone: themes live in
+  // Profile, and the root layout already applies the saved one.)
 
   const failedAttempts = useSelector((state: RootState) => state.auth.failedAttempts)
   const lockedUntil = useSelector((state: RootState) => state.auth.lockedUntil)
@@ -90,19 +72,9 @@ export default function AuthPage() {
   // harmless.
   const [role, setRole] = useState<'tenant' | 'landlord' | ''>('')
   
-  // Tenant Profile Fields
-  const [bio, setBio] = useState('')
-  const [gender, setGender] = useState<'men' | 'women' | 'any'>('any')
-  const [childrenCount, setChildrenCount] = useState(0)
-  const [employmentStatus, setEmploymentStatus] = useState('Employed')
-  const [hasPets, setHasPets] = useState(false)
-  
-  // Landlord Preference Fields
-  const [genderPreference, setGenderPreference] = useState<'men' | 'women' | 'couple' | 'any'>('any')
-  const [childrenAllowed, setChildrenAllowed] = useState(true)
-  const [maxChildren, setMaxChildren] = useState(2)
-  const [smokingAllowed, setSmokingAllowed] = useState(false)
-  const [petsAllowed, setPetsAllowed] = useState(false)
+  // Sign up asks only what an account needs (name, email, password, tenant
+  // or landlord). The tenant profile and landlord house rules it used to ask
+  // up front are filled in later on the Profile page, where they already live.
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [showPolicyModal, setShowPolicyModal] = useState(false)
 
@@ -195,7 +167,7 @@ export default function AuthPage() {
     }
 
     if (!termsAccepted) {
-      setErrorMessage('You must review and accept the Master Platform Liability Shield and Terms to proceed.')
+      setErrorMessage('Please accept the Terms to create your account.')
       return
     }
 
@@ -205,7 +177,6 @@ export default function AuthPage() {
     }
 
     const sanitizedName = sanitizeInput(name)
-    const sanitizedBio = sanitizeInput(bio)
 
     // Real Supabase signup
     const { data, error } = await supabase.auth.signUp({
@@ -239,16 +210,18 @@ export default function AuthPage() {
       await supabase.from('res_profiles').insert({
         id: uuid,
         role: role,
-        bio: sanitizedBio || null,
-        gender: role === 'tenant' ? gender : null,
-        children_count: role === 'tenant' ? childrenCount : 0,
-        employment_status: role === 'tenant' ? employmentStatus : null,
-        has_pets: role === 'tenant' ? hasPets : false,
-        landlord_gender_pref: role === 'landlord' ? genderPreference : null,
-        landlord_children_allowed: role === 'landlord' ? childrenAllowed : true,
-        landlord_max_children: role === 'landlord' ? maxChildren : 0,
-        landlord_smoking_allowed: role === 'landlord' ? smokingAllowed : false,
-        landlord_pets_allowed: role === 'landlord' ? petsAllowed : false
+        // Neutral defaults until they fill in Profile; nothing is guessed
+        // (employment status used to default to "Employed").
+        bio: null,
+        gender: role === 'tenant' ? 'any' : null,
+        children_count: 0,
+        employment_status: null,
+        has_pets: false,
+        landlord_gender_pref: role === 'landlord' ? 'any' : null,
+        landlord_children_allowed: true,
+        landlord_max_children: role === 'landlord' ? 2 : 0,
+        landlord_smoking_allowed: false,
+        landlord_pets_allowed: false
       })
 
       dispatch(resetFailedAttempts(email))
@@ -296,25 +269,7 @@ export default function AuthPage() {
     // On success the browser navigates away to the provider — nothing else to do.
   }
 
-  const handleGruvsSSO = () => {
-    // One account across The Gruvs & The Resident — they share the SAME Supabase
-    // Auth project, so there is no separate "Gruvs password": your Gruvs email +
-    // password ARE your login here. A cross-domain redirect to thegruvs.com can't
-    // hand a session back (it's a static SPA with no SSO endpoint), so instead we
-    // drop straight into the login form with a clear one-account note. On submit,
-    // handleLogin() calls ensure_res_profile() to set up the Resident side
-    // automatically — a Gruvs user becomes whole here on their first sign-in.
-    setActiveTab('login')
-    setGruvsMode(true)
-    setErrorMessage(null)
-    if (typeof document !== 'undefined') {
-      setTimeout(() => {
-        const el = document.querySelector<HTMLInputElement>('input[type="email"]')
-        el?.focus()
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 60)
-    }
-  }
+
 
   const handleVisitorLogin = () => {
     // Visitor guests don't have Supabase auth records, so we set a guest token
@@ -350,16 +305,7 @@ export default function AuthPage() {
   return (
     <div style={containerStyle}>
       <div style={overlayStyle} />
-      
-      <button
-        onClick={toggleTheme}
-        style={themeToggleStyle}
-        title="Switch color palette (Minimal Emerald, Crimson Cyber, Liquid Glass, Midnight Violet)"
-        aria-label="Switch color palette"
-      >
-        <Palette size={16} />
-      </button>
-      
+
       {securityMessage && (
         <div style={alertStyle}>
           <Shield size={20} className="text-gold-primary" />
@@ -367,32 +313,38 @@ export default function AuthPage() {
         </div>
       )}
 
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
+      {/* Kept to the essentials: email and password, plus Facebook and guest
+          browsing. It used to stack three "Continue with The Gruvs" buttons,
+          a theme switcher, a partner footer and a full tenant/landlord
+          questionnaire on one screen. */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4 }}
         className="responsive-glass-panel"
-        style={glassPanelStyle}
+        style={{ ...glassPanelStyle, maxWidth: '420px' }}
       >
-        <div style={headerStyle}>
-          <h2 style={logoStyle}>THE RESIDENT</h2>
-          <p style={taglineStyle}>Verified Co-Living & Rental Portal</p>
-          <p style={crossAppNoteStyle}>One account — the same login works on The Gruvs</p>
+        <div style={{ ...headerStyle, marginBottom: '1.5rem' }}>
+          <h2 style={{ ...logoStyle, fontSize: 'clamp(1.5rem, 7vw, 2.2rem)', letterSpacing: '3px' }}>THE RESIDENT</h2>
+          <p style={{ ...taglineStyle, textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
+            {activeTab === 'login' ? 'Welcome back' : 'Create your free account'}
+          </p>
         </div>
 
-        {/* Tab Selection */}
         <div style={tabContainerStyle}>
-          <button 
-            style={activeTab === 'signup' ? activeTabStyle : inactiveTabStyle}
-            onClick={() => setActiveTab('signup')}
-          >
-            Create Profile
-          </button>
-          <button 
+          <button
+            type="button"
             style={activeTab === 'login' ? activeTabStyle : inactiveTabStyle}
-            onClick={() => setActiveTab('login')}
+            onClick={() => { setActiveTab('login'); setErrorMessage(null) }}
           >
-            Log In
+            Log in
+          </button>
+          <button
+            type="button"
+            style={activeTab === 'signup' ? activeTabStyle : inactiveTabStyle}
+            onClick={() => { setActiveTab('signup'); setErrorMessage(null) }}
+          >
+            Sign up
           </button>
         </div>
 
@@ -403,90 +355,16 @@ export default function AuthPage() {
           </div>
         )}
 
-        {gruvsMode && activeTab === 'login' && (
-          <div style={{ ...gruvsBannerStyle, border: '1px solid rgba(168, 85, 247, 0.4)', background: 'rgba(168, 85, 247, 0.12)' }}>
-            <GruvsMark />
-            <span>
-              <strong>One account across both apps.</strong> Sign in with the same email &amp; password you use on
-              The Gruvs — we&apos;ll set up your Resident profile automatically.
-            </span>
-          </div>
-        )}
-
-        {/* Unified Cross-App SSO & Social Logins */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.25rem' }}>
-          <button
-            type="button"
-            onClick={handleGruvsSSO}
-            style={{
-              ...gruvsBtnStyle,
-              marginBottom: 0,
-              background: gruvsMode ? 'rgba(168, 85, 247, 0.28)' : 'linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(212, 175, 55, 0.12) 100%)',
-              borderColor: gruvsMode ? '#a855f7' : 'rgba(212, 175, 55, 0.45)',
-              color: '#FFFFFF',
-              boxShadow: 'none',
-            }}
-          >
-            <GruvsMark />
-            <span>Continue with The Gruvs</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOAuth('facebook')}
-            disabled={oauthLoading !== null}
-            style={oauthBtnStyle}
-          >
-            {oauthLoading === 'facebook' ? 'Connecting…' : 'Continue with Facebook'}
-          </button>
-        </div>
-
-        {activeTab === 'signup' && (
-          <div style={{ ...gruvsBannerStyle, marginTop: '1rem', marginBottom: 0, background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
-            <GruvsMark />
-            <span>
-              <strong>Already on The Gruvs?</strong> You don&apos;t need to register again.{' '}
-              <button
-                type="button"
-                onClick={handleGruvsSSO}
-                style={{ background: 'none', border: 'none', color: 'var(--gold-primary)', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-              >
-                Sign in with The Gruvs
-              </button>
-            </span>
-          </div>
-        )}
-
-        <div style={socialDividerStyle}>
-          <span style={socialDividerLineStyle} />
-          <span style={socialDividerTextStyle}>or with email</span>
-          <span style={socialDividerLineStyle} />
-        </div>
-
         {activeTab === 'login' ? (
           <form onSubmit={handleLogin} style={formStyle}>
             <div style={inputGroupStyle}>
-              <label style={labelStyle}>Access Role (Optional)</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
-                style={selectStyle}
-              >
-                <option value="">Auto-detect from existing profile (or choose…)</option>
-                <option value="tenant">I am a Tenant looking for a Room</option>
-                <option value="landlord">I am a Landlord renting out Rooms</option>
-              </select>
-              <p style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
-                Existing Gruvs &amp; Resident accounts keep their saved role. New here? Choose now or configure during onboarding.
-              </p>
-            </div>
-
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Email Address</label>
-              <input 
-                type="email" 
-                required 
-                placeholder="enter your email..." 
+              <label style={labelStyle} htmlFor="login-email">Email</label>
+              <input
+                id="login-email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 style={inputStyle}
@@ -495,12 +373,12 @@ export default function AuthPage() {
 
             <div style={inputGroupStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={labelStyle}>Password</label>
+                <label style={labelStyle} htmlFor="login-password">Password</label>
                 <button
                   type="button"
                   onClick={async () => {
                     if (!email) {
-                      setErrorMessage('Please type your email address first so we know where to send the reset link.')
+                      setErrorMessage('Type your email first so we know where to send the reset link.')
                       return
                     }
                     if (!supabase) {
@@ -525,9 +403,11 @@ export default function AuthPage() {
                 </button>
               </div>
               <input
+                id="login-password"
                 type="password"
                 required
-                placeholder="enter your password..."
+                autoComplete="current-password"
+                placeholder="Your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 style={inputStyle}
@@ -535,397 +415,156 @@ export default function AuthPage() {
             </div>
 
             {resetEmailSent && (
-              <div style={{ ...alertStyle, background: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)', color: '#86efac' }}>
+              <div style={{ ...noticeStyle, background: 'rgba(34, 197, 94, 0.1)', borderColor: 'rgba(34, 197, 94, 0.3)', color: '#86efac' }}>
                 <CheckCircle size={16} color="#22c55e" />
-                <span>Password reset link sent to <strong>{email}</strong>! Check your inbox &amp; spam folder.</span>
+                <span>Reset link sent to <strong>{email}</strong>. Check your inbox and spam folder.</span>
               </div>
             )}
 
             <button type="submit" className="btn-primary" style={submitButtonStyle}>
-              {gruvsMode ? (
-                <>Log In with The Gruvs <Lock size={14} style={{ marginLeft: 8 }} /></>
-              ) : (
-                <>Grant Access <Lock size={14} style={{ marginLeft: 8 }} /></>
-              )}
+              Log in
             </button>
 
-            <button
-              type="button"
-              onClick={handleVisitorLogin}
-              className="btn-outline"
-              style={submitButtonStyle}
-            >
-              <UserIcon size={15} style={{ marginRight: 6 }} /> Continue as Visitor (Guest)
-            </button>
-
-            {/* Cross-App Sign-In (one account works on both The Resident and The Gruvs) */}
-            <div style={socialDividerStyle}>
-              <span style={socialDividerLineStyle} />
-              <span style={socialDividerTextStyle}>or use your Gruvs account</span>
-              <span style={socialDividerLineStyle} />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGruvsSSO}
-              style={gruvsBtnStyle}
-            >
+            {/* The Gruvs shares this login (same accounts), so there is
+                nothing extra to tap: just say so. Highlighted when the
+                visitor arrived from The Gruvs (?sso=gruvs). */}
+            <p style={{ ...gruvsNoteStyle, ...(gruvsMode ? gruvsNoteActiveStyle : null) }}>
               <GruvsMark />
-              Sign in with The Gruvs
-            </button>
+              <span>Have a Gruvs account? Log in with the same email and password.</span>
+            </p>
           </form>
         ) : (
           <form onSubmit={handleSignup} style={formStyle}>
-            <div style={rowStyle}>
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>Full Name</label>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="e.g. Sarah Connor" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>Account Role</label>
-                <select
-                  required
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as 'tenant' | 'landlord')}
-                  style={selectStyle}
-                >
-                  <option value="" disabled>Select your role…</option>
-                  <option value="tenant">Tenant</option>
-                  <option value="landlord">Landlord</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={rowStyle}>
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>Email</label>
-                <input 
-                  type="email" 
-                  required 
-                  placeholder="name@domain.com" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-              <div style={inputGroupStyle}>
-                <label style={labelStyle}>Password</label>
-                <input 
-                  type="password" 
-                  required 
-                  placeholder="secure key..." 
-                  value={password}
-                  onChange={(e) => handlePasswordChange(e.target.value)}
-                  style={inputStyle}
-                />
-                {passwordStrength && (
-                  <div style={{marginTop: '4px'}}>
-                    <div style={{display: 'flex', gap: '3px', marginBottom: '4px'}}>
-                      {[...Array(6)].map((_, i) => (
-                        <div key={i} style={{
-                          flex: 1, height: '4px', borderRadius: '2px',
-                          background: i < passwordStrength.score 
-                            ? passwordStrength.score >= 4 ? '#4CAF50' : passwordStrength.score >= 2 ? '#FFC107' : '#F44336'
-                            : 'rgba(255,255,255,0.15)'
-                        }} />
-                      ))}
-                    </div>
-                    <span style={{fontSize: '11px', color: passwordStrength.strong ? '#4CAF50' : '#FFC107'}}>
-                      {passwordStrength.strong ? '✅ Strong password' : `⚠️ ${passwordStrength.feedback[0] || 'Weak password'}`}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Role-Based Onboarding */}
-            {role === 'tenant' ? (
-              <div style={profileSectionStyle}>
-                <h4 style={sectionHeaderStyle}><UserIcon size={14} style={{ marginRight: 6 }} /> Tenant Requirement Profile</h4>
-                
-                <div style={inputGroupStyle}>
-                  <label style={labelStyle}>About Yourself / Intro bio</label>
-                  <textarea 
-                    rows={2} 
-                    placeholder="Tell landlords about yourself, your cleanliness habits, etc." 
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    style={textareaStyle}
-                  />
-                </div>
-
-                <div style={rowStyle}>
-                  <div style={inputGroupStyle}>
-                    <label style={labelStyle}>Gender</label>
-                    <select 
-                      value={gender} 
-                      onChange={(e) => setGender(e.target.value as 'men' | 'women' | 'any')}
-                      style={selectStyle}
-                    >
-                      <option value="any">Any / Rather not say</option>
-                      <option value="men">Male</option>
-                      <option value="women">Female</option>
-                    </select>
-                  </div>
-                  
-                  <div style={inputGroupStyle}>
-                    <label style={labelStyle}>Number of Children</label>
-                    <input 
-                      type="number" 
-                      min={0} 
-                      max={10} 
-                      value={childrenCount}
-                      onChange={(e) => setChildrenCount(parseInt(e.target.value) || 0)}
-                      style={inputStyle}
-                    />
-                  </div>
-                </div>
-
-                <div style={rowStyle}>
-                  <div style={inputGroupStyle}>
-                    <label style={labelStyle}>Employment Status</label>
-                    <select 
-                      value={employmentStatus} 
-                      onChange={(e) => setEmploymentStatus(e.target.value)}
-                      style={selectStyle}
-                    >
-                      <option value="Employed">Full-time Employed</option>
-                      <option value="Self-Employed">Self-Employed</option>
-                      <option value="Student">Student</option>
-                      <option value="Unemployed">Other / Unemployed</option>
-                    </select>
-                  </div>
-                  
-                  <div style={checkboxWrapperStyle}>
-                    <input 
-                      type="checkbox" 
-                      id="hasPets" 
-                      checked={hasPets} 
-                      onChange={(e) => setHasPets(e.target.checked)}
-                      style={checkboxStyle}
-                    />
-                    <label htmlFor="hasPets" style={checkboxLabelStyle}>I have pets</label>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div style={profileSectionStyle}>
-                <h4 style={sectionHeaderStyle}><Users size={14} style={{ marginRight: 6 }} /> Landlord Preferences & Rules</h4>
-                
-                <div style={rowStyle}>
-                  <div style={inputGroupStyle}>
-                    <label style={labelStyle}>Gender Preference</label>
-                    <select 
-                      value={genderPreference} 
-                      onChange={(e) => setGenderPreference(e.target.value as 'men' | 'women' | 'couple' | 'any')}
-                      style={selectStyle}
-                    >
-                      <option value="any">Any Welcomed</option>
-                      <option value="men">Men Only</option>
-                      <option value="women">Women Only</option>
-                      <option value="couple">Couples Only</option>
-                    </select>
-                  </div>
-
-                  <div style={inputGroupStyle}>
-                    <label style={labelStyle}>Max Children Allowed</label>
-                    <input 
-                      type="number" 
-                      min={0} 
-                      max={10} 
-                      value={maxChildren}
-                      onChange={(e) => setMaxChildren(parseInt(e.target.value) || 0)}
-                      style={inputStyle}
-                    />
-                  </div>
-                </div>
-
-                <div className="responsive-pref-grid" style={preferenceGridStyle}>
-                  <div style={checkboxWrapperStyle}>
-                    <input 
-                      type="checkbox" 
-                      id="childrenAllowed" 
-                      checked={childrenAllowed} 
-                      onChange={(e) => setChildrenAllowed(e.target.checked)}
-                      style={checkboxStyle}
-                    />
-                    <label htmlFor="childrenAllowed" style={checkboxLabelStyle}>Children Allowed</label>
-                  </div>
-
-                  <div style={checkboxWrapperStyle}>
-                    <input 
-                      type="checkbox" 
-                      id="smokingAllowed" 
-                      checked={smokingAllowed} 
-                      onChange={(e) => setSmokingAllowed(e.target.checked)}
-                      style={checkboxStyle}
-                    />
-                    <label htmlFor="smokingAllowed" style={checkboxLabelStyle}>Smoking Allowed</label>
-                  </div>
-
-                  <div style={checkboxWrapperStyle}>
-                    <input 
-                      type="checkbox" 
-                      id="petsAllowed" 
-                      checked={petsAllowed} 
-                      onChange={(e) => setPetsAllowed(e.target.checked)}
-                      style={checkboxStyle}
-                    />
-                    <label htmlFor="petsAllowed" style={checkboxLabelStyle}>Pets Allowed</label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Sovereign Platform Liability Shield Checkbox */}
-            <div style={{
-              padding: '0.85rem',
-              borderRadius: '1rem',
-              backgroundColor: 'rgb(var(--accent) / 0.05)',
-              border: '1px solid rgb(var(--accent) / 0.25)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.5rem',
-              marginBottom: '0.75rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
-                <input
-                  type="checkbox"
-                  id="termsAgreement"
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
-                  style={{ marginTop: '0.15rem', cursor: 'pointer', accentColor: 'var(--gold-primary)' }}
-                />
-                <label htmlFor="termsAgreement" style={{ fontSize: '11px', color: '#D1D5DB', lineHeight: 1.45, cursor: 'pointer' }}>
-                  I accept the{' '}
+            <div style={inputGroupStyle}>
+              <span style={labelStyle}>I am…</span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {([['tenant', 'Looking for a room'], ['landlord', 'Renting out a room']] as const).map(([value, text]) => (
                   <button
+                    key={value}
                     type="button"
-                    onClick={() => setShowPolicyModal(true)}
-                    style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 'bold', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                    onClick={() => setRole(value)}
+                    aria-pressed={role === value}
+                    style={role === value ? { ...roleChoiceStyle, ...roleChoiceActiveStyle } : roleChoiceStyle}
                   >
-                    Platform Liability Shield &amp; Terms
+                    {text}
                   </button>
-                  . I acknowledge The Resident is an independent technology facilitator, not a property owner, broker, or financial custodian.
-                </label>
+                ))}
               </div>
             </div>
 
-            <button type="submit" className="btn-gold" style={submitButtonStyle}>
-              Confirm Profile & Enter <CheckCircle size={14} style={{ marginLeft: 8 }} />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleVisitorLogin}
-              className="btn-outline"
-              style={submitButtonStyle}
-            >
-              <UserIcon size={15} style={{ marginRight: 6 }} /> Continue as Visitor (Guest)
-            </button>
-
-            {/* Cross-App Sign-In (one account works on both The Resident and The Gruvs) */}
-            <div style={socialDividerStyle}>
-              <span style={socialDividerLineStyle} />
-              <span style={socialDividerTextStyle}>or sign up with Gruvs</span>
-              <span style={socialDividerLineStyle} />
+            <div style={inputGroupStyle}>
+              <label style={labelStyle} htmlFor="signup-name">Name</label>
+              <input
+                id="signup-name"
+                type="text"
+                required
+                autoComplete="name"
+                placeholder="Your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                style={inputStyle}
+              />
             </div>
 
-            <button
-              type="button"
-              onClick={handleGruvsSSO}
-              style={gruvsBtnStyle}
-            >
-              <GruvsMark />
-              Sign up with The Gruvs
+            <div style={inputGroupStyle}>
+              <label style={labelStyle} htmlFor="signup-email">Email</label>
+              <input
+                id="signup-email"
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={inputGroupStyle}>
+              <label style={labelStyle} htmlFor="signup-password">Password</label>
+              <input
+                id="signup-password"
+                type="password"
+                required
+                autoComplete="new-password"
+                placeholder="Choose a strong password"
+                value={password}
+                onChange={(e) => handlePasswordChange(e.target.value)}
+                style={inputStyle}
+              />
+              {passwordStrength && (
+                <div style={{ marginTop: '4px' }}>
+                  <div style={{ display: 'flex', gap: '3px', marginBottom: '4px' }}>
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} style={{
+                        flex: 1, height: '4px', borderRadius: '2px',
+                        background: i < passwordStrength.score
+                          ? passwordStrength.score >= 4 ? '#4CAF50' : passwordStrength.score >= 2 ? '#FFC107' : '#F44336'
+                          : 'rgba(255,255,255,0.15)'
+                      }} />
+                    ))}
+                  </div>
+                  <span style={{ fontSize: '11px', color: passwordStrength.strong ? '#4CAF50' : '#FFC107' }}>
+                    {passwordStrength.strong ? 'Strong password' : (passwordStrength.feedback[0] || 'Weak password')}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <label htmlFor="termsAgreement" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '12px', color: '#D1D5DB', lineHeight: 1.45, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                id="termsAgreement"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                style={{ marginTop: '0.15rem', cursor: 'pointer', accentColor: 'var(--gold-primary)' }}
+              />
+              <span>
+                I agree to the{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowPolicyModal(true)}
+                  style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 700, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '12px' }}
+                >
+                  Terms &amp; Privacy Policy
+                </button>
+              </span>
+            </label>
+
+            <button type="submit" className="btn-gold" style={submitButtonStyle} disabled={!role}>
+              {role ? 'Create account' : 'Choose an option above'}
             </button>
           </form>
         )}
 
-        {/* Connected Partners Footer */}
-        <div style={{
-          marginTop: '1.75rem',
-          paddingTop: '1.25rem',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.6rem',
-          alignItems: 'center',
-          textAlign: 'center'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <a
-              href="https://thegruvs.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                color: 'var(--gold-primary)',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textDecoration: 'none',
-                opacity: 0.9
-              }}
-            >
-              <GruvsMark />
-              <span>{GRUVS.cta} on {GRUVS.name}</span>
-              <ExternalLink size={11} />
-            </a>
-            {TEARNS.url && (<>
-            <span style={{ color: 'rgba(255, 255, 255, 0.2)', fontSize: '0.75rem' }}>•</span>
-            <a
-              href={TEARNS.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                color: 'rgba(255, 255, 255, 0.7)',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textDecoration: 'none'
-              }}
-            >
-              <Table2 size={13} color="var(--gold-primary)" />
-              <span>{TEARNS.name}</span>
-              <ExternalLink size={11} />
-            </a>
-            </>)}
-          </div>
-          <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <button
-              type="button"
-              onClick={() => setShowPolicyModal(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                fontSize: '0.7rem',
-                color: 'var(--gold-primary)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: 700,
-                textDecoration: 'underline'
-              }}
-            >
-              <Scale size={12} />
-              <span>Platform Legal Shield &amp; POPIA Policies</span>
-            </button>
-          </div>
-          <span style={{ fontSize: '0.68rem', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '0.5px' }}>
-            Unified student accommodations &amp; nightlife network
-          </span>
+        <div style={socialDividerStyle}>
+          <span style={socialDividerLineStyle} />
+          <span style={socialDividerTextStyle}>or</span>
+          <span style={socialDividerLineStyle} />
         </div>
+
+        <button
+          type="button"
+          onClick={() => handleOAuth('facebook')}
+          disabled={oauthLoading !== null}
+          style={{ ...oauthBtnStyle, width: '100%' }}
+        >
+          {oauthLoading === 'facebook' ? 'Connecting…' : 'Continue with Facebook'}
+        </button>
+
+        <button type="button" onClick={handleVisitorLogin} style={guestLinkStyle}>
+          Just looking? Browse as a guest
+        </button>
+
+        <p style={{ margin: '1.25rem 0 0', textAlign: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setShowPolicyModal(true)}
+            style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.45)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+          >
+            Terms &amp; privacy
+          </button>
+        </p>
       </motion.div>
 
       <MasterLegalPolicyModal
@@ -961,24 +600,6 @@ export const overlayStyle: React.CSSProperties = {
   pointerEvents: 'none'
 }
 
-const themeToggleStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '20px',
-  right: '20px',
-  zIndex: 10,
-  background: 'var(--glass-bg)',
-  border: '1px solid var(--glass-border)',
-  borderRadius: '50%',
-  width: '40px',
-  height: '40px',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  color: 'var(--gold-primary)',
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  boxShadow: '0 4px 6px -1px var(--shadow-color)'
-}
 
 export const glassPanelStyle: React.CSSProperties = {
   position: 'relative',
@@ -1020,14 +641,6 @@ export const taglineStyle: React.CSSProperties = {
   margin: 0
 }
 
-const crossAppNoteStyle: React.CSSProperties = {
-  fontSize: '0.72rem',
-  color: 'var(--gold-primary)',
-  opacity: 0.85,
-  letterSpacing: '1px',
-  fontWeight: 600,
-  margin: '0.5rem 0 0 0'
-}
 
 const tabContainerStyle: React.CSSProperties = {
   display: 'flex',
@@ -1235,20 +848,6 @@ const alertStyle: React.CSSProperties = {
   maxWidth: '500px'
 }
 
-// Social login styles
-const gruvsBannerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  background: 'rgb(var(--accent) / 0.08)',
-  border: '1px solid rgb(var(--accent) / 0.25)',
-  borderRadius: '16px',
-  padding: '14px 16px',
-  marginBottom: '16px',
-  color: 'rgba(255, 255, 255, 0.9)',
-  fontSize: '0.82rem',
-  lineHeight: 1.45,
-}
 
 const socialDividerStyle: React.CSSProperties = {
   display: 'flex',
@@ -1272,11 +871,6 @@ const socialDividerTextStyle: React.CSSProperties = {
   whiteSpace: 'nowrap'
 }
 
-const oauthRowStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '0.75rem',
-  marginTop: '0.25rem'
-}
 
 const oauthBtnStyle: React.CSSProperties = {
   flex: 1,
@@ -1294,22 +888,65 @@ const oauthBtnStyle: React.CSSProperties = {
   transition: 'all 0.25s ease'
 }
 
-const gruvsBtnStyle: React.CSSProperties = {
+const noticeStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'center',
-  gap: '0.75rem',
-  width: '100%',
-  padding: '0.85rem 1.25rem',
-  marginBottom: '0.75rem',
-  background: 'linear-gradient(135deg, rgb(var(--accent) / 0.2) 0%, rgb(var(--accent) / 0.08) 100%)',
-  border: '1.5px solid rgb(var(--accent) / 0.6)',
-  borderRadius: '14px',
-  color: 'var(--gold-primary)',
-  fontSize: '0.88rem',
-  fontWeight: 800,
-  letterSpacing: '0.5px',
-  cursor: 'pointer',
-  transition: 'all 0.25s ease'
+  gap: '0.6rem',
+  padding: '0.75rem 1rem',
+  borderRadius: '12px',
+  border: '1px solid transparent',
+  fontSize: '0.8rem'
 }
 
+const gruvsNoteStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.6rem',
+  margin: '0.25rem 0 0',
+  padding: '0.6rem 0.75rem',
+  borderRadius: '12px',
+  border: '1px solid transparent',
+  fontSize: '0.75rem',
+  lineHeight: 1.4,
+  color: 'rgba(255, 255, 255, 0.6)'
+}
+
+const gruvsNoteActiveStyle: React.CSSProperties = {
+  background: 'rgba(168, 85, 247, 0.12)',
+  borderColor: 'rgba(168, 85, 247, 0.4)',
+  color: 'rgba(255, 255, 255, 0.9)'
+}
+
+const roleChoiceStyle: React.CSSProperties = {
+  flex: 1,
+  padding: '0.75rem 0.5rem',
+  borderRadius: '12px',
+  border: '1px solid rgba(255, 255, 255, 0.12)',
+  background: 'rgba(255, 255, 255, 0.04)',
+  color: 'rgba(255, 255, 255, 0.75)',
+  fontSize: '0.8rem',
+  fontWeight: 700,
+  cursor: 'pointer',
+  transition: 'all 0.2s ease'
+}
+
+const roleChoiceActiveStyle: React.CSSProperties = {
+  background: 'rgb(var(--accent))',
+  borderColor: 'rgb(var(--accent))',
+  color: '#000000',
+  fontWeight: 900
+}
+
+const guestLinkStyle: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  marginTop: '0.75rem',
+  padding: '0.5rem',
+  background: 'none',
+  border: 'none',
+  color: 'rgba(255, 255, 255, 0.65)',
+  fontSize: '0.8rem',
+  fontWeight: 600,
+  cursor: 'pointer',
+  textDecoration: 'underline'
+}
