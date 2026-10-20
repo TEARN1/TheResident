@@ -2,35 +2,26 @@
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { AnimatePresence, motion } from 'framer-motion'
 import {
-  ArrowRight, Briefcase, Car, ExternalLink, Home, MessageCircle, Search, Send, ShieldCheck, Sparkles, User, Users, X
+  Briefcase, Car, ExternalLink, Home, MessageCircle, ShieldCheck, Sparkles, User, Users
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState, isGuestUser } from '../../store'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { GRUVS } from '../../utils/sisterApps'
 import { fetchUpcomingGruvsEvents, formatGruvsEventWhen, type GruvsEvent } from '../../utils/gruvsEvents'
-import { analyzeMunicipalQuery, type ConciergeAnalysis } from '../../utils/conciergeEngine'
 import { LAUNCH_AREA } from '../../utils/launch'
 
 /**
- * Home: a greeting, "ask anything", what is really on the app right now,
- * shortcuts, and real events from The Gruvs.
+ * Home: a greeting, what is really on the app right now, shortcuts, and
+ * real events from The Gruvs. (An "Ask anything" box sat here; it was
+ * removed because people would take it for an AI chatbot, which it isn't.)
  *
  * This replaced the "Command Bridge", which showed invented figures (it
  * fell back to "24 rooms / 18 plumbers / 7 lift clubs" whenever the real
  * count was zero), a "94% calm" vibe index, made-up government directives
  * and five fictional "planetary hubs". Every number here is a real count.
  */
-const QUICK_ASKS = [
-  { label: 'Locked out by my landlord', query: 'landlord changed the lock and locked me out' },
-  { label: 'Room under R3 000', query: 'single room under 3000' },
-  { label: 'I need a bakkie', query: 'I need a bakkie to move' },
-  { label: 'Power is out', query: 'power outage on my street' }
-]
-
 function greeting(hour: number): string {
   if (hour < 12) return 'Good morning'
   if (hour < 18) return 'Good afternoon'
@@ -38,7 +29,6 @@ function greeting(hour: number): string {
 }
 
 export default function HomeDashboard() {
-  const router = useRouter()
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const listings = useSelector((state: RootState) => state.listings.items)
   const services = useSelector((state: RootState) => state.networking.services)
@@ -46,8 +36,6 @@ export default function HomeDashboard() {
   const activeAlerts = useSelector((state: RootState) => state.community.alerts.filter(a => a.status === 'active').length)
 
   const [hour, setHour] = useState<number | null>(null)
-  const [query, setQuery] = useState('')
-  const [answer, setAnswer] = useState<ConciergeAnalysis | null>(null)
   const [events, setEvents] = useState<GruvsEvent[]>([])
 
   useEffect(() => {
@@ -61,21 +49,6 @@ export default function HomeDashboard() {
 
   const guest = isGuestUser(currentUser)
   const firstName = !guest && currentUser?.name ? currentUser.name.split(' ')[0] : null
-
-  const ask = (text: string) => {
-    if (!text.trim()) return
-    playTactileSound('click')
-    const result = analyzeMunicipalQuery(text, LAUNCH_AREA || 'your area')
-    setAnswer(result)
-    playTactileSound(result.tactileSound)
-  }
-
-  const runAction = (action: ConciergeAnalysis['actions'][number]) => {
-    playTactileSound('pop')
-    if (action.externalUrl?.startsWith('tel:')) window.location.assign(action.externalUrl)
-    else if (action.externalUrl) window.open(action.externalUrl, '_blank', 'noopener,noreferrer')
-    else if (action.path) router.push(action.path)
-  }
 
   const stats = [
     { label: 'Rooms listed', value: listings.length, href: '/dashboard/housing', icon: Home },
@@ -103,74 +76,6 @@ export default function HomeDashboard() {
           {LAUNCH_AREA ? `What do you need in ${LAUNCH_AREA} today?` : 'What do you need today?'}
         </p>
       </div>
-
-      {/* Ask anything: matches the question to the right part of the app,
-          entirely on the device (utils/conciergeEngine). */}
-      <section className="glass-panel p-4 sm:p-5 space-y-3">
-        <form onSubmit={e => { e.preventDefault(); ask(query) }} className="relative flex items-center">
-          <Search size={17} className="absolute left-4 text-gold-primary" />
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Ask anything, e.g. “room under R3 000”"
-            className="w-full bg-black/60 border border-white/15 rounded-2xl pl-11 pr-14 py-3.5 text-sm text-white placeholder:text-gray-500 outline-none focus:border-gold-primary"
-          />
-          <button type="submit" className="absolute right-2 p-2.5 rounded-xl bg-gold-primary text-black" aria-label="Ask">
-            <Send size={15} />
-          </button>
-        </form>
-        <div className="flex flex-wrap gap-2">
-          {QUICK_ASKS.map(q => (
-            <button
-              key={q.label}
-              type="button"
-              onClick={() => { setQuery(q.query); ask(q.query) }}
-              className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-gray-300 hover:text-white"
-            >
-              {q.label}
-            </button>
-          ))}
-        </div>
-
-        <AnimatePresence>
-          {answer && (
-            <motion.div
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              className={`rounded-2xl p-4 space-y-3 border ${answer.category === 'EMERGENCY_DEFENSE' ? 'bg-red-950/40 border-red-500/40' : 'bg-white/[0.04] border-white/10'}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="m-0 text-[10px] font-black uppercase tracking-widest text-gold-primary">{answer.categoryLabel}</p>
-                  <h2 className="m-0 mt-0.5 text-base font-black text-white">{answer.headline}</h2>
-                </div>
-                <button type="button" onClick={() => setAnswer(null)} className="p-1 text-gray-400 hover:text-white shrink-0" aria-label="Close">
-                  <X size={16} />
-                </button>
-              </div>
-              <p className="m-0 text-sm text-gray-300 leading-relaxed">{answer.diagnosis}</p>
-              <ol className="m-0 pl-5 space-y-1 text-sm text-gray-300">
-                {answer.actionPlan.map(step => <li key={step}>{step}</li>)}
-              </ol>
-              <div className="flex flex-wrap gap-2">
-                {answer.actions.map(action => (
-                  <button
-                    key={action.label}
-                    type="button"
-                    onClick={() => runAction(action)}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${action.primary ? 'bg-gold-primary text-black' : 'bg-white/10 border border-white/15 text-white'}`}
-                  >
-                    {action.label}
-                    {action.externalUrl && !action.externalUrl.startsWith('tel:') ? <ExternalLink size={13} /> : <ArrowRight size={13} />}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </section>
 
       {/* Real counts from the data the app has loaded; zero means zero. */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
