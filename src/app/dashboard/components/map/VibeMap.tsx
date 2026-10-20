@@ -218,7 +218,13 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         styleState.timer = window.setTimeout(fallBack, 12000)
       }
       armTimer()
-      map.on('error', () => { if (styleState.pending) fallBack() })
+      // Only a failed STYLE should switch to the raster fallback. A single
+      // tile, glyph or sprite error (common on patchy mobile data) used to
+      // flip the whole map to the flat raster style mid-load.
+      map.on('error', e => {
+        const ev = e as { sourceId?: string; tile?: unknown }
+        if (styleState.pending && !ev.sourceId && !ev.tile) fallBack()
+      })
 
       const fx: Fx = {
         engine,
@@ -627,7 +633,11 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
   return (
     <div
-      className={`fm-map relative w-full overflow-hidden ${fullscreen ? 'h-screen' : 'h-[calc(100vh-13rem)] min-h-[580px] rounded-3xl border border-white/10 shadow-glass'}`}
+      // Fullscreen fills its fixed inset-0 parent. It was h-screen (100vh),
+      // which on phones is taller than the visible screen while the address
+      // bar shows: the bottom controls sat off-screen and drags pushed the
+      // page around. dvh is the screen you can actually see.
+      className={`fm-map relative w-full overflow-hidden ${fullscreen ? 'h-full' : 'h-[calc(100dvh-13rem)] min-h-[520px] rounded-3xl border border-white/10 shadow-glass'}`}
       // Not `data-theme`: that attribute is the app's palette switch (globals.css).
       data-map-theme={mapTheme}
     >
@@ -635,11 +645,11 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
       {/* Sized by width/height, not `absolute inset-0`: maplibre-gl.css makes the container position: relative. */}
       <div ref={mapContainerRef} className="w-full h-full" role="region" aria-label="Vibe map" />
 
-      {/* HUD: vignette, faint grid, scan line, corner brackets */}
+      {/* HUD: vignette, faint grid, corner brackets. (A scan line used to sweep
+          down the whole map every 7s; on a phone it looked like the screen glitching.) */}
       <div className="fm-hud" aria-hidden="true">
         <div className="fm-hud-vignette" />
         {mapTheme !== 'light' && <div className="fm-hud-grid" />}
-        <div className="fm-hud-scan" />
         <i className="fm-hud-c tl" /><i className="fm-hud-c tr" /><i className="fm-hud-c bl" /><i className="fm-hud-c br" />
       </div>
 

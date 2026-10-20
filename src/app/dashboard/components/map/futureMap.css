@@ -108,7 +108,7 @@
   -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
 }
 
-/* ── HUD: faint grid, scan line, corner brackets, vignette ──────────────── */
+/* ── HUD: faint grid, corner brackets, vignette ─────────────────────────── */
 .fm-hud { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
 .fm-hud-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45) 100%); }
 .fm-map[data-map-theme='light'] .fm-hud-vignette { background: radial-gradient(ellipse at center, transparent 60%, rgba(15, 23, 42, 0.12) 100%); }
@@ -118,10 +118,6 @@
   background-size: 44px 44px;
   -webkit-mask-image: radial-gradient(ellipse at center, transparent 35%, #000 100%);
   mask-image: radial-gradient(ellipse at center, transparent 35%, #000 100%);
-}
-.fm-hud-scan {
-  position: absolute; left: 0; right: 0; top: 0; height: 20%; opacity: 0;
-  background: linear-gradient(to bottom, rgba(var(--fm-hud), 0), rgba(var(--fm-hud), 0.06) 70%, rgba(var(--fm-hud), 0.2) 99%, rgba(var(--fm-hud), 0));
 }
 .fm-hud-c { position: absolute; width: 22px; height: 22px; border-color: rgba(var(--fm-hud), 0.55); border-style: solid; border-width: 0; }
 .fm-hud-c.tl { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; border-top-left-radius: 6px; }
@@ -153,7 +149,6 @@
 @keyframes fm-sonar { 0% { transform: scale(0.04); opacity: 0.85; } 70% { opacity: 0.25; } 100% { transform: scale(1); opacity: 0; } }
 @keyframes fm-packet { 0% { transform: translate3d(0, 0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate3d(0, calc(var(--fm-beam-h, 80px) * -1), 0); opacity: 0; } }
 @keyframes fm-orb { 0%, 100% { transform: translate3d(-50%, 0, 0) scale(1); opacity: 0.85; } 50% { transform: translate3d(-50%, -5px, 0) scale(1.25); opacity: 1; } }
-@keyframes fm-scan { 0% { transform: translate3d(0, -120%, 0); } 100% { transform: translate3d(0, 520%, 0); } }
 @keyframes fm-breathe { 0%, 100% { transform: scale(0.75); opacity: 0.9; } 50% { transform: scale(1.35); opacity: 0.25; } }
 @keyframes fm-rise { from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.97); } to { opacity: 1; transform: none; } }
 @keyframes fm-drop { 0% { transform: translate3d(0, -26px, 0) scale(0.6); opacity: 0; } 60% { transform: translate3d(0, 2px, 0) scale(1.1); opacity: 1; } 100% { transform: none; } }
@@ -178,6 +173,18 @@
   .fm-hazard > i:nth-child(2) { animation-delay: 1.4s; }
   .fm-tap-body { animation: fm-drop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
   .fm-tap-body > i { display: block; animation: fm-sonar 1.8s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
-  .fm-hud-scan { opacity: 1; animation: fm-scan 7s linear infinite; }
   .fm-live-dot { animation: fm-blink 1.6s ease-in-out infinite; }
 }
+
+/* Performance: no backdrop blur on anything that sits over the map. The
+   canvas repaints every frame while you pan, so each blurred control or
+   marker forced the GPU to re-blur behind it on every frame, which made the
+   map stutter and "glitch" on phones. Solid, slightly darker glass instead. */
+.fm-map *,
+.fm-map *::before,
+.fm-map *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.fm-map .fm-glass { background-color: rgba(8, 10, 14, 0.86); }
+.fm-map[data-map-theme='light'] .fm-glass { background-color: rgba(255, 255, 255, 0.92); }

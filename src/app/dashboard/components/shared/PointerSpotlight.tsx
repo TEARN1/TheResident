@@ -35,7 +35,14 @@ export default function PointerSpotlight() {
     const onMove = (e: PointerEvent) => {
       x = e.clientX
       y = e.clientY
-      target = (e.target as Element | null)?.closest<HTMLElement>(SELECTOR) ?? null
+      const el = e.target as Element | null
+      // Never on the map: a style write per frame on the map's panel made
+      // the browser recalculate styles under the canvas during every drag.
+      if (el?.closest('.fm-map')) {
+        target = null
+      } else {
+        target = el?.closest<HTMLElement>(SELECTOR) ?? null
+      }
       if (!frame) frame = requestAnimationFrame(paint)
     }
 

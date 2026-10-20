@@ -473,7 +473,7 @@ export default function CommunityPage() {
   // VibeMap alone, with its own exit control to get back.
   if (subTab === 'vibemap' && mapFullscreen) {
     return (
-      <div className="fixed inset-0 z-[1000] bg-black">
+      <div className="fixed inset-0 z-[1000] bg-black overscroll-none" data-map-open="">
         <button
           onClick={exitFullscreenMap}
           aria-label="Exit fullscreen map"

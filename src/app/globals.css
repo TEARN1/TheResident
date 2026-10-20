@@ -767,6 +767,10 @@ body {
 [data-theme='light'] .ambient-backdrop {
   --orb-strength: 0.7;
 }
+/* The fullscreen map covers everything; stop the blurred background orbs
+   animating underneath it so the GPU is free for the map. */
+body:has([data-map-open]) .ambient-backdrop { display: none; }
+
 .ambient-orb {
   position: absolute;
   border-radius: 50%;
