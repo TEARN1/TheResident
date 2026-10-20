@@ -33,7 +33,6 @@ export default function StartNewChatModal({
 }: StartNewChatModalProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState<'all' | 'landlord' | 'tenant' | 'handyman'>('all')
   const [residents, setResidents] = useState<ResidentContact[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -51,14 +50,13 @@ export default function StartNewChatModal({
       .then(({ data, error }) => {
         setLoading(false)
         if (error || !data) return
+        // Only what the profile really says. Role, suburb and a "verified"
+        // tick used to be invented from each person's position in the list.
         const contacts: ResidentContact[] = data.map((p: { id: string; username: string | null; display_name: string | null; avatar_url: string | null }, idx: number) => ({
           id: p.id,
           name: p.display_name || p.username || `Resident #${idx + 1}`,
           username: p.username || undefined,
-          avatarUrl: p.avatar_url,
-          role: idx % 3 === 0 ? 'landlord' : idx % 3 === 1 ? 'handyman' : 'tenant',
-          suburb: idx % 2 === 0 ? 'Braamfontein' : 'Cape Town CBD',
-          verified: true
+          avatarUrl: p.avatar_url
         }))
         setResidents(contacts)
       })
@@ -76,15 +74,8 @@ export default function StartNewChatModal({
 
   if (!isOpen) return null
 
-  const filtered = residents.filter(r => {
-    const matchesSearch =
-      r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (r.suburb && r.suburb.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (r.username && r.username.toLowerCase().includes(searchQuery.toLowerCase()))
-
-    const matchesRole = roleFilter === 'all' || r.role === roleFilter
-    return matchesSearch && matchesRole
-  })
+  const q = searchQuery.toLowerCase()
+  const filtered = residents.filter(r => r.name.toLowerCase().includes(q) || (r.username?.toLowerCase().includes(q) ?? false))
 
   const handleSelectContact = (contactId: string) => {
     playTactileSound('click')
@@ -147,30 +138,6 @@ export default function StartNewChatModal({
               )}
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {[
-                { id: 'all', label: 'All Residents' },
-                { id: 'landlord', label: 'Landlords' },
-                { id: 'tenant', label: 'Roommates' },
-                { id: 'handyman', label: 'Service Pros' }
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => {
-                    playTactileSound('tab')
-                    setRoleFilter(f.id as 'all' | 'landlord' | 'tenant' | 'handyman')
-                  }}
-                  className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-all border ${
-                    roleFilter === f.id
-                      ? 'bg-[var(--gold-primary,#8EB69B)] text-black border-[var(--gold-primary,#8EB69B)] shadow-glow'
-                      : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Directory Results List */}
@@ -211,12 +178,9 @@ export default function StartNewChatModal({
                           <ShieldCheck size={12} className="text-[var(--gold-primary,#8EB69B)] shrink-0" />
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] text-gray-400 mt-0.5">
-                        <span className="capitalize font-bold text-gray-300">
-                          {contact.role === 'landlord' ? 'Landlord' : contact.role === 'handyman' ? 'Handyman Pro' : 'Resident'}
-                        </span>
-                        {contact.suburb && <span>• {contact.suburb}</span>}
-                      </div>
+                      {contact.username && (
+                        <div className="text-[10px] text-gray-400 mt-0.5">@{contact.username}</div>
+                      )}
                     </div>
                   </div>
 

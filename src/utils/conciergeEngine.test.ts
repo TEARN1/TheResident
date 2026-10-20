@@ -26,7 +26,9 @@ test('Concierge: EMERGENCY_DEFENSE detects panic and stalking triggers', () => {
   assert.equal(res.category, 'EMERGENCY_DEFENSE')
   assert.equal(res.confidenceScore >= 95, true)
   assert.equal(res.tactileSound, 'alert')
-  assert.equal(res.actions.some(a => a.label.includes('Panic')), true)
+  // Real help first: a call button, then the neighbour alert in Safety.
+  assert.equal(res.actions.some(a => a.externalUrl === 'tel:10111'), true)
+  assert.equal(res.actions.some(a => a.path === '/dashboard/community?tab=safety'), true)
 })
 
 test('Concierge: HAULING_DISPATCH extracts budget and location for bakkie logistics', () => {
@@ -65,7 +67,7 @@ test('Concierge: MUNICIPAL_RESILIENCE enforces 3-report consensus rule', () => {
 test('Concierge: DIRECTIVE_CASCADE routes educational circulars', () => {
   const res = analyzeMunicipalQuery('Department of education circular on matric exam timetable')
   assert.equal(res.category, 'DIRECTIVE_CASCADE')
-  assert.equal(res.actions.some(a => a.modalKey === 'cascade'), true)
+  assert.equal(res.actions.some(a => a.path === '/dashboard/community?tab=departments'), true)
 })
 
 test('Concierge: CULTURE_RADAR links to The Gruvs verified events', () => {

@@ -246,6 +246,14 @@ body {
   border-color: rgb(var(--accent) / 0.4);
 }
 
+/* Tailwind's reset (preflight) is off, so the browser default underlined
+   every link in the app: bottom-bar labels, page titles, buttons built as
+   links. :where() keeps this at zero specificity, so a link that asks for
+   an underline (the "underline" utility) still gets one. */
+:where(.dashboard-wrapper) a {
+  text-decoration: none;
+}
+
 .dashboard-page-body {
   flex: 1;
   overflow-y: auto;

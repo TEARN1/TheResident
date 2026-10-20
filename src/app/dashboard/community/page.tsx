@@ -57,7 +57,6 @@ import SharedResourcesTab from '../components/household/SharedResourcesTab'
 import CommunityAdminTab from '../components/community/CommunityAdminTab'
 import GruvsConnectionsWidget from '../components/social/GruvsConnectionsWidget'
 import OrgBroadcastsPanel from '../components/community/OrgBroadcastsPanel'
-import InstitutionalBroadcastsPortal from '../components/community/InstitutionalBroadcastsPortal'
 import dynamic from 'next/dynamic'
 import { formatCurrency, type StatusReport } from '../../../utils/logic'
 
@@ -66,12 +65,24 @@ const VibeMap = dynamic(() => import('../components/map/VibeMap'), {
   loading: () => <div className="p-12 text-slate-400 font-bold text-center">Loading VibeMap client engine...</div>
 })
 
+type CommunityTab = 'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'resources' | 'admin' | 'departments'
+const COMMUNITY_TABS: CommunityTab[] = ['overview', 'notices', 'tools', 'chores', 'disputes', 'safety', 'market', 'household', 'communities', 'vibemap', 'resources', 'admin', 'departments']
+
+// Deep links into Community: ?tab=<any tab>, plus the Ask box's older
+// ?action=panic / ?action=dispute_* and ?tab=nightwalk links.
+function tabFromParams(params: URLSearchParams | null): CommunityTab | null {
+  const tab = params?.get('tab') || ''
+  const action = params?.get('action') || ''
+  if ((COMMUNITY_TABS as string[]).includes(tab)) return tab as CommunityTab
+  if (tab === 'nightwalk' || action === 'panic') return 'safety'
+  if (action.startsWith('dispute')) return 'disputes'
+  return null
+}
+
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
   const searchParams = useSearchParams()
-  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'resources' | 'admin' | 'departments'>(
-    searchParams.get('tab') === 'vibemap' ? 'vibemap' : searchParams.get('tab') === 'departments' ? 'departments' : 'overview'
-  )
+  const [subTab, setSubTab] = useState<CommunityTab>(tabFromParams(searchParams) ?? 'overview')
   const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
   // Arriving via the top bar's "Map" quick-link (?tab=vibemap) means the
   // user wants the map, not the Community Hub chrome around it — so that
@@ -84,8 +95,10 @@ export default function CommunityPage() {
   // page was already mounted — the useState initializer above only fires on
   // first mount, so a repeat visit needs this effect to still catch the param.
   useEffect(() => {
-    if (searchParams.get('tab') === 'vibemap') { setSubTab('vibemap'); setMapFullscreen(true) }
-    else if (searchParams.get('tab') === 'departments') { setSubTab('departments'); setMapFullscreen(false) }
+    const tab = tabFromParams(searchParams)
+    if (!tab) return
+    setSubTab(tab)
+    setMapFullscreen(tab === 'vibemap')
   }, [searchParams])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
@@ -382,7 +395,7 @@ export default function CommunityPage() {
       accent: 'text-sky-400 bg-sky-400/10',
       tabs: [
         { id: 'notices', label: 'Notices', icon: Megaphone },
-        { id: 'departments', label: 'Departments', icon: Layers },
+        { id: 'departments', label: 'Organisations', icon: Layers },
         { id: 'communities', label: 'Groups', icon: Users },
       ],
     },
@@ -427,7 +440,7 @@ export default function CommunityPage() {
   // reads as a dead app. Tabs with nothing in them yet fold behind a
   // "+N quiet" chip (still one tap away, and the open tab always shows).
   // Only tabs with a cheap, already-loaded count are folded; the core ones
-  // (Notices, Groups, Safety, Household, Departments, Resources) always show.
+  // (Notices, Groups, Safety, Household, Organisations, Resources) always show.
   const [showQuietTabs, setShowQuietTabs] = useState(false)
   const tabItemCounts: Partial<Record<string, number>> = {
     market: marketItems.length + vendors.length + groupBuys.length + lostFound.length,
@@ -634,11 +647,13 @@ export default function CommunityPage() {
                     isModerator={isModerator}
                     onModerate={handleModerate}
                  />
-                <OrgBroadcastsPanel />
               </div>
             )}
+            {/* Real notices from organisations people follow (res_org_*).
+                This tab used to show made-up "official directives" from
+                real government departments and universities. */}
             {subTab === 'departments' && (
-              <InstitutionalBroadcastsPortal inline={true} />
+              <OrgBroadcastsPanel />
             )}
             {subTab === 'market' && (
               <MarketTab

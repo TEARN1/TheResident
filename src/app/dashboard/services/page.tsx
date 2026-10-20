@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Droplets
+  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon
 } from 'lucide-react'
 import {
   RootState,
@@ -31,8 +31,6 @@ import { directionsUrlForAddress } from '../../../utils/navigation'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents } from '../../../utils/gruvsEvents'
-import MovingLogisticsPortal from '../components/services/MovingLogisticsPortal'
-import PlumbingTradesModal from '../components/services/PlumbingTradesModal'
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
 const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
@@ -55,7 +53,17 @@ const TIER_RANK: Record<'premium' | 'priority' | 'none', number> = { premium: 0,
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
   const [activeTab, setActiveTab] = useState<'moving' | 'handymen' | 'lifts' | 'utilities'>('moving')
-  const [showPlumbingModal, setShowPlumbingModal] = useState(false)
+  // Deep links: ?tab=moving|handymen|lifts|utilities (Feed "Share a lift",
+  // the Ask box on Home). ?type=locksmith from the Ask box opens Trades.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tab = params.get('tab')
+    if (tab === 'moving' || tab === 'handymen' || tab === 'lifts' || tab === 'utilities') {
+      setActiveTab(tab)
+    } else if (params.get('type')) {
+      setActiveTab('handymen')
+    }
+  }, [])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
   // Business Registration State
@@ -283,6 +291,7 @@ export default function ServicesPage() {
     setAlertNotification('Contract dispatched successfully!')
   }
 
+  const visibleServices = activeTab === 'moving' ? services.filter(s => MOVE_ASSIST_CATEGORIES.includes(s.category)) : services
   const myBiz = services.find(s => s.ownerId === currentUser?.id)
   const incomingOrders = myBiz ? dispatches.filter(d => d.serviceId === myBiz.id) : []
 
@@ -291,7 +300,7 @@ export default function ServicesPage() {
       <header className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-xl font-black text-white uppercase tracking-tight">Community <span className="text-gold-primary">Services</span></h2>
-          <p className="text-xs text-gray-400 font-medium mt-0.5">Verified local transport, trades, and direct utilities management.</p>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Moving, repairs, lifts and utilities near you.</p>
         </div>
 
         <div className="flex bg-black/60 p-1.5 rounded-2xl border border-white/10 shadow-glass backdrop-blur-2xl w-full md:w-auto overflow-x-auto no-scrollbar gap-1">
@@ -314,14 +323,6 @@ export default function ServicesPage() {
         </div>
       </header>
 
-      {/* 1. Moving & Bakkie Logistics Portal */}
-      {activeTab === 'moving' && (
-        <MovingLogisticsPortal
-          onSelectProvider={(phone, name) => {
-            setAlertNotification(`Connecting with ${name} (${phone})`)
-          }}
-        />
-      )}
 
       {activeTab === 'lifts' && (
         <div className="space-y-4">
@@ -426,35 +427,20 @@ export default function ServicesPage() {
         </div>
       )}
 
-      {activeTab === 'handymen' && (
+      {/* Moving and Trades both list REAL services (res_services); Moving is
+          the bakkie/transport categories. Moving used to show invented
+          movers with real-looking phone numbers, and Trades a "dispatched in
+          30 mins" emergency button that sent nothing to anyone. */}
+      {(activeTab === 'handymen' || activeTab === 'moving') && (
         <div className="space-y-8">
-          {/* Emergency Plumbing & Trades Dispatch Banner */}
-          <div className="flex flex-col sm:flex-row items-center justify-between p-5 rounded-3xl bg-blue-950/40 border border-blue-500/30 gap-4 shadow-glass">
-            <div className="flex items-center gap-3.5">
-              <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-glow">
-                <Droplets size={22} />
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-white uppercase tracking-tight">Need Emergency Plumbing or Repairs?</h4>
-                <p className="text-xs text-gray-300">Geyser leak, burst pipe, blocked drain, or electrical trip dispatched in 30 mins.</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowPlumbingModal(true)}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-900/40 transition-all shrink-0 active:scale-95"
-            >
-              Request Emergency Trades
-            </button>
-          </div>
-
           <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
               <div className="glass-panel p-6 bg-blue-500/5 border-blue-500/10 flex-1 flex flex-col md:flex-row gap-6 items-center shadow-2xl">
                  <div className="p-4 bg-blue-500/20 rounded-2xl shadow-xl shadow-blue-900/10">
                     <Star size={32} className="text-blue-400" />
                  </div>
                  <div className="text-center md:text-left">
-                    <h3 className="text-lg font-black text-white uppercase tracking-widest italic">Local Verified <span className="text-blue-400">Professionals</span></h3>
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest opacity-60">Verified skills helping to grow the local economy</p>
+                    <h3 className="text-lg font-black text-white uppercase tracking-widest italic">{activeTab === 'moving' ? <>Bakkies &amp; <span className="text-blue-400">movers</span></> : <>Local <span className="text-blue-400">pros</span></>}</h3>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest opacity-60">Listed by people in your area, rated by your neighbours</p>
                  </div>
               </div>
               {trustGate && !trustGate.unlocked ? (
@@ -475,13 +461,17 @@ export default function ServicesPage() {
               )}
            </div>
 
-           {services.length === 0 ? (
+           {visibleServices.length === 0 ? (
              <div className="glass-panel">
-               <EmptyState icon={Briefcase} title="No local pros listed yet" subtitle="Be the first to advertise your skills to the neighbourhood." />
+               {activeTab === 'moving' ? (
+                 <EmptyState icon={Truck} title="No bakkies or movers listed yet" subtitle="Have a bakkie? List it and get booked by your neighbours." />
+               ) : (
+                 <EmptyState icon={Briefcase} title="No local pros listed yet" subtitle="Be the first to advertise your skills to the neighbourhood." />
+               )}
              </div>
            ) : (
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-             {services.map(srv => (
+             {visibleServices.map(srv => (
                <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-black/40 hover:border-gold-primary/40 transition-all duration-500 shadow-2xl">
                   <div className="h-44 bg-gray-900 relative overflow-hidden">
                      {srv.image ? (
@@ -919,14 +909,6 @@ export default function ServicesPage() {
          )}
       </AnimatePresence>
 
-      {/* Emergency Plumbing & Trades Dispatch Modal */}
-      <PlumbingTradesModal
-        isOpen={showPlumbingModal}
-        onClose={() => setShowPlumbingModal(false)}
-        onSuccess={data => {
-          setAlertNotification(`Emergency ${data.category} dispatch broadcasted to local pros!`)
-        }}
-      />
     </div>
   )
 }

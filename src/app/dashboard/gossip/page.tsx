@@ -3,10 +3,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import Image from 'next/image'
-import dynamic from 'next/dynamic'
 import {
   MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, ExternalLink, Table2, Zap, Car,
-  Search, GraduationCap, BookOpen, EyeOff
+  Search, EyeOff
 } from 'lucide-react'
 import { GRUVS, GRUVS_TOUCH_DOWN, TEARNS } from '../../../utils/sisterApps'
 import { RootState } from '../../../store'
@@ -14,11 +13,9 @@ import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
 import EmptyState from '../components/shared/EmptyState'
-import EventRidePoolerModal from '../components/community/EventRidePoolerModal'
-import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../utils/gruvsEvents'
+import Link from 'next/link'
 import { playTactileSound } from '../../../utils/tactileSounds'
 
-const InstitutionalBroadcastsPortal = dynamic(() => import('../components/community/InstitutionalBroadcastsPortal'), { ssr: false })
 
 export type GossipCategory = 'all' | 'campus' | 'landlords' | 'gruvs' | 'roommates' | 'safety'
 
@@ -120,8 +117,6 @@ export default function GossipPage() {
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({})
   const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({})
 
-  // Institutional Broadcasts Modal
-  const [showInstitutionalModal, setShowInstitutionalModal] = useState(false)
 
   // Advanced Category & Search Filter
   const [activeCategory, setActiveCategory] = useState<GossipCategory>('all')
@@ -152,14 +147,6 @@ export default function GossipPage() {
 
   const isPostAnonymous = (body: string) => body.includes('[🕶️ ANONYMOUS RESIDENT]')
   const cleanPostBody = (body: string) => body.replace(/\[🕶️ ANONYMOUS RESIDENT\]\s*/g, '')
-
-  // Event Ride Pooler
-  const [showRidePoolerModal, setShowRidePoolerModal] = useState(false)
-  const [upcomingGruvsEvents, setUpcomingGruvsEvents] = useState<GruvsEvent[]>([])
-
-  useEffect(() => {
-    fetchUpcomingGruvsEvents(10).then(events => setUpcomingGruvsEvents(events)).catch(() => {})
-  }, [])
 
   const sentinelRef = useRef<HTMLDivElement>(null)
   const loadingMoreRef = useRef(false)
@@ -547,18 +534,18 @@ export default function GossipPage() {
                 <ExternalLink size={12} />
               </a>
 
-              <button
-                type="button"
-                onClick={() => {
-                  playTactileSound('chime')
-                  setShowRidePoolerModal(true)
-                }}
+              {/* Real lift clubs (Services → Lifts), which can be tied to a
+                  Gruvs event. This used to open made-up rides with
+                  real-looking phone numbers. */}
+              <Link
+                href="/dashboard/services?tab=lifts"
+                onClick={() => playTactileSound('chime')}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-200 hover:text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
-                title="Coordinate shared Uber/Bolt or carpool to Gruvs events"
+                title="Share a lift to an event"
               >
                 <Car size={13} className="text-pink-400" />
-                <span>Share Ride Pool</span>
-              </button>
+                <span>Share a lift</span>
+              </Link>
             </div>
           </div>
         </div>
@@ -606,38 +593,6 @@ export default function GossipPage() {
           </div>
         </div>
         )}
-      </div>
-
-      {/* INSTITUTIONAL BROADCASTS & CIRCULARS PORTAL BANNER */}
-      <div className="glass-panel p-5 bg-gradient-to-r from-amber-950/40 via-black/70 to-blue-950/30 border border-amber-500/30 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
-            <GraduationCap size={24} />
-          </div>
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-white uppercase tracking-tight">Institutional & School Circulars</h3>
-              <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
-                Official Directives
-              </span>
-            </div>
-            <p className="text-xs text-gray-300">
-              Direct official circulars from the <strong>Department of Education (DBE/GDE)</strong>, <strong>University Res Wardens</strong>, and <strong>School Teachers</strong> (homework schedules, exams, quiet hours).
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('chime')
-            setShowInstitutionalModal(true)
-          }}
-          className="bg-amber-500 hover:bg-amber-400 text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-glow shrink-0 flex items-center gap-2"
-        >
-          <BookOpen size={14} />
-          <span>Open School & Uni Notices</span>
-        </button>
       </div>
 
       {/* TOPIC TABS & REAL-TIME SEARCH */}
@@ -1144,17 +1099,6 @@ export default function GossipPage() {
       )}
 
       {/* EVENT RIDE POOLER MODAL */}
-      <EventRidePoolerModal
-        isOpen={showRidePoolerModal}
-        onClose={() => setShowRidePoolerModal(false)}
-        upcomingEvents={upcomingGruvsEvents}
-      />
-
-      {/* INSTITUTIONAL BROADCASTS & CIRCULARS MODAL */}
-      <InstitutionalBroadcastsPortal
-        isOpen={showInstitutionalModal}
-        onClose={() => setShowInstitutionalModal(false)}
-      />
     </div>
   )
 }

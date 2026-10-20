@@ -118,24 +118,25 @@ export function analyzeMunicipalQuery(query: string, activeHubName: string = 'Jo
   ) {
     return {
       category: 'EMERGENCY_DEFENSE',
-      categoryLabel: 'Civic Defense & Emergency',
+      categoryLabel: 'Safety',
       confidenceScore: 99,
-      ruleApplied: 'CIVIC_DEFENSE_MESH_RULE_v1',
-      headline: 'CRITICAL // IMMEDIATE DEFENSE & MUTUAL AID PROTOCOL',
-      diagnosis: 'Urgent personal safety condition detected. Municipal peer mesh can broadcast high-priority silent distress signals and dispatch nearby verified neighbours.',
+      ruleApplied: 'SAFETY_CALL_FIRST',
+      headline: 'If you are in danger, call for help now',
+      // The app can alert neighbours, but it is not an emergency service:
+      // say so plainly and put the real numbers first.
+      diagnosis: 'Call 10111 (police) or 112 from any phone first. You can also alert neighbours on The Resident and share your location with someone you trust.',
       params: [
-        { key: 'Threat Level', value: 'IMMEDIATE', badge: 'HIGH_PRIORITY' },
-        { key: 'Quiet Hours Bypass', value: 'EXEMPT (Delivers 100%)' },
-        { key: 'Target Sector', value: detectedLoc }
+        { key: 'Police', value: '10111' },
+        { key: 'Any phone', value: '112' }
       ],
       actionPlan: [
-        'Broadcast silent emergency distress signal to verified residents within 500m radius.',
-        'Engage live GPS beacon with active route telemetry for emergency responders.',
-        'Launch Virtual Night Walk Companion mode for continuous peer monitoring.'
+        'Call 10111 or 112.',
+        'Get to a lit, busy place if you can.',
+        'Alert your neighbours from Community → Safety.'
       ],
       actions: [
-        { label: 'Trigger Emergency Panic Broadcast', path: '/dashboard/community?action=panic', actionType: 'navigate', primary: true },
-        { label: 'Activate Virtual Night Walk', path: '/dashboard/community?tab=nightwalk', actionType: 'navigate' }
+        { label: 'Call 10111', externalUrl: 'tel:10111', actionType: 'external', primary: true },
+        { label: 'Alert neighbours', path: '/dashboard/community?tab=safety', actionType: 'navigate' }
       ],
       tactileSound: 'alert'
     }
@@ -249,8 +250,8 @@ export function analyzeMunicipalQuery(query: string, activeHubName: string = 'Jo
       categoryLabel: 'Skilled Trades & Repairs',
       confidenceScore: 95,
       ruleApplied: 'CIVIC_ARTISAN_DISPATCH_TRIAGE',
-      headline: 'VERIFIED SKILLED TRADE & REPAIR DISPATCH',
-      diagnosis: `Rapid local artisan triage in ${detectedLoc}. Connects residents with background-checked local plumbers, electricians, and handymen.`,
+      headline: 'Find someone to fix it',
+      diagnosis: `Local plumbers, electricians and handymen near ${detectedLoc}, with reviews from your neighbours.`,
       params: [
         { key: 'Dispatch Urgency', value: isUrgent ? 'Level A (Immediate Hazard)' : 'Level B (Routine Maintenance)', badge: isUrgent ? 'URGENT' : 'STANDARD' },
         { key: 'Target Sector', value: detectedLoc },
@@ -258,7 +259,7 @@ export function analyzeMunicipalQuery(query: string, activeHubName: string = 'Jo
       ],
       actionPlan: [
         isUrgent ? 'Isolate water stopcock or main circuit breaker immediately.' : 'Document damage with timestamped photographs.',
-        `Review available verified artisans within 5 km of ${detectedLoc}.`,
+        `Compare the services listed near ${detectedLoc} and read their reviews.`,
         'Request instant quote and schedule arrival window.'
       ],
       actions: [
@@ -329,24 +330,25 @@ export function analyzeMunicipalQuery(query: string, activeHubName: string = 'Jo
   ) {
     return {
       category: 'DIRECTIVE_CASCADE',
-      categoryLabel: 'Triangular Directives Cascade',
-      confidenceScore: 98,
-      ruleApplied: 'TRIANGULAR_DIRECTIVE_CASCADE_v4',
-      headline: 'DEPARTMENT DIRECTIVES // CIVIC COMMAND CHAIN',
-      diagnosis: 'Triangular civil communication cascade routing authenticated circulars from National Ministers down through Provincial Directors, School Principals, Teachers, and Citizen Learners.',
+      categoryLabel: 'Notices from schools and organisations',
+      confidenceScore: 90,
+      ruleApplied: 'ORG_NOTICES_ROUTE',
+      headline: 'Department and school notices',
+      // Real feature only: organisations post to people who follow them
+      // (res_org_broadcasts). This used to describe signed government
+      // circulars and "cryptographic delivery receipts" that don't exist.
+      diagnosis: 'Schools, departments and local businesses on The Resident post notices to the people who follow them. Follow the ones that matter to you to see their updates.',
       params: [
-        { key: 'Top Authority', value: 'National Department of Basic Education' },
-        { key: 'Distribution Protocol', value: 'Apex -> Directorate -> Field -> Citizen' },
-        { key: 'Signature Verification', value: 'ECDSA Authenticated' }
+        { key: 'Where', value: 'Community → Organisations' },
+        { key: 'Who can post', value: 'Organisations you follow' }
       ],
       actionPlan: [
-        'Review gazetted circulars filtered by your municipal unit.',
-        'Acknowledge verified school circulars with cryptographic delivery receipts.',
-        'Cascade urgent school calendar updates to parents and community leaders.'
+        'Open Community → Organisations and find your school, department or business.',
+        'Tap Follow to get their updates.',
+        'If they are not on The Resident yet, ask them to join.'
       ],
       actions: [
-        { label: 'Open Cascading Directives Deck', modalKey: 'cascade', actionType: 'modal', primary: true },
-        { label: 'Filter Education Circulars', path: '/dashboard', actionType: 'navigate' }
+        { label: 'Open notices', path: '/dashboard/community?tab=departments', actionType: 'navigate', primary: true }
       ],
       tactileSound: 'chime'
     }
@@ -364,21 +366,20 @@ export function analyzeMunicipalQuery(query: string, activeHubName: string = 'Jo
       categoryLabel: 'The Gruvs // Cultural Radar',
       confidenceScore: 98,
       ruleApplied: 'GRUVS_CULTURAL_FREQUENCY_INTEGRATION',
-      headline: 'THE GRUVS // LIVE CULTURAL FREQUENCY RADAR',
-      diagnosis: 'Direct interlock with The Gruvs verified nightlife and concert database. Renders live artist lineups, sound pulses, and venue crowd telemetry.',
+      headline: "What's on, on The Gruvs",
+      diagnosis: 'The Gruvs, our sister app, lists events near you. Find a show there, then arrange a lift with other residents here.',
       params: [
         { key: 'Network Interlock', value: 'The Gruvs Ecosystem (Contract Boundary)' },
         { key: 'Live Concerts', value: 'Active Real-Time Radar' },
         { key: 'Transit Sync', value: 'Resident Lift Clubs Synchronised' }
       ],
       actionPlan: [
-        'Check verified venue coordinates and live artist lineups.',
-        'Coordinate secure group transit via The Resident Lift Clubs.',
-        'Verify door tickets and table bookings via The Gruvs authenticated portal.'
+        'Find an event on The Gruvs.',
+        'Share a lift with other residents going the same way.'
       ],
       actions: [
         ...(GRUVS.url ? [{
-          label: 'Launch The Gruvs Radar',
+          label: 'Open The Gruvs',
           externalUrl: GRUVS.url,
           actionType: 'external' as const,
           primary: true

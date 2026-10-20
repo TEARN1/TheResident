@@ -138,6 +138,10 @@ export default function HousingPage() {
   // Legal Lease Modal
   const [leaseModalListing, setLeaseModalListing] = useState<Partial<Listing> | null>(null)
 
+  // Lease, bill splitter and snag list sit behind one "Tools" button, so
+  // the rooms are the first thing on the page.
+  const [showTools, setShowTools] = useState(false)
+
   // Expense Splitter Modal
   const [showSplitterModal, setShowSplitterModal] = useState(false)
 
@@ -539,55 +543,64 @@ export default function HousingPage() {
             )}
           </div>
 
-          {/* Civic Utility Action Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setLeaseModalListing({
-                  id: 'custom-draft',
-                  title: 'Urban Co-Living Suite',
-                  suburb: 'Central District',
-                  location: 'Central District',
-                  price: 1200,
-                  currency: 'USD'
-                })
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
-              title="Generate international legally compliant co-living lease agreement"
-            >
-              <FileText size={13} className="text-gold-primary" />
-              <span>Lease Gen</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowSplitterModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
-              title="Calculate and split household rent, electricity, and bills"
-            >
-              <Calculator size={13} className="text-gold-primary" />
-              <span>Splitter</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowSnagModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
-              title="Record move-in defects and generate official snag report"
-            >
-              <ClipboardList size={13} className="text-gold-primary" />
-              <span>Snag List</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowTools(v => !v)}
+            aria-expanded={showTools}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-all shrink-0 ${showTools ? 'bg-white/15 text-white border-white/20' : 'bg-white/5 text-gray-300 border-white/10 hover:text-white'}`}
+          >
+            <ClipboardList size={13} className="text-gold-primary" /> Tools
+          </button>
         </div>
+        {showTools && (
+          <div className="w-full flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('tab')
+                  setLeaseModalListing({
+                    id: 'custom-draft',
+                    title: 'Room',
+                    suburb: '',
+                    location: '',
+                    price: 3000,
+                    currency: 'ZAR'
+                  })
+                }}
+                className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+                title="Fill in a lease template"
+              >
+                <FileText size={13} className="text-gold-primary" />
+                <span>Lease template</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('tab')
+                  setShowSplitterModal(true)
+                }}
+                className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+                title="Calculate and split household rent, electricity, and bills"
+              >
+                <Calculator size={13} className="text-gold-primary" />
+                <span>Split bills</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('tab')
+                  setShowSnagModal(true)
+                }}
+                className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+                title="Record what is broken when you move in"
+              >
+                <ClipboardList size={13} className="text-gold-primary" />
+                <span>Move-in check</span>
+              </button>
+          </div>
+        )}
       </header>
 
       {activeTab === 'rooms' && (
@@ -620,30 +633,23 @@ export default function HousingPage() {
             </button>
           </div>
 
-          {/* Connected Network Callout: The Gruvs Event Stays */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-black/60 to-gold-primary/10 border border-purple-500/20 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gold-primary/20 border border-gold-primary/40 flex items-center justify-center shrink-0">
-                <Image src="/gruvs-logo.png" alt="The Gruvs" width={20} height={20} className="rounded-full object-cover" />
+          {/* Only relevant to short stays, so only shown under Guest Houses. */}
+          {filterListingType === 'guesthouse' && (
+            <div className="p-3.5 rounded-2xl bg-purple-950/30 border border-purple-500/20 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Image src="/gruvs-logo.png" alt="" width={22} height={22} className="rounded-full object-cover shrink-0" />
+                <p className="m-0 text-xs text-gray-300">Going to an event on The Gruvs? Stays near events show here.</p>
               </div>
-              <div>
-                <p className="text-xs font-bold text-white flex items-center gap-2">
-                  <span>Traveling for a festival or event on The Gruvs?</span>
-                  <span className="text-[9px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">Partner Network</span>
-                </p>
-                <p className="text-[11px] text-gray-400">Filter by &quot;Guest Houses&quot; above to find short stays reserved for Gruvs party-goers, or check live events on their portal.</p>
-              </div>
+              <a
+                href="https://thegruvs.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-[10px] uppercase tracking-wider shrink-0"
+              >
+                Events <ExternalLink size={10} />
+              </a>
             </div>
-            <a
-              href="https://thegruvs.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-[10px] uppercase tracking-wider transition-all shadow-md shrink-0 active:scale-95"
-            >
-              <span>See Gruvs Events</span>
-              <ExternalLink size={10} />
-            </a>
-          </div>
+          )}
         </div>
       )}
 

@@ -9,7 +9,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette, Radio
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -264,10 +264,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // routes — without this, visiting either would show the wrong tab (or
   // none) highlighted as "current" in the top bar title.
   const pageTitle =
-    pathname === '/dashboard' ? { name: 'Command Bridge', href: '/dashboard', icon: Radio } :
+    pathname === '/dashboard' ? { name: 'Home', href: '/dashboard', icon: Home } :
     pathname === '/dashboard/trust-circle' ? { name: 'Next of Kin', href: pathname, icon: ShieldCheck } :
     pathname === '/dashboard/business' ? { name: 'My Business', href: pathname, icon: Briefcase } :
-    navItems.find(item => item.href === pathname) || { name: 'Command Bridge', href: '/dashboard', icon: Radio }
+    navItems.find(item => item.href === pathname) || { name: 'Home', href: '/dashboard', icon: Home }
 
   return (
     // Real voice/video calls: listens for incoming calls on every dashboard
@@ -325,7 +325,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="guest-summary-banner">
           <Sparkles size={16} className="shrink-0" style={{ color: 'var(--gold-primary)' }} />
           <span>
-            <strong>You&apos;re browsing as a guest.</strong> Sign up free to save listings, message neighbours, post to the feed, and build the trust circle other residents can see.
+            <strong>Browsing as a guest.</strong> Sign up free to message, post and save rooms.
           </span>
           <Link href="/auth" className="guest-summary-banner-cta">Sign up</Link>
           <button onClick={dismissGuestBanner} aria-label="Dismiss" className="guest-summary-banner-dismiss">
@@ -362,7 +362,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             href="/dashboard"
             onClick={() => playTactileSound('tab')}
             className="flex items-center gap-3 group"
-            title="Planetary Command Bridge"
+            title="Home"
           >
             <div className="w-9 h-9 rounded-xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary shadow-glow group-hover:scale-105 transition-transform shrink-0">
               <pageTitle.icon size={18} />
@@ -382,7 +382,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
 
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
-            {/* Direct Link to Command Bridge */}
+            {/* Home */}
             <Link
               href="/dashboard"
               onClick={() => playTactileSound('tab')}
@@ -391,10 +391,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   ? 'bg-gold-primary/20 text-gold-primary border-gold-primary/40'
                   : 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border-white/10'
               }`}
-              title="Planetary Command Bridge"
+              title="Home"
             >
-              <Radio size={12} className={pathname === '/dashboard' ? 'text-gold-primary animate-pulse' : 'text-gray-400'} />
-              <span>Bridge</span>
+              <Home size={12} className={pathname === '/dashboard' ? 'text-gold-primary' : 'text-gray-400'} />
+              <span>Home</span>
             </Link>
 
             {/* Global Spotlight Palette Trigger (Ctrl+K) */}
