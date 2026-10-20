@@ -231,6 +231,11 @@ export default function ProfilePage() {
           </button>
         ))}
       </div>
+      {/* Only part of the app is translated (menus and some labels); say so
+          rather than let isiZulu, isiXhosa or Afrikaans look broken. */}
+      {lang !== 'en' && (
+        <p className="m-0 text-[11px] text-gray-500">Menus and some labels are translated so far. The rest is still in English.</p>
+      )}
     </div>
   )
 
@@ -238,11 +243,8 @@ export default function ProfilePage() {
     <div className="glass-panel p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
-          <Palette size={16} /> Theme &amp; Color Spectrum
+          <Palette size={16} /> Colours
         </h2>
-        <span className="text-[9px] font-black uppercase tracking-wider bg-gold-primary/10 text-gold-primary px-2.5 py-0.5 rounded-full border border-gold-primary/30">
-          4 Palettes
-        </span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -288,7 +290,7 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {mutedAudio ? <VolumeX size={18} className="text-gray-400" /> : <Volume2 size={18} className="text-gold-primary" />}
-          <h2 className="text-sm font-black text-white uppercase tracking-widest">Tactile Sound Effects</h2>
+          <h2 className="text-sm font-black text-white uppercase tracking-widest">Sounds &amp; vibration</h2>
         </div>
         <button
           type="button"
@@ -299,11 +301,11 @@ export default function ProfilePage() {
               : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
           }`}
         >
-          {!mutedAudio ? 'Enabled' : 'Muted'}
+          {!mutedAudio ? 'On' : 'Off'}
         </button>
       </div>
       <p className="text-xs text-gray-400">
-        Lightweight Web Audio oscillators and micro-vibrations for tabs, taps, and alerts. Mute anytime for quiet environments.
+        Small sounds and vibrations when you tap. Turn them off for quiet places.
       </p>
     </div>
   )

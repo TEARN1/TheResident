@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -82,6 +82,7 @@ function tabFromParams(params: URLSearchParams | null): CommunityTab | null {
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [subTab, setSubTab] = useState<CommunityTab>(tabFromParams(searchParams) ?? 'overview')
   const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
   // Arriving via the top bar's "Map" quick-link (?tab=vibemap) means the
@@ -391,7 +392,7 @@ export default function CommunityPage() {
   const clusters = [
     {
       id: 'feed',
-      label: 'Feed & Social',
+      label: 'Notices',
       accent: 'text-sky-400 bg-sky-400/10',
       tabs: [
         { id: 'notices', label: 'Notices', icon: Megaphone },
@@ -401,7 +402,7 @@ export default function CommunityPage() {
     },
     {
       id: 'trade',
-      label: 'Trade & Resources',
+      label: 'Trade',
       accent: 'text-emerald-400 bg-emerald-400/10',
       tabs: [
         { id: 'market', label: 'Market', icon: Briefcase },
@@ -411,7 +412,7 @@ export default function CommunityPage() {
     },
     {
       id: 'safety',
-      label: 'Safety & Household',
+      label: 'Safety & home',
       accent: 'text-rose-400 bg-rose-400/10',
       tabs: [
         { id: 'safety', label: 'Safety', icon: ShieldCheck },
@@ -506,7 +507,7 @@ export default function CommunityPage() {
 
       {/* TWO-STEP DRILL-DOWN NAVIGATION */}
       <div className="bg-black/60 p-3 md:p-4 rounded-3xl border border-white/10 shadow-glass backdrop-blur-2xl space-y-3">
-        <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           <button
             onClick={() => goToTab('overview')}
             className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap ${
@@ -545,8 +546,8 @@ export default function CommunityPage() {
                 : 'text-amber-300 hover:text-white bg-gold-primary/10 border-gold-primary/30 hover:bg-gold-primary/20'
             }`}
           >
-            <Sparkles size={13} className="text-gold-primary animate-pulse" />
-            <span>Vibe Radar</span>
+            <MapIcon size={13} className="text-gold-primary" />
+            <span>Map</span>
           </button>
         </div>
 
@@ -598,37 +599,26 @@ export default function CommunityPage() {
           >
             {subTab === 'overview' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="glass-panel p-5 bg-rose-400/5 border-rose-400/10 space-y-3">
-                    <div className="p-2 bg-rose-400/10 rounded-xl w-fit text-rose-400"><AlertTriangle size={18} /></div>
-                    <div>
-                      <p className="text-2xl font-black text-white italic">{activeAlertsCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active Alerts</p>
-                    </div>
-                  </div>
-                  <div className="glass-panel p-5 bg-gold-primary/5 border-gold-primary/10 space-y-3">
-                    <div className="p-2 bg-gold-primary/10 rounded-xl w-fit text-gold-primary"><ListChecks size={18} /></div>
-                    <div>
-                      <p className="text-2xl font-black text-white italic">{myPendingChoresCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Chores Assigned To You</p>
-                    </div>
-                  </div>
-                  <div className="glass-panel p-5 bg-emerald-400/5 border-emerald-400/10 space-y-3">
-                    <div className="p-2 bg-emerald-400/10 rounded-xl w-fit text-emerald-400"><Sparkles size={18} /></div>
-                    <div>
-                      <p className="text-2xl font-black text-white italic">{newMarketItemsCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">New Market Items (48h)</p>
-                    </div>
-                  </div>
-                  {isLandlord && (
-                    <div className="glass-panel p-5 bg-sky-400/5 border-sky-400/10 space-y-3">
-                      <div className="p-2 bg-sky-400/10 rounded-xl w-fit text-sky-400"><DoorOpen size={18} /></div>
-                      <div>
-                        <p className="text-2xl font-black text-white italic">{openRoomRequestsCount}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Open Room Requests</p>
-                      </div>
-                    </div>
-                  )}
+                {/* Small tappable counts (these were four half-screen cards that
+                    mostly said 0). Each opens the tab it counts. */}
+                <div className={`grid ${isLandlord ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-2`}>
+                  {[
+                    { n: activeAlertsCount, label: 'Active alerts', icon: AlertTriangle, tone: 'text-rose-400', go: () => goToTab('safety') },
+                    { n: myPendingChoresCount, label: 'Your chores', icon: ListChecks, tone: 'text-gold-primary', go: () => goToTab('chores') },
+                    { n: newMarketItemsCount, label: 'New in market', icon: Sparkles, tone: 'text-emerald-400', go: () => goToTab('market') },
+                    ...(isLandlord ? [{ n: openRoomRequestsCount, label: 'Room requests', icon: DoorOpen, tone: 'text-sky-400', go: () => router.push('/dashboard/housing?tab=properties') }] : [])
+                  ].map(c => (
+                    <button
+                      key={c.label}
+                      type="button"
+                      onClick={c.go}
+                      className="flex flex-col items-start gap-1 p-3 rounded-2xl bg-black/40 border border-white/10 hover:border-white/25 text-left"
+                    >
+                      <c.icon size={15} className={c.tone} />
+                      <span className="text-xl font-black text-white leading-none">{c.n}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{c.label}</span>
+                    </button>
+                  ))}
                 </div>
                 <GruvsConnectionsWidget />
               </div>

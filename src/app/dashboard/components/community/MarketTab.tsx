@@ -269,7 +269,7 @@ export default function MarketTab({
                        <p className="text-sm text-gray-400 leading-relaxed">{v.description || 'No description added yet.'}</p>
                        <div className="flex items-center gap-4 text-xs text-gray-500">
                           {v.contactNumber && <span>📞 {v.contactNumber}</span>}
-                          <span>⭐ {v.rating.toFixed(1)} ({v.reviewsCount} reviews)</span>
+                          <span>{v.reviewsCount > 0 ? `⭐ ${v.rating.toFixed(1)} (${v.reviewsCount} review${v.reviewsCount === 1 ? '' : 's'})` : 'No reviews yet'}</span>
                           {v.hours && <span>🕒 {v.hours}</span>}
                           {v.suburb && <span>📍 {v.suburb}</span>}
                        </div>

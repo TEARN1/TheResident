@@ -168,7 +168,7 @@ export default function BusinessPage() {
           </>
         ) : (
           <>
-            <StatCard icon={Star} label="Rating" value={myService ? myService.rating.toFixed(1) : '—'} accent="text-gold-primary" />
+            <StatCard icon={Star} label="Rating" value={myService && myService.reviewsCount > 0 ? myService.rating.toFixed(1) : '—'} accent="text-gold-primary" />
             <StatCard icon={Users} label="Reviews" value={myService?.reviewsCount ?? 0} />
             <StatCard icon={Clock} label="New leads" value={pendingLeads} accent={pendingLeads > 0 ? 'text-amber-400' : undefined} />
             <StatCard icon={CheckCircle2} label="Jobs completed" value={completedJobs} accent="text-green-400" />

@@ -6,6 +6,7 @@ import UpgradeButton from '../shared/UpgradeButton'
 import { formatGruvsEventWhen } from '../../../../utils/gruvsEvents'
 import { goldButtonClass } from '../../../../components/ui/GoldButton'
 import { playTactileSound } from '@/utils/tactileSounds'
+import EmptyState from '../shared/EmptyState'
 
 const NOTICE_FREE_WINDOW_MS = 8 * 60 * 60 * 1000
 
@@ -256,61 +257,11 @@ export default function NoticeBoardTab({
            </form>
         )}
 
+        {/* Plain empty state. It used to offer one-tap "Rooftop social /
+            Elevator maintenance / Lost keys" notices with invented details
+            (a lift, a time, "left with security") that could be posted as real. */}
         {communityNotices.length === 0 ? (
-          <div className="py-16 px-6 text-center text-gray-500 bg-white/[0.02] rounded-3xl border border-dashed border-white/10 relative overflow-hidden backdrop-blur-sm">
-             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.15)]">
-               <Megaphone size={32} />
-             </div>
-             <p className="text-base font-black uppercase tracking-widest text-white">Your Neighborhood Wall is Clear</p>
-             <p className="text-xs text-gray-400 mt-1.5 max-w-md mx-auto">
-               Be the spark in your building. Post building updates, organize floor meetups, or alert neighbors about maintenance.
-             </p>
-
-             <div className="mt-6 flex flex-wrap justify-center gap-3">
-               <button
-                 type="button"
-                 onClick={() => {
-                   playTactileSound('tab')
-                   setTitle('Weekend Rooftop Sunset Social 🌅')
-                   setDesc('Bring your own drinks and chill on the rooftop lounge this Saturday from 5 PM! Great chance to meet everyone.')
-                   setType('event')
-                   setAudience('everyone')
-                   setShowForm(true)
-                 }}
-                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
-               >
-                 <span>🌇 Rooftop Social</span>
-               </button>
-               <button
-                 type="button"
-                 onClick={() => {
-                   playTactileSound('tab')
-                   setTitle('Scheduled Elevator Maintenance Notice 🛠️')
-                   setDesc('Elevator B will undergo quarterly inspection this Thursday between 10:00 and 13:00. Please plan accordingly.')
-                   setType('notice')
-                   setAudience('everyone')
-                   setShowForm(true)
-                 }}
-                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
-               >
-                 <span>🛠️ Maintenance Alert</span>
-               </button>
-               <button
-                 type="button"
-                 onClick={() => {
-                   playTactileSound('tab')
-                   setTitle('Lost Set of Keys in Lobby 🔑')
-                   setDesc('Found a key ring with a blue carabiner near the mailboxes. Left with security reception.')
-                   setType('notice')
-                   setAudience('everyone')
-                   setShowForm(true)
-                 }}
-                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
-               >
-                 <span>🔑 Lost & Found</span>
-               </button>
-             </div>
-          </div>
+          <EmptyState icon={Megaphone} title="No notices yet" subtitle="Post a building update, a meetup, or something neighbours should know." />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {communityNotices.map(notice => (

@@ -26,6 +26,7 @@ import FollowButton from '../components/social/FollowButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
 import OpenInMapsButton from '../components/map/OpenInMapsButton'
 import UpgradeButton from '../components/shared/UpgradeButton'
+import { realImage } from '../../public-services'
 import EmptyState from '../components/shared/EmptyState'
 import { directionsUrlForAddress } from '../../../utils/navigation'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
@@ -262,7 +263,8 @@ export default function ServicesPage() {
       contactNumber: bizPhone,
       priceEstimate: bizPrice,
       description: bizDesc,
-      image: 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?auto=format&fit=crop&w=600&q=80',
+      // No stock photo: a picture that isn't the business misleads people.
+      image: '',
       reviewsCount: 0,
       showPublicly: bizPublic
     }
@@ -433,18 +435,14 @@ export default function ServicesPage() {
           30 mins" emergency button that sent nothing to anyone. */}
       {(activeTab === 'handymen' || activeTab === 'moving') && (
         <div className="space-y-8">
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
-              <div className="glass-panel p-6 bg-blue-500/5 border-blue-500/10 flex-1 flex flex-col md:flex-row gap-6 items-center shadow-2xl">
-                 <div className="p-4 bg-blue-500/20 rounded-2xl shadow-xl shadow-blue-900/10">
-                    <Star size={32} className="text-blue-400" />
-                 </div>
-                 <div className="text-center md:text-left">
-                    <h3 className="text-lg font-black text-white uppercase tracking-widest italic">{activeTab === 'moving' ? <>Bakkies &amp; <span className="text-blue-400">movers</span></> : <>Local <span className="text-blue-400">pros</span></>}</h3>
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest opacity-60">Listed by people in your area, rated by your neighbours</p>
-                 </div>
-              </div>
+          {/* One line plus the button; this was a large decorative card with
+              a star icon that pushed the actual list below the fold. */}
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+              <p className="m-0 text-xs text-gray-400">
+                {activeTab === 'moving' ? 'Bakkies and movers' : 'Local pros'} listed by people near you, rated by your neighbours.
+              </p>
               {trustGate && !trustGate.unlocked ? (
-                 <a href="/dashboard/trust-circle" className="w-full lg:w-auto flex items-center gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-6 py-4 hover:border-gold-primary/40 transition-all">
+                 <a href="/dashboard/trust-circle" className="w-full sm:w-auto flex items-center gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-4 py-3 hover:border-gold-primary/40 transition-all shrink-0">
                     <Lock size={16} className="text-gold-primary shrink-0" />
                     <span className="text-left">
                        <span className="block text-[11px] font-black text-white uppercase tracking-widest">Build trust to list</span>
@@ -454,9 +452,9 @@ export default function ServicesPage() {
               ) : (
                  <button
                     onClick={() => openBusinessForm(null)}
-                    className="w-full lg:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+                    className="w-full sm:w-auto shrink-0 bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-5 py-3 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
                  >
-                    <Plus size={20} /> Advertise My Skills
+                    <Plus size={16} /> List my service
                  </button>
               )}
            </div>
@@ -474,17 +472,23 @@ export default function ServicesPage() {
              {visibleServices.map(srv => (
                <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-black/40 hover:border-gold-primary/40 transition-all duration-500 shadow-2xl">
                   <div className="h-44 bg-gray-900 relative overflow-hidden">
-                     {srv.image ? (
-                       <Image src={srv.image} alt={srv.businessName} fill className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
+                     {/* realImage() drops the stock photo every new service used to get: it isn't the business. */}
+                     {realImage(srv.image) ? (
+                       <Image src={realImage(srv.image)!} alt={srv.businessName} fill className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
                      ) : (
                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
                          <ImageIcon size={32} className="text-gold-primary/20" />
                        </div>
                      )}
                      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-xl border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-2xl">
-                        <Star size={14} className="text-gold-primary fill-gold-primary" />
-                        <span className="text-xs font-black text-white">{srv.rating}</span>
-                        <span className="text-[10px] text-gray-500 font-bold">({srv.reviewsCount})</span>
+                        {/* A new service is stored with rating 5.0 and no reviews; show "New" until someone reviews it. */}
+                        {srv.reviewsCount > 0 ? (<>
+                          <Star size={14} className="text-gold-primary fill-gold-primary" />
+                          <span className="text-xs font-black text-white">{Number(srv.rating).toFixed(1)}</span>
+                          <span className="text-[10px] text-gray-500 font-bold">({srv.reviewsCount})</span>
+                        </>) : (
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">New</span>
+                        )}
                      </div>
                      <div className="absolute bottom-4 left-4 flex gap-2">
                         <span className="bg-gold-primary text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-xl">{srv.category}</span>
