@@ -12,7 +12,6 @@ import { safeNextPath } from '../../utils/launch'
 import { track } from '../../utils/track'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 import Image from 'next/image'
-import MasterLegalPolicyModal from '../dashboard/components/shared/MasterLegalPolicyModal'
 
 // Cross-app SSO mark for The Gruvs — their real logo (public/gruvs-logo.png),
 // not a placeholder monogram.
@@ -76,7 +75,6 @@ export default function AuthPage() {
   // or landlord). The tenant profile and landlord house rules it used to ask
   // up front are filled in later on the Profile page, where they already live.
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [showPolicyModal, setShowPolicyModal] = useState(false)
 
   // Message states
   const [securityMessage, setSecurityMessage] = useState<string | null>(null)
@@ -521,13 +519,9 @@ export default function AuthPage() {
               />
               <span>
                 I agree to the{' '}
-                <button
-                  type="button"
-                  onClick={() => setShowPolicyModal(true)}
-                  style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 700, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '12px' }}
-                >
-                  Terms &amp; Privacy Policy
-                </button>
+                <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 700 }}>Terms</a>
+                {' '}and{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 700 }}>Privacy Policy</a>
               </span>
             </label>
 
@@ -557,25 +551,19 @@ export default function AuthPage() {
         </button>
 
         <p style={{ margin: '1.25rem 0 0', textAlign: 'center' }}>
-          <button
-            type="button"
-            onClick={() => setShowPolicyModal(true)}
-            style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.45)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-          >
-            Terms &amp; privacy
-          </button>
+          <a href="/terms" target="_blank" rel="noopener noreferrer" style={legalLinkStyle}>Terms</a>
+          <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.3)', margin: '0 8px' }}>·</span>
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" style={legalLinkStyle}>Privacy</a>
         </p>
       </motion.div>
 
-      <MasterLegalPolicyModal
-        isOpen={showPolicyModal}
-        onClose={() => setShowPolicyModal(false)}
-      />
     </div>
   )
 }
 
 // Styles
+const legalLinkStyle: React.CSSProperties = { fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.45)', textDecoration: 'underline' }
+
 export const containerStyle: React.CSSProperties = {
   position: 'relative',
   width: '100vw',

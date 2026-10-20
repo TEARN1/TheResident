@@ -237,7 +237,7 @@ export default function MessagesPage() {
             <MessageCircle size={22} className="text-gold-primary" /> Direct <span className="text-gold-primary">Messages</span>
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Encrypted resident-to-resident private communications, calls, and location radar.
+            Private chats with your neighbours: messages, voice notes, calls and location.
           </p>
         </div>
 

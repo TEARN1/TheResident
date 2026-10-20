@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, Home, MessageSquare,
-  Sparkles, ExternalLink, Table2, Zap, MapPin, X, ArrowRight, User, Layers, Radio
+  Search, Home, MessageSquare, MessageCircle, Briefcase, Car, ShieldCheck,
+  Sparkles, ExternalLink, Table2, Zap, MapPin, X, ArrowRight, User, Layers
 } from 'lucide-react'
 import { GRUVS, TEARNS } from '../../../../utils/sisterApps'
 import { playTactileSound } from '../../../../utils/tactileSounds'
@@ -54,56 +54,22 @@ export default function CommandPalette() {
     }
   }, [open])
 
+  const go = (href: string) => () => { router.push(href); setOpen(false) }
+
+  // Plain names for the pages that exist. These used to promise a "Planetary
+  // Command Bridge", "Triangular Department Directives" and "3D radars".
   const commandItems: CommandItem[] = [
     // App Navigation
-    {
-      id: 'nav-bridge',
-      title: 'Planetary Command Bridge',
-      subtitle: 'Global telemetry, 3D radar preview, department directives & hub switcher',
-      category: 'App Navigation',
-      icon: Radio,
-      action: () => { router.push('/dashboard'); setOpen(false) }
-    },
-    {
-      id: 'nav-map',
-      title: 'VibeMap & Neighborhood Radars',
-      subtitle: 'Explore incident zones, verified pins & street walkability in 3D',
-      category: 'App Navigation',
-      icon: MapPin,
-      action: () => { router.push('/dashboard/community?tab=vibemap'); setOpen(false) }
-    },
-    {
-      id: 'nav-rooms',
-      title: 'Find Rooms & Accommodations',
-      subtitle: 'Browse student co-living, commune rooms and rentals',
-      category: 'App Navigation',
-      icon: Home,
-      action: () => { router.push('/dashboard/housing'); setOpen(false) }
-    },
-    {
-      id: 'nav-gossip',
-      title: 'Suburb Gossip Wall',
-      subtitle: 'Neighborhood chatter, community notices and tips',
-      category: 'App Navigation',
-      icon: MessageSquare,
-      action: () => { router.push('/dashboard/gossip'); setOpen(false) }
-    },
-    {
-      id: 'nav-departments',
-      title: 'Triangular Department Directives',
-      subtitle: 'Cascading notices: Education, Defense, Utilities & Universities',
-      category: 'App Navigation',
-      icon: Layers,
-      action: () => { router.push('/dashboard/community?tab=departments'); setOpen(false) }
-    },
-    {
-      id: 'nav-profile',
-      title: 'Citizen Profile & Verification',
-      subtitle: 'Switch between Tenant & Landlord modes',
-      category: 'App Navigation',
-      icon: User,
-      action: () => { router.push('/dashboard/profile'); setOpen(false) }
-    },
+    { id: 'nav-home', title: 'Home', subtitle: "What's on the app right now", category: 'App Navigation', icon: Home, action: go('/dashboard') },
+    { id: 'nav-rooms', title: 'Find a room', subtitle: 'Rooms and rentals near you', category: 'App Navigation', icon: Home, action: go('/dashboard/housing') },
+    { id: 'nav-services', title: 'Services', subtitle: 'Plumbers, movers, spazas and more', category: 'App Navigation', icon: Briefcase, action: go('/dashboard/services') },
+    { id: 'nav-lifts', title: 'Lift clubs', subtitle: 'Share a ride with neighbours', category: 'App Navigation', icon: Car, action: go('/dashboard/services?tab=lifts') },
+    { id: 'nav-map', title: 'Map', subtitle: 'Alerts, places and rooms on a map', category: 'App Navigation', icon: MapPin, action: go('/dashboard/community?tab=vibemap') },
+    { id: 'nav-safety', title: 'Safety', subtitle: 'Alerts from your street', category: 'App Navigation', icon: ShieldCheck, action: go('/dashboard/community?tab=safety') },
+    { id: 'nav-orgs', title: 'Organisations', subtitle: 'Notices from local organisations', category: 'App Navigation', icon: Layers, action: go('/dashboard/community?tab=departments') },
+    { id: 'nav-feed', title: 'Feed', subtitle: 'Neighbourhood posts and notices', category: 'App Navigation', icon: MessageSquare, action: go('/dashboard/gossip') },
+    { id: 'nav-messages', title: 'Messages', subtitle: 'Chats, voice notes and calls', category: 'App Navigation', icon: MessageCircle, action: go('/dashboard/messages') },
+    { id: 'nav-profile', title: 'Profile', subtitle: 'Your details, tenant or landlord mode', category: 'App Navigation', icon: User, action: go('/dashboard/profile') },
 
     // The Gruvs Nightlife Ecosystem
     {
@@ -118,8 +84,8 @@ export default function CommandPalette() {
     },
     {
       id: 'gruvs-sso',
-      title: 'Unified Cross-App Identity',
-      subtitle: 'Your Resident login works seamlessly across The Gruvs',
+      title: 'Use the same account on The Gruvs',
+      subtitle: 'Log in there with your Resident account',
       category: 'The Gruvs Nightlife',
       icon: Zap,
       action: () => { window.open(GRUVS.url ?? '', '_blank'); setOpen(false) },
@@ -194,7 +160,19 @@ export default function CommandPalette() {
                     setQuery(e.target.value)
                     setSelectedIndex(0)
                   }}
-                  placeholder="Type a command, jump to Gruvs, or search..."
+                  onKeyDown={e => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      setSelectedIndex(i => Math.min(i + 1, filteredItems.length - 1))
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      setSelectedIndex(i => Math.max(i - 1, 0))
+                    } else if (e.key === 'Enter' && filteredItems[selectedIndex]) {
+                      e.preventDefault()
+                      handleSelect(filteredItems[selectedIndex])
+                    }
+                  }}
+                  placeholder="Search pages..."
                   className="w-full bg-transparent text-sm text-white placeholder-gray-500 outline-none font-medium"
                 />
                 {query && (

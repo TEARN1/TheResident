@@ -9,7 +9,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Palette
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -31,7 +31,6 @@ import CommandPalette from './components/navigation/CommandPalette'
 import PointerSpotlight from './components/shared/PointerSpotlight'
 import CallProvider from './components/messages/CallProvider'
 import PWAInstallBanner from './components/shared/PWAInstallBanner'
-import MasterLegalPolicyModal from './components/shared/MasterLegalPolicyModal'
 import ThemeSwitcherModal from './components/shared/ThemeSwitcherModal'
 import { DEFAULT_THEME } from '../../utils/themes'
 import { playTactileSound } from '../../utils/tactileSounds'
@@ -43,7 +42,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const dispatch = useDispatch()
   const [showNotifMenu, setShowNotifMenu] = useState(false)
-  const [showLegalModal, setShowLegalModal] = useState(false)
   const [showThemeModal, setShowThemeModal] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<string>(DEFAULT_THEME)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
@@ -453,17 +451,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="hidden sm:inline">Theme</span>
             </button>
 
-            {/* Platform Legal Shield & Governance Trigger */}
-            <button
-              type="button"
-              onClick={() => { setShowLegalModal(true); playTactileSound('tab') }}
-              className="hidden sm:inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all"
-              title="Platform Legal Shield, Neutrality Disclaimers & POPIA Governance"
-            >
-              <Scale size={13} className="text-amber-400" />
-              <span className="hidden sm:inline">Legal Shield</span>
-            </button>
-
             <div ref={notifMenuRef} className="relative">
               <button
                 onClick={() => { setShowNotifMenu(!showNotifMenu); playTactileSound('click') }}
@@ -559,10 +546,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </nav>
 
       <PWAInstallBanner />
-      <MasterLegalPolicyModal
-        isOpen={showLegalModal}
-        onClose={() => setShowLegalModal(false)}
-      />
       <ThemeSwitcherModal
         isOpen={showThemeModal}
         onClose={() => setShowThemeModal(false)}
