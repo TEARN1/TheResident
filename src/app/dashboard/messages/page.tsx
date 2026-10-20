@@ -12,7 +12,7 @@ import { supabase } from '../../../utils/supabase'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import EmptyState from '../components/shared/EmptyState'
 import StartNewChatModal from '../components/messages/StartNewChatModal'
-import ActiveCallModal, { type CallType } from '../components/messages/ActiveCallModal'
+import { useCall, type CallType } from '../components/messages/CallProvider'
 
 interface DbMessage {
   id: string
@@ -51,15 +51,9 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'requests' | 'chats'>('all')
 
-  // Calling state
-  const [showCallModal, setShowCallModal] = useState(false)
-  const [callType, setCallType] = useState<CallType>('audio')
-  const [callTarget, setCallTarget] = useState<{
-    id: string
-    name: string
-    avatarUrl?: string | null
-    role?: string
-  } | null>(null)
+  // Real calls (CallProvider in the dashboard layout); the old screen here
+  // only simulated one.
+  const { available: callsAvailable, startCall } = useCall()
 
   const loadThreads = useCallback(async () => {
     if (!supabase || !myId) { setLoading(false); return }
@@ -141,10 +135,9 @@ export default function MessagesPage() {
     type: CallType
   ) => {
     e.stopPropagation()
+    if (!callsAvailable) return
     playTactileSound('click')
-    setCallTarget(target)
-    setCallType(type)
-    setShowCallModal(true)
+    startCall({ id: target.id, name: target.name, avatarUrl: target.avatarUrl }, type)
   }
 
   const ThreadRow = ({ t }: { t: Thread }) => {
@@ -202,7 +195,7 @@ export default function MessagesPage() {
               onClick={e =>
                 handleStartCall(
                   e,
-                  { id: t.otherId, name: contactName, avatarUrl, role: 'Verified Resident' },
+                  { id: t.otherId, name: contactName, avatarUrl, role: 'On The Resident' },
                   'audio'
                 )
               }
@@ -216,7 +209,7 @@ export default function MessagesPage() {
               onClick={e =>
                 handleStartCall(
                   e,
-                  { id: t.otherId, name: contactName, avatarUrl, role: 'Verified Resident' },
+                  { id: t.otherId, name: contactName, avatarUrl, role: 'On The Resident' },
                   'video'
                 )
               }
@@ -358,18 +351,6 @@ export default function MessagesPage() {
         currentUserId={myId}
       />
 
-      {/* Active Voice & Video Calling Screen / Floating Phone Badge */}
-      {callTarget && (
-        <ActiveCallModal
-          isOpen={showCallModal}
-          onClose={() => {
-            setShowCallModal(false)
-            setCallTarget(null)
-          }}
-          callType={callType}
-          contact={callTarget}
-        />
-      )}
     </div>
   )
 }

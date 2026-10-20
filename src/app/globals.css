@@ -249,6 +249,10 @@ body {
 .dashboard-page-body {
   flex: 1;
   overflow-y: auto;
+  /* overflow-y: auto quietly makes x scrollable too, so one too-wide row
+     (e.g. the connections chips) let the whole page slide sideways and cut
+     cards off at the edge on phones. */
+  overflow-x: hidden;
 }
 
 /* Used on horizontal-scroll rows (map quick-filters, Gruvs connections,

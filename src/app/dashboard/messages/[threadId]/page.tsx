@@ -3,16 +3,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import {
-  Send, ArrowLeft, Clock, Sparkles, Phone, Video,
-  MapPin, Radar, ExternalLink, Loader, Mic, Play, Pause, X, PhoneCall
+  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2
 } from 'lucide-react'
 import { RootState } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
 import { playTactileSound } from '../../../../utils/tactileSounds'
-import ActiveCallModal, { type CallType } from '../../components/messages/ActiveCallModal'
-import IncomingCallBanner, { type IncomingCallData } from '../../components/messages/IncomingCallBanner'
+import {
+  VOICE_BUCKET, formatDuration, voiceNoteBody, voiceNoteDuration, voiceNotePath, uploadTypeFor,
+  locationBody, parseLegacyBeacon, isLegacyVoiceNote
+} from '../../../../utils/dmMedia'
+import { useCall } from '../../components/messages/CallProvider'
+import VoiceNotePlayer from '../../components/messages/VoiceNotePlayer'
+import LocationCard from '../../components/messages/LocationCard'
+import { useVoiceRecorder, type Recording } from '../../components/messages/useVoiceRecorder'
 
 interface DbMessage {
   id: string
@@ -21,6 +25,11 @@ interface DbMessage {
   body: string
   is_request: boolean | null
   created_at: string
+  message_type: string | null
+  media_url: string | null
+  media_type: string | null
+  latitude: number | null
+  longitude: number | null
 }
 
 interface ProfileHit {
@@ -30,29 +39,24 @@ interface ProfileHit {
   avatar_url: string | null
 }
 
+type Extra = Partial<Pick<DbMessage, 'message_type' | 'media_url' | 'media_type' | 'latitude' | 'longitude'>>
+
 export default function ThreadPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const myId = currentUser?.id
   const router = useRouter()
   const params = useParams<{ threadId: string }>()
   const otherId = params.threadId
+  const { available: callsAvailable, inCall, startCall } = useCall()
 
   const [otherProfile, setOtherProfile] = useState<ProfileHit | null>(null)
   const [messages, setMessages] = useState<DbMessage[]>([])
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Calling States
-  const [showCallModal, setShowCallModal] = useState(false)
-  const [callType, setCallType] = useState<CallType>('audio')
-  const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null)
-
-  // Location Beacon & Voice Note States
-  const [sendingLocation, setSendingLocation] = useState(false)
-  const [isRecordingVoice, setIsRecordingVoice] = useState(false)
-  const [voiceDuration, setVoiceDuration] = useState(0)
-  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null)
+  const [confirmLocation, setConfirmLocation] = useState(false)
+  const [locating, setLocating] = useState(false)
+  const [uploadingVoice, setUploadingVoice] = useState(false)
 
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -68,7 +72,7 @@ export default function ThreadPage() {
     if (!supabase || !myId || !otherId) return
     const { data } = await supabase
       .from('messages')
-      .select('id, sender_id, recipient_id, body, is_request, created_at')
+      .select('id, sender_id, recipient_id, body, is_request, created_at, message_type, media_url, media_type, latitude, longitude')
       .or(`and(sender_id.eq.${myId},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${myId})`)
       .order('created_at', { ascending: true })
     setMessages((data || []) as DbMessage[])
@@ -80,18 +84,14 @@ export default function ThreadPage() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }, [loadThread])
 
-  // Realtime subscription
+  // New messages from them (and call summaries written by either side).
   useEffect(() => {
     if (!supabase || !myId || !otherId) return
     const sorted = [myId, otherId].sort()
-    const channelName = `dm_fast_${sorted[0]}_${sorted[1]}`
     const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${otherId}` },
-        () => { loadThread() }
-      )
+      .channel(`dm_fast_${sorted[0]}_${sorted[1]}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${otherId}` }, () => { loadThread() })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${otherId}` }, () => { loadThread() })
       .subscribe()
     return () => { supabase!.removeChannel(channel) }
   }, [myId, otherId, loadThread])
@@ -100,313 +100,211 @@ export default function ThreadPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Voice Note Recording Timer
-  useEffect(() => {
-    if (!isRecordingVoice) return
-    const timer = setInterval(() => {
-      setVoiceDuration(prev => prev + 1)
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [isRecordingVoice])
-
-  const sendMessage = async (textToSend?: string) => {
-    const content = textToSend || draft.trim()
-    if (!supabase || !myId || !otherId || !content) return
-    playTactileSound('click')
+  const insertMessage = async (body: string, extra: Extra = {}) => {
+    if (!supabase || !myId || !otherId) return false
     setSending(true)
     setError(null)
-    const alreadyTalked = messages.length > 0
-    const { error: sendError } = await supabase
-      .from('messages')
-      .insert({
-        sender_id: myId,
-        recipient_id: otherId,
-        body: content,
-        is_request: !alreadyTalked
-      })
+    const { error: sendError } = await supabase.from('messages').insert({
+      sender_id: myId,
+      recipient_id: otherId,
+      body,
+      is_request: messages.length === 0,
+      ...extra
+    })
     setSending(false)
     if (sendError) {
       setError(sendError.message)
+      return false
+    }
+    playTactileSound('pop')
+    loadThread()
+    return true
+  }
+
+  const sendText = async () => {
+    const content = draft.trim()
+    if (!content) return
+    playTactileSound('click')
+    if (await insertMessage(content, { message_type: 'text' })) setDraft('')
+  }
+
+  // ── Voice notes: really recorded, stored privately for the two of you ──
+  const sendRecording = async (r: Recording) => {
+    if (!supabase || !myId || !otherId) return
+    if (r.seconds < 1 || r.blob.size === 0) {
+      setError('That was too short to send.')
       return
     }
-    playTactileSound('pop')
-    if (!textToSend) setDraft('')
-    loadThread()
-  }
-
-  // 1-Tap "Find Me" GPS Radar Beacon
-  const handleSendFindMeBeacon = () => {
-    playTactileSound('tab')
-    setSendingLocation(true)
-    if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const lat = pos.coords.latitude.toFixed(4)
-          const lon = pos.coords.longitude.toFixed(4)
-          const beaconMsg = `📍 [Find Me Beacon] Lat: ${lat}, Lon: ${lon} — Shared live resident location coordinates.`
-          sendMessage(beaconMsg)
-          setSendingLocation(false)
-        },
-        () => {
-          const fallbackMsg = `📍 [Find Me Beacon] Lat: -26.1926, Lon: 28.0305 — Braamfontein Co-Living Zone.`
-          sendMessage(fallbackMsg)
-          setSendingLocation(false)
-        },
-        { timeout: 5000 }
-      )
-    } else {
-      const fallbackMsg = `📍 [Find Me Beacon] Lat: -26.1926, Lon: 28.0305 — Braamfontein Co-Living Zone.`
-      sendMessage(fallbackMsg)
-      setSendingLocation(false)
+    setUploadingVoice(true)
+    const { contentType, ext } = uploadTypeFor(r.mime)
+    const path = voiceNotePath(myId, otherId, ext)
+    const { error: upErr } = await supabase.storage.from(VOICE_BUCKET).upload(path, r.blob, { contentType })
+    setUploadingVoice(false)
+    if (upErr) {
+      setError('The voice note could not be uploaded. Check your connection and try again.')
+      return
     }
-  }
-
-  // Voice Note Handlers
-  const handleStartVoiceRecording = () => {
-    playTactileSound('alert')
-    setVoiceDuration(0)
-    setIsRecordingVoice(true)
-  }
-
-  const handleCancelVoiceRecording = () => {
-    playTactileSound('pop')
-    setIsRecordingVoice(false)
-    setVoiceDuration(0)
-  }
-
-  const handleSendVoiceNote = () => {
     playTactileSound('success')
-    const formattedDuration = `${Math.floor(voiceDuration / 60)}:${String(voiceDuration % 60).padStart(2, '0')}`
-    const noteMsg = `🎙️ [Voice Note] Duration: ${formattedDuration || '0:05'} — Encrypted Resident Audio Note`
-    setIsRecordingVoice(false)
-    setVoiceDuration(0)
-    sendMessage(noteMsg)
+    await insertMessage(voiceNoteBody(r.seconds), { message_type: 'voice', media_url: path, media_type: contentType })
+  }
+  const recorder = useVoiceRecorder(setError, r => { void sendRecording(r) })
+
+  const finishRecording = async () => {
+    const r = await recorder.stop()
+    if (r) await sendRecording(r)
   }
 
-  // Incoming Call Simulation Trigger
-  const handleSimulateIncomingCall = (type: CallType = 'audio') => {
+  // ── Location: asked first, real GPS only, never a made-up position ──
+  const shareLocation = () => {
+    setConfirmLocation(false)
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      setError('This device cannot share its location.')
+      return
+    }
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setLocating(false)
+        const { latitude, longitude } = pos.coords
+        void insertMessage(locationBody(latitude, longitude), { message_type: 'location', latitude, longitude })
+      },
+      err => {
+        setLocating(false)
+        setError(err.code === err.PERMISSION_DENIED
+          ? 'Location is blocked. Allow location access for this site, then try again.'
+          : 'Could not find your location right now. Try again outside or with Wi-Fi on.')
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+    )
+  }
+
+  const call = (type: 'audio' | 'video') => {
     playTactileSound('click')
-    setIncomingCall({
-      callerId: otherId,
-      callerName: name,
-      callerAvatar: otherProfile?.avatar_url,
-      callerRole: 'Verified Resident',
-      callType: type
-    })
-  }
-
-  const handleAcceptIncomingCall = (call: IncomingCallData) => {
-    setIncomingCall(null)
-    setCallType(call.callType)
-    setShowCallModal(true)
+    startCall({ id: otherId, name, avatarUrl: otherProfile?.avatar_url }, type)
   }
 
   const QUICK_PROMPTS = [
-    { label: 'Room Inquiry', text: `Hi ${name}! Inquiring about apartment sharing and availability.` },
-    { label: 'Vibe Check Call', text: `Saw your profile on Roommate Match! Would love to hop on a quick voice or video call.` },
-    { label: 'Find Me Beacon', text: `Sending you my live building location coordinates.` },
-    { label: 'Chore Rota', text: `Hi! Checking in on our household rotation schedule for this week.` }
+    { label: 'Room inquiry', text: `Hi ${name}! Is the room still available?` },
+    { label: 'Arrange a viewing', text: 'Hi! When would be a good time to come and view the place?' },
+    { label: 'Chores this week', text: 'Hi! Checking in on our chore rota for this week.' }
   ]
+
+  const callButton = 'p-2 sm:px-3 py-2 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/40 text-gray-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-40'
 
   return (
     <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-12">
       <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden shadow-glass flex flex-col h-[calc(100dvh-180px)] md:h-[75vh]">
-        {/* Header with Call & Video Controls */}
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/2">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => router.push('/dashboard/messages')}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-all"
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-all shrink-0"
               aria-label="Back to conversations"
             >
               <ArrowLeft size={16} />
             </button>
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gold-primary to-amber-600 flex items-center justify-center text-black font-black text-sm overflow-hidden shadow-sm">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gold-primary to-amber-600 flex items-center justify-center text-black font-black text-sm overflow-hidden shadow-sm shrink-0">
               {otherProfile?.avatar_url
                 ? // eslint-disable-next-line @next/next/no-img-element
                   <img src={otherProfile.avatar_url} alt="" className="w-full h-full object-cover" />
                 : name.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <span className="text-sm font-black text-white tracking-tight">{name}</span>
-              <p className="text-[10px] text-green-400 font-bold flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Resident Member
-              </p>
+            <div className="min-w-0">
+              <span className="block text-sm font-black text-white tracking-tight truncate">{name}</span>
+              <p className="m-0 text-[10px] text-gray-500 font-bold">On The Resident</p>
             </div>
           </div>
 
-          {/* Audio & Video Calling Action Buttons */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Simulate Incoming Call Demo Trigger */}
-            <button
-              onClick={() => handleSimulateIncomingCall('audio')}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5 hidden md:flex items-center gap-1"
-              title="Test Incoming Resident Call Simulation"
-              aria-label="Test Incoming Resident Call Simulation"
-            >
-              <PhoneCall size={14} className="text-amber-400" />
-              <span className="text-[10px] font-bold text-gray-300">Test Ring</span>
-            </button>
-
-            <button
-              onClick={() => {
-                playTactileSound('click')
-                setCallType('audio')
-                setShowCallModal(true)
-              }}
-              className="p-2 sm:px-3 py-2 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/40 text-gray-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5"
-              title="Start Voice Call"
-              aria-label="Start Voice Call"
-            >
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button onClick={() => call('audio')} disabled={!callsAvailable || inCall} className={callButton} title="Voice call" aria-label="Start voice call">
               <Phone size={15} className="text-gold-primary" />
               <span className="hidden sm:inline text-xs font-bold">Call</span>
             </button>
-
-            <button
-              onClick={() => {
-                playTactileSound('click')
-                setCallType('video')
-                setShowCallModal(true)
-              }}
-              className="p-2 sm:px-3 py-2 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/40 text-gray-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5"
-              title="Start Video Call"
-              aria-label="Start Video Call"
-            >
+            <button onClick={() => call('video')} disabled={!callsAvailable || inCall} className={callButton} title="Video call" aria-label="Start video call">
               <Video size={15} className="text-gold-primary" />
               <span className="hidden sm:inline text-xs font-bold">Video</span>
             </button>
           </div>
         </div>
 
-        {/* Message Log */}
+        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3.5 custom-scrollbar">
           {messages.length === 0 && (
             <div className="text-center py-12 px-4 space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-gold-primary/10 border border-gold-primary/20 text-gold-primary mx-auto flex items-center justify-center shadow-lg shadow-gold-primary/10">
+              <div className="w-12 h-12 rounded-2xl bg-gold-primary/10 border border-gold-primary/20 text-gold-primary mx-auto flex items-center justify-center">
                 <Sparkles size={22} />
               </div>
               <div>
-                <p className="text-sm font-bold text-white tracking-tight">Direct Conversation with {name}</p>
+                <p className="text-sm font-bold text-white tracking-tight">Say hi to {name}</p>
                 <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto">
-                  Encrypted resident communications with voice, video, audio notes, and live location sharing.
+                  Send a message, a voice note or your location. Once you have messaged each other you can also call.
                 </p>
               </div>
               <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto pt-2">
-                {QUICK_PROMPTS.map((prompt, i) => (
+                {QUICK_PROMPTS.map(prompt => (
                   <button
-                    key={i}
+                    key={prompt.label}
                     type="button"
-                    onClick={() => {
-                      playTactileSound('tab')
-                      setDraft(prompt.text)
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/40 text-[11px] font-semibold text-gray-300 hover:text-white transition-all active:scale-95 text-left"
+                    onClick={() => { playTactileSound('tab'); setDraft(prompt.text) }}
+                    className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/40 text-[11px] font-semibold text-gray-300 hover:text-white transition-all active:scale-95"
                   >
-                    <span>💬 {prompt.label}</span>
+                    {prompt.label}
                   </button>
                 ))}
               </div>
             </div>
           )}
+
           {messages.map(m => {
             const isMe = m.sender_id === myId
-            const isFindMeBeacon = m.body.startsWith('📍 [Find Me Beacon]')
-            const isVoiceNote = m.body.startsWith('🎙️ [Voice Note]')
+            const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-            // Extract lat & lon for deep linking to VibeMap
-            const latMatch = m.body.match(/Lat:\s*([-\d.]+)/)
-            const lonMatch = m.body.match(/Lon:\s*([-\d.]+)/)
-            const bLat = latMatch ? latMatch[1] : null
-            const bLon = lonMatch ? lonMatch[1] : null
-            const mapUrl = bLat && bLon
-              ? `/dashboard/community?tab=vibemap&lat=${bLat}&lon=${bLon}&beacon=true`
-              : `/dashboard/community?tab=vibemap`
+            if (m.message_type === 'call') {
+              return (
+                <div key={m.id} className="flex justify-center">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-400 bg-white/5 border border-white/10 rounded-full px-3 py-1">
+                    {m.body.includes('Missed') ? <PhoneMissed size={12} className="text-red-400" /> : <Phone size={12} className="text-gold-primary" />}
+                    {m.body.replace('📞 ', '')}{isMe && m.body.includes('Missed') ? ` (to ${name})` : ''} · {time}
+                  </span>
+                </div>
+              )
+            }
+
+            const legacyBeacon = parseLegacyBeacon(m.body)
+            const location = m.message_type === 'location' && m.latitude != null && m.longitude != null
+              ? { lat: m.latitude, lon: m.longitude, placeholder: false }
+              : legacyBeacon
+
+            let content: React.ReactNode
+            if (m.message_type === 'voice' && m.media_url) {
+              content = <VoiceNotePlayer path={m.media_url} duration={voiceNoteDuration(m.body)} isMe={isMe} />
+            } else if (isLegacyVoiceNote(m.body)) {
+              content = <p className="m-0 italic opacity-80">Voice note ({voiceNoteDuration(m.body) || '?'}) from before recording worked, so there is no audio.</p>
+            } else if (location && !location.placeholder) {
+              content = <LocationCard lat={location.lat} lon={location.lon} isMe={isMe} />
+            } else if (location?.placeholder) {
+              content = <p className="m-0 italic opacity-80">Location from an older version of the app. It was a placeholder, not a real position.</p>
+            } else {
+              content = <p className="m-0 whitespace-pre-wrap break-words">{m.body}</p>
+            }
 
             return (
               <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[80%] sm:max-w-[70%] rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-sm transition-all ${
+                  className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-sm ${
                     isMe
-                      ? 'bg-gradient-to-br from-gold-primary to-amber-500 text-black font-semibold rounded-br-xs shadow-glow'
+                      ? 'bg-gradient-to-br from-gold-primary to-amber-500 text-black font-semibold rounded-br-xs'
                       : 'bg-white/5 backdrop-blur-xl border border-white/10 text-gray-100 rounded-bl-xs'
                   }`}
                 >
                   {m.is_request && isMe && (
                     <span className="flex items-center gap-1 text-[9px] opacity-80 mb-1 uppercase font-black tracking-wider">
-                      <Clock size={10} /> First Inquiry
+                      <Clock size={10} /> First message
                     </span>
                   )}
-
-                  {isFindMeBeacon ? (
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider">
-                        <Radar size={14} className={isMe ? 'text-black' : 'text-gold-primary'} />
-                        <span>Find Me Radar Beacon</span>
-                      </div>
-                      <p className="text-xs opacity-90 leading-snug">
-                        {m.body.replace('📍 [Find Me Beacon]', '').trim()}
-                      </p>
-                      <Link
-                        href={mapUrl}
-                        className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl transition-all shadow-sm ${
-                          isMe
-                            ? 'bg-black/25 text-black hover:bg-black/35 border border-black/20'
-                            : 'bg-black/70 hover:bg-black text-white border border-white/20 hover:border-gold-primary/50'
-                        }`}
-                      >
-                        <MapPin size={11} className={isMe ? 'text-black' : 'text-gold-primary'} />
-                        <span>Locate on VibeMap</span>
-                        <ExternalLink size={10} />
-                      </Link>
-                    </div>
-                  ) : isVoiceNote ? (
-                    <div className="space-y-2 min-w-[210px]">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              playTactileSound('bell')
-                              setPlayingVoiceId(prev => prev === m.id ? null : m.id)
-                            }}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                              isMe
-                                ? 'bg-black text-gold-primary'
-                                : 'bg-gold-primary text-black'
-                            }`}
-                            aria-label={playingVoiceId === m.id ? 'Pause voice note' : 'Play voice note'}
-                          >
-                            {playingVoiceId === m.id ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
-                          </button>
-                          <span className="text-[10px] font-black uppercase tracking-wider">
-                            Voice Note
-                          </span>
-                        </div>
-                        <span className={`text-[10px] font-mono font-bold ${isMe ? 'text-black/80' : 'text-gold-primary'}`}>
-                          {m.body.match(/Duration:\s*([\d:]+)/)?.[1] || '0:06'}
-                        </span>
-                      </div>
-
-                      {/* Animated Audio Equalizer Waveform */}
-                      <div className="flex items-center gap-1 h-5 pt-1 px-1">
-                        {[8, 16, 12, 20, 10, 18, 14, 22, 12, 16, 8, 14, 18, 10].map((h, idx) => (
-                          <div
-                            key={idx}
-                            style={{ height: `${h}px` }}
-                            className={`w-1 rounded-full transition-all ${
-                              isMe ? 'bg-black/60' : 'bg-gold-primary/80'
-                            } ${playingVoiceId === m.id ? 'animate-pulse' : 'opacity-50'}`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="whitespace-pre-wrap">{m.body}</p>
-                  )}
-
-                  <span className={`block text-[9px] mt-1 text-right font-medium ${isMe ? 'text-black/60' : 'text-gray-500'}`}>
-                    {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  {content}
+                  <span className={`block text-[9px] mt-1 text-right font-medium ${isMe ? 'text-black/60' : 'text-gray-500'}`}>{time}</span>
                 </div>
               </div>
             )
@@ -414,78 +312,74 @@ export default function ThreadPage() {
           <div ref={bottomRef} />
         </div>
 
-        {error && <p className="text-[11px] text-red-400 px-5 pb-2">{error}</p>}
+        {error && (
+          <div className="flex items-start justify-between gap-2 px-5 pb-2">
+            <p className="m-0 text-[11px] text-red-400">{error}</p>
+            <button type="button" onClick={() => setError(null)} className="text-gray-500 hover:text-white shrink-0" aria-label="Dismiss"><X size={12} /></button>
+          </div>
+        )}
 
-        {/* Message Composer with "Find Me" & Voice Note Recording */}
+        {/* Composer */}
         <div className="p-3.5 border-t border-white/10 bg-white/2">
-          {isRecordingVoice ? (
-            <div className="flex items-center justify-between gap-3 bg-red-950/40 border border-red-500/40 rounded-2xl px-4 py-2.5 backdrop-blur-2xl animate-pulse">
-              <div className="flex items-center gap-2 text-xs font-mono font-black text-red-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-                <span>REC {Math.floor(voiceDuration / 60)}:{String(voiceDuration % 60).padStart(2, '0')}</span>
+          {recorder.recording ? (
+            <div className="flex items-center justify-between gap-3 bg-red-950/40 border border-red-500/40 rounded-2xl px-3 py-2">
+              <button type="button" onClick={recorder.cancel} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white" aria-label="Discard recording">
+                <Trash2 size={15} />
+              </button>
+              <div className="flex items-center gap-2 text-xs font-mono font-black text-red-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                <span>{formatDuration(recorder.seconds)}</span>
+                <span className="text-[10px] text-red-300/60 font-sans font-bold">/ 2:00</span>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleCancelVoiceRecording}
-                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-all"
-                  aria-label="Cancel recording"
-                >
-                  <X size={15} />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSendVoiceNote}
-                  className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1 shadow-md transition-all active:scale-95"
-                >
-                  <Send size={12} />
-                  <span>Send Audio</span>
-                </button>
+              <button
+                type="button"
+                onClick={() => { void finishRecording() }}
+                className="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-1.5 active:scale-95"
+              >
+                <Send size={13} /> Send
+              </button>
+            </div>
+          ) : confirmLocation ? (
+            <div className="flex items-center justify-between gap-3 bg-white/5 border border-gold-primary/30 rounded-2xl px-4 py-2.5">
+              <p className="m-0 text-xs text-gray-200">Send your current location to <span className="font-bold text-white">{name}</span>?</p>
+              <div className="flex items-center gap-2 shrink-0">
+                <button type="button" onClick={() => setConfirmLocation(false)} className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-bold">Cancel</button>
+                <button type="button" onClick={shareLocation} className="px-3 py-1.5 rounded-xl bg-gold-primary text-black text-xs font-black">Share</button>
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-black/60 backdrop-blur-2xl border border-white/15 focus-within:border-gold-primary/60 rounded-2xl px-3 py-1.5 transition-all shadow-inner">
-              {/* 1-Tap Find Me Beacon */}
+            <div className="flex items-center gap-2 bg-black/60 backdrop-blur-2xl border border-white/15 focus-within:border-gold-primary/60 rounded-2xl px-2.5 py-1.5 transition-all">
               <button
                 type="button"
-                onClick={handleSendFindMeBeacon}
-                disabled={sendingLocation}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-gold-primary transition-all shrink-0 active:scale-95 flex items-center gap-1"
-                title="Share Live Location Beacon"
-                aria-label="Share Live Location Beacon"
+                onClick={() => setConfirmLocation(true)}
+                disabled={locating || sending}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gold-primary transition-all shrink-0 active:scale-95 disabled:opacity-50"
+                title="Share your location"
+                aria-label="Share your location"
               >
-                {sendingLocation ? (
-                  <Loader size={15} className="animate-spin text-gold-primary" />
-                ) : (
-                  <MapPin size={15} className="text-gold-primary" />
-                )}
-                <span className="hidden sm:inline text-[10px] font-black uppercase text-gold-primary tracking-wider">
-                  Find Me
-                </span>
+                {locating ? <Loader size={15} className="animate-spin" /> : <MapPin size={15} />}
               </button>
-
-              {/* 1-Tap Voice Note Recorder */}
               <button
                 type="button"
-                onClick={handleStartVoiceRecording}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all shrink-0 active:scale-95 flex items-center gap-1"
-                title="Record Voice Note"
-                aria-label="Record Voice Note"
+                onClick={() => { void recorder.start() }}
+                disabled={uploadingVoice || sending}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-rose-400 transition-all shrink-0 active:scale-95 disabled:opacity-50"
+                title="Record a voice note"
+                aria-label="Record a voice note"
               >
-                <Mic size={15} className="text-rose-400" />
+                {uploadingVoice ? <Loader size={15} className="animate-spin" /> : <Mic size={15} />}
               </button>
-
               <input
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') sendMessage() }}
-                placeholder="Write a resident message..."
-                className="flex-1 bg-transparent text-xs text-white placeholder:text-gray-500 outline-none p-2 font-medium"
+                onKeyDown={e => { if (e.key === 'Enter') void sendText() }}
+                placeholder="Write a message…"
+                className="flex-1 min-w-0 bg-transparent border-0 text-xs text-white placeholder:text-gray-500 outline-none p-2 font-medium"
               />
               <button
-                onClick={() => sendMessage()}
+                onClick={() => { void sendText() }}
                 disabled={sending || !draft.trim()}
-                className="bg-gold-primary hover:bg-gold-secondary text-black p-2.5 rounded-xl transition-all shadow-md disabled:opacity-40 shrink-0 active:scale-95"
+                className="bg-gold-primary hover:bg-gold-secondary text-black p-2.5 rounded-xl transition-all disabled:opacity-40 shrink-0 active:scale-95"
                 aria-label="Send message"
               >
                 <Send size={14} />
@@ -494,26 +388,6 @@ export default function ThreadPage() {
           )}
         </div>
       </div>
-
-      {/* Incoming Call Popup Banner */}
-      <IncomingCallBanner
-        incomingCall={incomingCall}
-        onAccept={handleAcceptIncomingCall}
-        onDecline={() => setIncomingCall(null)}
-      />
-
-      {/* Live Voice & Video Calling Screen / Floating Phone Widget */}
-      <ActiveCallModal
-        isOpen={showCallModal}
-        onClose={() => setShowCallModal(false)}
-        callType={callType}
-        contact={{
-          id: otherId,
-          name,
-          avatarUrl: otherProfile?.avatar_url,
-          role: 'Verified Resident'
-        }}
-      />
     </div>
   )
 }

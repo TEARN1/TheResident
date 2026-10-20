@@ -28,8 +28,8 @@ import { unlockNotificationAudio } from '../../utils/notificationSounds'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
 import CommandPalette from './components/navigation/CommandPalette'
-import FloatingEmergencySOS from './components/shared/FloatingEmergencySOS'
 import PointerSpotlight from './components/shared/PointerSpotlight'
+import CallProvider from './components/messages/CallProvider'
 import PWAInstallBanner from './components/shared/PWAInstallBanner'
 import MasterLegalPolicyModal from './components/shared/MasterLegalPolicyModal'
 import ThemeSwitcherModal from './components/shared/ThemeSwitcherModal'
@@ -270,6 +270,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     navItems.find(item => item.href === pathname) || { name: 'Command Bridge', href: '/dashboard', icon: Radio }
 
   return (
+    // Real voice/video calls: listens for incoming calls on every dashboard
+    // page, so a call rings wherever you are in the app. Guests can't call.
+    <CallProvider
+      myId={currentUser && !isGuestUser(currentUser) ? currentUser.id : null}
+      myName={currentUser?.name}
+    >
     <div className="dashboard-wrapper">
       <div className="ambient-backdrop" aria-hidden="true">
         <div className="ambient-orb ambient-orb--a" />
@@ -552,7 +558,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      <FloatingEmergencySOS />
       <PWAInstallBanner />
       <MasterLegalPolicyModal
         isOpen={showLegalModal}
@@ -571,5 +576,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }}
       />
     </div>
+    </CallProvider>
   )
 }
