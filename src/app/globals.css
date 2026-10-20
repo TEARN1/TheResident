@@ -801,6 +801,13 @@ body:has([data-map-open]) .ambient-backdrop { display: none; }
   -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
   mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
 }
+/* On phones the orbs hold still. They drift over 20-30s, so you can barely
+   see the motion, but every frame of it made the browser re-blur every glass
+   card on screen (backdrop-filter over a moving background): steady GPU work
+   and battery drain while scrolling. */
+@media (hover: none), (pointer: coarse) {
+  .ambient-orb { animation: none; will-change: auto; }
+}
 @keyframes orb-drift-a { to { transform: translate3d(14vmax, 10vmax, 0) scale(1.15); } }
 @keyframes orb-drift-b { to { transform: translate3d(-12vmax, -8vmax, 0) scale(1.1); } }
 @keyframes orb-drift-c { to { transform: translate3d(-18vmax, 6vmax, 0) scale(0.85); } }
@@ -814,6 +821,15 @@ body:has([data-map-open]) .ambient-backdrop { display: none; }
 /* Cursor spotlight for cards that opt in with data-spotlight. */
 [data-spotlight] {
   background-image: radial-gradient(380px circle at var(--mx, -999px) var(--my, -999px), rgb(var(--accent) / 0.12), transparent 60%);
+}
+
+/* Every page fades in briefly (see app/template.tsx). */
+@keyframes page-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.page-enter {
+  animation: page-enter 0.2s ease-out backwards;
 }
 
 /* Panels float up into place when a page opens, in a short stagger.
@@ -864,6 +880,7 @@ a.bg-gold-primary:hover:not([class*='animate-']) {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .page-enter,
   .ambient-orb,
   .dashboard-page-body .glass-panel,
   button.bg-gold-primary,

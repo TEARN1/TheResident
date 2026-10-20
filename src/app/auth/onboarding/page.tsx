@@ -12,7 +12,6 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
-import { motion } from 'framer-motion'
 import { User as UserIcon, Users, AlertTriangle } from 'lucide-react'
 import { loginUser, RootState, AppDispatch } from '../../../store'
 import { supabase } from '../../../utils/supabase'
@@ -87,10 +86,7 @@ export default function OnboardingPage() {
   return (
     <div style={containerStyle}>
       <div style={overlayStyle} />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
+      <div
         className="responsive-glass-panel"
         style={glassPanelStyle}
       >
@@ -267,7 +263,7 @@ export default function OnboardingPage() {
             {submitting ? 'Saving…' : 'Finish Setting Up'}
           </button>
         </form>
-      </motion.div>
+      </div>
     </div>
   )
 }

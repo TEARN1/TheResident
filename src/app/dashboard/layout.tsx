@@ -36,8 +36,19 @@ import { DEFAULT_THEME } from '../../utils/themes'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 import { GRUVS, TEARNS } from '../../utils/sisterApps'
+import { ReduxProvider } from '../../store/provider'
 
+// The store is provided here rather than in the root layout (see
+// app/layout.tsx), so the shell below sits inside its own provider.
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ReduxProvider>
+      <DashboardShell>{children}</DashboardShell>
+    </ReduxProvider>
+  )
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const dispatch = useDispatch()

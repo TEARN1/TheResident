@@ -1,6 +1,5 @@
 'use client'
 import React, { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Download, Home, LogIn, ShieldCheck, Smartphone, Wrench } from 'lucide-react'
 import Link from 'next/link'
@@ -75,15 +74,10 @@ export default function HomePage() {
           </span>
         )}
 
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className={styles.title}
-        >
+        <h1 className={styles.title}>
           Find a room you can trust.<br />
           <span className={styles.goldText}>Know the street you live on.</span>
-        </motion.h1>
+        </h1>
 
         <p className={styles.subtitle} style={{ marginBottom: '2rem' }}>
           Rooms, neighbours and local services in one free app.

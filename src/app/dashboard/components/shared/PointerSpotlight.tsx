@@ -5,14 +5,17 @@ import { useEffect } from 'react'
 /**
  * One delegated pointer listener for the whole dashboard: it sets --mx/--my
  * on the glass panel (or [data-spotlight] card) under the pointer, which the
- * CSS turns into a soft accent glow that follows the cursor or finger.
- * Throttled to one write per frame; renders nothing.
+ * CSS turns into a soft accent glow that follows the cursor. Mouse only,
+ * throttled to one write per frame; renders nothing.
  */
 const SELECTOR = '.glass-panel, [data-spotlight]'
 
 export default function PointerSpotlight() {
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    // Mouse and trackpad only. On a phone a finger hides the glow anyway, and
+    // the per-frame style write (plus a layout read) ran while you scrolled.
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
     let frame = 0
     let last: HTMLElement | null = null
     let x = 0
@@ -33,6 +36,7 @@ export default function PointerSpotlight() {
     }
 
     const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return
       x = e.clientX
       y = e.clientY
       const el = e.target as Element | null

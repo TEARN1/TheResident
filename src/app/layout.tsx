@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import { ReduxProvider } from '../store/provider'
 import { siteUrl } from './site-url'
 
 export const viewport: Viewport = {
@@ -72,9 +71,9 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ReduxProvider>
-          {children}
-        </ReduxProvider>
+        {/* The Redux store is provided by the auth and dashboard layouts, so
+            the home page and info pages don't load it or Supabase. */}
+        {children}
         <script
           dangerouslySetInnerHTML={{
             __html: `

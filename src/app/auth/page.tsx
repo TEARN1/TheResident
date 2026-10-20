@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
-import { motion } from 'framer-motion'
 import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
 import { performLogin } from '../../utils/authLogin'
@@ -315,10 +314,7 @@ export default function AuthPage() {
           browsing. It used to stack three "Continue with The Gruvs" buttons,
           a theme switcher, a partner footer and a full tenant/landlord
           questionnaire on one screen. */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
+      <div
         className="responsive-glass-panel"
         style={{ ...glassPanelStyle, maxWidth: '420px' }}
       >
@@ -555,7 +551,7 @@ export default function AuthPage() {
           <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.3)', margin: '0 8px' }}>·</span>
           <a href="/privacy" target="_blank" rel="noopener noreferrer" style={legalLinkStyle}>Privacy</a>
         </p>
-      </motion.div>
+      </div>
 
     </div>
   )
