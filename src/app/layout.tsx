@@ -80,7 +80,17 @@ export default function RootLayout({
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                  // When a new release's service worker takes over, reload
+                  // once so the page on screen is the new version too (only
+                  // when one was already in control, so no loop on first install).
+                  var hadController = !!navigator.serviceWorker.controller;
+                  var reloaded = false;
+                  navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    if (!hadController || reloaded) return;
+                    reloaded = true;
+                    window.location.reload();
+                  });
+                  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(function(err) {
                     console.log('SW registration failed: ', err);
                   });
                 });
