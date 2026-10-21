@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
+import { fetchEnabledProviders, isOAuthFailure, OAUTH_FAILURE_MESSAGES } from '../../utils/oauth'
 import { performLogin } from '../../utils/authLogin'
 import { Shield, CheckCircle, AlertTriangle } from 'lucide-react'
 import { safeNextPath } from '../../utils/launch'
@@ -101,6 +102,22 @@ export default function AuthPage() {
       // A guest tapping "Sign up to request this room" lands on Sign Up.
       setActiveTab('signup')
     }
+    // Back from Facebook without a session: say why (see /auth/callback).
+    const oauth = params.get('oauth')
+    if (isOAuthFailure(oauth)) setErrorMessage(OAUTH_FAILURE_MESSAGES[oauth])
+  }, [])
+
+  // "Continue with Facebook" only once Facebook login is switched on for
+  // the project (Supabase → Authentication → Providers). Until then the
+  // button led to a bare "provider is not enabled" error page.
+  const [facebookOn, setFacebookOn] = useState(false)
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) return
+    let cancelled = false
+    fetchEnabledProviders(url, key).then(p => { if (!cancelled) setFacebookOn(p.facebook === true) })
+    return () => { cancelled = true }
   }, [])
   const [passwordStrength, setPasswordStrength] = useState<{strong: boolean; score: number; feedback: string[]} | null>(null)
 
@@ -527,20 +544,22 @@ export default function AuthPage() {
           </form>
         )}
 
-        <div style={socialDividerStyle}>
-          <span style={socialDividerLineStyle} />
-          <span style={socialDividerTextStyle}>or</span>
-          <span style={socialDividerLineStyle} />
-        </div>
+        {facebookOn && (<>
+          <div style={socialDividerStyle}>
+            <span style={socialDividerLineStyle} />
+            <span style={socialDividerTextStyle}>or</span>
+            <span style={socialDividerLineStyle} />
+          </div>
 
-        <button
-          type="button"
-          onClick={() => handleOAuth('facebook')}
-          disabled={oauthLoading !== null}
-          style={{ ...oauthBtnStyle, width: '100%' }}
-        >
-          {oauthLoading === 'facebook' ? 'Connecting…' : 'Continue with Facebook'}
-        </button>
+          <button
+            type="button"
+            onClick={() => handleOAuth('facebook')}
+            disabled={oauthLoading !== null}
+            style={{ ...oauthBtnStyle, width: '100%' }}
+          >
+            {oauthLoading === 'facebook' ? 'Connecting…' : 'Continue with Facebook'}
+          </button>
+        </>)}
 
         <button type="button" onClick={handleVisitorLogin} style={guestLinkStyle}>
           Just looking? Browse as a guest

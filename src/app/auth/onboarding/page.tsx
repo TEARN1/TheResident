@@ -41,12 +41,19 @@ export default function OnboardingPage() {
   const [petsAllowed, setPetsAllowed] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // People who arrive through Facebook (or The Gruvs) never saw the sign-up
+  // form's Terms tick, so they agree here.
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   const sanitizeInput = (text: string): string => encodeHTMLEntities(cleanScriptTags(text))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!role || !currentUser || !supabase) return
+    if (!termsAccepted) {
+      setErrorMessage('Please agree to the Terms and Privacy Policy to continue.')
+      return
+    }
     setSubmitting(true)
     setErrorMessage(null)
 
@@ -259,7 +266,23 @@ export default function OnboardingPage() {
             </div>
           ) : null}
 
-          <button type="submit" className="btn-gold" style={submitButtonStyle} disabled={submitting || !role}>
+          <label htmlFor="onboardingTerms" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '12px', color: '#D1D5DB', lineHeight: 1.45, cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              id="onboardingTerms"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              style={{ marginTop: '0.15rem', cursor: 'pointer', accentColor: 'var(--gold-primary)' }}
+            />
+            <span>
+              I agree to the{' '}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 700 }}>Terms</a>
+              {' '}and{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 700 }}>Privacy Policy</a>
+            </span>
+          </label>
+
+          <button type="submit" className="btn-gold" style={submitButtonStyle} disabled={submitting || !role || !termsAccepted}>
             {submitting ? 'Saving…' : 'Finish Setting Up'}
           </button>
         </form>
