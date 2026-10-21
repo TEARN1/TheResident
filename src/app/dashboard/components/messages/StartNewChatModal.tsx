@@ -128,7 +128,7 @@ export default function StartNewChatModal({
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search by name, landlord, or suburb..."
-                className="w-full bg-transparent text-xs text-white placeholder:text-gray-500 outline-none font-medium"
+                className="w-full bg-transparent border-0 text-xs text-white placeholder:text-gray-500 outline-none font-medium"
                 autoFocus
               />
               {searchQuery && (

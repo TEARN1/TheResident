@@ -276,7 +276,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     pathname === '/dashboard' ? { name: 'Home', href: '/dashboard', icon: Home } :
     pathname === '/dashboard/trust-circle' ? { name: 'Next of Kin', href: pathname, icon: ShieldCheck } :
     pathname === '/dashboard/business' ? { name: 'My Business', href: pathname, icon: Briefcase } :
-    navItems.find(item => item.href === pathname) || { name: 'Home', href: '/dashboard', icon: Home }
+    // Prefix match so a chat (/dashboard/messages/<id>) is titled Messages, not Home.
+    navItems.find(item => pathname === item.href || pathname.startsWith(item.href + '/')) || { name: 'Home', href: '/dashboard', icon: Home }
 
   return (
     // Real voice/video calls: listens for incoming calls on every dashboard
@@ -530,7 +531,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
       <nav className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] left-3 right-3 max-w-lg mx-auto z-50 bg-black/55 backdrop-blur-3xl backdrop-saturate-150 border border-white/15 rounded-3xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)] flex items-center justify-around transition-all">
         {navItems.map(item => {
-          const isActive = pathname === item.href
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link
               key={item.href}

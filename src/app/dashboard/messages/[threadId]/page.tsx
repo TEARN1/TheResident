@@ -4,9 +4,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2
+  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle
 } from 'lucide-react'
-import { RootState } from '../../../../store'
+import { RootState, isGuestUser } from '../../../../store'
+import Link from 'next/link'
+import EmptyState from '../../components/shared/EmptyState'
 import { supabase } from '../../../../utils/supabase'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import {
@@ -43,7 +45,8 @@ type Extra = Partial<Pick<DbMessage, 'message_type' | 'media_url' | 'media_type'
 
 export default function ThreadPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
-  const myId = currentUser?.id
+  const guest = isGuestUser(currentUser)
+  const myId = guest ? undefined : currentUser?.id
   const router = useRouter()
   const params = useParams<{ threadId: string }>()
   const otherId = params.threadId
@@ -190,6 +193,24 @@ export default function ThreadPage() {
   ]
 
   const callButton = 'p-2 sm:px-3 py-2 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/40 text-gray-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-40'
+
+  // Guests can't send: say so instead of an empty chat whose send fails.
+  if (guest) {
+    return (
+      <div className="p-4 md:p-8 max-w-4xl mx-auto pb-32">
+        <EmptyState
+          icon={MessageCircle}
+          title="Sign up to send a message"
+          subtitle="It's free. You can message landlords, roommates and neighbours once you have an account."
+          action={
+            <Link href="/auth?signup=1" className="no-underline inline-flex px-5 py-2.5 rounded-2xl bg-gold-primary text-black font-black text-xs uppercase tracking-wider">
+              Sign up
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-12">

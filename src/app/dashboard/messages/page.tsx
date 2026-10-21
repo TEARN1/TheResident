@@ -7,7 +7,8 @@ import {
   MessageCircle, Loader, Plus, Search,
   Phone, Video, ShieldCheck, X
 } from 'lucide-react'
-import { RootState } from '../../../store'
+import { RootState, isGuestUser } from '../../../store'
+import Link from 'next/link'
 import { supabase } from '../../../utils/supabase'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import EmptyState from '../components/shared/EmptyState'
@@ -37,7 +38,10 @@ interface Thread {
 
 export default function MessagesPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
-  const myId = currentUser?.id
+  // Guests have a placeholder id and no messages; they get a sign-up prompt
+  // below instead of a search that never loads.
+  const guest = isGuestUser(currentUser)
+  const myId = guest ? undefined : currentUser?.id
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -228,6 +232,23 @@ export default function MessagesPage() {
     )
   }
 
+  if (guest) {
+    return (
+      <div className="p-4 md:p-8 max-w-4xl mx-auto pb-32">
+        <EmptyState
+          icon={MessageCircle}
+          title="Messages need an account"
+          subtitle="Sign up free to message landlords, roommates and neighbours, send voice notes and call."
+          action={
+            <Link href="/auth?signup=1" className="no-underline inline-flex px-5 py-2.5 rounded-2xl bg-gold-primary text-black font-black text-xs uppercase tracking-wider">
+              Sign up
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6 pb-32">
       {/* Top Header */}
@@ -264,7 +285,7 @@ export default function MessagesPage() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search conversations by name or message..."
-            className="w-full bg-transparent text-xs text-white placeholder:text-gray-500 outline-none font-medium"
+            className="w-full bg-transparent border-0 text-xs text-white placeholder:text-gray-500 outline-none font-medium"
           />
           {searchQuery && (
             <button
