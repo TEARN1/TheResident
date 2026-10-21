@@ -246,9 +246,21 @@ body {
   border-color: rgb(var(--accent) / 0.4);
 }
 
+/* Tailwind's reset (preflight) is off, so the browser default underlined
+   every link in the app: bottom-bar labels, page titles, buttons built as
+   links. :where() keeps this at zero specificity, so a link that asks for
+   an underline (the "underline" utility) still gets one. */
+:where(.dashboard-wrapper) a {
+  text-decoration: none;
+}
+
 .dashboard-page-body {
   flex: 1;
   overflow-y: auto;
+  /* overflow-y: auto quietly makes x scrollable too, so one too-wide row
+     (e.g. the connections chips) let the whole page slide sideways and cut
+     cards off at the edge on phones. */
+  overflow-x: hidden;
 }
 
 /* Used on horizontal-scroll rows (map quick-filters, Gruvs connections,
@@ -755,6 +767,10 @@ body {
 [data-theme='light'] .ambient-backdrop {
   --orb-strength: 0.7;
 }
+/* The fullscreen map covers everything; stop the blurred background orbs
+   animating underneath it so the GPU is free for the map. */
+body:has([data-map-open]) .ambient-backdrop { display: none; }
+
 .ambient-orb {
   position: absolute;
   border-radius: 50%;
@@ -785,6 +801,13 @@ body {
   -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
   mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
 }
+/* On phones the orbs hold still. They drift over 20-30s, so you can barely
+   see the motion, but every frame of it made the browser re-blur every glass
+   card on screen (backdrop-filter over a moving background): steady GPU work
+   and battery drain while scrolling. */
+@media (hover: none), (pointer: coarse) {
+  .ambient-orb { animation: none; will-change: auto; }
+}
 @keyframes orb-drift-a { to { transform: translate3d(14vmax, 10vmax, 0) scale(1.15); } }
 @keyframes orb-drift-b { to { transform: translate3d(-12vmax, -8vmax, 0) scale(1.1); } }
 @keyframes orb-drift-c { to { transform: translate3d(-18vmax, 6vmax, 0) scale(0.85); } }
@@ -798,6 +821,15 @@ body {
 /* Cursor spotlight for cards that opt in with data-spotlight. */
 [data-spotlight] {
   background-image: radial-gradient(380px circle at var(--mx, -999px) var(--my, -999px), rgb(var(--accent) / 0.12), transparent 60%);
+}
+
+/* Every page fades in briefly (see app/template.tsx). */
+@keyframes page-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.page-enter {
+  animation: page-enter 0.2s ease-out backwards;
 }
 
 /* Panels float up into place when a page opens, in a short stagger.
@@ -848,6 +880,7 @@ a.bg-gold-primary:hover:not([class*='animate-']) {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .page-enter,
   .ambient-orb,
   .dashboard-page-body .glass-panel,
   button.bg-gold-primary,

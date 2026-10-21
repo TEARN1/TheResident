@@ -1,22 +1,12 @@
-'use client'
-import { motion } from 'framer-motion'
-
-// No `filter` in this transition, deliberately. Framer Motion's resting value
-// after animating filter is 'blur(0px)', not 'none' — and per the CSS spec,
-// ANY filter value other than none (including blur(0px)) creates a new
-// containing block for descendants. Since this template wraps literally
-// every page, that silently broke `position: fixed` for everything nested
-// inside it app-wide — the dashboard's bottom nav bar included, which
-// scrolled away with the page instead of staying pinned to the viewport.
+// A short CSS fade when you move between sections. This used to be a
+// Framer Motion fade-and-slide (0.75s) whose server-rendered starting style
+// was opacity 0, so every page stayed blank until all the JavaScript had
+// downloaded and run: seconds of empty screen on a slow connection. CSS
+// starts as soon as the HTML and stylesheet arrive, and needs no JS at all.
+//
+// Opacity only, on purpose: a transform here would turn this wrapper into
+// the containing block for every `position: fixed` element inside it (the
+// bottom nav, modals) while it ran.
 export default function Template({ children }: { children: React.ReactNode }) {
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ ease: 'easeInOut', duration: 0.75 }}
-        >
-            {children}
-        </motion.div>
-    )
+  return <div className="page-enter">{children}</div>
 }

@@ -9,7 +9,7 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Scale, Palette, Radio
+  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Palette
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -28,22 +28,31 @@ import { unlockNotificationAudio } from '../../utils/notificationSounds'
 import { t } from '../../utils/i18n'
 import Link from 'next/link'
 import CommandPalette from './components/navigation/CommandPalette'
-import FloatingEmergencySOS from './components/shared/FloatingEmergencySOS'
 import PointerSpotlight from './components/shared/PointerSpotlight'
+import CallProvider from './components/messages/CallProvider'
 import PWAInstallBanner from './components/shared/PWAInstallBanner'
-import MasterLegalPolicyModal from './components/shared/MasterLegalPolicyModal'
 import ThemeSwitcherModal from './components/shared/ThemeSwitcherModal'
 import { DEFAULT_THEME } from '../../utils/themes'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
 import { GRUVS, TEARNS } from '../../utils/sisterApps'
+import { ReduxProvider } from '../../store/provider'
 
+// The store is provided here rather than in the root layout (see
+// app/layout.tsx), so the shell below sits inside its own provider.
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ReduxProvider>
+      <DashboardShell>{children}</DashboardShell>
+    </ReduxProvider>
+  )
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const dispatch = useDispatch()
   const [showNotifMenu, setShowNotifMenu] = useState(false)
-  const [showLegalModal, setShowLegalModal] = useState(false)
   const [showThemeModal, setShowThemeModal] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<string>(DEFAULT_THEME)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
@@ -264,12 +273,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // routes — without this, visiting either would show the wrong tab (or
   // none) highlighted as "current" in the top bar title.
   const pageTitle =
-    pathname === '/dashboard' ? { name: 'Command Bridge', href: '/dashboard', icon: Radio } :
+    pathname === '/dashboard' ? { name: 'Home', href: '/dashboard', icon: Home } :
     pathname === '/dashboard/trust-circle' ? { name: 'Next of Kin', href: pathname, icon: ShieldCheck } :
     pathname === '/dashboard/business' ? { name: 'My Business', href: pathname, icon: Briefcase } :
-    navItems.find(item => item.href === pathname) || { name: 'Command Bridge', href: '/dashboard', icon: Radio }
+    // Prefix match so a chat (/dashboard/messages/<id>) is titled Messages, not Home.
+    navItems.find(item => pathname === item.href || pathname.startsWith(item.href + '/')) || { name: 'Home', href: '/dashboard', icon: Home }
 
   return (
+    // Real voice/video calls: listens for incoming calls on every dashboard
+    // page, so a call rings wherever you are in the app. Guests can't call.
+    <CallProvider
+      myId={currentUser && !isGuestUser(currentUser) ? currentUser.id : null}
+      myName={currentUser?.name}
+    >
     <div className="dashboard-wrapper">
       <div className="ambient-backdrop" aria-hidden="true">
         <div className="ambient-orb ambient-orb--a" />
@@ -319,7 +335,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="guest-summary-banner">
           <Sparkles size={16} className="shrink-0" style={{ color: 'var(--gold-primary)' }} />
           <span>
-            <strong>You&apos;re browsing as a guest.</strong> Sign up free to save listings, message neighbours, post to the feed, and build the trust circle other residents can see.
+            <strong>Browsing as a guest.</strong> Sign up free to message, post and save rooms.
           </span>
           <Link href="/auth" className="guest-summary-banner-cta">Sign up</Link>
           <button onClick={dismissGuestBanner} aria-label="Dismiss" className="guest-summary-banner-dismiss">
@@ -356,7 +372,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             href="/dashboard"
             onClick={() => playTactileSound('tab')}
             className="flex items-center gap-3 group"
-            title="Planetary Command Bridge"
+            title="Home"
           >
             <div className="w-9 h-9 rounded-xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary shadow-glow group-hover:scale-105 transition-transform shrink-0">
               <pageTitle.icon size={18} />
@@ -376,7 +392,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
 
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
-            {/* Direct Link to Command Bridge */}
+            {/* Home */}
             <Link
               href="/dashboard"
               onClick={() => playTactileSound('tab')}
@@ -385,10 +401,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   ? 'bg-gold-primary/20 text-gold-primary border-gold-primary/40'
                   : 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border-white/10'
               }`}
-              title="Planetary Command Bridge"
+              title="Home"
             >
-              <Radio size={12} className={pathname === '/dashboard' ? 'text-gold-primary animate-pulse' : 'text-gray-400'} />
-              <span>Bridge</span>
+              <Home size={12} className={pathname === '/dashboard' ? 'text-gold-primary' : 'text-gray-400'} />
+              <span>Home</span>
             </Link>
 
             {/* Global Spotlight Palette Trigger (Ctrl+K) */}
@@ -445,17 +461,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <Palette size={13} className="text-gold-primary group-hover/theme:rotate-12 transition-transform" />
               <span className="hidden sm:inline">Theme</span>
-            </button>
-
-            {/* Platform Legal Shield & Governance Trigger */}
-            <button
-              type="button"
-              onClick={() => { setShowLegalModal(true); playTactileSound('tab') }}
-              className="hidden sm:inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all"
-              title="Platform Legal Shield, Neutrality Disclaimers & POPIA Governance"
-            >
-              <Scale size={13} className="text-amber-400" />
-              <span className="hidden sm:inline">Legal Shield</span>
             </button>
 
             <div ref={notifMenuRef} className="relative">
@@ -526,7 +531,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <nav className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] left-3 right-3 max-w-lg mx-auto z-50 bg-black/55 backdrop-blur-3xl backdrop-saturate-150 border border-white/15 rounded-3xl p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)] flex items-center justify-around transition-all">
         {navItems.map(item => {
-          const isActive = pathname === item.href
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link
               key={item.href}
@@ -552,12 +557,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
 
-      <FloatingEmergencySOS />
       <PWAInstallBanner />
-      <MasterLegalPolicyModal
-        isOpen={showLegalModal}
-        onClose={() => setShowLegalModal(false)}
-      />
       <ThemeSwitcherModal
         isOpen={showThemeModal}
         onClose={() => setShowThemeModal(false)}
@@ -571,5 +571,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }}
       />
     </div>
+    </CallProvider>
   )
 }

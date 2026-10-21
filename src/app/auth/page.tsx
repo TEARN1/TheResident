@@ -3,16 +3,15 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
-import { motion } from 'framer-motion'
 import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
+import { fetchEnabledProviders, isOAuthFailure, OAUTH_FAILURE_MESSAGES } from '../../utils/oauth'
 import { performLogin } from '../../utils/authLogin'
 import { Shield, CheckCircle, AlertTriangle } from 'lucide-react'
 import { safeNextPath } from '../../utils/launch'
 import { track } from '../../utils/track'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 import Image from 'next/image'
-import MasterLegalPolicyModal from '../dashboard/components/shared/MasterLegalPolicyModal'
 
 // Cross-app SSO mark for The Gruvs — their real logo (public/gruvs-logo.png),
 // not a placeholder monogram.
@@ -76,7 +75,6 @@ export default function AuthPage() {
   // or landlord). The tenant profile and landlord house rules it used to ask
   // up front are filled in later on the Profile page, where they already live.
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [showPolicyModal, setShowPolicyModal] = useState(false)
 
   // Message states
   const [securityMessage, setSecurityMessage] = useState<string | null>(null)
@@ -104,6 +102,22 @@ export default function AuthPage() {
       // A guest tapping "Sign up to request this room" lands on Sign Up.
       setActiveTab('signup')
     }
+    // Back from Facebook without a session: say why (see /auth/callback).
+    const oauth = params.get('oauth')
+    if (isOAuthFailure(oauth)) setErrorMessage(OAUTH_FAILURE_MESSAGES[oauth])
+  }, [])
+
+  // "Continue with Facebook" only once Facebook login is switched on for
+  // the project (Supabase → Authentication → Providers). Until then the
+  // button led to a bare "provider is not enabled" error page.
+  const [facebookOn, setFacebookOn] = useState(false)
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) return
+    let cancelled = false
+    fetchEnabledProviders(url, key).then(p => { if (!cancelled) setFacebookOn(p.facebook === true) })
+    return () => { cancelled = true }
   }, [])
   const [passwordStrength, setPasswordStrength] = useState<{strong: boolean; score: number; feedback: string[]} | null>(null)
 
@@ -317,10 +331,7 @@ export default function AuthPage() {
           browsing. It used to stack three "Continue with The Gruvs" buttons,
           a theme switcher, a partner footer and a full tenant/landlord
           questionnaire on one screen. */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
+      <div
         className="responsive-glass-panel"
         style={{ ...glassPanelStyle, maxWidth: '420px' }}
       >
@@ -521,13 +532,9 @@ export default function AuthPage() {
               />
               <span>
                 I agree to the{' '}
-                <button
-                  type="button"
-                  onClick={() => setShowPolicyModal(true)}
-                  style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 700, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '12px' }}
-                >
-                  Terms &amp; Privacy Policy
-                </button>
+                <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 700 }}>Terms</a>
+                {' '}and{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold-primary)', textDecoration: 'underline', fontWeight: 700 }}>Privacy Policy</a>
               </span>
             </label>
 
@@ -537,45 +544,41 @@ export default function AuthPage() {
           </form>
         )}
 
-        <div style={socialDividerStyle}>
-          <span style={socialDividerLineStyle} />
-          <span style={socialDividerTextStyle}>or</span>
-          <span style={socialDividerLineStyle} />
-        </div>
+        {facebookOn && (<>
+          <div style={socialDividerStyle}>
+            <span style={socialDividerLineStyle} />
+            <span style={socialDividerTextStyle}>or</span>
+            <span style={socialDividerLineStyle} />
+          </div>
 
-        <button
-          type="button"
-          onClick={() => handleOAuth('facebook')}
-          disabled={oauthLoading !== null}
-          style={{ ...oauthBtnStyle, width: '100%' }}
-        >
-          {oauthLoading === 'facebook' ? 'Connecting…' : 'Continue with Facebook'}
-        </button>
+          <button
+            type="button"
+            onClick={() => handleOAuth('facebook')}
+            disabled={oauthLoading !== null}
+            style={{ ...oauthBtnStyle, width: '100%' }}
+          >
+            {oauthLoading === 'facebook' ? 'Connecting…' : 'Continue with Facebook'}
+          </button>
+        </>)}
 
         <button type="button" onClick={handleVisitorLogin} style={guestLinkStyle}>
           Just looking? Browse as a guest
         </button>
 
         <p style={{ margin: '1.25rem 0 0', textAlign: 'center' }}>
-          <button
-            type="button"
-            onClick={() => setShowPolicyModal(true)}
-            style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.45)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-          >
-            Terms &amp; privacy
-          </button>
+          <a href="/terms" target="_blank" rel="noopener noreferrer" style={legalLinkStyle}>Terms</a>
+          <span style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.3)', margin: '0 8px' }}>·</span>
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" style={legalLinkStyle}>Privacy</a>
         </p>
-      </motion.div>
+      </div>
 
-      <MasterLegalPolicyModal
-        isOpen={showPolicyModal}
-        onClose={() => setShowPolicyModal(false)}
-      />
     </div>
   )
 }
 
 // Styles
+const legalLinkStyle: React.CSSProperties = { fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.45)', textDecoration: 'underline' }
+
 export const containerStyle: React.CSSProperties = {
   position: 'relative',
   width: '100vw',

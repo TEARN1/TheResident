@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
-import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction } from 'lucide-react'
+import { Shield, Activity, Bell, MapPin, CheckCircle2, Droplets, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction } from 'lucide-react'
 import { outageConsensus, type StatusReport } from '../../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
@@ -52,10 +52,10 @@ interface SafetyTabProps {
 
 const SERVICES: Array<{ key: 'power' | 'water' | 'network' | 'fiber' | 'road'; label: string; Icon: typeof Zap }> = [
   { key: 'power', label: 'Electricity', Icon: Zap },
-  { key: 'water', label: 'Water', Icon: Info },
-  { key: 'network', label: 'Network', Icon: Wifi },
-  { key: 'fiber', label: 'Fiber', Icon: Signal },
-  { key: 'road', label: 'Road / Traffic', Icon: Construction }
+  { key: 'water', label: 'Water', Icon: Droplets },
+  { key: 'network', label: 'Mobile network', Icon: Wifi },
+  { key: 'fiber', label: 'Fibre', Icon: Signal },
+  { key: 'road', label: 'Roads', Icon: Construction }
 ]
 
 // "How long" options for a crowd report's optional end time. The DB trigger
@@ -245,31 +245,34 @@ export default function SafetyTab({
 
   return (
     <div className="space-y-8">
-      {/* Panic Section — deliberately two-step so a mis-tap can't page the neighbourhood */}
+      {/* Urgent alert to neighbours — deliberately two-step so a mis-tap can't
+          page the neighbourhood. It used to be framed as a pulsing red "Panic"
+          button that promised "community watch"; it alerts people on the app
+          near you, nothing more, so it says that and gives the real numbers. */}
       <div className="glass-panel p-6 border-red-500/20 bg-red-500/5">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-red-500/20 rounded-full animate-pulse">
-              <Shield size={32} className="text-red-500" />
+            <div className="p-3 bg-red-500/15 rounded-full">
+              <Shield size={24} className="text-red-400" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-red-500">Emergency & Panic</h3>
-              <p className="text-gray-400 text-sm">Raise an immediate alert to verified neighbors and community watch.</p>
+              <h3 className="text-base font-bold text-white">Need help now?</h3>
+              <p className="text-gray-400 text-sm">Send an urgent alert to people on The Resident near you.</p>
             </div>
           </div>
 
           {!confirmPanic ? (
             <button
               onClick={() => { setPanicReach(undefined); setConfirmPanic(true) }}
-              className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-red-900/20 transition-all active:scale-95"
+              className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95"
             >
-              RAISE PANIC ALERT
+              Alert neighbours
             </button>
           ) : (
             <div className="flex gap-2 w-full md:w-auto">
               <button
                 onClick={() => {
-                  onRaiseAlert?.({ kind: 'panic', title: 'Panic alert', description: 'Immediate help needed.', severity: 'critical' })
+                  onRaiseAlert?.({ kind: 'panic', title: 'Urgent: help needed', description: 'A neighbour needs help now.', severity: 'critical' })
                   setConfirmPanic(false)
                 }}
                 className="flex-1 md:flex-none bg-red-600 text-white font-bold px-6 py-3 rounded-xl active:scale-95 transition-all"
@@ -291,9 +294,11 @@ export default function SafetyTab({
             {panicReach > 0
               ? `This alert will notify ${panicReach} neighbour${panicReach === 1 ? '' : 's'} in ${suburb || 'your area'}.`
               : `No neighbours in ${suburb || 'your area'} are on The Resident yet, so nobody will be notified.`}
-            {' '}In a life-threatening emergency, call 10111 (police) or 112 from any phone.
           </p>
         )}
+        <p className="mt-3 text-xs text-gray-400">
+          In a life-threatening emergency call <a href="tel:10111" className="font-bold text-white">10111</a> (police) or <a href="tel:112" className="font-bold text-white">112</a> from any phone.
+        </p>
 
         <button
           onClick={() => setShowIncidentForm(v => !v)}
@@ -558,7 +563,7 @@ export default function SafetyTab({
         {/* Utility Status — crowd-signal consensus: one report is noise, three is a fact */}
         <div className="space-y-6">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Activity size={20} className="text-gold-primary" /> Local Infrastructure
+            <Activity size={20} className="text-gold-primary" /> Outages near you
           </h3>
           <div className="glass-panel p-6 space-y-6">
              {SERVICES.map(({ key, label, Icon }) => {
@@ -576,30 +581,31 @@ export default function SafetyTab({
                const selectedDuration = durationByKey[key] || '8h'
 
                return (
-                 <div key={key} className="flex items-center justify-between group">
+                 <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 group">
                     <div className="flex items-center gap-3">
-                       <div className={`p-2 rounded-lg ${isDown ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
-                          <Icon size={18} className={isDown ? 'text-red-500' : 'text-green-500'} />
+                       <div className={`p-2 rounded-lg ${isDown ? 'bg-red-500/10' : 'bg-white/5'}`}>
+                          <Icon size={18} className={isDown ? 'text-red-500' : 'text-gray-400'} />
                        </div>
                        <span className="text-sm font-medium text-gray-300">{label}</span>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
+                    <div className="flex flex-col items-start sm:items-end gap-1.5">
                        <div className="flex items-center gap-1">
                           {officialRow && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gold-primary/20 text-gold-primary uppercase tracking-widest">
                               Official{providerName ? ` · ${providerName}` : ''}
                             </span>
                           )}
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isDown ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>
-                             {isDown ? (!officialRow && consensus.confirmed ? `OUTAGE (${consensus.reporters} reports)` : 'OUTAGE') : 'OPERATIONAL'}
+                          {/* "No reports", not "Operational": the app can't know the power is on, only that nobody has said it's off. */}
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isDown ? 'bg-red-500/20 text-red-500' : officialRow ? 'bg-green-500/20 text-green-500' : 'bg-white/5 text-gray-400'}`}>
+                             {isDown ? (!officialRow && consensus.confirmed ? `OUTAGE (${consensus.reporters} reports)` : 'OUTAGE') : officialRow ? 'ON' : 'NO REPORTS'}
                           </span>
                        </div>
                        {expiry && <span className="text-[9px] text-gray-500">{expiry}</span>}
-                       <div className="flex items-center gap-1">
+                       <div className="flex items-center gap-2">
                           <select
                             value={selectedDuration}
                             onChange={e => setDurationByKey(prev => ({ ...prev, [key]: e.target.value }))}
-                            className="bg-black border border-white/10 rounded px-1 py-0.5 text-[9px] text-gray-400 outline-none"
+                            className="bg-black border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-gray-300 outline-none"
                             title="How long"
                           >
                             {DURATION_OPTIONS.map(opt => (
@@ -612,14 +618,13 @@ export default function SafetyTab({
                               const endsAt = opt?.hours ? new Date(Date.now() + opt.hours * 60 * 60 * 1000).toISOString() : null
                               onReportStatus?.(key, 'down', endsAt)
                             }}
-                            className="text-[9px] text-red-400 hover:text-red-300 uppercase font-bold"
+                            className="px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[11px] text-red-300 hover:text-red-200 font-bold whitespace-nowrap"
                           >
                             Report down
                           </button>
-                          <span className="text-gray-700">/</span>
                           <button
                             onClick={() => onReportStatus?.(key, 'up', null)}
-                            className="text-[9px] text-green-400 hover:text-green-300 uppercase font-bold"
+                            className="px-2.5 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-[11px] text-green-300 hover:text-green-200 font-bold whitespace-nowrap"
                           >
                             It&apos;s back
                           </button>

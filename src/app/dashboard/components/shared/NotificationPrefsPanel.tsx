@@ -5,7 +5,6 @@ import { useSelector } from 'react-redux'
 import { Bell, Moon, Save, Check } from 'lucide-react'
 import { RootState } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
-import { PANIC_TYPE } from '../../../../utils/logic'
 
 // Curated list of mutable notification types — pulled from the RPC/type
 // strings actually in use (CONTRACT.md §4 + res_alert_panic in logic.ts).
@@ -112,7 +111,7 @@ export default function NotificationPrefsPanel() {
       </div>
 
       <div>
-        <p className="text-[11px] text-gray-500 mb-3">Mute specific notification types. Panic alerts always reach you.</p>
+        <p className="text-[11px] text-gray-500 mb-3">Mute specific notification types. Urgent help alerts always reach you.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {MUTABLE_TYPES.map(t => (
             <label key={t.value} className="flex items-center gap-2 p-2.5 bg-black/40 border border-white/5 rounded-lg text-xs text-gray-300 cursor-pointer hover:border-white/10">
@@ -126,7 +125,7 @@ export default function NotificationPrefsPanel() {
             </label>
           ))}
         </div>
-        <p className="text-[10px] text-gray-600 mt-2">Panic alerts ({PANIC_TYPE}) can&apos;t be muted here.</p>
+        <p className="text-[10px] text-gray-600 mt-2">Urgent help alerts can&apos;t be muted.</p>
       </div>
 
       <div>

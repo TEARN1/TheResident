@@ -775,6 +775,10 @@ create policy res_seekers_write on public.res_roommate_seekers
 drop policy if exists res_seekers_update on public.res_roommate_seekers;
 create policy res_seekers_update on public.res_roommate_seekers
   for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
+-- So people can take their roommate ad down.
+drop policy if exists res_seekers_delete on public.res_roommate_seekers;
+create policy res_seekers_delete on public.res_roommate_seekers
+  for delete to authenticated using (id = auth.uid());
 
 -- res_notice_events
 drop policy if exists res_notices_select on public.res_notice_events;

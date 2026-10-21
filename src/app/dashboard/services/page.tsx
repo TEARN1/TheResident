@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Droplets
+  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon
 } from 'lucide-react'
 import {
   RootState,
@@ -26,13 +26,12 @@ import FollowButton from '../components/social/FollowButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
 import OpenInMapsButton from '../components/map/OpenInMapsButton'
 import UpgradeButton from '../components/shared/UpgradeButton'
+import { realImage } from '../../public-services'
 import EmptyState from '../components/shared/EmptyState'
 import { directionsUrlForAddress } from '../../../utils/navigation'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents } from '../../../utils/gruvsEvents'
-import MovingLogisticsPortal from '../components/services/MovingLogisticsPortal'
-import PlumbingTradesModal from '../components/services/PlumbingTradesModal'
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
 const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
@@ -55,7 +54,17 @@ const TIER_RANK: Record<'premium' | 'priority' | 'none', number> = { premium: 0,
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
   const [activeTab, setActiveTab] = useState<'moving' | 'handymen' | 'lifts' | 'utilities'>('moving')
-  const [showPlumbingModal, setShowPlumbingModal] = useState(false)
+  // Deep links: ?tab=moving|handymen|lifts|utilities (Feed "Share a lift",
+  // the Ask box on Home). ?type=locksmith from the Ask box opens Trades.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tab = params.get('tab')
+    if (tab === 'moving' || tab === 'handymen' || tab === 'lifts' || tab === 'utilities') {
+      setActiveTab(tab)
+    } else if (params.get('type')) {
+      setActiveTab('handymen')
+    }
+  }, [])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
   // Business Registration State
@@ -254,7 +263,8 @@ export default function ServicesPage() {
       contactNumber: bizPhone,
       priceEstimate: bizPrice,
       description: bizDesc,
-      image: 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?auto=format&fit=crop&w=600&q=80',
+      // No stock photo: a picture that isn't the business misleads people.
+      image: '',
       reviewsCount: 0,
       showPublicly: bizPublic
     }
@@ -283,6 +293,7 @@ export default function ServicesPage() {
     setAlertNotification('Contract dispatched successfully!')
   }
 
+  const visibleServices = activeTab === 'moving' ? services.filter(s => MOVE_ASSIST_CATEGORIES.includes(s.category)) : services
   const myBiz = services.find(s => s.ownerId === currentUser?.id)
   const incomingOrders = myBiz ? dispatches.filter(d => d.serviceId === myBiz.id) : []
 
@@ -291,7 +302,7 @@ export default function ServicesPage() {
       <header className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-xl font-black text-white uppercase tracking-tight">Community <span className="text-gold-primary">Services</span></h2>
-          <p className="text-xs text-gray-400 font-medium mt-0.5">Verified local transport, trades, and direct utilities management.</p>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Moving, repairs, lifts and utilities near you.</p>
         </div>
 
         <div className="flex bg-black/60 p-1.5 rounded-2xl border border-white/10 shadow-glass backdrop-blur-2xl w-full md:w-auto overflow-x-auto no-scrollbar gap-1">
@@ -314,14 +325,6 @@ export default function ServicesPage() {
         </div>
       </header>
 
-      {/* 1. Moving & Bakkie Logistics Portal */}
-      {activeTab === 'moving' && (
-        <MovingLogisticsPortal
-          onSelectProvider={(phone, name) => {
-            setAlertNotification(`Connecting with ${name} (${phone})`)
-          }}
-        />
-      )}
 
       {activeTab === 'lifts' && (
         <div className="space-y-4">
@@ -426,39 +429,20 @@ export default function ServicesPage() {
         </div>
       )}
 
-      {activeTab === 'handymen' && (
+      {/* Moving and Trades both list REAL services (res_services); Moving is
+          the bakkie/transport categories. Moving used to show invented
+          movers with real-looking phone numbers, and Trades a "dispatched in
+          30 mins" emergency button that sent nothing to anyone. */}
+      {(activeTab === 'handymen' || activeTab === 'moving') && (
         <div className="space-y-8">
-          {/* Emergency Plumbing & Trades Dispatch Banner */}
-          <div className="flex flex-col sm:flex-row items-center justify-between p-5 rounded-3xl bg-blue-950/40 border border-blue-500/30 gap-4 shadow-glass">
-            <div className="flex items-center gap-3.5">
-              <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-glow">
-                <Droplets size={22} />
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-white uppercase tracking-tight">Need Emergency Plumbing or Repairs?</h4>
-                <p className="text-xs text-gray-300">Geyser leak, burst pipe, blocked drain, or electrical trip dispatched in 30 mins.</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowPlumbingModal(true)}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-900/40 transition-all shrink-0 active:scale-95"
-            >
-              Request Emergency Trades
-            </button>
-          </div>
-
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
-              <div className="glass-panel p-6 bg-blue-500/5 border-blue-500/10 flex-1 flex flex-col md:flex-row gap-6 items-center shadow-2xl">
-                 <div className="p-4 bg-blue-500/20 rounded-2xl shadow-xl shadow-blue-900/10">
-                    <Star size={32} className="text-blue-400" />
-                 </div>
-                 <div className="text-center md:text-left">
-                    <h3 className="text-lg font-black text-white uppercase tracking-widest italic">Local Verified <span className="text-blue-400">Professionals</span></h3>
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest opacity-60">Verified skills helping to grow the local economy</p>
-                 </div>
-              </div>
+          {/* One line plus the button; this was a large decorative card with
+              a star icon that pushed the actual list below the fold. */}
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+              <p className="m-0 text-xs text-gray-400">
+                {activeTab === 'moving' ? 'Bakkies and movers' : 'Local pros'} listed by people near you, rated by your neighbours.
+              </p>
               {trustGate && !trustGate.unlocked ? (
-                 <a href="/dashboard/trust-circle" className="w-full lg:w-auto flex items-center gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-6 py-4 hover:border-gold-primary/40 transition-all">
+                 <a href="/dashboard/trust-circle" className="w-full sm:w-auto flex items-center gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-4 py-3 hover:border-gold-primary/40 transition-all shrink-0">
                     <Lock size={16} className="text-gold-primary shrink-0" />
                     <span className="text-left">
                        <span className="block text-[11px] font-black text-white uppercase tracking-widest">Build trust to list</span>
@@ -468,33 +452,43 @@ export default function ServicesPage() {
               ) : (
                  <button
                     onClick={() => openBusinessForm(null)}
-                    className="w-full lg:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+                    className="w-full sm:w-auto shrink-0 bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-5 py-3 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
                  >
-                    <Plus size={20} /> Advertise My Skills
+                    <Plus size={16} /> List my service
                  </button>
               )}
            </div>
 
-           {services.length === 0 ? (
+           {visibleServices.length === 0 ? (
              <div className="glass-panel">
-               <EmptyState icon={Briefcase} title="No local pros listed yet" subtitle="Be the first to advertise your skills to the neighbourhood." />
+               {activeTab === 'moving' ? (
+                 <EmptyState icon={Truck} title="No bakkies or movers listed yet" subtitle="Have a bakkie? List it and get booked by your neighbours." />
+               ) : (
+                 <EmptyState icon={Briefcase} title="No local pros listed yet" subtitle="Be the first to advertise your skills to the neighbourhood." />
+               )}
              </div>
            ) : (
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-             {services.map(srv => (
+             {visibleServices.map(srv => (
                <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-black/40 hover:border-gold-primary/40 transition-all duration-500 shadow-2xl">
                   <div className="h-44 bg-gray-900 relative overflow-hidden">
-                     {srv.image ? (
-                       <Image src={srv.image} alt={srv.businessName} fill className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
+                     {/* realImage() drops the stock photo every new service used to get: it isn't the business. */}
+                     {realImage(srv.image) ? (
+                       <Image src={realImage(srv.image)!} alt={srv.businessName} fill className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
                      ) : (
                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
                          <ImageIcon size={32} className="text-gold-primary/20" />
                        </div>
                      )}
                      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-xl border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-2xl">
-                        <Star size={14} className="text-gold-primary fill-gold-primary" />
-                        <span className="text-xs font-black text-white">{srv.rating}</span>
-                        <span className="text-[10px] text-gray-500 font-bold">({srv.reviewsCount})</span>
+                        {/* A new service is stored with rating 5.0 and no reviews; show "New" until someone reviews it. */}
+                        {srv.reviewsCount > 0 ? (<>
+                          <Star size={14} className="text-gold-primary fill-gold-primary" />
+                          <span className="text-xs font-black text-white">{Number(srv.rating).toFixed(1)}</span>
+                          <span className="text-[10px] text-gray-500 font-bold">({srv.reviewsCount})</span>
+                        </>) : (
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">New</span>
+                        )}
                      </div>
                      <div className="absolute bottom-4 left-4 flex gap-2">
                         <span className="bg-gold-primary text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-xl">{srv.category}</span>
@@ -919,14 +913,6 @@ export default function ServicesPage() {
          )}
       </AnimatePresence>
 
-      {/* Emergency Plumbing & Trades Dispatch Modal */}
-      <PlumbingTradesModal
-        isOpen={showPlumbingModal}
-        onClose={() => setShowPlumbingModal(false)}
-        onSuccess={data => {
-          setAlertNotification(`Emergency ${data.category} dispatch broadcasted to local pros!`)
-        }}
-      />
     </div>
   )
 }

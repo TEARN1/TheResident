@@ -3,22 +3,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import Image from 'next/image'
-import dynamic from 'next/dynamic'
 import {
-  MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, ExternalLink, Table2, Zap, Car,
-  Search, GraduationCap, BookOpen, EyeOff
+  MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, ExternalLink, Table2,
+  Search, EyeOff
 } from 'lucide-react'
-import { GRUVS, GRUVS_TOUCH_DOWN, TEARNS } from '../../../utils/sisterApps'
+import { GRUVS, TEARNS } from '../../../utils/sisterApps'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
 import EmptyState from '../components/shared/EmptyState'
-import EventRidePoolerModal from '../components/community/EventRidePoolerModal'
-import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../utils/gruvsEvents'
 import { playTactileSound } from '../../../utils/tactileSounds'
 
-const InstitutionalBroadcastsPortal = dynamic(() => import('../components/community/InstitutionalBroadcastsPortal'), { ssr: false })
 
 export type GossipCategory = 'all' | 'campus' | 'landlords' | 'gruvs' | 'roommates' | 'safety'
 
@@ -120,8 +116,6 @@ export default function GossipPage() {
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({})
   const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({})
 
-  // Institutional Broadcasts Modal
-  const [showInstitutionalModal, setShowInstitutionalModal] = useState(false)
 
   // Advanced Category & Search Filter
   const [activeCategory, setActiveCategory] = useState<GossipCategory>('all')
@@ -152,14 +146,6 @@ export default function GossipPage() {
 
   const isPostAnonymous = (body: string) => body.includes('[🕶️ ANONYMOUS RESIDENT]')
   const cleanPostBody = (body: string) => body.replace(/\[🕶️ ANONYMOUS RESIDENT\]\s*/g, '')
-
-  // Event Ride Pooler
-  const [showRidePoolerModal, setShowRidePoolerModal] = useState(false)
-  const [upcomingGruvsEvents, setUpcomingGruvsEvents] = useState<GruvsEvent[]>([])
-
-  useEffect(() => {
-    fetchUpcomingGruvsEvents(10).then(events => setUpcomingGruvsEvents(events)).catch(() => {})
-  }, [])
 
   const sentinelRef = useRef<HTMLDivElement>(null)
   const loadingMoreRef = useRef(false)
@@ -493,151 +479,47 @@ export default function GossipPage() {
 
   return (
     <div className="space-y-6">
-      {/* Sister-app ads. Every word and link comes from utils/sisterApps.ts,
-          which carries the rules for what each app may and may not claim. */}
-      <div className={`grid grid-cols-1 ${TEARNS.url ? 'md:grid-cols-2' : ''} gap-4`}>
-        {/* The Gruvs */}
-        <div className="glass-panel p-5 bg-gradient-to-br from-purple-900/25 via-black/50 to-gold-primary/10 border-purple-500/30 hover:border-gold-primary/40 rounded-3xl relative overflow-hidden group shadow-2xl transition-all duration-300">
-          <div className="absolute top-0 right-0 w-44 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16 group-hover:bg-purple-500/20 transition-all duration-700" />
-          <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="flex h-2.5 w-2.5 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-pink-500" />
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-wider text-pink-400 bg-pink-500/10 px-2.5 py-0.5 rounded-full border border-pink-500/20">
-                  What&apos;s on tonight
-                </span>
-              </div>
-              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Sister app</span>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gold-primary/20 border border-gold-primary/40 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                  <Image
-                    src="/gruvs-logo.png"
-                    alt="The Gruvs"
-                    width={22}
-                    height={22}
-                    className="rounded-full object-cover group-hover:scale-110 transition-transform"
-                  />
-                </div>
-                <h3 className="text-lg font-black text-white tracking-tight group-hover:text-gold-primary transition-colors">
-                  {GRUVS.headline}
-                </h3>
-              </div>
-              <p className="text-xs text-gray-300 leading-relaxed font-normal">
-                {GRUVS.body}
-              </p>
-              <p className="text-xs text-gray-400 leading-relaxed font-normal">
-                {GRUVS_TOUCH_DOWN}
-              </p>
-            </div>
-
-            <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
-              <a
-                href={GRUVS.url ?? undefined}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:brightness-110 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-purple-500/20"
-              >
-                <span>{GRUVS.cta}</span>
-                <ExternalLink size={12} />
-              </a>
-
-              <button
-                type="button"
-                onClick={() => {
-                  playTactileSound('chime')
-                  setShowRidePoolerModal(true)
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-200 hover:text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
-                title="Coordinate shared Uber/Bolt or carpool to Gruvs events"
-              >
-                <Car size={13} className="text-pink-400" />
-                <span>Share Ride Pool</span>
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Sister-app ads, one line each so the feed itself starts near the top
+          of the screen (the Gruvs card used to fill half a phone screen).
+          Every word and link comes from utils/sisterApps.ts, which carries
+          the rules for what each app may and may not claim. */}
+      <div className="space-y-2">
+        <a
+          href={GRUVS.url ?? undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="no-underline flex items-center gap-3 p-3 rounded-2xl bg-purple-500/10 border border-purple-500/25 hover:border-purple-400/50 transition-colors"
+        >
+          <Image src="/gruvs-logo.png" alt="" width={28} height={28} className="rounded-full object-cover shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-white truncate">{GRUVS.headline}</span>
+            <span className="block text-[11px] text-gray-400 truncate">{GRUVS.name} · sister app</span>
+          </span>
+          <span className="text-[11px] font-bold text-purple-300 shrink-0 flex items-center gap-1">
+            {GRUVS.cta} <ExternalLink size={11} />
+          </span>
+        </a>
 
         {/* TEARN's Excellence — hidden until it has a real address to send people to */}
         {TEARNS.url && (
-        <div className="glass-panel p-5 bg-gradient-to-br from-gold-primary/15 via-black/50 to-emerald-950/20 border-gold-primary/30 hover:border-gold-primary/50 rounded-3xl relative overflow-hidden group shadow-2xl transition-all duration-300">
-          <div className="absolute top-0 right-0 w-44 h-44 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16 group-hover:bg-gold-primary/20 transition-all duration-700" />
-          <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap size={14} className="text-gold-primary animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-gold-primary bg-gold-primary/10 px-2.5 py-0.5 rounded-full border border-gold-primary/30">
-                  {TEARNS.name}
-                </span>
-              </div>
-              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Sister app</span>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-white/5 border border-white/15 flex items-center justify-center shrink-0">
-                  <Table2 size={18} className="text-gold-primary group-hover:rotate-12 transition-transform" />
-                </div>
-                <h3 className="text-lg font-black text-white tracking-tight group-hover:text-gold-primary transition-colors">
-                  {TEARNS.headline}
-                </h3>
-              </div>
-              <p className="text-xs text-gray-300 leading-relaxed font-normal">
-                {TEARNS.body}
-              </p>
-            </div>
-
-            <div className="pt-2 flex items-center justify-between">
-              <a
-                href={TEARNS.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-gold-primary via-amber-300 to-gold-secondary text-black font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-gold-primary/20 hover:brightness-105"
-              >
-                <span>{TEARNS.cta}</span>
-                <ExternalLink size={12} />
-              </a>
-            </div>
-          </div>
-        </div>
+          <a
+            href={TEARNS.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="no-underline flex items-center gap-3 p-3 rounded-2xl bg-gold-primary/10 border border-gold-primary/25 hover:border-gold-primary/50 transition-colors"
+          >
+            <span className="w-7 h-7 rounded-full bg-white/5 border border-white/15 flex items-center justify-center shrink-0">
+              <Table2 size={15} className="text-gold-primary" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-white truncate">{TEARNS.headline}</span>
+              <span className="block text-[11px] text-gray-400 truncate">{TEARNS.name} · sister app</span>
+            </span>
+            <span className="text-[11px] font-bold text-gold-primary shrink-0 flex items-center gap-1">
+              {TEARNS.cta} <ExternalLink size={11} />
+            </span>
+          </a>
         )}
-      </div>
-
-      {/* INSTITUTIONAL BROADCASTS & CIRCULARS PORTAL BANNER */}
-      <div className="glass-panel p-5 bg-gradient-to-r from-amber-950/40 via-black/70 to-blue-950/30 border border-amber-500/30 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
-            <GraduationCap size={24} />
-          </div>
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-white uppercase tracking-tight">Institutional & School Circulars</h3>
-              <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
-                Official Directives
-              </span>
-            </div>
-            <p className="text-xs text-gray-300">
-              Direct official circulars from the <strong>Department of Education (DBE/GDE)</strong>, <strong>University Res Wardens</strong>, and <strong>School Teachers</strong> (homework schedules, exams, quiet hours).
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('chime')
-            setShowInstitutionalModal(true)
-          }}
-          className="bg-amber-500 hover:bg-amber-400 text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-glow shrink-0 flex items-center gap-2"
-        >
-          <BookOpen size={14} />
-          <span>Open School & Uni Notices</span>
-        </button>
       </div>
 
       {/* TOPIC TABS & REAL-TIME SEARCH */}
@@ -1144,17 +1026,6 @@ export default function GossipPage() {
       )}
 
       {/* EVENT RIDE POOLER MODAL */}
-      <EventRidePoolerModal
-        isOpen={showRidePoolerModal}
-        onClose={() => setShowRidePoolerModal(false)}
-        upcomingEvents={upcomingGruvsEvents}
-      />
-
-      {/* INSTITUTIONAL BROADCASTS & CIRCULARS MODAL */}
-      <InstitutionalBroadcastsPortal
-        isOpen={showInstitutionalModal}
-        onClose={() => setShowInstitutionalModal(false)}
-      />
     </div>
   )
 }

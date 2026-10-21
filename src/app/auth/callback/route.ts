@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { oauthFailureReason } from '../../../utils/oauth'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -42,6 +43,10 @@ export async function GET(request: Request) {
     }
   }
 
-  // Return to auth page if code exchange fails
-  return NextResponse.redirect(`${origin}/auth?error=oauth_callback_failed`)
+  // Back to sign-in with a reason the page can explain (cancelled, no email
+  // on the Facebook account, or anything else). It used to send
+  // ?error=oauth_callback_failed, which the page never read, so people just
+  // landed back on sign-in with no message.
+  const reason = oauthFailureReason(searchParams.get('error'), searchParams.get('error_description'))
+  return NextResponse.redirect(`${origin}/auth?oauth=${reason}`)
 }

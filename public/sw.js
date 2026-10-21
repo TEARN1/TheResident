@@ -1,91 +1,90 @@
-// The Resident — Low-Bandwidth 2G/3G PWA Service Worker (Cache-First & Offline Resilience)
-const CACHE_NAME = 'resident-v2'
-const STATIC_ASSETS = [
-  '/',
-  '/dashboard',
-  '/manifest.json',
-  '/logo.png',
-  '/offline.html'
-]
+// The Resident service worker: works on slow 2G/3G and offline, without
+// ever showing an old version of a page.
+//
+// Pages (HTML) are network-first: the newest version every time you are
+// online, the last saved copy (or offline.html) only when you are not. They
+// used to be cache-first under a cache name that never changed, so an
+// installed app kept showing an old home page for days after a release.
+//
+// Build files under /_next/static/ have the content hash in their names and
+// never change, so those are cache-first. Other images, fonts and scripts are
+// served from cache and refreshed in the background.
+//
+// Bump CACHE_NAME whenever this file's caching rules change: activate()
+// deletes every other cache, which clears anything stale on people's phones.
+const CACHE_NAME = 'resident-v3'
+const PRECACHE = ['/offline.html', '/logo.png', '/manifest.json']
 
-// 1. Install event: Cache core offline shell assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS)
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting())
   )
 })
 
-// 2. Activate event: Clean up old cache versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      )
-    }).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim())
   )
 })
 
-// 3. Fetch event: Stale-While-Revalidate for static assets only.
-//    API calls (Supabase, third-party) are NEVER cached to prevent
-//    leaking authenticated data into the shared browser cache.
+function isCacheable(response) {
+  return response && response.status === 200 && response.type === 'basic'
+}
+
 self.addEventListener('fetch', (event) => {
-  // Ignore non-GET or chrome-extension requests
-  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) return
+  const request = event.request
+  if (request.method !== 'GET' || !request.url.startsWith('http')) return
 
-  const url = new URL(event.request.url)
-
-  // NEVER cache API responses (Supabase REST, auth, realtime, or any external API)
+  const url = new URL(request.url)
+  // Never cache other sites (Supabase, maps) or anything personal.
   if (url.hostname !== self.location.hostname) return
-  if (url.pathname.startsWith('/api/')) return
-  if (url.pathname.startsWith('/rest/')) return
-  if (url.pathname.startsWith('/auth/')) return
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/') || url.pathname.startsWith('/rest/')) return
+
+  const isPage = request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html')
+
+  if (isPage) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (isCacheable(response)) {
+            const copy = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+          }
+          return response
+        })
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('/offline.html')))
+    )
+    return
+  }
+
+  if (url.pathname.startsWith('/_next/static/')) {
+    event.respondWith(
+      caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+        if (isCacheable(response)) {
+          const copy = response.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+        }
+        return response
+      }))
+    )
+    return
+  }
+
+  const type = url.pathname.match(/\.(png|jpe?g|webp|gif|svg|ico|woff2?|css|js)$/i)
+  if (!type) return
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached version immediately while fetching update in background
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-            const responseToCache = networkResponse.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache))
-          }
-        }).catch(() => {/* Offline fallback active */})
-
-        return cachedResponse
-      }
-
-      // If not in cache, fetch from network and cache only static assets for offline access
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse
+    caches.match(request).then((cached) => {
+      const refresh = fetch(request).then((response) => {
+        if (isCacheable(response)) {
+          const copy = response.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
         }
-
-        // Only cache navigations and static assets (HTML, CSS, JS, images)
-        const contentType = networkResponse.headers.get('content-type') || ''
-        const isStaticAsset = contentType.includes('text/html') ||
-                              contentType.includes('text/css') ||
-                              contentType.includes('javascript') ||
-                              contentType.includes('image/') ||
-                              contentType.includes('font/')
-
-        if (isStaticAsset) {
-          const responseToCache = networkResponse.clone()
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache)
-          })
-        }
-
-        return networkResponse
-      }).catch(() => {
-        // Fallback for HTML page requests if completely offline
-        if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('/offline.html').then((offlineRes) => offlineRes || caches.match('/dashboard'))
-        }
-      })
+        return response
+      }).catch(() => cached)
+      return cached || refresh
     })
   )
 })
-

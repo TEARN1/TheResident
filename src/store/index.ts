@@ -874,10 +874,18 @@ const networkingSlice = createSlice({
         reporterId: toUUID(tr.reporterId)
       }))
     },
+    // One ad per person (the row id is their user id), so posting again
+    // replaces the old ad rather than adding a second one.
     addRoommateSeeker: (state, action: PayloadAction<RoommateSeeker>) => {
       const seeker = { ...action.payload }
       seeker.id = toUUID(seeker.id)
-      state.roommates.push(seeker)
+      const i = state.roommates.findIndex(r => r.id === seeker.id)
+      if (i >= 0) state.roommates[i] = seeker
+      else state.roommates.push(seeker)
+    },
+    removeRoommateSeeker: (state, action: PayloadAction<string>) => {
+      const id = toUUID(action.payload)
+      state.roommates = state.roommates.filter(r => r.id !== id)
     },
     addLiftClub: (state, action: PayloadAction<LiftClub>) => {
       const lift = { ...action.payload }
@@ -1696,6 +1704,7 @@ export const {
   setDispatches,
   setTrafficReports,
   addRoommateSeeker,
+  removeRoommateSeeker,
   addLiftClub,
   addService,
   updateService,
@@ -2389,6 +2398,17 @@ const isReplayable = (actionType: string) => !ROLLED_BACK_ACTIONS.includes(actio
 // retry; a permission failure (resilientCall's isRetryableError) does not,
 // since retrying can't fix "you're not allowed." The 3rd tier — the offline
 // queue — is the caller's (syncActionToSupabase's catch block).
+// Insert, or update the row with the same id (for one-row-per-person tables).
+const dbUpsert = async (table: string, payload: Record<string, unknown>) => {
+  assertNetworkAlive();
+  if (!supabase) return;
+  const client = supabase;
+  await resilientCall(async () => {
+    const { error } = await client.from(table).upsert(payload);
+    if (error) throw error;
+  })
+};
+
 const dbUpdate = async (table: string, payload: Record<string, unknown> | null, eqCol?: string, eqVal?: unknown) => {
   assertNetworkAlive();
   if (supabase) {
@@ -2576,7 +2596,12 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     // 4. Sync Roommate Seekers
     if (addRoommateSeeker.match(action)) {
       syncLabel = 'your roommate ad'
-      await dbUpdate('res_roommate_seekers', db.seekerToRow(action.payload))
+      await dbUpsert('res_roommate_seekers', db.seekerToRow(action.payload))
+    }
+
+    if (removeRoommateSeeker.match(action)) {
+      syncLabel = 'your roommate ad removal'
+      await dbUpdate('res_roommate_seekers', null, 'id', toUUID(action.payload))
     }
 
     // 5. Sync Lift Clubs

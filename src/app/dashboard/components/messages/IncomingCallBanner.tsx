@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, PhoneOff, Video, ShieldCheck } from 'lucide-react'
+import { Phone, PhoneOff, Video } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 export interface IncomingCallData {
@@ -64,22 +64,21 @@ export default function IncomingCallBanner({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-black text-white truncate">{incomingCall.callerName}</span>
-              <ShieldCheck size={12} className="text-[var(--gold-primary,#8EB69B)] shrink-0" />
             </div>
             <p className="text-[10px] text-gray-300 font-medium flex items-center gap-1 mt-0.5">
               {incomingCall.callType === 'video' ? (
                 <>
                   <Video size={10} className="text-[var(--gold-primary,#8EB69B)]" />
-                  <span>Incoming Resident Video Call...</span>
+                  <span>Incoming video call…</span>
                 </>
               ) : (
                 <>
                   <Phone size={10} className="text-[var(--gold-primary,#8EB69B)]" />
-                  <span>Incoming Resident Voice Call...</span>
+                  <span>Incoming voice call…</span>
                 </>
               )}
             </p>
-            <p className="text-[9px] text-gray-500 capitalize">{incomingCall.callerRole || 'Verified Resident'}</p>
+            <p className="text-[9px] text-gray-500 capitalize">{incomingCall.callerRole || 'On The Resident'}</p>
           </div>
 
           {/* Action Call Buttons: Decline & Accept */}

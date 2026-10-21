@@ -5,14 +5,13 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import Image from 'next/image'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, ExternalLink, Table2, Sparkles, QrCode, Palette, Volume2, VolumeX } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, ExternalLink, Table2, Sparkles, Palette, Volume2, VolumeX } from 'lucide-react'
 import { GRUVS, TEARNS } from '../../../utils/sisterApps'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
-import ResidentIDCardModal from '../components/profile/ResidentIDCardModal'
 import { playTactileSound, isTactileSoundMuted, setTactileSoundMuted } from '../../../utils/tactileSounds'
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import Card from '../../../components/ui/Card'
@@ -94,7 +93,6 @@ export default function ProfilePage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
-  const [showIDCardModal, setShowIDCardModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -233,6 +231,11 @@ export default function ProfilePage() {
           </button>
         ))}
       </div>
+      {/* Only part of the app is translated (menus and some labels); say so
+          rather than let isiZulu, isiXhosa or Afrikaans look broken. */}
+      {lang !== 'en' && (
+        <p className="m-0 text-[11px] text-gray-500">Menus and some labels are translated so far. The rest is still in English.</p>
+      )}
     </div>
   )
 
@@ -240,11 +243,8 @@ export default function ProfilePage() {
     <div className="glass-panel p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
-          <Palette size={16} /> Theme &amp; Color Spectrum
+          <Palette size={16} /> Colours
         </h2>
-        <span className="text-[9px] font-black uppercase tracking-wider bg-gold-primary/10 text-gold-primary px-2.5 py-0.5 rounded-full border border-gold-primary/30">
-          4 Palettes
-        </span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -290,7 +290,7 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {mutedAudio ? <VolumeX size={18} className="text-gray-400" /> : <Volume2 size={18} className="text-gold-primary" />}
-          <h2 className="text-sm font-black text-white uppercase tracking-widest">Tactile Sound Effects</h2>
+          <h2 className="text-sm font-black text-white uppercase tracking-widest">Sounds &amp; vibration</h2>
         </div>
         <button
           type="button"
@@ -301,11 +301,11 @@ export default function ProfilePage() {
               : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
           }`}
         >
-          {!mutedAudio ? 'Enabled' : 'Muted'}
+          {!mutedAudio ? 'On' : 'Off'}
         </button>
       </div>
       <p className="text-xs text-gray-400">
-        Lightweight Web Audio oscillators and micro-vibrations for tabs, taps, and alerts. Mute anytime for quiet environments.
+        Small sounds and vibrations when you tap. Turn them off for quiet places.
       </p>
     </div>
   )
@@ -362,18 +362,6 @@ export default function ProfilePage() {
           <p className="text-[11px] text-gold-primary uppercase tracking-widest font-black mt-0.5">{currentUser.role} Account</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <TrustBadge userId={currentUser.id} />
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('chime')
-                setShowIDCardModal(true)
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
-              title="Open Digital Resident Passport & QR Keycard"
-            >
-              <QrCode size={13} />
-              <span>Resident ID Pass</span>
-            </button>
           </div>
         </div>
       </div>
@@ -691,12 +679,11 @@ export default function ProfilePage() {
         <LogOut size={14} /> Log Out
       </button>
 
-      {/* DIGITAL RESIDENT ID MODAL */}
-      <ResidentIDCardModal
-        isOpen={showIDCardModal}
-        onClose={() => setShowIDCardModal(false)}
-        user={currentUser}
-      />
+      <p className="m-0 text-center text-xs text-gray-500">
+        <Link href="/terms" className="text-gray-400 no-underline hover:text-white">Terms</Link>
+        <span className="mx-2 text-white/20">·</span>
+        <Link href="/privacy" className="text-gray-400 no-underline hover:text-white">Privacy</Link>
+      </p>
     </div>
   )
 }
