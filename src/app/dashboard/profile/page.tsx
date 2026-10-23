@@ -489,6 +489,42 @@ export default function ProfilePage() {
         </div>
       )}
 
+      
+      {/* Privacy, POPIA Compliance & Data Sovereignty */}
+      <Card className="space-y-3">
+        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+          <ShieldCheck size={16} /> Privacy &amp; Data Rights (POPIA / GDPR)
+        </h2>
+        <p className="text-[11px] text-gray-500">
+          You own your data. Download a complete archive of your profile, preferences, and activity, or review privacy policies.
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              playTactileSound('pop');
+              const data = JSON.stringify({ user: currentUser, exportedAt: new Date().toISOString() }, null, 2);
+              const blob = new Blob([data], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `TheResident_DataArchive_${currentUser?.id || 'guest'}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all min-h-[44px]"
+          >
+            Download Data (.json)
+          </button>
+          <Link
+            href="/privacy"
+            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-bold text-xs uppercase tracking-wider transition-all min-h-[44px] flex items-center no-underline"
+          >
+            Privacy Policy
+          </Link>
+        </div>
+      </Card>
+
       <Link href="/dashboard/trust-circle" className="glass-panel p-4 flex items-center gap-3 hover:border-gold-primary/30 transition-all">
         <div className="p-2 bg-gold-primary/10 rounded-lg text-gold-primary"><ShieldCheck size={18} /></div>
         <div className="flex-1">

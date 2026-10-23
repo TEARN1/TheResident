@@ -82,6 +82,15 @@ export default function GossipPage() {
   const myId = currentUser?.id
 
   const [posts, setPosts] = useState<GossipPost[]>([])
+  const [reactions, setReactions] = useState<Record<string, Record<string, number>>>({})
+  const toggleReaction = (postId: string, emoji: string) => {
+    playTactileSound('pop');
+    setReactions(prev => {
+      const postReactions = { ...(prev[postId] || {}) };
+      postReactions[emoji] = (postReactions[emoji] || 0) + 1;
+      return { ...prev, [postId]: postReactions };
+    });
+  };
   const [profileMap, setProfileMap] = useState<Record<string, ProfileHit>>({})
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -723,7 +732,7 @@ export default function GossipPage() {
           <button
             onClick={() => { submitPost(); playTactileSound('pop') }}
             disabled={posting || uploading || (!composerBody.trim() && !mediaFile)}
-            className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-gold-primary/10 hover:shadow-gold-primary/25"
+            className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 min-h-[44px]"
           >
             {uploading ? <Loader size={13} className="animate-spin" /> : <Send size={13} />}
             {uploading ? 'Uploading…' : posting ? 'Posting…' : 'Post'}

@@ -91,6 +91,8 @@ export default function SafetyTab({
   onReportStatus
 }: SafetyTabProps) {
   const [confirmPanic, setConfirmPanic] = useState(false)
+  const [nightwalkActive, setNightwalkActive] = useState(false)
+  const [nightwalkMinutes, setNightwalkMinutes] = useState(15)
   // How many people the alert will actually reach, shown before it is sent
   // (res_alert_reach_preview counts the same audience res_raise_alert uses).
   // undefined = loading/unknown, so nothing is claimed until it is known.
@@ -321,6 +323,37 @@ export default function SafetyTab({
               <span className="font-mono text-gold-primary font-black">0800 150 150</span>
             </a>
           </div>
+        </div>
+
+        {/* Nightwalk Walking Escort & Trust Mesh Quick-Actions */}
+        <div className="mt-4 pt-4 border-t border-red-500/15 flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-3.5 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-white block">Nightwalk Escort Mode</span>
+              <span className="text-[11px] text-gray-400">Walking home after dark? Start a 15-min safety timer.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setNightwalkActive(!nightwalkActive);
+                if (!nightwalkActive) setNightwalkMinutes(15);
+              }}
+              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+                nightwalkActive ? 'bg-red-500 text-white animate-pulse' : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+            >
+              {nightwalkActive ? `${nightwalkMinutes}m Active` : 'Start Walk'}
+            </button>
+          </div>
+
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent("Hi! I added you as my Next of Kin contact on The Resident. Please confirm our trust connection so my rental profile is verified: https://theresidentcrew.com/dashboard/trust-circle")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sm:w-auto bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 no-underline min-h-[44px]"
+          >
+            Invite Next of Kin on WhatsApp
+          </a>
         </div>
 
         <button

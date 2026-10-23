@@ -224,7 +224,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleExport}
-                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-gold-primary/10"
+                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 "
               >
                 <Download size={14} />
                 <span>Export (.txt)</span>
@@ -240,10 +240,24 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
                   )
                   window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
                 }}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px]"
                 title="Email inspection snag report directly to property owner or landlord"
               >
                 <span>Email Landlord</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('click')
+                  const text = `*MOVE-IN DEFECT & SNAG REPORT*\nProperty: ${propertyAddress}\nDate: ${new Date().toLocaleDateString()}\n\nRecorded Defects (${items.length}):\n` +
+                    items.map((it, i) => `${i + 1}. [${it.room}] ${it.description} (${it.severity})`).join('\n') +
+                    `\n\nGenerated via The Resident.`
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+                }}
+                className="px-4 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px]"
+                title="Send inspection snag report to landlord via WhatsApp"
+              >
+                <span>WhatsApp Landlord</span>
               </button>
             </div>
             <button

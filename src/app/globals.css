@@ -953,3 +953,42 @@ a.bg-gold-primary:hover:not([class*='animate-']) {
   background-size: 200% 100%;
   animation: skeleton-pulse 1.8s ease-in-out infinite;
 }
+
+
+/* =========================================================================
+   Phase 2: Mobile Tap Response, Standalone PWA & Skeleton Blurhash (Points 91-96)
+   ========================================================================= */
+
+/* Eliminate 300ms double-tap delay on mobile browsers */
+button,
+a,
+input,
+select,
+textarea,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* Standalone PWA viewport boundary enforcement */
+@media all and (display-mode: standalone) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input, textarea {
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
+}
+
+/* Progressive low-res image blur placeholder */
+.blur-placeholder {
+  filter: blur(12px);
+  transform: scale(1.05);
+  transition: filter 0.4s ease, transform 0.4s ease;
+}
+.blur-placeholder.loaded {
+  filter: blur(0);
+  transform: scale(1);
+}

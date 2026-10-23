@@ -553,6 +553,12 @@ export default function HousingPage() {
           >
             <ClipboardList size={13} className="text-gold-primary" /> Tools
           </button>
+          <Link
+            href="/dashboard/community?tab=vibemap"
+            className="px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-all shrink-0 bg-white/5 text-gray-300 border-white/10 hover:text-white no-underline"
+          >
+            <MapPin size={13} className="text-gold-primary" /> Map View
+          </Link>
         </div>
         {showTools && (
           <div className="w-full flex flex-wrap items-center gap-1.5">
@@ -1029,14 +1035,19 @@ export default function HousingPage() {
                         <span>{item.suburb || item.location}</span>
                       </div>
                     </div>
-                    <div className="bg-black/80 backdrop-blur-2xl border border-gold-primary/40 px-3.5 py-1.5 rounded-2xl shadow-xl flex items-baseline gap-1">
-                      <span className="text-base font-black text-gold-primary tracking-tight">
-                        {formatCurrency(item.price, item.currency)}
-                      </span>
-                      {item.listingType !== 'sale' && (
-                        <span className="text-[9px] text-gray-400 font-black uppercase">
-                          /{item.listingType === 'guesthouse' ? 'night' : 'mo'}
+                    <div className="bg-black/80 backdrop-blur-2xl border border-gold-primary/40 px-3.5 py-1.5 rounded-2xl shadow-xl flex flex-col items-end">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-base font-black text-gold-primary tracking-tight">
+                          {formatCurrency(item.price, item.currency)}
                         </span>
+                        {item.listingType !== 'sale' && (
+                          <span className="text-[9px] text-gray-400 font-black uppercase">
+                            /{item.listingType === 'guesthouse' ? 'night' : 'mo'}
+                          </span>
+                        )}
+                      </div>
+                      {item.listingType === 'rent' && (
+                        <span className="text-[9px] text-gray-400 font-medium">1 mo deposit</span>
                       )}
                     </div>
                   </div>

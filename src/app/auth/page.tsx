@@ -7,7 +7,7 @@ import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID,
 import { supabase } from '../../utils/supabase'
 import { fetchEnabledProviders, isOAuthFailure, OAUTH_FAILURE_MESSAGES } from '../../utils/oauth'
 import { performLogin } from '../../utils/authLogin'
-import { Shield, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Shield, CheckCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react'
 import { safeNextPath } from '../../utils/launch'
 import { track } from '../../utils/track'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
@@ -75,6 +75,9 @@ export default function AuthPage() {
   // or landlord). The tenant profile and landlord house rules it used to ask
   // up front are filled in later on the Profile page, where they already live.
   const [termsAccepted, setTermsAccepted] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
+  const EMAIL_DOMAINS = ['@gmail.com', '@outlook.com', '@icloud.com', '@yahoo.com']
 
   // Message states
   const [securityMessage, setSecurityMessage] = useState<string | null>(null)

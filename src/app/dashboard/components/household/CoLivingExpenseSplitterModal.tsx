@@ -282,7 +282,7 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleCopyBreakdown}
-                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-gold-primary/10"
+                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 "
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
                 <span>{copied ? 'Copied Breakdown!' : 'Copy for Chat'}</span>
@@ -309,6 +309,23 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                 title="Send expense breakdown directly via email to all housemates"
               >
                 <span>Email House</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('click');
+                  const text = `*MONTHLY CO-LIVING EXPENSE SPLIT*\nTotal: ${currency} ${totalExpense.toLocaleString()}\n\nContributions:\n` +
+                    roommates.map(rm => {
+                      const share = Math.round((rm.roomSizeRatio / totalRatios) * totalExpense);
+                      return `• ${rm.name}: ${currency} ${share.toLocaleString()}`;
+                    }).join('\n') +
+                    `\n\nGenerated via The Resident.`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                }}
+                className="px-4 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px]"
+                title="Send expense split to flatmates via WhatsApp"
+              >
+                <span>WhatsApp House</span>
               </button>
             </div>
             <button

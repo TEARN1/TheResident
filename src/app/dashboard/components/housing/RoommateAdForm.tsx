@@ -14,12 +14,9 @@ interface Props {
 }
 
 const BUDGET_PRESETS = [2500, 3500, 4500, 6000]
+const LIFESTYLE_TAGS = ['Non-Smoker', 'Student', 'Young Pro', 'Early Bird', 'Night Owl', 'Quiet', 'Social']
+const MOVE_IN_OPTIONS = ['Immediately', '1st of next month', 'Flexible']
 
-/**
- * Post (or update, or take down) your own "looking for a place to share" ad.
- * The Roommates tab could list ads but there was no way to post one, so it
- * was always empty. One ad per person: the row id is your user id.
- */
 export default function RoommateAdForm({ currentUser, myAd, onDone }: Props) {
   const dispatch = useDispatch<AppDispatch>()
   const [open, setOpen] = useState(false)
@@ -28,14 +25,28 @@ export default function RoommateAdForm({ currentUser, myAd, onDone }: Props) {
   const [gender, setGender] = useState<'men' | 'women'>(myAd?.gender ?? 'women')
   const [childrenCount, setChildrenCount] = useState(myAd ? String(myAd.childrenCount) : '0')
   const [bio, setBio] = useState(myAd?.bio ?? '')
+  const [moveIn, setMoveIn] = useState('Flexible')
 
   const amount = Number(budget)
   const canSave = amount > 0 && suburb.trim().length > 1 && bio.trim().length > 9
+
+  const toggleTag = (tag: string) => {
+    playTactileSound('click')
+    if (bio.includes(tag)) {
+      setBio(bio.replace(new RegExp(`\\s*#${tag}`, 'g'), '').trim())
+    } else {
+      const addition = bio.length > 0 ? ` #${tag}` : `#${tag}`
+      if (bio.length + addition.length <= 300) {
+        setBio(bio + addition)
+      }
+    }
+  }
 
   const save = (e: React.FormEvent) => {
     e.preventDefault()
     if (!canSave) return
     playTactileSound('chime')
+    const finalBio = moveIn !== 'Flexible' ? `[Move-in: ${moveIn}] ${bio}` : bio
     dispatch(addRoommateSeeker({
       id: currentUser.id,
       name: currentUser.name,
@@ -45,7 +56,7 @@ export default function RoommateAdForm({ currentUser, myAd, onDone }: Props) {
       currency: 'ZAR',
       location: suburb.trim(),
       suburb: suburb.trim(),
-      bio: bio.trim()
+      bio: finalBio.trim()
     }))
     setOpen(false)
     onDone(myAd ? 'Your roommate ad is updated.' : 'Your roommate ad is up. People can message you from it.')
@@ -105,6 +116,27 @@ export default function RoommateAdForm({ currentUser, myAd, onDone }: Props) {
         </div>
       </div>
 
+      {/* Move-in timeline pills */}
+      <div className="space-y-1">
+        <span className="text-[11px] font-bold text-gray-400">Move-In Timeline</span>
+        <div className="flex flex-wrap gap-2">
+          {MOVE_IN_OPTIONS.map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => { setMoveIn(opt); playTactileSound('click') }}
+              className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${
+                moveIn === opt
+                  ? 'bg-gold-primary text-black border-gold-primary'
+                  : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="space-y-1">
           <span className="text-[11px] font-bold text-gray-400">Monthly Budget (ZAR)</span>
@@ -125,6 +157,27 @@ export default function RoommateAdForm({ currentUser, myAd, onDone }: Props) {
           <span className="text-[11px] font-bold text-gray-400">Children with me</span>
           <input className={field} inputMode="numeric" value={childrenCount} onChange={e => setChildrenCount(e.target.value.replace(/[^\d]/g, '').slice(0, 2))} />
         </label>
+      </div>
+
+      {/* Selectable lifestyle chips */}
+      <div className="space-y-1">
+        <span className="text-[11px] font-bold text-gray-400">Lifestyle Chips (tap to add to bio)</span>
+        <div className="flex flex-wrap gap-1.5">
+          {LIFESTYLE_TAGS.map(tag => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => toggleTag(tag)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                bio.includes(tag)
+                  ? 'bg-gold-primary/20 text-gold-primary border-gold-primary/40'
+                  : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+              }`}
+            >
+              #{tag}
+            </button>
+          ))}
+        </div>
       </div>
 
       <label className="block space-y-1">

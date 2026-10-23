@@ -553,7 +553,7 @@ export default function ServicesPage() {
                            <div className="space-y-1.5">
                               <button
                                  onClick={() => openMoveAssist(srv)}
-                                 className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-gold-primary/10"
+                                 className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2 "
                               >
                                  <Truck size={16} /> Request Move Assist
                               </button>
@@ -566,10 +566,20 @@ export default function ServicesPage() {
                         )}
                         <button
                            onClick={() => srv.ownerId === currentUser?.id ? openBusinessForm(srv) : setSelectedBiz(srv)}
-                           className="w-full bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black py-4 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                           className="w-full bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black py-3.5 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest min-h-[44px]"
                         >
                            {srv.ownerId === currentUser?.id ? 'Manage My Card' : 'Hire Contractor'}
                         </button>
+                        {srv.contactNumber && srv.ownerId !== currentUser?.id && (
+                           <a
+                              href={`https://wa.me/${srv.contactNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi ${srv.businessName}, I saw your service on The Resident. Could you give me an estimate for some work in ${srv.suburb}?`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest no-underline min-h-[44px]"
+                           >
+                              WhatsApp Quick Quote
+                           </a>
+                        )}
                         {srv.ownerId === currentUser?.id && !providerTiers[srv.ownerId] && (
                            <div className="space-y-2 pt-2 border-t border-white/5">
                               <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest text-center">Free listing — get seen first</p>
@@ -649,7 +659,7 @@ export default function ServicesPage() {
                    </div>
                    <button
                     onClick={() => { dispatch(claimVoucher(token.id)); setAlertNotification('Voucher Purchased!') }}
-                    className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-gold-primary/10 active:scale-95 transition-all"
+                    className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl text-xs uppercase tracking-widest  active:scale-95 transition-all"
                    >
                     Buy Voucher Now
                    </button>

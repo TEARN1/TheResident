@@ -53,6 +53,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const dispatch = useDispatch()
   const [showNotifMenu, setShowNotifMenu] = useState(false)
+  const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all')
   const [showThemeModal, setShowThemeModal] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<string>(DEFAULT_THEME)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
@@ -500,11 +501,28 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       </button>
                     </div>
 
+                    <div className="flex gap-1.5 pb-1 border-b border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => setNotifFilter('all')}
+                        className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition-all ${notifFilter === 'all' ? 'bg-gold-primary text-black' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNotifFilter('unread')}
+                        className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition-all ${notifFilter === 'unread' ? 'bg-gold-primary text-black' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                      >
+                        Unread (${notifications.items.filter(n => !n.read).length})
+                      </button>
+                    </div>
+
                     <div className="space-y-2 overflow-y-auto max-h-64 custom-scrollbar pr-1">
                       {notifications.items.length === 0 ? (
                         <p className="text-xs text-gray-500 italic text-center py-6">{t('noRecentAlerts', lang)}</p>
                       ) : (
-                        notifications.items.map(item => (
+                        notifications.items.filter(item => notifFilter === 'all' || !item.read).map(item => (
                           <div
                             key={item.id}
                             className={`p-2.5 rounded-xl border text-xs transition-all ${
@@ -536,7 +554,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              onClick={() => playTactileSound('tab')}
+              onClick={() => {
+                if (isActive && typeof window !== 'undefined') {
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }
+                playTactileSound('tab')
+              }}
               className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-2xl transition-all relative group min-h-[48px] touch-target-48 ${
                 isActive ? 'text-black' : 'text-gray-400 hover:text-white'
               }`}

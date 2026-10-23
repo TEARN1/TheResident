@@ -1,5 +1,15 @@
 'use client'
 
+function formatMessageDate(iso: string): string {
+  const d = new Date(iso)
+  const today = new Date()
+  if (d.toDateString() === today.toDateString()) return 'Today'
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
@@ -277,7 +287,9 @@ export default function ThreadPage() {
             </div>
           )}
 
-          {messages.map(m => {
+          {messages.map((m, index) => {
+            const prevMsg = messages[index - 1]
+            const showDateHeader = !prevMsg || formatMessageDate(prevMsg.created_at) !== formatMessageDate(m.created_at)
             const isMe = m.sender_id === myId
             const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
