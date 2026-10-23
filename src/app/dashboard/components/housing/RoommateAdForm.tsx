@@ -14,7 +14,10 @@ interface Props {
 }
 
 const BUDGET_PRESETS = [2500, 3500, 4500, 6000]
-const LIFESTYLE_TAGS = ['Non-Smoker', 'Student', 'Young Pro', 'Early Bird', 'Night Owl', 'Quiet', 'Social']
+const LIFESTYLE_TAGS = [
+  'Non-Smoker', 'Student', 'Young Pro', 'Early Bird', 'Night Owl', 'Quiet', 'Social',
+  'Vegetarian', 'Halaal Friendly', 'Wits', 'UJ', 'Remote Worker', 'Clean Freak'
+]
 const MOVE_IN_OPTIONS = ['Immediately', '1st of next month', 'Flexible']
 
 export default function RoommateAdForm({ currentUser, myAd, onDone }: Props) {

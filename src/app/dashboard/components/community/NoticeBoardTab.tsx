@@ -253,7 +253,7 @@ export default function NoticeBoardTab({
                     className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 transition-all font-medium"
                  />
               </div>
-              <button type="submit" className="w-full bg-gold-primary text-black font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all hover:bg-gold-secondary shadow-lg shadow-gold-primary/10 active:scale-95">Publish to Community Wall</button>
+              <button type="submit" className="w-full bg-gold-primary text-black font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all hover:bg-gold-secondary border border-gold-primary/30 active:scale-95 min-h-[44px]">Publish to Community Wall</button>
            </form>
         )}
 

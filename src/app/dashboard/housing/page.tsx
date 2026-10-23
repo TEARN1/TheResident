@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, FileText, Calculator, Users, ClipboardList, Upload, Camera
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, FileText, Calculator, Users, ClipboardList, Upload, Camera, Heart, Sparkles, Zap, Droplets, ArrowUpDown
 } from 'lucide-react'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import {
@@ -94,6 +94,27 @@ export default function HousingPage() {
   // distinguished by listing_type, same pattern as the quick-post merge above.
   const [filterListingType, setFilterListingType] = useState<'rent' | 'sale' | 'guesthouse'>('rent')
   const [filterParking, setFilterParking] = useState(false)
+  const [filterSolar, setFilterSolar] = useState(false)
+  const [filterBackupWater, setFilterBackupWater] = useState(false)
+  const [filterEnsuite, setFilterEnsuite] = useState(false)
+  const [sortBy, setSortBy] = useState<'featured' | 'priceAsc' | 'priceDesc' | 'newest'>('featured')
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('res_bookmarks')
+      if (stored) setBookmarkedIds(JSON.parse(stored))
+    } catch {}
+  }, [])
+
+  const toggleBookmark = (id: string) => {
+    playTactileSound('pop')
+    setBookmarkedIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      try { localStorage.setItem('res_bookmarks', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
   // "Stay near this event" deep link from The Gruvs (?event=<gruvs event id>):
   // guest houses linked to that one event.
   const [filterEventId, setFilterEventId] = useState<string | null>(null)
@@ -1182,7 +1203,7 @@ export default function HousingPage() {
                 <div className="pt-2 flex items-center gap-2">
                   <Link
                     href={`/dashboard/messages?to=${rm.id}`}
-                    className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 rounded-xl transition-all text-xs uppercase tracking-wider active:scale-98 flex items-center justify-center shadow-md"
+                    className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 rounded-xl transition-all text-xs uppercase tracking-wider active:scale-98 flex items-center justify-center border border-gold-primary/30 min-h-[44px]"
                   >
                      Message
                   </Link>

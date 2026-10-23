@@ -992,3 +992,27 @@ textarea,
   filter: blur(0);
   transform: scale(1);
 }
+
+/* =========================================================================
+   Phase 3: Mobile Viewport & Modal Ergonomics (Points 291-300)
+   ========================================================================= */
+
+/* Mobile modal sheet elastic scroll prevention */
+.modal-sheet {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent iOS Safari 100%+ auto-zoom by enforcing 16px input font size on mobile */
+@media screen and (max-width: 768px) {
+  input[type='text'],
+  input[type='number'],
+  input[type='email'],
+  input[type='password'],
+  input[type='tel'],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+

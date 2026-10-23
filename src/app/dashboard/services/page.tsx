@@ -55,6 +55,7 @@ export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
   const [activeTab, setActiveTab] = useState<'moving' | 'handymen' | 'lifts' | 'utilities'>('moving')
   const [selectedTradeCategory, setSelectedTradeCategory] = useState<string>('All')
+  const [filterEmergency247, setFilterEmergency247] = useState(false)
   // Deep links: ?tab=moving|handymen|lifts|utilities (Feed "Share a lift",
   // the Ask box on Home). ?type=locksmith from the Ask box opens Trades.
   useEffect(() => {
@@ -294,11 +295,16 @@ export default function ServicesPage() {
     setAlertNotification('Contract dispatched successfully!')
   }
 
-  const visibleServices = activeTab === 'moving'
-    ? services.filter(s => MOVE_ASSIST_CATEGORIES.includes(s.category))
-    : selectedTradeCategory === 'All'
-      ? services
-      : services.filter(s => s.category === selectedTradeCategory)
+  const filteredByCategory = services.filter(s => {
+    if (activeTab === 'moving') return MOVE_ASSIST_CATEGORIES.includes(s.category);
+    if (selectedTradeCategory !== 'All' && s.category !== selectedTradeCategory) return false;
+    if (filterEmergency247) {
+      const text = (s.description + ' ' + s.businessName).toLowerCase();
+      return text.includes('24/7') || text.includes('emergency') || text.includes('urgent') || text.includes('locksmith') || text.includes('plumb');
+    }
+    return true;
+  });
+  const visibleServices = filteredByCategory
   const myBiz = services.find(s => s.ownerId === currentUser?.id)
   const incomingOrders = myBiz ? dispatches.filter(d => d.serviceId === myBiz.id) : []
 

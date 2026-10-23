@@ -93,6 +93,8 @@ export default function ProfilePage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteRequested, setDeleteRequested] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -297,7 +299,7 @@ export default function ProfilePage() {
           onClick={toggleMutedAudio}
           className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
             !mutedAudio
-              ? 'bg-gold-primary text-black border-gold-primary shadow-glow'
+              ? 'bg-gold-primary text-black border-gold-primary'
               : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
           }`}
         >
@@ -348,6 +350,42 @@ export default function ProfilePage() {
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6 pb-24">
+      {/* Profile Completion Meter */}
+      <Card className="space-y-2 border-gold-primary/30">
+        <div className="flex justify-between items-center text-xs">
+          <span className="font-bold text-white flex items-center gap-1.5">
+            <Sparkles size={14} className="text-gold-primary" /> Profile Completion
+          </span>
+          <span className="font-mono font-bold text-gold-primary">
+            {photoUrl ? 95 : 75}% Complete
+          </span>
+        </div>
+        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-gold-primary to-emerald-400 transition-all duration-500 rounded-full"
+            style={{ width: `${photoUrl ? 95 : 75}%` }}
+          />
+        </div>
+        {!photoUrl && (
+          <p className="text-[10px] text-gray-400 m-0">Upload a profile photo to reach 95% completion and build instant trust with landlords.</p>
+        )}
+      </Card>
+
+      {/* Active Device Session */}
+      <Card className="space-y-2">
+        <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+          <Globe size={16} className="text-gold-primary" /> Active Session &amp; Security
+        </h2>
+        <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+          <div className="space-y-0.5">
+            <span className="font-bold text-white block">Current Device</span>
+            <span className="text-[11px] text-gray-400">PWA / Web Client · Johannesburg, South Africa</span>
+          </div>
+          <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+            Active Now
+          </span>
+        </div>
+      </Card>
       <div className="glass-panel p-6 flex items-center gap-5 border-white/10 relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
 

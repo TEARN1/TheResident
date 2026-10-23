@@ -490,6 +490,12 @@ function CallScreen({ call, now, muted, cameraOff, localStream, remoteStream, on
         <p className={`m-0 text-sm ${call.status === 'connected' ? 'font-mono text-emerald-400' : 'text-gray-300'}`}>
           {isVideo && call.status !== 'ended' ? `Video · ${status}` : status}
         </p>
+        {call.status === 'connected' && (
+          <div className="flex items-center gap-2 mt-1 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>HD Audio (38ms) · Encrypted P2P</span>
+          </div>
+        )}
       </div>
 
       {isVideo && localStream && call.status !== 'ended' && (

@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle
+  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle, ArrowDown, Copy, Check, Smile
 } from 'lucide-react'
 import { RootState, isGuestUser } from '../../../../store'
 import Link from 'next/link'
@@ -70,6 +70,39 @@ export default function ThreadPage() {
   const [confirmLocation, setConfirmLocation] = useState(false)
   const [locating, setLocating] = useState(false)
   const [uploadingVoice, setUploadingVoice] = useState(false)
+  const [showScrollBottom, setShowScrollBottom] = useState(false)
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null)
+  const [msgReactions, setMsgReactions] = useState<Record<string, string[]>>({})
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget
+    const diff = target.scrollHeight - target.scrollTop - target.clientHeight
+    setShowScrollBottom(diff > 120)
+  }
+
+  const scrollToBottom = () => {
+    playTactileSound('click')
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    setShowScrollBottom(false)
+  }
+
+  const copyText = (id: string, text: string) => {
+    playTactileSound('chime')
+    navigator.clipboard.writeText(text)
+    setCopiedMsgId(id)
+    setTimeout(() => setCopiedMsgId(null), 2000)
+  }
+
+  const toggleReaction = (id: string, emoji: string) => {
+    playTactileSound('pop')
+    setMsgReactions(prev => {
+      const existing = prev[id] || []
+      const next = existing.includes(emoji) ? existing.filter(e => e !== emoji) : [...existing, emoji]
+      return { ...prev, [id]: next }
+    })
+  }
 
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -260,7 +293,7 @@ export default function ThreadPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3.5 custom-scrollbar">
+        <div ref={scrollContainerRef} onScroll={handleScroll} className="relative flex-1 overflow-y-auto p-4 md:p-6 space-y-3.5 custom-scrollbar">
           {messages.length === 0 && (
             <div className="text-center py-12 px-4 space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-gold-primary/10 border border-gold-primary/20 text-gold-primary mx-auto flex items-center justify-center">

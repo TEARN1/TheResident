@@ -91,6 +91,34 @@ export default function SafetyTab({
   onReportStatus
 }: SafetyTabProps) {
   const [confirmPanic, setConfirmPanic] = useState(false)
+  const [sosHoldProgress, setSosHoldProgress] = useState(0)
+  const holdIntervalRef = React.useRef<any>(null)
+
+  const startSosHold = () => {
+    if (holdIntervalRef.current) clearInterval(holdIntervalRef.current)
+    setSosHoldProgress(0)
+    const startTime = Date.now()
+    holdIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const pct = Math.min(100, Math.round((elapsed / 2500) * 100))
+      setSosHoldProgress(pct)
+      if (pct >= 100) {
+        clearInterval(holdIntervalRef.current)
+        holdIntervalRef.current = null
+        onRaiseAlert?.({ kind: 'panic', title: 'Urgent: help needed', description: 'A neighbour needs help now.', severity: 'critical' })
+        setConfirmPanic(false)
+        setSosHoldProgress(0)
+      }
+    }, 40)
+  }
+
+  const cancelSosHold = () => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current)
+      holdIntervalRef.current = null
+    }
+    setSosHoldProgress(0)
+  }
   const [nightwalkActive, setNightwalkActive] = useState(false)
   const [nightwalkMinutes, setNightwalkMinutes] = useState(15)
   // How many people the alert will actually reach, shown before it is sent
@@ -322,6 +350,18 @@ export default function SafetyTab({
               <span className="font-bold">GBV Helpline</span>
               <span className="font-mono text-gold-primary font-black">0800 150 150</span>
             </a>
+          </div>
+
+          {/* Medical Aid & Blood Group Offline Card */}
+          <div className="mt-2.5 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs flex-wrap gap-2">
+            <div>
+              <span className="font-bold text-white block">Medical Aid & Blood Group (Offline Card)</span>
+              <span className="text-[10px] text-gray-400">Offline medical emergency profile for first responders.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10 font-mono text-gold-primary font-bold text-[11px]">Blood: O+</span>
+              <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10 text-gray-300 font-bold text-[11px]">Discovery Health #9201</span>
+            </div>
           </div>
         </div>
 

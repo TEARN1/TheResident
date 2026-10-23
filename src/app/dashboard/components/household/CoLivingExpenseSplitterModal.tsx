@@ -41,6 +41,17 @@ export default function CoLivingExpenseSplitterModal({
   const [newLabel, setNewLabel] = useState('')
   const [newAmount, setNewAmount] = useState('')
   const [copied, setCopied] = useState(false)
+  const [paidRoommates, setPaidRoommates] = useState<number[]>([])
+
+  const togglePaid = (idx: number) => {
+    playTactileSound('click')
+    setPaidRoommates(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])
+  }
+
+  const setRatio = (idx: number, ratio: number) => {
+    playTactileSound('click')
+    setRoommates(prev => prev.map((rm, i) => i === idx ? { ...rm, roomSizeRatio: ratio } : rm))
+  }
 
   if (!isOpen) return null
 
@@ -186,6 +197,24 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
               </div>
             </div>
 
+            {/* Collection Progress Bar */}
+            <div className="space-y-1.5 p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-gray-400 font-bold">House Fund Collection:</span>
+                <span className="font-mono font-bold text-emerald-400">
+                  {currency} {roommates.reduce((acc, rm, i) => paidRoommates.includes(i) ? acc + Math.round((rm.roomSizeRatio / totalRatios) * totalExpense) : acc, 0).toLocaleString()} / {currency} {totalExpense.toLocaleString()}
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-gold-primary to-emerald-400 transition-all duration-500 rounded-full"
+                  style={{
+                    width: `${totalExpense > 0 ? Math.min(100, Math.round((roommates.reduce((acc, rm, i) => paidRoommates.includes(i) ? acc + Math.round((rm.roomSizeRatio / totalRatios) * totalExpense) : acc, 0) / totalExpense) * 100)) : 0}%`
+                  }}
+                />
+              </div>
+            </div>
+
             {/* Split Results Breakdown Cards */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -220,8 +249,68 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                         {currency} {share.toLocaleString()}
                       </div>
                       <span className="text-[10px] text-gray-500 block">
-                        {Math.round((rm.roomSizeRatio / totalRatios) * 100)}% of expenses
+                        {Math.round((rm.roomSizeRatio / totalRatios) * 100)}% of expenses · Ref: RES-{idx + 1}
                       </span>
+
+                      {/* Room size ratio quick presets */}
+                      <div className="flex items-center gap-1 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setRatio(idx, 1.2)}
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all ${
+                            rm.roomSizeRatio > 1.05
+                              ? 'bg-gold-primary text-black border-gold-primary'
+                              : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          Master (+20%)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRatio(idx, 1.0)}
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all ${
+                            Math.abs(rm.roomSizeRatio - 1.0) < 0.05
+                              ? 'bg-gold-primary text-black border-gold-primary'
+                              : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          Equal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRatio(idx, 0.85)}
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all ${
+                            rm.roomSizeRatio < 0.95
+                              ? 'bg-gold-primary text-black border-gold-primary'
+                              : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          Compact (-15%)
+                        </button>
+                      </div>
+
+                      {/* Payment tracking & WhatsApp ping */}
+                      <div className="flex items-center justify-between pt-1.5 border-t border-white/5">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={paidRoommates.includes(idx)}
+                            onChange={() => togglePaid(idx)}
+                            className="accent-gold-primary w-3.5 h-3.5 cursor-pointer"
+                          />
+                          <span className={`text-[10px] font-bold ${paidRoommates.includes(idx) ? 'text-emerald-400' : 'text-gray-400'}`}>
+                            {paidRoommates.includes(idx) ? 'Paid' : 'Unpaid'}
+                          </span>
+                        </label>
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(`Hi ${rm.name}! Your co-living share for this month is ${currency} ${share.toLocaleString()} (Payment Ref: RES-${idx + 1}-HOUSE). Thanks!`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[9px] font-bold text-emerald-400 hover:underline"
+                        >
+                          Ping on WA
+                        </a>
+                      </div>
                     </div>
                   )
                 })}

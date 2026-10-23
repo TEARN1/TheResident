@@ -959,13 +959,23 @@ export default function GossipPage() {
                     })}
                   </div>
 
-                  <button
-                    onClick={() => toggleExpand(post.id)}
-                    className="flex items-center gap-1.5 text-[11px] text-gold-primary font-bold hover:underline"
-                  >
-                    {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                    {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(`Neighbourhood update on The Resident: "${cleanBody.slice(0, 90)}..." https://theresidentcrew.com/dashboard/gossip`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-bold text-emerald-400 hover:underline flex items-center gap-1"
+                    >
+                      Share on WA
+                    </a>
+                    <button
+                      onClick={() => toggleExpand(post.id)}
+                      className="flex items-center gap-1.5 text-[11px] text-gold-primary font-bold hover:underline"
+                    >
+                      {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                      {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
+                    </button>
+                  </div>
                 </div>
 
                 {!expanded[post.id] && (commentPreviews[post.id]?.length ?? 0) > 0 && (
