@@ -54,6 +54,7 @@ const TIER_RANK: Record<'premium' | 'priority' | 'none', number> = { premium: 0,
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
   const [activeTab, setActiveTab] = useState<'moving' | 'handymen' | 'lifts' | 'utilities'>('moving')
+  const [selectedTradeCategory, setSelectedTradeCategory] = useState<string>('All')
   // Deep links: ?tab=moving|handymen|lifts|utilities (Feed "Share a lift",
   // the Ask box on Home). ?type=locksmith from the Ask box opens Trades.
   useEffect(() => {
@@ -293,7 +294,11 @@ export default function ServicesPage() {
     setAlertNotification('Contract dispatched successfully!')
   }
 
-  const visibleServices = activeTab === 'moving' ? services.filter(s => MOVE_ASSIST_CATEGORIES.includes(s.category)) : services
+  const visibleServices = activeTab === 'moving'
+    ? services.filter(s => MOVE_ASSIST_CATEGORIES.includes(s.category))
+    : selectedTradeCategory === 'All'
+      ? services
+      : services.filter(s => s.category === selectedTradeCategory)
   const myBiz = services.find(s => s.ownerId === currentUser?.id)
   const incomingOrders = myBiz ? dispatches.filter(d => d.serviceId === myBiz.id) : []
 
@@ -413,7 +418,7 @@ export default function ServicesPage() {
                         setAlertNotification('Added to the waitlist — you get the next seat that opens up.')
                       }
                     }}
-                    className="flex-1 lg:flex-none bg-gold-primary hover:bg-gold-secondary text-black font-black px-10 py-4 rounded-2xl transition-all active:scale-95 shadow-xl shadow-gold-primary/10 uppercase tracking-widest text-xs"
+                    className="flex-1 lg:flex-none bg-gold-primary hover:bg-gold-secondary text-black font-black px-10 py-4 rounded-2xl transition-all active:scale-95 uppercase tracking-widest text-xs min-h-[44px] touch-target-44"
                   >
                     {lift.availableSeats > 0 ? 'Request Ride' : 'Join Waitlist'}
                   </button>
@@ -458,6 +463,26 @@ export default function ServicesPage() {
                  </button>
               )}
            </div>
+
+           
+           {activeTab === 'handymen' && (
+             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+               {['All', 'Plumbing', 'Electrical', 'Cleaning', 'Security', 'Bakkie / Transport', 'General Services'].map(cat => (
+                 <button
+                   key={cat}
+                   type="button"
+                   onClick={() => setSelectedTradeCategory(cat)}
+                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] ${
+                     selectedTradeCategory === cat
+                       ? 'bg-gold-primary text-black border-gold-primary'
+                       : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+                   }`}
+                 >
+                   {cat}
+                 </button>
+               ))}
+             </div>
+           )}
 
            {visibleServices.length === 0 ? (
              <div className="glass-panel">

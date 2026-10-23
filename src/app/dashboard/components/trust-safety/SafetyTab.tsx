@@ -300,6 +300,29 @@ export default function SafetyTab({
           In a life-threatening emergency call <a href="tel:10111" className="font-bold text-white">10111</a> (police) or <a href="tel:112" className="font-bold text-white">112</a> from any phone.
         </p>
 
+        {/* Offline Emergency Quick-Dial Handbook */}
+        <div className="mt-4 pt-4 border-t border-red-500/15">
+          <span className="text-[10px] font-black uppercase tracking-widest text-red-300 block mb-2">Emergency Hotlines (Offline Quick-Dial)</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <a href="tel:10111" className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-red-400/40 text-white no-underline text-xs min-h-[44px]">
+              <span className="font-bold">Police (SAPS)</span>
+              <span className="font-mono text-gold-primary font-black">10111</span>
+            </a>
+            <a href="tel:112" className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-red-400/40 text-white no-underline text-xs min-h-[44px]">
+              <span className="font-bold">Cell Emergency</span>
+              <span className="font-mono text-gold-primary font-black">112</span>
+            </a>
+            <a href="tel:10177" className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-red-400/40 text-white no-underline text-xs min-h-[44px]">
+              <span className="font-bold">Ambulance/Fire</span>
+              <span className="font-mono text-gold-primary font-black">10177</span>
+            </a>
+            <a href="tel:0800150150" className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-red-400/40 text-white no-underline text-xs min-h-[44px]">
+              <span className="font-bold">GBV Helpline</span>
+              <span className="font-mono text-gold-primary font-black">0800 150 150</span>
+            </a>
+          </div>
+        </div>
+
         <button
           onClick={() => setShowIncidentForm(v => !v)}
           className="mt-4 text-xs text-gray-500 hover:text-white uppercase tracking-widest font-bold"

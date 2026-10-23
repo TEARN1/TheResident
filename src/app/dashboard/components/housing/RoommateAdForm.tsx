@@ -13,6 +13,8 @@ interface Props {
   onDone: (message: string) => void
 }
 
+const BUDGET_PRESETS = [2500, 3500, 4500, 6000]
+
 /**
  * Post (or update, or take down) your own "looking for a place to share" ad.
  * The Roommates tab could list ads but there was no way to post one, so it
@@ -68,7 +70,7 @@ export default function RoommateAdForm({ currentUser, myAd, onDone }: Props) {
         <button
           type="button"
           onClick={() => { playTactileSound('tab'); setOpen(true) }}
-          className="px-4 py-2 rounded-xl bg-gold-primary text-black text-xs font-black uppercase tracking-wider"
+          className="px-4 py-2.5 rounded-xl bg-gold-primary text-black text-xs font-black uppercase tracking-wider touch-target-44 transition-transform active:scale-97"
         >
           {myAd ? 'Edit my ad' : 'Post an ad'}
         </button>
@@ -76,18 +78,40 @@ export default function RoommateAdForm({ currentUser, myAd, onDone }: Props) {
     )
   }
 
-  const field = 'w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-gold-primary/50'
+  const field = 'w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-gold-primary/50 min-h-[44px]'
 
   return (
-    <form onSubmit={save} className="glass-panel p-4 sm:p-5 space-y-3">
+    <form onSubmit={save} className="glass-panel p-4 sm:p-5 space-y-4">
       <h3 className="m-0 text-sm font-black text-white">{myAd ? 'Edit your roommate ad' : 'Post a roommate ad'}</h3>
-      <div className="grid grid-cols-2 gap-3">
+
+      {/* Preset budget quick pills */}
+      <div className="space-y-1">
+        <span className="text-[11px] font-bold text-gray-400">Quick Budget</span>
+        <div className="flex flex-wrap gap-2">
+          {BUDGET_PRESETS.map(preset => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => { setBudget(String(preset)); playTactileSound('click') }}
+              className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${
+                budget === String(preset)
+                  ? 'bg-gold-primary text-black border-gold-primary'
+                  : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+              }`}
+            >
+              R{preset.toLocaleString()}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="space-y-1">
-          <span className="text-[11px] font-bold text-gray-400">Budget a month (R)</span>
+          <span className="text-[11px] font-bold text-gray-400">Monthly Budget (ZAR)</span>
           <input className={field} inputMode="numeric" value={budget} onChange={e => setBudget(e.target.value.replace(/[^\d]/g, ''))} placeholder="4000" />
         </label>
         <label className="space-y-1">
-          <span className="text-[11px] font-bold text-gray-400">Suburb</span>
+          <span className="text-[11px] font-bold text-gray-400">Target Suburb</span>
           <input className={field} value={suburb} onChange={e => setSuburb(e.target.value)} placeholder="e.g. Braamfontein" maxLength={60} />
         </label>
         <label className="space-y-1">
@@ -102,30 +126,43 @@ export default function RoommateAdForm({ currentUser, myAd, onDone }: Props) {
           <input className={field} inputMode="numeric" value={childrenCount} onChange={e => setChildrenCount(e.target.value.replace(/[^\d]/g, '').slice(0, 2))} />
         </label>
       </div>
+
       <label className="block space-y-1">
-        <span className="text-[11px] font-bold text-gray-400">About you</span>
+        <div className="flex justify-between items-center text-[11px] font-bold text-gray-400">
+          <span>About you</span>
+          <span className={bio.length > 280 ? 'text-amber-400' : 'text-gray-500'}>{bio.length}/300</span>
+        </div>
         <textarea
-          className={`${field} min-h-[80px] resize-y`}
+          className={`${field} min-h-[90px] resize-y`}
           value={bio}
           onChange={e => setBio(e.target.value)}
           maxLength={300}
-          placeholder="Work or study, quiet or social, what you are looking for."
+          placeholder="Work or study, lifestyle, cleanliness, quiet or social, what you are looking for in a co-living home."
         />
       </label>
-      <div className="flex items-center gap-2 flex-wrap">
+
+      <div className="flex items-center gap-2 flex-wrap pt-1">
         <button
           type="submit"
           disabled={!canSave}
-          className="px-4 py-2 rounded-xl bg-gold-primary text-black text-xs font-black uppercase tracking-wider disabled:opacity-40"
+          className="px-5 py-2.5 rounded-xl bg-gold-primary text-black text-xs font-black uppercase tracking-wider disabled:opacity-40 touch-target-44 transition-transform active:scale-97"
         >
-          {myAd ? 'Save' : 'Post'}
+          {myAd ? 'Save Changes' : 'Post Ad'}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-xs font-bold touch-target-44 hover:bg-white/10"
+        >
           Cancel
         </button>
         {myAd && (
-          <button type="button" onClick={remove} className="ml-auto px-3 py-2 rounded-xl text-red-300 text-xs font-bold flex items-center gap-1.5 hover:bg-red-500/10">
-            <Trash2 size={13} /> Remove my ad
+          <button
+            type="button"
+            onClick={remove}
+            className="ml-auto px-3 py-2.5 rounded-xl text-red-300 text-xs font-bold flex items-center gap-1.5 hover:bg-red-500/10 touch-target-44"
+          >
+            <Trash2 size={14} /> Remove my ad
           </button>
         )}
       </div>

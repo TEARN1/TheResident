@@ -891,3 +891,65 @@ a.bg-gold-primary:hover:not([class*='animate-']) {
     scale: none;
   }
 }
+
+
+/* =========================================================================
+   Mobile Ergonomics & Responsive Safe-Area Utilities (100-Point UX Master)
+   ========================================================================= */
+
+/* Viewport height utilities preventing keyboard jump on iOS/Android */
+.h-dvh {
+  height: 100vh;
+  height: 100dvh;
+}
+.min-h-dvh {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Touch targets conforming to Apple Human Interface & Material Design (min 44px / 48px) */
+.touch-target-44 {
+  min-height: 44px;
+  min-width: 44px;
+}
+.touch-target-48 {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Bottom safe-area padding for bottom navigation and docked action bars */
+.pb-safe-nav {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+.pb-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Scrollable chip containers with hidden scrollbars for clean filter rows */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Map touch containment preventing accidental vertical scroll trapping */
+.map-touch-container {
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+}
+
+/* Skeleton shimmer utility */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.8s ease-in-out infinite;
+}

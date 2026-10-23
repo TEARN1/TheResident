@@ -200,6 +200,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
         pitch: 0,
         maxPitch: 70,
         attributionControl: { compact: true },
+        cooperativeGestures: true,
         // Retina is plenty; 3x phones would triple the fill cost for nothing visible.
         pixelRatio: Math.min(2, window.devicePixelRatio || 1),
         fadeDuration: 180,

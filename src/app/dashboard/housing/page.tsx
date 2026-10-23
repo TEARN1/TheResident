@@ -707,6 +707,16 @@ export default function HousingPage() {
                       className="bg-transparent border-none text-white w-full outline-none text-xs font-semibold placeholder:text-gray-500"
                       autoComplete="off"
                    />
+                   {searchInputValue && (
+                      <button
+                         type="button"
+                         onClick={() => { setSearchInputValue(''); setSearchLocation(''); playTactileSound('click') }}
+                         className="p-1 text-gray-400 hover:text-white shrink-0 mr-1"
+                         aria-label="Clear search"
+                      >
+                         <X size={15} />
+                      </button>
+                   )}
                    <button
                       onClick={() => handleGetLiveLocation(setSearchInputValue)}
                       className={`p-1.5 transition-all rounded-lg shrink-0 ${locationLoading ? 'text-gold-primary' : 'text-gray-400 hover:text-gold-primary hover:bg-gold-primary/10'}`}
@@ -774,6 +784,56 @@ export default function HousingPage() {
                    <Building2 size={16} /> Rent out a room
                 </Link>
              )}
+          </div>
+
+          {/* Quick Filter Chips (Pill Bar) */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider shrink-0">Budget:</span>
+            {[
+              { label: 'All', max: 0 },
+              { label: '< R2,000', max: 2000 },
+              { label: '< R3,500', max: 3500 },
+              { label: '< R5,000', max: 5000 },
+            ].map(tier => (
+              <button
+                key={tier.label}
+                type="button"
+                onClick={() => { setFilterPrice(tier.max); playTactileSound('click') }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] ${
+                  filterPrice === tier.max
+                    ? 'bg-gold-primary text-black border-gold-primary'
+                    : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+                }`}
+              >
+                {tier.label}
+              </button>
+            ))}
+
+            <div className="w-px h-5 bg-white/10 shrink-0 mx-1" />
+
+            <button
+              type="button"
+              onClick={() => { setFilterWifi(v => !v); playTactileSound('click') }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] ${
+                filterWifi
+                  ? 'bg-gold-primary text-black border-gold-primary'
+                  : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+              }`}
+            >
+              WiFi Only
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setFilterParking(v => !v); playTactileSound('click') }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] ${
+                filterParking
+                  ? 'bg-gold-primary text-black border-gold-primary'
+                  : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+              }`}
+            >
+              Parking Only
+            </button>
           </div>
 
           <AnimatePresence>
@@ -1023,7 +1083,7 @@ export default function HousingPage() {
                   <div className="pt-2 flex items-center gap-2">
                     <button
                       onClick={() => { setActiveListing(item); playTactileSound('pop') }}
-                      className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black text-xs font-black py-2.5 rounded-xl uppercase tracking-wider transition-all shadow-md active:scale-98"
+                      className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black text-xs font-black py-2.5 rounded-xl uppercase tracking-wider transition-all active:scale-98 min-h-[44px] touch-target-44 flex items-center justify-center"
                     >
                       View Details
                     </button>

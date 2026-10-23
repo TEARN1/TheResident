@@ -456,7 +456,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => { setShowThemeModal(true); playTactileSound('tab') }}
-              className="inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all group/theme"
+              className="hidden sm:inline-flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 transition-all group/theme"
               title="Change visual theme and color palette"
             >
               <Palette size={13} className="text-gold-primary group-hover/theme:rotate-12 transition-transform" />
@@ -466,7 +466,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             <div ref={notifMenuRef} className="relative">
               <button
                 onClick={() => { setShowNotifMenu(!showNotifMenu); playTactileSound('click') }}
-                className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-gray-300 hover:text-gold-primary transition-all relative"
+                className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-gray-300 hover:text-gold-primary transition-all relative touch-target-44"
                 aria-label="Open notifications"
               >
                 <Megaphone size={16} />
@@ -537,7 +537,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               key={item.href}
               href={item.href}
               onClick={() => playTactileSound('tab')}
-              className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-2xl transition-all relative group ${
+              className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-2xl transition-all relative group min-h-[48px] touch-target-48 ${
                 isActive ? 'text-black' : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -549,7 +549,15 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 />
               )}
               <div className="relative z-10 flex flex-col items-center gap-0.5">
-                <item.icon size={18} className="transition-transform group-hover:scale-110" />
+                <div className="relative">
+                  <item.icon size={18} className="transition-transform group-hover:scale-110" />
+                  {item.name === 'Messages' && notifications.items.filter(n => !n.read).length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-gold-primary" />
+                  )}
+                  {item.name === 'Community' && activeAlerts > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  )}
+                </div>
                 <span className="text-[9px] font-black uppercase tracking-wider">{item.name}</span>
               </div>
             </Link>

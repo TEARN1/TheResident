@@ -523,7 +523,7 @@ function CallScreen({ call, now, muted, cameraOff, localStream, remoteStream, on
           <button
             type="button"
             onClick={onHangUp}
-            className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shadow-xl transition-all active:scale-95"
+            className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center transition-all active:scale-95 touch-target-48"
             aria-label="Hang up"
           >
             <PhoneOff size={26} />
