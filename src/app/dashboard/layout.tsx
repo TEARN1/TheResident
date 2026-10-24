@@ -9,8 +9,8 @@ import {
   Wifi, Users, CheckCircle2,
   Briefcase,
   Megaphone, Wrench, Loader,
-  ShieldCheck, MessageCircle, MessagesSquare, UserRound, X, Sparkles, ExternalLink, Table2, Palette,
-  MapPin, ShieldAlert
+  ShieldCheck, MessageCircle, UserRound, X, Sparkles, ExternalLink, Palette,
+  MapPin, 
 } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -38,7 +38,7 @@ import ActionOrb from './components/navigation/ActionOrb'
 import { DEFAULT_THEME } from '../../utils/themes'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { getNextOfKinStatus, type NextOfKinStatus } from '../../utils/trust'
-import { GRUVS, TEARNS } from '../../utils/sisterApps'
+import { GRUVS } from '../../utils/sisterApps'
 import { ReduxProvider } from '../../store/provider'
 
 // The store is provided here rather than in the root layout (see
@@ -277,21 +277,22 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         <PointerSpotlight />
 
         {/* ============================================================== */}
-        {/* DESKTOP PERMANENT NAVIGATION SIDEBAR (Screen >= 1024px)       */}
+        {/* TABLET & DESKTOP PERMANENT NAVIGATION SIDEBAR                  */}
+        {/* (Tablet md: 80px slim icon rail | Desktop lg: 256px full shell) */}
         {/* ============================================================== */}
-        <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 z-50 bg-black/80 backdrop-blur-3xl border-r border-white/10 flex-col justify-between p-4 pointer-events-auto">
-          <div className="space-y-6">
+        <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-20 lg:w-64 z-50 bg-black/85 backdrop-blur-3xl border-r border-white/10 flex-col justify-between p-2.5 lg:p-4 pointer-events-auto transition-all duration-200">
+          <div className="space-y-4 lg:space-y-6">
             {/* Brand Logo & Urban OS Subtitle */}
             <Link
               href="/dashboard"
               onClick={() => playTactileSound('tab')}
-              className="flex items-center gap-3 px-2 group"
+              className="flex items-center justify-center lg:justify-start gap-3 px-1 lg:px-2 group"
               title="The Resident — Living Urban OS"
             >
               <div className="w-10 h-10 rounded-2xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary group-hover:scale-105 transition-transform shrink-0">
                 <Home size={20} />
               </div>
-              <div className="flex flex-col">
+              <div className="hidden lg:flex flex-col">
                 <span className="font-black text-sm text-white tracking-widest uppercase group-hover:text-gold-primary transition-colors">
                   The Resident
                 </span>
@@ -302,7 +303,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             {/* Navigation Links */}
-            <nav className="space-y-1.5" aria-label="Desktop primary navigation">
+            <nav className="space-y-1.5" aria-label="Primary navigation rail">
               {desktopNavItems.map(item => {
                 const isActive = item.exact
                   ? pathname === item.href
@@ -315,21 +316,31 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                     key={item.href}
                     href={item.href}
                     onClick={() => playTactileSound('tab')}
-                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all ${
+                    className={`relative group flex items-center justify-center lg:justify-between px-2.5 lg:px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all ${
                       isActive
                         ? 'bg-gold-primary text-black font-black'
                         : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
                     }`}
+                    title={item.name}
                   >
                     <div className="flex items-center gap-3">
-                      <item.icon size={17} className={isActive ? 'text-black' : 'text-gray-400'} />
-                      <span>{item.name}</span>
+                      <item.icon size={18} className={isActive ? 'text-black' : 'text-gray-400'} />
+                      <span className="hidden lg:inline">{item.name}</span>
                     </div>
 
+                    {/* Tablet hover tooltip */}
+                    <span className="lg:hidden absolute left-full ml-2 px-2 py-1 rounded-lg bg-black/95 border border-white/20 text-[10px] font-bold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      {item.name}
+                    </span>
+
+                    {/* Notification badges */}
                     {item.unreadCount && item.unreadCount > 0 ? (
-                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-500 text-white animate-pulse">
-                        {item.unreadCount}
-                      </span>
+                      <>
+                        <span className="lg:hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        <span className="hidden lg:inline-block px-1.5 py-0.5 rounded-full text-[9px] font-black bg-red-500 text-white animate-pulse">
+                          {item.unreadCount}
+                        </span>
+                      </>
                     ) : null}
                   </Link>
                 )
@@ -337,37 +348,38 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
 
-          {/* Desktop Sidebar Footer: Trust Meter, Theme & User Role */}
-          <div className="space-y-3 pt-4 border-t border-white/10">
+          {/* Sidebar Footer: Trust Meter, Theme & User Role */}
+          <div className="space-y-3 pt-3 border-t border-white/10">
             {/* Trust Meter status */}
             <Link
               href="/dashboard/trust-circle"
               onClick={() => playTactileSound('tab')}
-              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between transition-all"
+              className="p-2 lg:p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center lg:justify-between transition-all group"
+              title="Trust Circle & Next of Kin Verification"
             >
               <div className="flex items-center gap-2">
                 <ShieldCheck size={16} className={nokStatus?.hasNextOfKin ? 'text-emerald-400' : 'text-amber-400'} />
-                <div className="flex flex-col">
+                <div className="hidden lg:flex flex-col text-left">
                   <span className="text-[10px] font-black uppercase text-gray-200">Trust Circle</span>
                   <span className="text-[9px] text-gray-400">
                     {nokStatus?.hasNextOfKin ? 'Verified' : nokStatus?.overdue ? 'Incomplete' : 'Next of Kin pending'}
                   </span>
                 </div>
               </div>
-              <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded border ${
+              <span className={`hidden lg:inline-block text-[10px] font-black uppercase px-1.5 py-0.5 rounded border ${
                 nokStatus?.hasNextOfKin ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-amber-500/15 border-amber-500/30 text-amber-300'
               }`}>
                 {nokStatus?.hasNextOfKin ? '100%' : '60%'}
               </span>
             </Link>
 
-            {/* User profile quick glance */}
-            <div className="flex items-center justify-between px-1">
+            {/* User profile quick glance & Theme toggle */}
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-2 px-1">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-xs font-black text-white uppercase">
+                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-black text-white uppercase border border-white/15 shrink-0">
                   {currentUser.name ? currentUser.name[0] : 'U'}
                 </div>
-                <div className="flex flex-col min-w-0">
+                <div className="hidden lg:flex flex-col min-w-0 text-left">
                   <span className="text-xs font-bold text-gray-200 truncate max-w-[100px]">
                     {currentUser.name || 'Resident'}
                   </span>
@@ -380,7 +392,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => { setShowThemeModal(true); playTactileSound('tab') }}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors touch-target-44 flex items-center justify-center"
                 title="Change theme"
                 aria-label="Theme settings"
               >
@@ -391,7 +403,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {/* Alert stack */}
-        <div className="top-alert-banner-stack lg:pl-64">
+        <div className="top-alert-banner-stack md:pl-20 lg:pl-64">
           {dataStatus === 'error' && failedTables.length > 0 ? (
             <div className="top-alert-banner">
               <AlertTriangle size={18} color="#ef4444" />
@@ -417,7 +429,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
         {/* Guest and Next of Kin Banners */}
         {currentUser && isGuestUser(currentUser) && !guestBannerDismissed ? (
-          <div className="guest-summary-banner lg:ml-64">
+          <div className="guest-summary-banner md:ml-20 lg:ml-64">
             <Sparkles size={16} className="shrink-0" style={{ color: 'var(--gold-primary)' }} />
             <span>
               <strong>Browsing as a guest.</strong> Sign up free to message, post and save rooms.
@@ -428,7 +440,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         ) : nokStatus && !nokStatus.hasNextOfKin && !nokBannerDismissed ? (
-          <div className="guest-summary-banner lg:ml-64">
+          <div className="guest-summary-banner md:ml-20 lg:ml-64">
             <ShieldCheck size={16} className="shrink-0" style={{ color: nokStatus.overdue ? '#ef4444' : 'var(--gold-primary)' }} />
             <span>
               {nokStatus.overdue ? (
@@ -447,16 +459,16 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         ) : null}
 
         {/* ============================================================== */}
-        {/* MAIN WORKSPACE WRAPPER (With lg:pl-64 for Desktop Sidebar)     */}
+        {/* MAIN WORKSPACE WRAPPER (With md:pl-20 lg:pl-64)                */}
         {/* ============================================================== */}
-        <div className="dashboard-main-content lg:pl-64">
-          <header className="sticky top-0 z-40 h-16 bg-black/60 backdrop-blur-2xl border-b border-white/15 px-4 md:px-6 flex items-center justify-between transition-all">
+        <div className="dashboard-main-content md:pl-20 lg:pl-64 min-h-screen min-h-dvh flex flex-col transition-all overflow-x-hidden">
+          <header className="sticky top-0 z-40 h-16 bg-black/60 backdrop-blur-2xl border-b border-white/15 px-3 sm:px-4 md:px-6 flex items-center justify-between transition-all">
             {/* Left Header Title / Mobile Logo */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <Link
                 href="/dashboard"
                 onClick={() => playTactileSound('tab')}
-                className="flex items-center gap-2.5 group lg:hidden"
+                className="flex items-center gap-2 group md:hidden shrink-0"
                 title="Home"
               >
                 <div className="w-8 h-8 rounded-xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary shrink-0">
@@ -467,8 +479,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 </span>
               </Link>
 
-              {/* Desktop breadcrumb title */}
-              <div className="hidden lg:flex items-center gap-2 text-xs">
+              {/* Tablet and Desktop breadcrumb title */}
+              <div className="hidden md:flex items-center gap-2 text-xs">
                 <span className="text-gray-400 font-bold uppercase tracking-wider">Dashboard</span>
                 <span className="text-white/20">/</span>
                 <span className="text-white font-black uppercase tracking-wider">{pageTitle.name}</span>
@@ -593,16 +605,16 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Page content body */}
-          <main className="dashboard-page-body pb-[calc(7rem+env(safe-area-inset-bottom,0px))] lg:pb-8">
+          <main className="dashboard-page-body pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:pb-8 lg:pb-8">
             {children}
           </main>
         </div>
 
         {/* ============================================================== */}
-        {/* MOBILE & TABLET 5-POINT KINETIC DOCK (Screen < 1024px)        */}
+        {/* MOBILE 5-POINT KINETIC DOCK (Screen < 768px)                  */}
         {/* ============================================================== */}
         <nav
-          className="lg:hidden fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] left-3 right-3 max-w-md mx-auto z-50 bg-black/80 backdrop-blur-3xl border border-white/15 rounded-3xl p-1.5 flex items-center justify-between pointer-events-auto"
+          className="md:hidden fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] left-3 right-3 max-w-md mx-auto z-50 bg-black/80 backdrop-blur-3xl border border-white/15 rounded-3xl p-1.5 flex items-center justify-between pointer-events-auto"
           aria-label="Mobile primary navigation"
         >
           {/* Left Wing (Home, Map) */}

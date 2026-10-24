@@ -118,8 +118,20 @@ export default function CommandPalette() {
 
   return (
     <>
-      {/* Floating launcher indicator in dashboard */}
+      {/* Mobile & Tablet search trigger */}
       <button
+        type="button"
+        onClick={() => { setOpen(true); playTactileSound('pop') }}
+        className="flex lg:hidden w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 items-center justify-center text-gray-300 hover:text-gold-primary transition-all touch-target-44 shrink-0"
+        title="Search pages and quick actions"
+        aria-label="Open search command palette"
+      >
+        <Search size={16} className="text-gold-primary" />
+      </button>
+
+      {/* Desktop floating launcher indicator in dashboard */}
+      <button
+        type="button"
         onClick={() => { setOpen(true); playTactileSound('pop') }}
         className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all text-xs font-semibold"
         title="Open Command Palette (Ctrl+K)"
@@ -134,7 +146,7 @@ export default function CommandPalette() {
       {/* Spotlight Modal Overlay */}
       <AnimatePresence>
         {open && (
-          <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-16 md:pt-24 px-4">
+          <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-12 sm:pt-16 md:pt-24 px-3 sm:px-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -148,7 +160,7 @@ export default function CommandPalette() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="relative w-full max-w-xl bg-neutral-950/95 border border-gold-primary/30 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgb(var(--accent)/0.15)] overflow-hidden z-10 backdrop-blur-3xl flex flex-col"
+              className="relative w-full max-w-xl bg-neutral-950/95 border border-gold-primary/30 rounded-3xl overflow-hidden z-10 backdrop-blur-3xl flex flex-col max-h-[85dvh]"
             >
               {/* Input Header */}
               <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10">
@@ -217,7 +229,7 @@ export default function CommandPalette() {
               </div>
 
               {/* Items List */}
-              <div className="max-h-80 overflow-y-auto p-3 space-y-1 custom-scrollbar">
+              <div className="max-h-[min(20rem,50dvh)] overflow-y-auto p-3 space-y-1 custom-scrollbar">
                 {filteredItems.length === 0 ? (
                   <div className="py-12 text-center text-gray-500 text-xs font-medium">
                     No matching commands found.

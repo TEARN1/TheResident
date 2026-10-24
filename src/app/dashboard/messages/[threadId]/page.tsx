@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle, ArrowDown, Copy, Check, Smile, PenLine, Sticker, Eye, WifiOff, CornerDownLeft, Search
+  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle, ArrowDown, Copy, Check, Smile, PenLine, Eye, WifiOff, CornerDownLeft, Search
 } from 'lucide-react'
 import { RootState, isGuestUser } from '../../../../store'
 import Link from 'next/link'
@@ -29,7 +29,6 @@ import { useCall } from '../../components/messages/CallProvider'
 import VoiceNotePlayer from '../../components/messages/VoiceNotePlayer'
 import LocationCard from '../../components/messages/LocationCard'
 import { useVoiceRecorder, type Recording } from '../../components/messages/useVoiceRecorder'
-import { RESIDENT_STICKERS, STICKER_MAP, ResidentSticker, type StickerCategory } from '../../../../utils/residentStickers'
 
 interface DbMessage {
   id: string
@@ -70,28 +69,12 @@ function renderMessageBody(text: string) {
     bodyContent = remaining
   }
 
-  const parts = bodyContent.split(/(\[sticker:[a-z0-9-]+\])/i)
-  const renderedParts = parts.map((part, idx) => {
-    const sticker = STICKER_MAP.get(part.replace(/\[sticker:([a-z0-9-]+)\]/i, '$1'))
-    if (sticker) {
-      return (
-        <span
-          key={idx}
-          className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-full bg-gold-primary/20 border border-gold-primary/40 text-xs font-bold text-white align-middle select-none shadow-none"
-          title={sticker.label}
-        >
-          <span className="text-sm">{sticker.emoji}</span>
-          <span className="text-[10px] tracking-tight">{sticker.label}</span>
-        </span>
-      )
-    }
-    return <span key={idx}>{part}</span>
-  })
+  const cleanedBody = bodyContent.replace(/\[sticker:[a-z0-9-]+\]\s*/gi, '').trim()
 
   return (
     <>
       {quoteBlock}
-      {renderedParts}
+      <span>{cleanedBody}</span>
     </>
   )
 }
@@ -113,8 +96,6 @@ export default function ThreadPage() {
   const [confirmLocation, setConfirmLocation] = useState(false)
   const [locating, setLocating] = useState(false)
   const [uploadingVoice, setUploadingVoice] = useState(false)
-  const [showStickerTray, setShowStickerTray] = useState(false)
-  const [stickerCategory, setStickerCategory] = useState<StickerCategory>('all')
   const [replyingTo, setReplyingTo] = useState<{ id: string; authorName: string; text: string } | null>(null)
   const [threadSearch, setThreadSearch] = useState('')
   const [showSearch, setShowSearch] = useState(false)
@@ -342,7 +323,7 @@ export default function ThreadPage() {
 
   return (
     <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-12">
-      <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden shadow-glass flex flex-col h-[calc(100dvh-180px)] md:h-[75vh]">
+      <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col h-[calc(100dvh-11rem-env(safe-area-inset-bottom,0px))] md:h-[calc(100dvh-10rem)]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/2">
           <div className="flex items-center gap-3 min-w-0">
@@ -600,59 +581,6 @@ export default function ThreadPage() {
           </div>
         )}
 
-        {/* In-App Resident Stickers Tray with Category Filtering */}
-        {showStickerTray && (
-          <div className="p-3 mx-3.5 mb-1 bg-black/90 backdrop-blur-2xl border border-gold-primary/30 rounded-2xl space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-white flex items-center gap-1.5">
-                <Sparkles size={13} className="text-gold-primary" /> Safety-Certified Stickers
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowStickerTray(false)}
-                className="text-gray-400 hover:text-white text-[10px] font-bold"
-              >
-                Close
-              </button>
-            </div>
-            {/* Category Filter Chips */}
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 text-[10px]">
-              {(['all', 'co-living', 'utilities', 'safety', 'local'] as const).map(cat => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => { playTactileSound('click'); setStickerCategory(cat); }}
-                  className={`px-2.5 py-0.5 rounded-lg font-bold capitalize transition-all border ${
-                    stickerCategory === cat
-                      ? 'bg-gold-primary text-black border-gold-primary font-black'
-                      : 'bg-white/5 text-gray-400 hover:text-white border-white/5'
-                  }`}
-                >
-                  {cat === 'all' ? 'All Stickers' : cat}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 max-h-36 overflow-y-auto no-scrollbar">
-              {(stickerCategory === 'all' ? RESIDENT_STICKERS : RESIDENT_STICKERS.filter(s => s.category === stickerCategory)).map(s => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => {
-                    playTactileSound('pop');
-                    setDraft(prev => prev ? `${prev} ${s.tag} ` : `${s.tag} `);
-                    setShowStickerTray(false);
-                  }}
-                  className="flex flex-col items-center gap-0.5 p-1.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/40 transition-all active:scale-95"
-                  title={s.label}
-                >
-                  <span className="text-lg">{s.emoji}</span>
-                  <span className="text-[9px] font-bold text-gray-300 truncate w-full text-center">{s.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Composer */}
         <div className="p-3.5 border-t border-white/10 bg-white/2">
           {recorder.recording ? (
@@ -692,19 +620,6 @@ export default function ThreadPage() {
                 aria-label="Share your location"
               >
                 {locating ? <Loader size={15} className="animate-spin" /> : <MapPin size={15} />}
-              </button>
-              <button
-                type="button"
-                onClick={() => { playTactileSound('tab'); setShowStickerTray(v => !v); }}
-                className={`p-2 rounded-xl border transition-all shrink-0 active:scale-95 ${
-                  showStickerTray
-                    ? 'bg-gold-primary text-black border-gold-primary'
-                    : 'bg-white/5 hover:bg-white/10 border-white/10 text-gold-primary'
-                }`}
-                title="In-App Resident Stickers"
-                aria-label="Add Resident Sticker"
-              >
-                <Sticker size={15} />
               </button>
               <button
                 type="button"

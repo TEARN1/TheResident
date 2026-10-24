@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare
+  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare
 } from 'lucide-react'
 import {
   RootState,
@@ -475,6 +475,17 @@ export default function ServicesPage() {
            
            {activeTab === 'handymen' && (
              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+               <button
+                 type="button"
+                 onClick={() => { playTactileSound('click'); setFilterEmergency247(v => !v) }}
+                 className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] flex items-center gap-1.5 ${
+                   filterEmergency247
+                     ? 'bg-red-600 text-white border-red-400'
+                     : 'bg-white/5 text-red-300 border-red-500/20 hover:border-red-500/40'
+                 }`}
+               >
+                 <AlertTriangle size={12} /> 24/7 Urgent
+               </button>
                {['All', 'Plumbing', 'Electrical', 'Cleaning', 'Security', 'Bakkie / Transport', 'General Services'].map(cat => (
                  <button
                    key={cat}
@@ -501,7 +512,7 @@ export default function ServicesPage() {
                )}
              </div>
            ) : (
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
              {visibleServices.map(srv => (
                <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-black/40 hover:border-gold-primary/40 transition-all duration-500 shadow-2xl">
                   <div className="h-44 bg-gray-900 relative overflow-hidden">
@@ -659,7 +670,7 @@ export default function ServicesPage() {
               </div>
            </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {utilityTokens.filter(t => t.status === 'available').map(token => (
                 <motion.div key={token.id} whileHover={{ scale: 1.02 }} className="glass-panel p-8 border-gold-primary/10 bg-black/40 space-y-8 group transition-all cursor-pointer hover:border-gold-primary/50 shadow-2xl">
                    <div className="flex justify-between items-start">
@@ -805,7 +816,7 @@ export default function ServicesPage() {
                         <div className="flex flex-wrap gap-1.5">
                            {[
                               { label: 'Diagnostic Callout', text: `Hi ${selectedBiz.businessName}, requesting a diagnostic inspection and price estimate in ${selectedBiz.suburb || 'my area'}.` },
-                              { label: 'Bakkie / Moving Job', text: `Hi ${selectedBiz.businessName}, need assistance with moving furniture / household items with a bakkie in ${selectedBiz.suburb || 'my area'} [sticker:bakkie].` },
+                              { label: 'Bakkie / Moving Job', text: `Hi ${selectedBiz.businessName}, need assistance with moving furniture / household items with a bakkie in ${selectedBiz.suburb || 'my area'}.` },
                               { label: 'Urgent Repair', text: `Hi ${selectedBiz.businessName}, emergency repair needed for geyser / electricity / plumbing fault at residence.` }
                            ].map(q => (
                               <button
@@ -899,7 +910,7 @@ export default function ServicesPage() {
                            <input value={liftDays} onChange={e => setLiftDays(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. Mon-Fri" />
                         </div>
                      </div>
-                     <div className="grid grid-cols-3 gap-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Price / Seat</label>
                            <input type="number" min="0" value={liftPrice} onChange={e => setLiftPrice(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. 20" />

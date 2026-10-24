@@ -215,12 +215,12 @@ export default function QuickVibeReportModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-[1001] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-lg max-h-[92dvh] overflow-y-auto custom-scrollbar bg-black/95 border border-gold-primary/30 rounded-3xl p-6 backdrop-blur-2xl"
+          className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto custom-scrollbar bg-black/95 border border-gold-primary/30 rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-2xl pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-4">

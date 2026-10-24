@@ -6,14 +6,10 @@ import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShieldAlert,
-  AlertTriangle,
   Zap,
-  Clock,
-  MapPin,
   ChevronRight,
   ShieldCheck,
-  CheckCircle2,
-  Navigation
+  CheckCircle2
 } from 'lucide-react'
 import { RootState } from '../../../../store'
 import { playTactileSound } from '../../../../utils/tactileSounds'
@@ -139,7 +135,7 @@ export default function UrbanDynamicIsland({ nokStatus, onOpenSOS }: UrbanDynami
       <button
         type="button"
         onClick={handleIslandClick}
-        className="group relative flex items-center gap-2 sm:gap-2.5 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-2xl border border-white/15 hover:border-gold-primary/40 transition-all touch-target-44 text-left max-w-[260px] sm:max-w-md overflow-hidden"
+        className="group relative flex items-center gap-1.5 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-2xl border border-white/15 hover:border-gold-primary/40 transition-all touch-target-44 text-left max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-md overflow-hidden"
         title="Urban Dynamic Island: Real-time precinct telemetry"
         aria-label="Urban Dynamic Island status"
       >

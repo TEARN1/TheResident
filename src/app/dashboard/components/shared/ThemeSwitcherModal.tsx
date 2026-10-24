@@ -32,17 +32,17 @@ export default function ThemeSwitcherModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-xl bg-black/95 border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden flex flex-col max-h-[90dvh]"
+          className="relative w-full max-w-xl bg-black/95 border border-white/15 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 backdrop-blur-2xl overflow-hidden flex flex-col max-h-[90dvh] pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-5 border-b border-white/10 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary shadow-glow">
+              <div className="w-10 h-10 rounded-2xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary">
                 <Palette size={20} />
               </div>
               <div>

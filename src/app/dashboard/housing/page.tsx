@@ -992,7 +992,7 @@ export default function HousingPage() {
               )}
             </div>
           ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
             {filteredListings.map((item) => (
               <motion.div
                 key={item.id}
@@ -1154,7 +1154,7 @@ export default function HousingPage() {
         {filteredRoommates.length === 0 ? (
           <EmptyState icon={Users} title="No roommate ads yet" subtitle={isGuest ? 'Sign in to post one.' : 'Post yours and people looking to share can message you.'} />
         ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
            {filteredRoommates.map(rm => (
              <motion.div
                key={rm.id}

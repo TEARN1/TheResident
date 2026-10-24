@@ -70,7 +70,7 @@ export default function HomeDashboard() {
   ]
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 space-y-6 max-w-3xl mx-auto">
+    <div className="p-3 sm:p-6 md:p-8 space-y-6 max-w-5xl 2xl:max-w-7xl mx-auto">
       {/* Header Greeting */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -150,7 +150,7 @@ export default function HomeDashboard() {
       </section>
 
       {/* Main Feature Shortcuts with dynamic badge notifications */}
-      <section className="grid grid-cols-3 gap-3">
+      <section className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 sm:gap-3">
         {shortcuts.map(s => (
           <Link
             key={s.label}

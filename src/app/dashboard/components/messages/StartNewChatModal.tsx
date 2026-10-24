@@ -85,17 +85,17 @@ export default function StartNewChatModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md">
+      <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/80 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-lg bg-[var(--card-bg,rgba(11,43,38,0.9))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-2xl flex flex-col max-h-[85vh] overflow-hidden"
+          className="relative w-full max-w-lg bg-[var(--card-bg,rgba(11,43,38,0.9))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-t-3xl sm:rounded-3xl p-5 sm:p-7 backdrop-blur-2xl flex flex-col max-h-[85dvh] overflow-hidden pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[var(--gold-dim,rgba(142,182,155,0.1))] border border-[var(--glass-border,rgba(142,182,155,0.3))] text-[var(--gold-primary,#8EB69B)] flex items-center justify-center shadow-glow">
+              <div className="w-10 h-10 rounded-2xl bg-[var(--gold-dim,rgba(142,182,155,0.1))] border border-[var(--glass-border,rgba(142,182,155,0.3))] text-[var(--gold-primary,#8EB69B)] flex items-center justify-center">
                 <MessageSquare size={18} />
               </div>
               <div>

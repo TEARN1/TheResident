@@ -405,7 +405,7 @@ export default function SafetyTab({
                 onClick={() => {
                   setFamilyBeaconDispatched(true);
                   setSafeConfirmed(false);
-                  const payload = `🚨 EMERGENCY ALERT: Urgent safety signal on The Resident. Area: ${suburb || 'Current location'}. Police: 10111, Cell: 112 [sticker:safe]`;
+                  const payload = `🚨 EMERGENCY ALERT: Urgent safety signal on The Resident. Area: ${suburb || 'Current location'}. Police: 10111, Cell: 112`;
                   navigator.clipboard.writeText(payload);
                   if (onRaiseAlert) {
                     onRaiseAlert({
@@ -430,7 +430,7 @@ export default function SafetyTab({
           {safeConfirmed && (
             <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
               <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-              <span>You marked yourself Safe. Your Care Circle has been notified in real time! [sticker:safe]</span>
+              <span>You marked yourself Safe. Your Care Circle has been notified in real time!</span>
             </div>
           )}
         </div>
@@ -530,7 +530,7 @@ export default function SafetyTab({
             <button
               type="button"
               onClick={() => {
-                const inviteMsg = "Hi! I added you as my Next of Kin contact on The Resident. Please confirm our trust connection so my rental profile is verified: https://theresidentcrew.com/dashboard/trust-circle [sticker:safe]";
+                const inviteMsg = "Hi! I added you as my Next of Kin contact on The Resident. Please confirm our trust connection so my rental profile is verified: https://theresidentcrew.com/dashboard/trust-circle";
                 navigator.clipboard.writeText(inviteMsg);
                 setInviteCopied(true);
                 setTimeout(() => setInviteCopied(false), 3000);

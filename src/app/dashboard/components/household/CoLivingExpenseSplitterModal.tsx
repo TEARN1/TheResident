@@ -122,12 +122,12 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgb(var(--accent)/0.15)] backdrop-blur-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 backdrop-blur-2xl overflow-hidden max-h-[90dvh] flex flex-col pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -182,7 +182,7 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                   type="button"
                   onClick={() => {
                     playTactileSound('click');
-                    navigator.clipboard.writeText('ResidentHouse-5G [sticker:wifi]');
+                    navigator.clipboard.writeText('ResidentHouse-5G');
                     setWifiCopied(true);
                     setTimeout(() => setWifiCopied(false), 2500);
                   }}
@@ -345,7 +345,7 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                           type="button"
                           onClick={() => {
                             playTactileSound('click');
-                            const msg = `[BILL SPLIT] Hi ${rm.name}! Your co-living share for this month is ${currency} ${share.toLocaleString()} (Payment Ref: RES-${idx + 1}-HOUSE) [sticker:rent-settled]`;
+                            const msg = `[BILL SPLIT] Hi ${rm.name}! Your co-living share for this month is ${currency} ${share.toLocaleString()} (Payment Ref: RES-${idx + 1}-HOUSE)`;
                             navigator.clipboard.writeText(msg);
                             setPingedIdx(idx);
                             setBroadcastNotice(`Copied bill ping for ${rm.name}! Paste into Resident Messages.`);
@@ -460,7 +460,7 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                       const share = Math.round((rm.roomSizeRatio / totalRatios) * totalExpense);
                       return `• ${rm.name}: ${currency} ${share.toLocaleString()}`;
                     }).join('\n') +
-                    `\n\n[sticker:rent-settled] Tracked on The Resident.`;
+                    `\n\nTracked on The Resident.`;
                   navigator.clipboard.writeText(text);
                   setBroadcastNotice('Copied full house split! Ready to paste in Resident Messages.');
                 }}

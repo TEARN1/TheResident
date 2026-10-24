@@ -9,7 +9,6 @@ import {
   MapPin,
   AlertTriangle,
   Flag,
-  ShieldAlert,
   Home,
   Wrench,
   Car,
@@ -168,13 +167,13 @@ export default function ActionOrb({ onOpenReportModal }: ActionOrbProps) {
               className="absolute inset-0 bg-black/80 backdrop-blur-md"
             />
 
-            {/* Modal Card */}
+            {/* Modal Card with responsive bottom sheet on mobile and centered modal on desktop */}
             <motion.div
               initial={{ opacity: 0, y: 40, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.96 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-lg bg-black/95 backdrop-blur-3xl border border-white/15 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto no-scrollbar z-10"
+              className="relative w-full max-w-lg bg-black/95 backdrop-blur-3xl border border-white/15 rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 space-y-4 max-h-[85dvh] overflow-y-auto no-scrollbar z-10 pb-[max(env(safe-area-inset-bottom),1.5rem)]"
             >
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-white/10">

@@ -24,7 +24,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './futureMap.css'
 import type { GeoJSONSource, Map as MLMap, MapGeoJSONFeature } from 'maplibre-gl'
 import {
- LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Building2, Moon, Sun, Box, Car, Clock
+ LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Building2, Moon, Sun, Box, Car
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState, type Listing } from '../../../../store'
@@ -907,6 +907,30 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  <ShieldAlert size={13} className="text-red-400" />
  <span>Safety</span>
  </button>
+
+ <div className="flex items-center gap-1 bg-black/80 px-1.5 py-0.5 rounded-xl border border-white/10 shrink-0 ml-1">
+   <button
+     type="button"
+     onClick={() => { playTactileSound('tab'); setTimeHorizonHours(0) }}
+     className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${timeHorizonHours === 0 ? 'bg-gold-primary text-black font-black' : 'text-gray-400 hover:text-white'}`}
+   >
+     Now
+   </button>
+   <button
+     type="button"
+     onClick={() => { playTactileSound('tab'); setTimeHorizonHours(6) }}
+     className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${timeHorizonHours === 6 ? 'bg-gold-primary text-black font-black' : 'text-gray-400 hover:text-white'}`}
+   >
+     Tonight
+   </button>
+   <button
+     type="button"
+     onClick={() => { playTactileSound('tab'); setTimeHorizonHours(48) }}
+     className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${timeHorizonHours === 48 ? 'bg-gold-primary text-black font-black' : 'text-gray-400 hover:text-white'}`}
+   >
+     48h
+   </button>
+ </div>
  </div>
  </div>
 
@@ -943,7 +967,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
  {/* Civic Spotter Proximity Check-in Prompt */}
       {nearbyClosure && (
-        <div className="absolute bottom-24 md:bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[550] p-3 rounded-2xl bg-black/90 backdrop-blur-xl border border-amber-500/40 flex items-center justify-between gap-3 text-white pointer-events-auto">
+        <div className="absolute bottom-[calc(9.5rem+env(safe-area-inset-bottom,0px))] md:bottom-20 left-3 right-3 sm:left-4 sm:right-4 md:left-auto md:right-4 md:w-96 z-[550] p-3 rounded-2xl bg-black/90 backdrop-blur-xl border border-amber-500/40 flex items-center justify-between gap-3 text-white pointer-events-auto">
           <div className="overflow-hidden">
             <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
               📍 Civic Spot Check (Within 450m)
@@ -986,7 +1010,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  </div>
 
  {/* Floating Bottom Left: Drop Vibe CTA */}
- <div className="absolute bottom-20 md:bottom-5 left-4 z-[500] flex items-center gap-2">
+ <div className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:bottom-5 left-3 sm:left-4 z-[500] flex items-center gap-2">
  <button
  onClick={() => {
  playTactileSound('pop')
@@ -1007,7 +1031,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  </div>
 
  {/* Floating Bottom Right: Map & Position Controls */}
- <div className="absolute bottom-20 md:bottom-12 right-4 z-[500] flex flex-col items-end gap-2.5">
+ <div className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:bottom-12 right-3 sm:right-4 z-[500] flex flex-col items-end gap-2.5">
  {/* Basemap Switcher (Neon / Day / Satellite) */}
  <div className="fm-glass bg-black/70 border border-white/10 rounded-2xl p-1 flex flex-col gap-1">
  {themeButton('dark', 'Neon Night Map', Moon)}

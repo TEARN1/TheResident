@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ClipboardList, X, CheckSquare, Square, Download, Trash2, MessageSquare, Send, Check, Printer } from 'lucide-react'
+import { ClipboardList, X, CheckSquare, Square, Download, Trash2, MessageSquare, Send, Printer } from 'lucide-react'
 import Link from 'next/link'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
@@ -96,12 +96,12 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgb(var(--accent)/0.15)] backdrop-blur-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 backdrop-blur-2xl overflow-hidden max-h-[90dvh] flex flex-col pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -270,7 +270,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
                   playTactileSound('click')
                   const text = `*MOVE-IN DEFECT & SNAG REPORT*\nProperty: ${propertyAddress}\nDate: ${new Date().toLocaleDateString()}\n\nRecorded Defects (${items.length}):\n` +
                     items.map((it, i) => `${i + 1}. [${it.room}] ${it.description} (${it.severity})`).join('\n') +
-                    `\n\n[sticker:safe] Verified on The Resident.`
+                    `\n\nVerified on The Resident.`
                   navigator.clipboard.writeText(text)
                   setDispatchNotice('Copied Snag List report! Ready to send to Landlord in Resident Messages.')
                 }}
