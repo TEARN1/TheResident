@@ -24,11 +24,11 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './futureMap.css'
 import type { GeoJSONSource, Map as MLMap, MapGeoJSONFeature } from 'maplibre-gl'
 import {
- LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Building2, Moon, Sun, Box, Car
+ LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Building2, Moon, Sun, Box, Car, Clock
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState, type Listing } from '../../../../store'
-import { fetchSharedZones, parseZoneDetails, type SharedZone } from '../../../../utils/mapZones'
+import { fetchSharedZones, parseZoneDetails, verifyZone, type SharedZone } from '../../../../utils/mapZones'
 import { distanceMetres } from '../../../../utils/logic'
 import { reverseGeocode } from '../../../../utils/geocode'
 import { playTactileSound } from '../../../../utils/tactileSounds'
@@ -725,7 +725,54 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  // Not `data-theme`: that attribute is the app's palette switch (globals.css).
  data-map-theme={mapTheme}
  >
- {/* Map Target Canvas */}
+ {/* Interactive Route Tracing HUD */}
+      {tracingType && (
+        <div className="absolute top-4 left-4 right-4 z-[600] flex items-center justify-between gap-2 p-3 rounded-2xl bg-black/90 backdrop-blur-xl border border-gold-primary pointer-events-auto">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="w-2.5 h-2.5 rounded-full bg-gold-primary animate-pulse shrink-0" />
+            <span className="text-xs font-bold text-white truncate">
+              {tracingType === 'marathon' ? '🏃 Tracing Marathon Course' : '↩️ Tracing Detour Bypass'}: {tracedWaypoints.length} points
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('click');
+                setTracedWaypoints(prev => prev.slice(0, -1));
+              }}
+              disabled={!tracedWaypoints.length}
+              className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold disabled:opacity-40"
+            >
+              Undo ↩
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('click');
+                setTracedWaypoints([]);
+              }}
+              disabled={!tracedWaypoints.length}
+              className="px-2.5 py-1.5 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 text-[11px] font-bold disabled:opacity-40"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                playTactileSound('success');
+                setTracingType(null);
+                setShowDropVibeModal(true);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-gold-primary text-black font-black text-[11px] uppercase tracking-wider"
+            >
+              Done & Attach ➔
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Map Target Canvas */}
  {/* Sized by width/height, not `absolute inset-0`: maplibre-gl.css makes the container position: relative. */}
  <div ref={mapContainerRef} className="w-full h-full" role="region" aria-label="Vibe map" />
 
@@ -863,7 +910,41 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  </div>
  </div>
 
- {/* Telemetry: what's on the map, and where the map is looking */}
+ {/* Civic Spotter Proximity Check-in Prompt */}
+      {nearbyClosure && (
+        <div className="absolute bottom-24 md:bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[550] p-3 rounded-2xl bg-black/90 backdrop-blur-xl border border-amber-500/40 flex items-center justify-between gap-3 text-white pointer-events-auto">
+          <div className="overflow-hidden">
+            <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+              📍 Civic Spot Check (Within 450m)
+            </span>
+            <p className="text-xs font-bold truncate">{nearbyClosure.label || 'Road Closure Scene'} — Still blocked?</p>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={async () => {
+                playTactileSound('pop');
+                setDismissedSpotterId(nearbyClosure.id);
+                try { await verifyZone(nearbyClosure.id, 'confirm'); } catch {}
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-emerald-500 text-black font-black text-[11px]"
+            >
+              Blocked 👍
+            </button>
+            <button
+              onClick={async () => {
+                playTactileSound('tab');
+                setDismissedSpotterId(nearbyClosure.id);
+                try { await verifyZone(nearbyClosure.id, 'dispute'); } catch {}
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-blue-500 text-white font-black text-[11px]"
+            >
+              Clear ✅
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Telemetry: what's on the map, and where the map is looking */}
  <div className="hidden md:block absolute left-4 bottom-[76px] z-[500] pointer-events-none">
  <div className="fm-glass fm-telemetry flex items-center gap-2.5 px-3 py-2 rounded-xl bg-black/65 border border-white/10 text-gray-200">
  <span className="fm-live-dot" aria-hidden="true" />

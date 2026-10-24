@@ -48,17 +48,33 @@ test('parseZoneDetails infers event type from natural language keywords', () => 
   assert.strictEqual(p4.eventType, 'accident')
 })
 
-test('formatZoneNote produces clean structured tag serialization', () => {
+test('parseZoneDetails extracts pointsman status and custom waypoints geometry', () => {
+  const p = parseZoneDetails({
+    kind: 'alert',
+    label: 'Dead Robots with Volunteer',
+    note: '[POINTSMAN: volunteer] [ROUTE_GEO: 28.0305,-26.1926;28.0350,-26.1950] Volunteer on duty'
+  })
+  assert.strictEqual(p.pointsmanStatus, 'volunteer')
+  assert.ok(p.routeCoordinates)
+  assert.strictEqual(p.routeCoordinates.length, 2)
+  assert.strictEqual(p.routeCoordinates[0][0], 28.0305)
+})
+
+test('formatZoneNote produces clean structured tag serialization including geometry', () => {
   const formatted = formatZoneNote({
-    eventType: 'funeral',
+    eventType: 'marathon',
     trafficDensity: 'gridlock',
     detourHint: 'Use 7th Ave bypass',
     corridor: 'Main Rd',
+    pointsmanStatus: 'police',
+    routeCoordinates: [[28.03, -26.19], [28.04, -26.20]],
     userNote: 'Tent on road until 16:00'
   })
 
-  assert.strictEqual(
-    formatted,
-    '[TYPE: funeral] [TRAFFIC: gridlock] [DETOUR: Use 7th Ave bypass] [CORRIDOR: Main Rd] Tent on road until 16:00'
-  )
+  assert.ok(formatted.includes('[TYPE: marathon]'))
+  assert.ok(formatted.includes('[TRAFFIC: gridlock]'))
+  assert.ok(formatted.includes('[DETOUR: Use 7th Ave bypass]'))
+  assert.ok(formatted.includes('[POINTSMAN: police]'))
+  assert.ok(formatted.includes('[ROUTE_GEO: 28.03000,-26.19000;28.04000,-26.20000]'))
+  assert.ok(formatted.includes('Tent on road until 16:00'))
 })

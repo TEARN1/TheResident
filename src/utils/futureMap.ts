@@ -188,3 +188,72 @@ export function marathonCorridorPolyline(point: LatLon, radiusM = 550, steps = 3
   }
   return pts
 }
+
+export interface SmartDetourPlan {
+  bypassPoint: LatLon
+  farPoint: LatLon
+  arcCoordinates: LngLatTuple[]
+  googleMapsUrl: string
+  wazeUrl: string
+  delaySavingsMinutes: number
+}
+
+/**
+ * Calculates a spatial smart bypass detour route avoiding a hazard or street closure,
+ * with pre-formatted Google Maps / Waze deep links with bypass waypoints.
+ */
+export function calculateSmartDetour(
+  origin: LatLon,
+  blockedSpot: LatLon,
+  detourHint?: string | null
+): SmartDetourPlan {
+  const dx = blockedSpot.lon - origin.lon
+  const dy = blockedSpot.lat - origin.lat
+  const dist = Math.sqrt(dx * dx + dy * dy) || 0.001
+  const ux = dx / dist, uy = dy / dist
+  const px = -uy, py = ux // perpendicular vector
+  const offsetDeg = 350 / 111_320
+  const bypassPoint: LatLon = {
+    lat: blockedSpot.lat + py * offsetDeg,
+    lon: blockedSpot.lon + px * offsetDeg,
+  }
+  const farPoint: LatLon = {
+    lat: blockedSpot.lat + uy * (300 / 111_320),
+    lon: blockedSpot.lon + ux * (300 / 111_320),
+  }
+  const arcCoordinates: LngLatTuple[] = [
+    [origin.lon, origin.lat],
+    [bypassPoint.lon, bypassPoint.lat],
+    [farPoint.lon, farPoint.lat],
+  ]
+  const destinationQuery = detourHint ? encodeURIComponent(detourHint) : `${farPoint.lat},${farPoint.lon}`
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lon}&destination=${destinationQuery}&waypoints=${bypassPoint.lat},${bypassPoint.lon}&travelmode=driving`
+  const wazeUrl = `https://waze.com/ul?ll=${bypassPoint.lat},${bypassPoint.lon}&navigate=yes`
+  return {
+    bypassPoint,
+    farPoint,
+    arcCoordinates,
+    googleMapsUrl,
+    wazeUrl,
+    delaySavingsMinutes: 20,
+  }
+}
+
+export type ZoneTimeStatus = 'active' | 'upcoming' | 'expired'
+
+/**
+ * Evaluates whether a zone is active, upcoming, or expired relative to a future time horizon.
+ */
+export function zoneTimeStatus(
+  zone: { startsAt?: string | null; endsAt: string | null },
+  horizonHours = 0,
+  now: Date = new Date()
+): ZoneTimeStatus {
+  const targetMs = now.getTime() + horizonHours * 3600_000
+  const endsMs = zone.endsAt ? new Date(zone.endsAt).getTime() : Infinity
+  const startsMs = zone.startsAt ? new Date(zone.startsAt).getTime() : -Infinity
+
+  if (targetMs > endsMs) return 'expired'
+  if (targetMs < startsMs) return 'upcoming'
+  return 'active'
+}

@@ -13,6 +13,8 @@ import {
   rankHotspots,
   detourBypassArc,
   marathonCorridorPolyline,
+  calculateSmartDetour,
+  zoneTimeStatus,
 } from './futureMap'
 
 // Wednesday 8 Oct 2026, 20:00 local time.
@@ -109,4 +111,29 @@ test('marathonCorridorPolyline produces a closed loop corridor', () => {
   const loop = marathonCorridorPolyline(p, 500, 24);
   assert.strictEqual(loop.length, 25);
   assert.strictEqual(loop[0][0].toFixed(5), loop[24][0].toFixed(5));
+});
+
+test('calculateSmartDetour generates bypass waypoints and navigation urls', () => {
+  const user = { lat: -26.1950, lon: 28.0300 };
+  const blocked = { lat: -26.1926, lon: 28.0305 };
+  const plan = calculateSmartDetour(user, blocked, '7th Ave bypass');
+  assert.ok(plan.bypassPoint);
+  assert.ok(plan.googleMapsUrl.includes('waypoints='));
+  assert.ok(plan.wazeUrl.includes('waze.com'));
+  assert.strictEqual(plan.delaySavingsMinutes, 20);
+});
+
+test('zoneTimeStatus detects active, upcoming and expired horizons', () => {
+  const base = new Date('2026-10-24T10:00:00Z');
+  const zone = {
+    startsAt: '2026-10-24T14:00:00Z',
+    endsAt: '2026-10-24T20:00:00Z',
+  };
+
+  // At horizon = 0 (10:00), zone is upcoming
+  assert.strictEqual(zoneTimeStatus(zone, 0, base), 'upcoming');
+  // At horizon = 5 (15:00), zone is active
+  assert.strictEqual(zoneTimeStatus(zone, 5, base), 'active');
+  // At horizon = 12 (22:00), zone is expired
+  assert.strictEqual(zoneTimeStatus(zone, 12, base), 'expired');
 });

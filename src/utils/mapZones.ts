@@ -23,11 +23,14 @@ export interface SharedZone {
   lon: number
   confirmCount: number
   disputeCount: number
+  startsAt: string | null
   endsAt: string | null
+  coordinates?: [number, number][] | null // [lon, lat] pairs for line geometry
 }
 
 export type TrafficDensity = 'normal' | 'moderate' | 'heavy' | 'gridlock'
 export type ZoneEventType = 'funeral' | 'party' | 'marathon' | 'accident' | 'dead_robots' | 'roadwork' | 'general'
+export type PointsmanStatus = 'police' | 'volunteer' | 'none'
 
 export interface ParsedZoneDetails {
   trafficDensity: TrafficDensity | null
@@ -36,6 +39,25 @@ export interface ParsedZoneDetails {
   corridor: string | null
   cleanNote: string
   displayLabel: string
+  pointsmanStatus: PointsmanStatus | null
+  routeCoordinates: [number, number][] | null
+  detourCoordinates: [number, number][] | null
+}
+
+function parseCoordsString(str: string): [number, number][] | null {
+  try {
+    const pairs = str.split(';').map(s => s.trim()).filter(Boolean)
+    const out: [number, number][] = []
+    for (const pair of pairs) {
+      const parts = pair.split(',').map(n => Number(n.trim()))
+      if (parts.length === 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+        out.push([parts[0], parts[1]])
+      }
+    }
+    return out.length >= 2 ? out : null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -56,6 +78,9 @@ export function parseZoneDetails(zone: {
   const detourMatch = /\[DETOUR:\s*([^\]]+)\]/i.exec(rawNote)
   const typeMatch = /\[TYPE:\s*([^\]]+)\]/i.exec(rawNote)
   const corridorMatch = /\[CORRIDOR:\s*([^\]]+)\]/i.exec(rawNote)
+  const pointsmanMatch = /\[POINTSMAN:\s*([^\]]+)\]/i.exec(rawNote)
+  const routeGeoMatch = /\[ROUTE_GEO:\s*([^\]]+)\]/i.exec(rawNote)
+  const detourGeoMatch = /\[DETOUR_GEO:\s*([^\]]+)\]/i.exec(rawNote)
 
   // 2. Traffic Density mapping
   let trafficDensity: TrafficDensity | null = null
@@ -89,15 +114,33 @@ export function parseZoneDetails(zone: {
     else if (/road closed|construction|sinkhole|pothole/i.test(combined)) eventType = 'roadwork'
   }
 
-  // 4. Clean note by removing bracketed tags
+  // 4. Pointsman status inference
+  let pointsmanStatus: PointsmanStatus | null = null
+  if (pointsmanMatch) {
+    const p = pointsmanMatch[1].toLowerCase()
+    if (p.includes('police') || p.includes('metro')) pointsmanStatus = 'police'
+    else if (p.includes('vol') || p.includes('outsur') || p.includes('yes')) pointsmanStatus = 'volunteer'
+    else if (p.includes('none') || p.includes('no')) pointsmanStatus = 'none'
+  } else if (eventType === 'dead_robots') {
+    if (/pointsman|police|outsurance/i.test(combined)) pointsmanStatus = 'volunteer'
+  }
+
+  // 5. Waypoints parsing
+  const routeCoordinates = routeGeoMatch ? parseCoordsString(routeGeoMatch[1]) : null
+  const detourCoordinates = detourGeoMatch ? parseCoordsString(detourGeoMatch[1]) : null
+
+  // 6. Clean note by removing bracketed tags
   const cleanNote = rawNote
     .replace(/\[TRAFFIC:\s*[^\]]+\]/gi, '')
     .replace(/\[DETOUR:\s*[^\]]+\]/gi, '')
     .replace(/\[TYPE:\s*[^\]]+\]/gi, '')
     .replace(/\[CORRIDOR:\s*[^\]]+\]/gi, '')
+    .replace(/\[POINTSMAN:\s*[^\]]+\]/gi, '')
+    .replace(/\[ROUTE_GEO:\s*[^\]]+\]/gi, '')
+    .replace(/\[DETOUR_GEO:\s*[^\]]+\]/gi, '')
     .trim()
 
-  // 5. User-friendly display label
+  // 7. User-friendly display label
   let displayLabel = rawLabel
   if (!displayLabel) {
     switch (eventType) {
@@ -121,6 +164,9 @@ export function parseZoneDetails(zone: {
     corridor: corridorMatch ? corridorMatch[1].trim() : null,
     cleanNote: cleanNote || displayLabel,
     displayLabel,
+    pointsmanStatus,
+    routeCoordinates,
+    detourCoordinates,
   }
 }
 
@@ -133,6 +179,9 @@ export function formatZoneNote(args: {
   detourHint?: string
   eventType?: ZoneEventType
   corridor?: string
+  pointsmanStatus?: PointsmanStatus | null
+  routeCoordinates?: [number, number][] | null
+  detourCoordinates?: [number, number][] | null
 }): string {
   const parts: string[] = []
   if (args.eventType && args.eventType !== 'general') {
@@ -146,6 +195,15 @@ export function formatZoneNote(args: {
   }
   if (args.corridor && args.corridor.trim()) {
     parts.push(`[CORRIDOR: ${args.corridor.trim()}]`)
+  }
+  if (args.pointsmanStatus) {
+    parts.push(`[POINTSMAN: ${args.pointsmanStatus}]`)
+  }
+  if (args.routeCoordinates && args.routeCoordinates.length >= 2) {
+    parts.push(`[ROUTE_GEO: ${args.routeCoordinates.map(p => `${p[0].toFixed(5)},${p[1].toFixed(5)}`).join(';')}]`)
+  }
+  if (args.detourCoordinates && args.detourCoordinates.length >= 2) {
+    parts.push(`[DETOUR_GEO: ${args.detourCoordinates.map(p => `${p[0].toFixed(5)},${p[1].toFixed(5)}`).join(';')}]`)
   }
   if (args.userNote && args.userNote.trim()) {
     parts.push(args.userNote.trim())
@@ -170,15 +228,31 @@ function geojsonPoint(g: GeoJsonGeometry | null): [number, number] | null {
   return [Number(c[1]), Number(c[0])] // [lat, lon]
 }
 
+function geojsonLineCoords(g: GeoJsonGeometry | null): [number, number][] | null {
+  if (!g) return null
+  if (g.type === 'LineString' && Array.isArray(g.coordinates)) {
+    const out: [number, number][] = []
+    for (const pt of g.coordinates) {
+      if (Array.isArray(pt) && pt.length >= 2) {
+        out.push([Number(pt[0]), Number(pt[1])]) // [lon, lat]
+      }
+    }
+    return out.length >= 2 ? out : null
+  }
+  return null
+}
+
 export async function fetchSharedZones(
   lat: number,
   lon: number,
-  radiusM = 8000
+  radiusM = 8000,
+  atTime: Date | string = new Date()
 ): Promise<SharedZone[]> {
   if (!supabase || lat == null || lon == null) return []
   try {
+    const atIso = typeof atTime === 'string' ? atTime : atTime.toISOString()
     const { data, error } = await supabase.rpc('zones_near', {
-      p_lat: lat, p_lng: lon, p_radius_m: radiusM, p_at: new Date().toISOString(),
+      p_lat: lat, p_lng: lon, p_radius_m: radiusM, p_at: atIso,
     })
     if (error) throw error
     const out: SharedZone[] = []
@@ -192,7 +266,9 @@ export async function fetchSharedZones(
         label: z.label, note: z.note, status: z.status,
         severity: z.severity, lat: p[0], lon: p[1],
         confirmCount: z.confirm_count || 0, disputeCount: z.dispute_count || 0,
+        startsAt: z.starts_at || null,
         endsAt: z.ends_at || null,
+        coordinates: geojsonLineCoords(g),
       })
     }
     return out

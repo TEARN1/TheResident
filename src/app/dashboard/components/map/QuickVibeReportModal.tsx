@@ -9,7 +9,7 @@ import {
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import {
   reportZone, formatZoneNote, type ReportableZoneKind,
-  type TrafficDensity, type ZoneEventType
+  type TrafficDensity, type ZoneEventType, type PointsmanStatus
 } from '../../../../utils/mapZones'
 
 interface QuickVibeReportModalProps {
@@ -17,6 +17,9 @@ interface QuickVibeReportModalProps {
   onClose: () => void
   currentCoords: { lat: number; lon: number } | null
   onReportSuccess: () => void
+  tracedWaypoints?: [number, number][] | null
+  onStartTracing?: (type: 'marathon' | 'detour') => void
+  onClearWaypoints?: () => void
 }
 
 type VibeCategory =
@@ -33,7 +36,10 @@ export default function QuickVibeReportModal({
   isOpen,
   onClose,
   currentCoords,
-  onReportSuccess
+  onReportSuccess,
+  tracedWaypoints,
+  onStartTracing,
+  onClearWaypoints
 }: QuickVibeReportModalProps) {
   const [category, setCategory] = useState<VibeCategory>('funeral_closure')
   const [title, setTitle] = useState('')
@@ -41,6 +47,7 @@ export default function QuickVibeReportModal({
   const [trafficDensity, setTrafficDensity] = useState<TrafficDensity>('gridlock')
   const [detourHint, setDetourHint] = useState('')
   const [corridor, setCorridor] = useState('')
+  const [pointsmanStatus, setPointsmanStatus] = useState<PointsmanStatus | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -182,7 +189,10 @@ export default function QuickVibeReportModal({
         trafficDensity,
         detourHint: detourHint.trim() || undefined,
         eventType: selectedOpt.eventType,
-        corridor: corridor.trim() || undefined
+        corridor: corridor.trim() || undefined,
+        pointsmanStatus: category === 'dead_robots' ? pointsmanStatus : null,
+        routeCoordinates: category === 'marathon_route' && tracedWaypoints && tracedWaypoints.length >= 2 ? tracedWaypoints : null,
+        detourCoordinates: detourHint && tracedWaypoints && tracedWaypoints.length >= 2 ? tracedWaypoints : null
       })
 
       await reportZone({
@@ -319,6 +329,41 @@ export default function QuickVibeReportModal({
               />
             </div>
 
+            {/* Pointsman Status for Dead Robots */}
+            {category === 'dead_robots' && (
+              <div className="space-y-1.5 p-3 rounded-2xl bg-yellow-500/10 border border-yellow-500/30">
+                <label className="text-[10px] text-yellow-300 uppercase font-black tracking-wider block">
+                  Intersection Traffic Control (Pointsman Status)
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { key: 'police' as PointsmanStatus, label: '👮 Metro Police' },
+                    { key: 'volunteer' as PointsmanStatus, label: '🦺 Volunteer Pointsman' },
+                    { key: 'none' as PointsmanStatus, label: '⚠️ None (4-Way Stop)' },
+                  ].map(p => {
+                    const active = pointsmanStatus === p.key;
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => {
+                          playTactileSound('click');
+                          setPointsmanStatus(active ? null : p.key);
+                        }}
+                        className={`py-2 px-1 text-center rounded-xl border text-[10px] font-bold transition-all ${
+                          active
+                            ? 'border-yellow-400 bg-yellow-400/20 text-yellow-300'
+                            : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Detour Suggestion */}
             <div className="space-y-1">
               <label className="text-[10px] text-gray-400 uppercase font-black tracking-wider">
@@ -334,11 +379,11 @@ export default function QuickVibeReportModal({
               />
             </div>
 
-            {/* Marathon Corridor if race route */}
+            {/* Marathon Corridor & Interactive Map Tracing */}
             {category === 'marathon_route' && (
-              <div className="space-y-1">
-                <label className="text-[10px] text-gray-400 uppercase font-black tracking-wider">
-                  Course Corridor Waypoints
+              <div className="space-y-2 p-3 rounded-2xl bg-orange-500/10 border border-orange-500/30">
+                <label className="text-[10px] text-orange-300 uppercase font-black tracking-wider block">
+                  Course Corridor & Route Plotting
                 </label>
                 <input
                   type="text"
@@ -348,6 +393,37 @@ export default function QuickVibeReportModal({
                   maxLength={120}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-gold-primary/50"
                 />
+
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <span className="text-[11px] text-gray-300">
+                    {tracedWaypoints && tracedWaypoints.length >= 2
+                      ? `📍 ${tracedWaypoints.length} Course Waypoints Traced`
+                      : 'Trace course corridor by tapping on map'}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {tracedWaypoints && tracedWaypoints.length >= 2 && onClearWaypoints && (
+                      <button
+                        type="button"
+                        onClick={onClearWaypoints}
+                        className="px-2.5 py-1 rounded-xl bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    {onStartTracing && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playTactileSound('click');
+                          onStartTracing('marathon');
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-orange-500 text-black font-black text-[11px] uppercase tracking-wider hover:bg-orange-400 transition-all"
+                      >
+                        {tracedWaypoints && tracedWaypoints.length >= 2 ? 'Edit Traced Course' : 'Trace On Map ↗'}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

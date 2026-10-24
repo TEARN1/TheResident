@@ -7,7 +7,8 @@ import {
   ThumbsUp, CheckCircle, AlertTriangle, Car, Flag, Home, Zap
 } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
-import { verifyZone, type TrafficDensity, type ZoneEventType } from '../../../../utils/mapZones'
+import { verifyZone, type TrafficDensity, type ZoneEventType, type PointsmanStatus } from '../../../../utils/mapZones'
+import { calculateSmartDetour } from '../../../../utils/futureMap'
 import Link from 'next/link'
 
 export type VibeType = 'nightlife' | 'housing' | 'safety' | 'chill' | 'poi'
@@ -36,6 +37,9 @@ export interface VibeItem {
   detourHint?: string | null
   eventType?: ZoneEventType
   corridor?: string | null
+  pointsmanStatus?: PointsmanStatus | null
+  routeCoordinates?: [number, number][] | null
+  detourCoordinates?: [number, number][] | null
 }
 
 interface VibeBottomSheetProps {
@@ -134,9 +138,15 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
   }
 
   const cleanDirectionsUrl = `https://maps.google.com/?q=${item.lat},${item.lon}`
-  const detourDirectionsUrl = item.detourHint
-    ? `https://maps.google.com/?q=${encodeURIComponent(item.detourHint)}`
-    : cleanDirectionsUrl
+  const detourPlan = (item.detourHint || item.trafficDensity === 'gridlock' || item.type === 'safety')
+    ? calculateSmartDetour(
+        { lat: item.lat - 0.005, lon: item.lon - 0.005 },
+        { lat: item.lat, lon: item.lon },
+        item.detourHint
+      )
+    : null
+  const detourDirectionsUrl = detourPlan?.googleMapsUrl || cleanDirectionsUrl
+  const wazeDetourUrl = detourPlan?.wazeUrl || `https://waze.com/ul?ll=${item.lat},${item.lon}&navigate=yes`
 
   const getTrafficBadge = (density: TrafficDensity) => {
     switch (density) {
@@ -202,37 +212,69 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
           </p>
         )}
 
-        {/* Suggested Detour Bypass Card */}
-        {item.detourHint && (
-          <div className="p-3 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 flex items-start justify-between gap-3">
-            <div className="space-y-0.5">
-              <span className="text-[9px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1">
-                <CornerUpRight size={11} /> Suggested Detour Bypass
+        {/* Smart Detour Bypass Visualizer */}
+        {(item.detourHint || item.trafficDensity === 'gridlock' || item.type === 'safety') && (
+          <div className="p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/40 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
+                <CornerUpRight size={12} className="text-cyan-400" /> Smart Detour Guidance
               </span>
-              <p className="text-xs font-bold text-white">{item.detourHint}</p>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                ⚡ Saves ~{detourPlan?.delaySavingsMinutes || 20}m delay
+              </span>
             </div>
-            <a
-              href={detourDirectionsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => playTactileSound('click')}
-              className="px-2.5 py-1.5 rounded-xl bg-cyan-500 text-black font-black text-[10px] uppercase tracking-wider hover:bg-cyan-400 transition-all shrink-0"
-            >
-              Route Bypass
-            </a>
+
+            <div className="p-2.5 rounded-xl bg-black/50 border border-white/10 space-y-1 text-xs">
+              <div className="flex items-center gap-2 text-red-300">
+                <span className="font-black text-[10px] uppercase tracking-wider text-red-400 shrink-0">Blocked:</span>
+                <span className="truncate">{item.title}</span>
+              </div>
+              <div className="flex items-center gap-2 text-cyan-200">
+                <span className="font-black text-[10px] uppercase tracking-wider text-cyan-400 shrink-0">Bypass:</span>
+                <span className="font-bold truncate">{item.detourHint || 'Adjacent Street Detour Arc'}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-0.5">
+              <a
+                href={detourDirectionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => playTactileSound('click')}
+                className="flex-1 py-2 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-[11px] uppercase tracking-wider text-center transition-all"
+              >
+                Google Maps Bypass ↗
+              </a>
+              <a
+                href={wazeDetourUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => playTactileSound('click')}
+                className="py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold text-[11px] uppercase tracking-wider text-center transition-all"
+              >
+                Waze ↗
+              </a>
+            </div>
           </div>
         )}
 
         {/* Marathon Race Corridor Card */}
-        {item.corridor && (
-          <div className="p-3 rounded-2xl bg-orange-950/40 border border-orange-500/30 flex items-center gap-2">
-            <Flag size={14} className="text-orange-400 shrink-0" />
-            <div className="overflow-hidden">
-              <span className="text-[9px] font-black uppercase tracking-wider text-orange-400 block">
-                Active Race Corridor
-              </span>
-              <p className="text-xs font-bold text-white truncate">{item.corridor}</p>
+        {(item.corridor || item.routeCoordinates) && (
+          <div className="p-3 rounded-2xl bg-orange-950/40 border border-orange-500/30 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 overflow-hidden">
+              <Flag size={15} className="text-orange-400 shrink-0" />
+              <div className="overflow-hidden">
+                <span className="text-[9px] font-black uppercase tracking-wider text-orange-400 block">
+                  Active Race Corridor
+                </span>
+                <p className="text-xs font-bold text-white truncate">{item.corridor || 'Marathon Course'}</p>
+              </div>
             </div>
+            {item.routeCoordinates && item.routeCoordinates.length >= 2 && (
+              <span className="text-[10px] font-black text-orange-300 bg-orange-500/20 px-2 py-1 rounded-lg border border-orange-500/40 shrink-0">
+                {item.routeCoordinates.length} Waypoints
+              </span>
+            )}
           </div>
         )}
 
