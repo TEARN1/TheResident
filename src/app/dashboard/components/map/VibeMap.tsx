@@ -119,6 +119,31 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  // Bumped on every style load: layers were (re)installed, so re-apply visibility.
  const [styleEpoch, setStyleEpoch] = useState(0)
 
+  // 4D Time Horizon & Interactive Tracing State
+  const [timeHorizonHours, setTimeHorizonHours] = useState<number>(0)
+  const [tracingType, setTracingType] = useState<'marathon' | 'detour' | null>(null)
+  const [tracedWaypoints, setTracedWaypoints] = useState<[number, number][]>([])
+  const tracingTypeRef = useRef(tracingType)
+  tracingTypeRef.current = tracingType
+  const [dismissedSpotterId, setDismissedSpotterId] = useState<string | null>(null)
+
+  // Proximity Civic Spotter Check-in (within 450m of a road closure)
+  const nearbyClosure = useMemo(() => {
+    if (!userLoc || !sharedZones.length) return null
+    for (const zone of sharedZones) {
+      if (zone.id === dismissedSpotterId) continue
+      const isClosure = zone.kind === 'road_closed' || zone.kind === 'heavy_traffic' || zone.kind === 'detour'
+      if (!isClosure) continue
+      const latDist = (zone.lat - userLoc.lat) * 111320
+      const lonDist = (zone.lon - userLoc.lon) * 111320 * Math.cos(userLoc.lat * Math.PI / 180)
+      const distM = Math.hypot(latDist, lonDist)
+      if (distM <= 450) {
+        return { ...zone, distanceM: Math.round(distM) }
+      }
+    }
+    return null
+  }, [userLoc, sharedZones, dismissedSpotterId])
+
  const searchParams = useSearchParams()
  const queryLat = searchParams ? parseFloat(searchParams.get('lat') || '') : NaN
  const queryLon = searchParams ? parseFloat(searchParams.get('lon') || '') : NaN
@@ -161,24 +186,25 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  }, [queryLat, queryLon])
 
  // 2. Fetch Gruvs events & Shared community zones
- const loadData = async (lat: number, lon: number) => {
- try {
- const [events, zones] = await Promise.all([
- fetchUpcomingGruvsEvents(60).catch(() => []),
- fetchSharedZones(lat, lon, 15000).catch(() => [])
- ])
- setGruvsEvents(events)
- setEventsAt(Date.now())
- setSharedZones(zones)
- } catch {
- // Silently handle offline or network hiccups
- }
- }
+ const loadData = async (lat: number, lon: number, horizonHours: number = timeHorizonHours) => {
+    try {
+      const targetTime = horizonHours > 0 ? new Date(Date.now() + horizonHours * 3600 * 1000) : new Date()
+      const [events, zones] = await Promise.all([
+        fetchUpcomingGruvsEvents(60).catch(() => []),
+        fetchSharedZones(lat, lon, 15000, targetTime).catch(() => [])
+      ])
+      setGruvsEvents(events)
+      setEventsAt(Date.now())
+      setSharedZones(zones)
+    } catch {
+      // Silently handle offline or network hiccups
+    }
+  }
 
- useEffect(() => {
- if (!center) return
- loadData(center.lat, center.lon)
- }, [center])
+  useEffect(() => {
+    if (!center) return
+    loadData(center.lat, center.lon, timeHorizonHours)
+  }, [center, timeHorizonHours])
 
  // 3. MapLibre lifecycle — created once geolocation resolves.
  useEffect(() => {
@@ -597,6 +623,11 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  },
  onMapClick: (feature, coords) => {
  const map = mapRef.current
+    if (tracingTypeRef.current) {
+      playTactileSound('click')
+      setTracedWaypoints(prev => [...prev, [coords.lon, coords.lat]])
+      return
+    }
  if (feature) {
  const id = String(feature.properties?.id ?? '')
  switch (feature.layer.id) {
@@ -1024,13 +1055,20 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
  {/* Quick Vibe Dropper Modal */}
  <QuickVibeReportModal
- isOpen={showDropVibeModal}
- onClose={() => setShowDropVibeModal(false)}
- currentCoords={pendingTapCoords || center}
- onReportSuccess={() => {
- if (center) loadData(center.lat, center.lon)
- }}
- />
+    isOpen={showDropVibeModal}
+    onClose={() => setShowDropVibeModal(false)}
+    currentCoords={pendingTapCoords || center}
+    onReportSuccess={() => {
+      setTracedWaypoints([])
+      if (center) loadData(center.lat, center.lon)
+    }}
+    tracedWaypoints={tracedWaypoints}
+    onStartTracing={type => {
+      setShowDropVibeModal(false)
+      setTracingType(type)
+    }}
+    onClearWaypoints={() => setTracedWaypoints([])}
+  />
  </div>
  )
 }
