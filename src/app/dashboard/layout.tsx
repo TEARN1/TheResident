@@ -80,6 +80,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   // Guest banner dismissal
   const [guestBannerDismissed, setGuestBannerDismissed] = useState(true)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount
     setGuestBannerDismissed(typeof window !== 'undefined' && sessionStorage.getItem('guestBannerDismissed') === '1')
   }, [])
   const dismissGuestBanner = () => {
@@ -91,6 +92,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const [nokStatus, setNokStatus] = useState<NextOfKinStatus | null>(null)
   const [nokBannerDismissed, setNokBannerDismissed] = useState(true)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from sessionStorage on mount
     setNokBannerDismissed(typeof window !== 'undefined' && sessionStorage.getItem('nokBannerDismissed') === '1')
   }, [])
   const dismissNokBanner = () => {
@@ -115,6 +117,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       const valid = ['minimal-green', 'crimson-cyber', 'liquid-glass', 'midnight-violet', 'light', 'night']
       if (stored && valid.includes(stored)) {
         document.documentElement.setAttribute('data-theme', stored)
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- apply stored theme
         setCurrentTheme(stored)
       } else {
         document.documentElement.setAttribute('data-theme', 'minimal-green')
@@ -122,6 +125,64 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       }
     }
   }, [])
+
+  // Session bootstrap: restore existing Supabase user or activate guest visitor
+  useEffect(() => {
+    if (currentUser) return
+    let cancelled = false
+    const bootstrapSession = async () => {
+      try {
+        if (supabase) {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user && !cancelled) {
+            await supabase.rpc('ensure_res_profile').then(() => {}, () => {})
+            const { data: dbProfile } = await supabase
+              .from('res_profiles')
+              .select('role, bio, created_at')
+              .eq('id', user.id)
+              .single()
+            if (!cancelled) {
+              dispatch(loginUser({
+                id: user.id,
+                name: user.user_metadata?.name || 'Resident User',
+                email: user.email || '',
+                role: (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor',
+                createdAt: dbProfile?.created_at || undefined
+              }))
+              if ((dbProfile?.role || 'visitor') === 'visitor' && !dbProfile?.bio) {
+                router.push('/auth/onboarding')
+              }
+              return
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Session bootstrap error:', err)
+      }
+
+      if (!cancelled) {
+        if (typeof document !== 'undefined') {
+          document.cookie = `guest-mode=1; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`
+        }
+        dispatch(loginUser({
+          id: GUEST_USER_ID,
+          name: 'Guest Visitor',
+          email: 'visitor@theresidentcrew.com',
+          role: 'visitor' as const
+        }))
+      }
+    }
+    bootstrapSession()
+    return () => { cancelled = true }
+  }, [currentUser, dispatch, router])
+
+  // Guests can read public listings:
+  useEffect(() => {
+    if (isGuest) {
+      const appDispatch = dispatch as AppDispatch
+      appDispatch(fetchPublicListings())
+    }
+  }, [isGuest, dispatch])
 
   useEffect(() => {
     if (currentUser) trackVisitOnce({ guest: isGuest })

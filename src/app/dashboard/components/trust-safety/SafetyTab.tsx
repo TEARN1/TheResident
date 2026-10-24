@@ -96,7 +96,7 @@ export default function SafetyTab({
   const [safeConfirmed, setSafeConfirmed] = useState(false)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [sosHoldProgress, setSosHoldProgress] = useState(0)
-  const holdIntervalRef = React.useRef<any>(null)
+  const holdIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
 
   const startSosHold = () => {
     if (holdIntervalRef.current) clearInterval(holdIntervalRef.current)
@@ -107,8 +107,10 @@ export default function SafetyTab({
       const pct = Math.min(100, Math.round((elapsed / 2500) * 100))
       setSosHoldProgress(pct)
       if (pct >= 100) {
-        clearInterval(holdIntervalRef.current)
-        holdIntervalRef.current = null
+        if (holdIntervalRef.current) {
+          clearInterval(holdIntervalRef.current)
+          holdIntervalRef.current = null
+        }
         onRaiseAlert?.({ kind: 'panic', title: 'Urgent: help needed', description: 'A neighbour needs help now.', severity: 'critical' })
         setConfirmPanic(false)
         setSosHoldProgress(0)

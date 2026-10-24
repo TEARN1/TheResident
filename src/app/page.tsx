@@ -1,7 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, CheckCircle2, Download, Home, LogIn, MapPin, Search, ShieldCheck, Smartphone, Sparkles, Wrench } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Compass, Download, Home, LogIn, MapPin, Search, ShieldCheck, Smartphone, Sparkles, Wrench } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import styles from './page.module.css'
@@ -56,15 +56,18 @@ export default function HomePage() {
     }
   }, [router])
 
+  const enterApp = (href: string) => {
+    playTactileSound('click')
+    if (typeof document !== 'undefined') {
+      document.cookie = `guest-mode=1; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`
+    }
+    router.push(href)
+  }
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    playTactileSound('click')
     const q = searchQuery.trim()
-    if (q) {
-      router.push(`/dashboard/housing?q=${encodeURIComponent(q)}`)
-    } else {
-      router.push('/dashboard/housing')
-    }
+    enterApp(q ? `/dashboard/housing?q=${encodeURIComponent(q)}` : '/dashboard/housing')
   }
 
   return (
@@ -79,14 +82,36 @@ export default function HomePage() {
           <Image src="/logo.png" alt="" width={32} height={32} style={{ borderRadius: '6px' }} />
           <span>THE RESIDENT</span>
         </div>
-        <Link
-          href="/auth"
-          onClick={() => playTactileSound('click')}
-          className="touch-target-44"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', padding: '0 12px' }}
-        >
-          <LogIn size={15} /> Log in
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={() => enterApp('/dashboard/community?tab=vibemap')}
+            className="touch-target-44"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#000',
+              background: 'var(--gold-primary)',
+              borderRadius: '999px',
+              padding: '6px 14px',
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <Compass size={14} /> Open Live Map
+          </button>
+          <Link
+            href="/auth"
+            onClick={() => playTactileSound('click')}
+            className="touch-target-44"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap', padding: '0 10px' }}
+          >
+            <LogIn size={15} /> Log in
+          </Link>
+        </div>
       </nav>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '2.5rem 1.25rem 1rem', position: 'relative', zIndex: 5 }}>
@@ -101,9 +126,51 @@ export default function HomePage() {
           <span className={styles.goldText}>Know the street you live on.</span>
         </h1>
 
-        <p className={styles.subtitle} style={{ marginBottom: '1.5rem' }}>
+        <p className={styles.subtitle} style={{ marginBottom: '1.25rem' }}>
           Rooms, neighbours and local services in one free community app.
         </p>
+
+        {/* Living Civic Pulse & Vibe Map Hero Portal */}
+        <div
+          onClick={() => enterApp('/dashboard/community?tab=vibemap')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') enterApp('/dashboard/community?tab=vibemap') }}
+          style={{
+            cursor: 'pointer',
+            maxWidth: '520px',
+            width: '100%',
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(5, 31, 32, 0.85) 100%)',
+            border: '1px solid rgba(16, 185, 129, 0.4)',
+            borderRadius: '16px',
+            padding: '14px 18px',
+            marginBottom: '1.25rem',
+            textAlign: 'left',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#34d399' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+              Live Precinct Radar Active
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              The Grooves &times; The Resident <ArrowRight size={13} />
+            </span>
+          </div>
+
+          <p style={{ margin: 0, fontSize: '0.85rem', color: '#e5e7eb', lineHeight: 1.45, fontWeight: 500 }}>
+            Unified live radar: street closures, weekend vibes, funerals, marathon routes, volunteer pointsmen, and grid telemetry.
+          </p>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: '2px' }}>
+            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }}>🚦 Traffic & Detours</span>
+            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }}>🎉 Event Vibes</span>
+            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }}>🏃 Marathon Corridors</span>
+          </div>
+        </div>
 
         {/* Quick Search Bar */}
         <form
@@ -173,10 +240,10 @@ export default function HomePage() {
         >
           <span style={{ fontSize: '0.75rem', color: '#9ca3af', whiteSpace: 'nowrap' }}>Popular:</span>
           {POPULAR_AREAS.map(area => (
-            <Link
+            <button
               key={area}
-              href={`/dashboard/housing?q=${encodeURIComponent(area)}`}
-              onClick={() => playTactileSound('click')}
+              type="button"
+              onClick={() => enterApp(`/dashboard/housing?q=${encodeURIComponent(area)}`)}
               style={{
                 fontSize: '0.75rem',
                 color: '#e5e7eb',
@@ -188,44 +255,47 @@ export default function HomePage() {
                 whiteSpace: 'nowrap',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '4px',
+                cursor: 'pointer'
               }}
             >
               <MapPin size={11} style={{ color: 'var(--gold-primary)' }} />
               {area}
-            </Link>
+            </button>
           ))}
         </div>
 
         {/* Main CTA buttons */}
         <div className={styles.ctaGroup}>
-          <Link
-            href="/dashboard/housing"
-            onClick={() => playTactileSound('click')}
+          <button
+            type="button"
+            onClick={() => enterApp('/dashboard/housing')}
             className="btn-primary touch-target-48"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px 28px', fontSize: '1rem', fontWeight: 800, textDecoration: 'none' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px 28px', fontSize: '1rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
           >
             Find a room <ArrowRight size={17} />
-          </Link>
-          <Link
-            href="/auth?role=landlord"
-            onClick={() => playTactileSound('click')}
+          </button>
+          <button
+            type="button"
+            onClick={() => enterApp('/dashboard/community?tab=vibemap')}
             className="touch-target-48"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px 24px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 800, textDecoration: 'none', color: '#fff', border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px 24px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 800, color: '#fff', border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.06)', cursor: 'pointer' }}
           >
-            List a room free
-          </Link>
+            <Compass size={16} style={{ color: 'var(--gold-primary)' }} /> Explore Live Map
+          </button>
         </div>
 
         {/* Instant guest browse shortcut */}
-        <Link
-          href="/dashboard"
-          onClick={() => playTactileSound('click')}
+        <button
+          type="button"
+          onClick={() => enterApp('/dashboard')}
           style={{
             marginTop: '1.25rem',
             fontSize: '0.85rem',
             color: '#a0a0a0',
-            textDecoration: 'none',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
@@ -234,7 +304,7 @@ export default function HomePage() {
         >
           <Sparkles size={14} style={{ color: 'var(--gold-primary)' }} />
           Browse neighbourhood as guest &rarr;
-        </Link>
+        </button>
 
         {/* Micro-trust indicators strip */}
         <div

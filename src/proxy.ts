@@ -109,15 +109,24 @@ export async function proxy(request: NextRequest) {
       hasValidSession = !!user
     }
 
-    if (!hasValidSession && !isGuest) {
-      // Remember the deep link (a room shared on WhatsApp, an event's
-      // "stay near it" link) so signing in or browsing as a guest lands
-      // there instead of the generic dashboard. Validated by safeNextPath.
+    const isPrivatePersonalRoute = url.pathname.startsWith('/dashboard/messages') || url.pathname.startsWith('/dashboard/profile')
+
+    if (isPrivatePersonalRoute && !hasValidSession) {
+      // Remember deep link for authenticated personal areas
       const wanted = url.pathname + url.search
       url.pathname = '/auth'
       url.search = ''
-      if (wanted !== '/dashboard') url.searchParams.set('next', wanted)
+      url.searchParams.set('next', wanted)
       return NextResponse.redirect(url)
+    }
+
+    if (!hasValidSession && !isGuest) {
+      // Auto-grant guest browsing cookie for public dashboard exploration (Vibe Map, Housing, Services, Town Square)
+      response.cookies.set('guest-mode', '1', {
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30,
+        sameSite: 'lax'
+      })
     }
   }
 
