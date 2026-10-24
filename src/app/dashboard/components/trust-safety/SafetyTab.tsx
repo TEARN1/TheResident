@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
-import { Shield, Activity, Bell, MapPin, CheckCircle2, Droplets, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction, Radio } from 'lucide-react'
+import { Shield, Activity, Bell, MapPin, CheckCircle2, Droplets, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction, Radio, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { outageConsensus, type StatusReport } from '../../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../../store'
@@ -93,6 +93,7 @@ export default function SafetyTab({
 }: SafetyTabProps) {
   const [confirmPanic, setConfirmPanic] = useState(false)
   const [familyBeaconDispatched, setFamilyBeaconDispatched] = useState(false)
+  const [safeConfirmed, setSafeConfirmed] = useState(false)
   const [inviteCopied, setInviteCopied] = useState(false)
   const [sosHoldProgress, setSosHoldProgress] = useState(0)
   const holdIntervalRef = React.useRef<any>(null)
@@ -381,11 +382,27 @@ export default function SafetyTab({
                   : 'Broadcasts an urgent real-time alert with coordinates to all your verified Care Circle contacts.'}
               </span>
             </div>
-            <div className="w-full sm:w-auto flex items-center gap-2">
+            <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
+              {familyBeaconDispatched && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFamilyBeaconDispatched(false);
+                    setSafeConfirmed(true);
+                    setTimeout(() => setSafeConfirmed(false), 5000);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider text-center transition-all active:scale-95 min-h-[44px] flex items-center justify-center gap-1.5 border border-emerald-400/40"
+                  title="Mark myself as safe and stand down beacon"
+                >
+                  <ShieldCheck size={14} />
+                  <span>I Am Safe</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
                   setFamilyBeaconDispatched(true);
+                  setSafeConfirmed(false);
                   const payload = `🚨 EMERGENCY ALERT: Urgent safety signal on The Resident. Area: ${suburb || 'Current location'}. Police: 10111, Cell: 112 [sticker:safe]`;
                   navigator.clipboard.writeText(payload);
                   if (onRaiseAlert) {
@@ -397,12 +414,23 @@ export default function SafetyTab({
                     });
                   }
                 }}
-                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider text-center transition-all active:scale-95 min-h-[44px] flex items-center justify-center shrink-0 border border-red-400/40"
+                className={`w-full sm:w-auto px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider text-center transition-all active:scale-95 min-h-[44px] flex items-center justify-center shrink-0 border ${
+                  familyBeaconDispatched
+                    ? 'bg-red-700 hover:bg-red-600 text-white border-red-400/40'
+                    : 'bg-red-600 hover:bg-red-500 text-white border-red-400/40'
+                }`}
               >
-                {familyBeaconDispatched ? 'Beacon Live (Re-Broadcast)' : 'Broadcast In-App Beacon'}
+                {familyBeaconDispatched ? 'Re-Broadcast Signal' : 'Broadcast In-App Beacon'}
               </button>
             </div>
           </div>
+
+          {safeConfirmed && (
+            <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+              <span>You marked yourself Safe. Your Care Circle has been notified in real time! [sticker:safe]</span>
+            </div>
+          )}
         </div>
 
         {/* Offline Emergency Quick-Dial Handbook */}
@@ -445,20 +473,48 @@ export default function SafetyTab({
           <div className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-3.5 flex items-center justify-between">
             <div>
               <span className="text-xs font-bold text-white block">Nightwalk Escort Mode</span>
-              <span className="text-[11px] text-gray-400">Walking home after dark? Start a 15-min safety timer.</span>
+              <span className="text-[11px] text-gray-400">
+                {nightwalkActive
+                  ? `Safety countdown active (${nightwalkMinutes}m left). Check in upon arrival.`
+                  : 'Walking home after dark? Start a 15-min safety timer.'}
+              </span>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setNightwalkActive(!nightwalkActive);
-                if (!nightwalkActive) setNightwalkMinutes(15);
-              }}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
-                nightwalkActive ? 'bg-red-500 text-white animate-pulse' : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
-            >
-              {nightwalkActive ? `${nightwalkMinutes}m Active` : 'Start Walk'}
-            </button>
+            {nightwalkActive ? (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setNightwalkMinutes(m => m + 5)}
+                  className="px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/10 min-h-[44px]"
+                  title="Extend 5 minutes"
+                >
+                  +5m
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNightwalkActive(false);
+                    setSafeConfirmed(true);
+                    setTimeout(() => setSafeConfirmed(false), 5000);
+                  }}
+                  className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 min-h-[44px] transition-all active:scale-95"
+                  title="I arrived home safely"
+                >
+                  <CheckCircle2 size={13} />
+                  <span>Arrived Safely</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setNightwalkActive(true);
+                  setNightwalkMinutes(15);
+                }}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold transition-all min-h-[44px] bg-white/10 text-white hover:bg-white/20 border border-white/10 active:scale-95"
+              >
+                Start Walk
+              </button>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">

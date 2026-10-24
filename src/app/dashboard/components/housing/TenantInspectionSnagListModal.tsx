@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ClipboardList, X, CheckSquare, Square, Download, Trash2, MessageSquare, Send, Check } from 'lucide-react'
+import { ClipboardList, X, CheckSquare, Square, Download, Trash2, MessageSquare, Send, Check, Printer } from 'lucide-react'
 import Link from 'next/link'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
@@ -116,7 +116,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
 
           {/* Header */}
           <div className="flex items-center gap-3 mb-5 shrink-0">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 flex items-center justify-center text-black shadow-lg">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 border border-gold-primary/30 flex items-center justify-center text-black">
               <ClipboardList size={24} />
             </div>
             <div>
@@ -231,10 +231,22 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleExport}
-                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 "
+                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 min-h-[44px]"
               >
                 <Download size={14} />
                 <span>Export (.txt)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('pop')
+                  if (typeof window !== 'undefined') window.print()
+                }}
+                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 active:scale-95 min-h-[44px]"
+                title="Print inspection snag certificate"
+              >
+                <Printer size={14} />
+                <span>Print</span>
               </button>
               <button
                 onClick={() => {

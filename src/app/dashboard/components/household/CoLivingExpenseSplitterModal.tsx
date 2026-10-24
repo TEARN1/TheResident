@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calculator, X, Plus, Trash2, Users, Copy, Check, MessageSquare, Send } from 'lucide-react'
+import { Calculator, X, Plus, Trash2, Users, Copy, Check, MessageSquare, Send, Wifi } from 'lucide-react'
 import Link from 'next/link'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import { SUPPORTED_CURRENCIES } from '../../../../utils/currencies'
@@ -45,6 +45,8 @@ export default function CoLivingExpenseSplitterModal({
   const [paidRoommates, setPaidRoommates] = useState<number[]>([])
   const [pingedIdx, setPingedIdx] = useState<number | null>(null)
   const [broadcastNotice, setBroadcastNotice] = useState<string | null>(null)
+  const [wifiCopied, setWifiCopied] = useState(false)
+  const isQuietHours = (() => { const h = new Date().getHours(); return h >= 22 || h < 6; })()
 
   const togglePaid = (idx: number) => {
     playTactileSound('click')
@@ -140,7 +142,7 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
 
           {/* Header */}
           <div className="flex items-center gap-3 mb-5 shrink-0">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 flex items-center justify-center text-black shadow-lg">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 border border-gold-primary/30 flex items-center justify-center text-black">
               <Calculator size={24} />
             </div>
             <div>
@@ -157,6 +159,40 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-6 pr-1 custom-scrollbar">
+            {/* Quiet Hours & Fibre Co-Living Status Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                isQuietHours
+                  ? 'bg-purple-950/30 border-purple-500/30 text-purple-200'
+                  : 'bg-white/[0.03] border-white/5 text-gray-300'
+              }`}>
+                <div className="flex items-center gap-2 font-bold">
+                  <span>{isQuietHours ? '🤫' : '☀️'}</span>
+                  <span>{isQuietHours ? 'Quiet Hours Active' : 'Daytime Living'}</span>
+                </div>
+                <span className="text-[10px] opacity-75">{isQuietHours ? '22:00 – 06:00' : 'House active'}</span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 text-gray-300">
+                  <Wifi size={13} className="text-gold-primary" />
+                  <span className="font-bold text-white">House Fibre 5G</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playTactileSound('click');
+                    navigator.clipboard.writeText('ResidentHouse-5G [sticker:wifi]');
+                    setWifiCopied(true);
+                    setTimeout(() => setWifiCopied(false), 2500);
+                  }}
+                  className="px-2 py-0.5 rounded-lg bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary font-bold text-[10px] transition-all"
+                >
+                  {wifiCopied ? 'Copied SSID!' : 'Copy Wi-Fi'}
+                </button>
+              </div>
+            </div>
+
             {/* Currency Selector Bar */}
             <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar">
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider shrink-0">Currency:</span>

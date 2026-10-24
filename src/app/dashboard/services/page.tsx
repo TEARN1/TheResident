@@ -799,6 +799,58 @@ export default function ServicesPage() {
                      <button onClick={() => setSelectedBiz(null)} className="text-gray-500 hover:text-white transition-colors"><X /></button>
                   </div>
                   <form onSubmit={handleDispatchContract} className="space-y-6">
+                     {/* Quick Scope Starters */}
+                     <div className="space-y-1.5">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Quick Scope Starters</span>
+                        <div className="flex flex-wrap gap-1.5">
+                           {[
+                              { label: 'Diagnostic Callout', text: `Hi ${selectedBiz.businessName}, requesting a diagnostic inspection and price estimate in ${selectedBiz.suburb || 'my area'}.` },
+                              { label: 'Bakkie / Moving Job', text: `Hi ${selectedBiz.businessName}, need assistance with moving furniture / household items with a bakkie in ${selectedBiz.suburb || 'my area'} [sticker:bakkie].` },
+                              { label: 'Urgent Repair', text: `Hi ${selectedBiz.businessName}, emergency repair needed for geyser / electricity / plumbing fault at residence.` }
+                           ].map(q => (
+                              <button
+                                 key={q.label}
+                                 type="button"
+                                 onClick={() => {
+                                    playTactileSound('click')
+                                    setHireMessage(q.text)
+                                 }}
+                                 className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-[10px] font-bold text-gray-300 hover:text-white transition-all active:scale-95"
+                              >
+                                 {q.label}
+                              </button>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* Moving Vehicle / Payload Selector if Moving Assist */}
+                     {MOVE_ASSIST_CATEGORIES.includes(selectedBiz.category) && (
+                        <div className="space-y-1.5">
+                           <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Moving Payload Size</span>
+                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                              {[
+                                 { label: 'Single-Cab Bakkie', icon: '🛻' },
+                                 { label: 'Double-Cab Bakkie', icon: '🛻' },
+                                 { label: '1-Ton Enclosed Van', icon: '🚐' },
+                                 { label: 'Helpers Only', icon: '💪' }
+                              ].map(v => (
+                                 <button
+                                    key={v.label}
+                                    type="button"
+                                    onClick={() => {
+                                       playTactileSound('pop')
+                                       setHireMessage(prev => prev ? `${prev} [Payload: ${v.label}]` : `[Payload: ${v.label}] `)
+                                    }}
+                                    className="p-2 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-[10px] font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1.5 transition-all active:scale-95 text-center"
+                                 >
+                                    <span>{v.icon}</span>
+                                    <span className="truncate">{v.label}</span>
+                                 </button>
+                              ))}
+                           </div>
+                        </div>
+                     )}
+
                      <div className="space-y-2">
                         <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Job Details & Scope</label>
                         <textarea value={hireMessage} onChange={e => setHireMessage(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-4 text-sm text-white h-32 resize-none outline-none focus:border-gold-primary/40" placeholder="Explain the problem or help you need, your address, and preferred date..." />

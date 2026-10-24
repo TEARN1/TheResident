@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle, ArrowDown, Copy, Check, Smile, PenLine, Sticker, Eye, WifiOff
+  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle, ArrowDown, Copy, Check, Smile, PenLine, Sticker, Eye, WifiOff, CornerDownLeft, Search
 } from 'lucide-react'
 import { RootState, isGuestUser } from '../../../../store'
 import Link from 'next/link'
@@ -29,7 +29,7 @@ import { useCall } from '../../components/messages/CallProvider'
 import VoiceNotePlayer from '../../components/messages/VoiceNotePlayer'
 import LocationCard from '../../components/messages/LocationCard'
 import { useVoiceRecorder, type Recording } from '../../components/messages/useVoiceRecorder'
-import { RESIDENT_STICKERS, STICKER_MAP, ResidentSticker } from '../../../../utils/residentStickers'
+import { RESIDENT_STICKERS, STICKER_MAP, ResidentSticker, type StickerCategory } from '../../../../utils/residentStickers'
 
 interface DbMessage {
   id: string
@@ -55,8 +55,23 @@ interface ProfileHit {
 type Extra = Partial<Pick<DbMessage, 'message_type' | 'media_url' | 'media_type' | 'latitude' | 'longitude'>>
 
 function renderMessageBody(text: string) {
-  const parts = text.split(/(\[sticker:[a-z0-9-]+\])/i)
-  return parts.map((part, idx) => {
+  let quoteBlock: React.ReactNode = null
+  let bodyContent = text
+
+  const quoteMatch = text.match(/^\[quote:([^:]+):\s*([^\]]+)\]\s*\n?([\s\S]*)$/i)
+  if (quoteMatch) {
+    const [, author, quoteText, remaining] = quoteMatch
+    quoteBlock = (
+      <div className="mb-2 p-2 rounded-xl bg-black/40 border-l-2 border-gold-primary text-[10px] opacity-90 flex flex-col gap-0.5 select-none">
+        <span className="font-bold text-gold-primary">{author}</span>
+        <span className="italic text-gray-300 truncate">{quoteText}</span>
+      </div>
+    )
+    bodyContent = remaining
+  }
+
+  const parts = bodyContent.split(/(\[sticker:[a-z0-9-]+\])/i)
+  const renderedParts = parts.map((part, idx) => {
     const sticker = STICKER_MAP.get(part.replace(/\[sticker:([a-z0-9-]+)\]/i, '$1'))
     if (sticker) {
       return (
@@ -72,6 +87,13 @@ function renderMessageBody(text: string) {
     }
     return <span key={idx}>{part}</span>
   })
+
+  return (
+    <>
+      {quoteBlock}
+      {renderedParts}
+    </>
+  )
 }
 
 export default function ThreadPage() {
@@ -92,6 +114,10 @@ export default function ThreadPage() {
   const [locating, setLocating] = useState(false)
   const [uploadingVoice, setUploadingVoice] = useState(false)
   const [showStickerTray, setShowStickerTray] = useState(false)
+  const [stickerCategory, setStickerCategory] = useState<StickerCategory>('all')
+  const [replyingTo, setReplyingTo] = useState<{ id: string; authorName: string; text: string } | null>(null)
+  const [threadSearch, setThreadSearch] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
   const [offlineQueue, setOfflineQueue] = useState<Array<{ id: string; body: string; createdAt: string; extra?: Extra }>>([])
 
 
@@ -224,7 +250,13 @@ export default function ThreadPage() {
     const content = draft.trim()
     if (!content) return
     playTactileSound('click')
-    if (await insertMessage(content, { message_type: 'text' })) setDraft('')
+    const finalBody = replyingTo
+      ? `[quote:${replyingTo.authorName}: ${replyingTo.text.slice(0, 75).replace(/\n/g, ' ')}]\n${content}`
+      : content
+    if (await insertMessage(finalBody, { message_type: 'text' })) {
+      setDraft('')
+      setReplyingTo(null)
+    }
   }
 
   // ── Voice notes: really recorded, stored privately for the two of you ──
@@ -334,6 +366,17 @@ export default function ThreadPage() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => { playTactileSound('click'); setShowSearch(v => !v); }}
+              className={`p-2.5 rounded-xl border flex items-center justify-center transition-all ${
+                showSearch ? 'bg-gold-primary text-black border-gold-primary' : 'bg-white/5 border-white/10 text-gray-300 hover:text-white'
+              }`}
+              title="Search conversation"
+              aria-label="Search conversation"
+            >
+              <Search size={14} />
+            </button>
             <button onClick={() => call('audio')} disabled={!callsAvailable || inCall} className={callButton} title="Voice call" aria-label="Start voice call">
               <Phone size={15} className="text-gold-primary" />
               <span className="hidden sm:inline text-xs font-bold">Call</span>
@@ -344,6 +387,26 @@ export default function ThreadPage() {
             </button>
           </div>
         </div>
+
+        {/* In-Thread Search Bar */}
+        {showSearch && (
+          <div className="px-4 py-2 border-b border-white/10 bg-black/80 flex items-center gap-2 animate-in fade-in">
+            <Search size={13} className="text-gold-primary shrink-0" />
+            <input
+              type="text"
+              value={threadSearch}
+              onChange={e => setThreadSearch(e.target.value)}
+              placeholder="Search conversation (addresses, bills, references)..."
+              className="w-full bg-transparent border-none text-xs text-white placeholder-gray-500 outline-none"
+              autoFocus
+            />
+            {threadSearch && (
+              <button type="button" onClick={() => setThreadSearch('')} className="text-gray-400 hover:text-white p-1">
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Messages */}
         <div ref={scrollContainerRef} onScroll={handleScroll} className="relative flex-1 overflow-y-auto p-4 md:p-6 space-y-3.5 custom-scrollbar">
@@ -373,7 +436,7 @@ export default function ThreadPage() {
             </div>
           )}
 
-          {messages.map((m, index) => {
+          {(threadSearch.trim() ? messages.filter(m => m.body.toLowerCase().includes(threadSearch.toLowerCase())) : messages).map((m, index) => {
             const prevMsg = messages[index - 1]
             const showDateHeader = !prevMsg || formatMessageDate(prevMsg.created_at) !== formatMessageDate(m.created_at)
             const isMe = m.sender_id === myId
@@ -445,6 +508,17 @@ export default function ThreadPage() {
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
+                        onClick={() => {
+                          playTactileSound('click');
+                          setReplyingTo({ id: m.id, authorName: isMe ? 'You' : name, text: m.body });
+                        }}
+                        className={`text-[9px] opacity-60 hover:opacity-100 transition-opacity flex items-center gap-0.5 ${isMe ? 'text-black' : 'text-gray-300'}`}
+                        title="Quote & reply"
+                      >
+                        <CornerDownLeft size={10} />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => copyText(m.id, m.body)}
                         className={`text-[9px] opacity-60 hover:opacity-100 transition-opacity ${isMe ? 'text-black' : 'text-gray-300'}`}
                         title="Copy message"
@@ -505,12 +579,33 @@ export default function ThreadPage() {
           </div>
         )}
 
-        {/* In-App Resident Stickers Tray */}
+        {/* Active Quote Reply Banner */}
+        {replyingTo && (
+          <div className="mx-3.5 mb-1 px-3 py-1.5 rounded-xl bg-black/80 border border-gold-primary/30 flex items-center justify-between text-xs animate-in fade-in">
+            <div className="flex items-center gap-2 min-w-0">
+              <CornerDownLeft size={13} className="text-gold-primary shrink-0" />
+              <div className="truncate">
+                <span className="font-bold text-gold-primary mr-1">Replying to {replyingTo.authorName}:</span>
+                <span className="text-gray-300 italic truncate">{replyingTo.text.slice(0, 55)}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReplyingTo(null)}
+              className="text-gray-400 hover:text-white shrink-0 p-1"
+              aria-label="Cancel reply"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+
+        {/* In-App Resident Stickers Tray with Category Filtering */}
         {showStickerTray && (
           <div className="p-3 mx-3.5 mb-1 bg-black/90 backdrop-blur-2xl border border-gold-primary/30 rounded-2xl space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-white flex items-center gap-1.5">
-                <Sparkles size={13} className="text-gold-primary" /> Safety-Certified Stickers (Tap to insert in message)
+                <Sparkles size={13} className="text-gold-primary" /> Safety-Certified Stickers
               </span>
               <button
                 type="button"
@@ -520,8 +615,25 @@ export default function ThreadPage() {
                 Close
               </button>
             </div>
+            {/* Category Filter Chips */}
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 text-[10px]">
+              {(['all', 'co-living', 'utilities', 'safety', 'local'] as const).map(cat => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => { playTactileSound('click'); setStickerCategory(cat); }}
+                  className={`px-2.5 py-0.5 rounded-lg font-bold capitalize transition-all border ${
+                    stickerCategory === cat
+                      ? 'bg-gold-primary text-black border-gold-primary font-black'
+                      : 'bg-white/5 text-gray-400 hover:text-white border-white/5'
+                  }`}
+                >
+                  {cat === 'all' ? 'All Stickers' : cat}
+                </button>
+              ))}
+            </div>
             <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 max-h-36 overflow-y-auto no-scrollbar">
-              {RESIDENT_STICKERS.map(s => (
+              {(stickerCategory === 'all' ? RESIDENT_STICKERS : RESIDENT_STICKERS.filter(s => s.category === stickerCategory)).map(s => (
                 <button
                   key={s.id}
                   type="button"
