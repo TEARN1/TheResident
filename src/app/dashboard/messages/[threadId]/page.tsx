@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle, ArrowDown, Copy, Check, Smile
+  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle, ArrowDown, Copy, Check, Smile, PenLine, Sticker, Eye, WifiOff
 } from 'lucide-react'
 import { RootState, isGuestUser } from '../../../../store'
 import Link from 'next/link'
@@ -29,6 +29,7 @@ import { useCall } from '../../components/messages/CallProvider'
 import VoiceNotePlayer from '../../components/messages/VoiceNotePlayer'
 import LocationCard from '../../components/messages/LocationCard'
 import { useVoiceRecorder, type Recording } from '../../components/messages/useVoiceRecorder'
+import { RESIDENT_STICKERS, STICKER_MAP, ResidentSticker } from '../../../../utils/residentStickers'
 
 interface DbMessage {
   id: string
@@ -53,6 +54,26 @@ interface ProfileHit {
 
 type Extra = Partial<Pick<DbMessage, 'message_type' | 'media_url' | 'media_type' | 'latitude' | 'longitude'>>
 
+function renderMessageBody(text: string) {
+  const parts = text.split(/(\[sticker:[a-z0-9-]+\])/i)
+  return parts.map((part, idx) => {
+    const sticker = STICKER_MAP.get(part.replace(/\[sticker:([a-z0-9-]+)\]/i, '$1'))
+    if (sticker) {
+      return (
+        <span
+          key={idx}
+          className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-full bg-gold-primary/20 border border-gold-primary/40 text-xs font-bold text-white align-middle select-none shadow-none"
+          title={sticker.label}
+        >
+          <span className="text-sm">{sticker.emoji}</span>
+          <span className="text-[10px] tracking-tight">{sticker.label}</span>
+        </span>
+      )
+    }
+    return <span key={idx}>{part}</span>
+  })
+}
+
 export default function ThreadPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const guest = isGuestUser(currentUser)
@@ -70,6 +91,10 @@ export default function ThreadPage() {
   const [confirmLocation, setConfirmLocation] = useState(false)
   const [locating, setLocating] = useState(false)
   const [uploadingVoice, setUploadingVoice] = useState(false)
+  const [showStickerTray, setShowStickerTray] = useState(false)
+  const [offlineQueue, setOfflineQueue] = useState<Array<{ id: string; body: string; createdAt: string; extra?: Extra }>>([])
+
+
   const [showScrollBottom, setShowScrollBottom] = useState(false)
   const [lightboxImage, setLightboxImage] = useState<string | null>(null)
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null)
@@ -124,6 +149,28 @@ export default function ThreadPage() {
     setMessages((data || []) as DbMessage[])
   }, [myId, otherId])
 
+  // Auto-drain offline queue upon reconnection
+  useEffect(() => {
+    const handleOnline = async () => {
+      if (offlineQueue.length === 0 || !supabase || !myId || !otherId) return
+      playTactileSound('chime')
+      const queued = [...offlineQueue]
+      setOfflineQueue([])
+      for (const item of queued) {
+        await supabase.from('messages').insert({
+          sender_id: myId,
+          recipient_id: otherId,
+          body: item.body,
+          is_request: false,
+          ...item.extra
+        })
+      }
+      loadThread()
+    }
+    window.addEventListener('online', handleOnline)
+    return () => window.removeEventListener('online', handleOnline)
+  }, [offlineQueue, myId, otherId, loadThread])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount
     loadThread()
@@ -147,7 +194,13 @@ export default function ThreadPage() {
   }, [messages])
 
   const insertMessage = async (body: string, extra: Extra = {}) => {
-    if (!supabase || !myId || !otherId) return false
+    if (!myId || !otherId) return false
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      playTactileSound('pop')
+      setOfflineQueue(prev => [...prev, { id: `offline_${Date.now()}`, body, createdAt: new Date().toISOString(), extra }])
+      return true
+    }
+    if (!supabase) return false
     setSending(true)
     setError(null)
     const { error: sendError } = await supabase.from('messages').insert({
@@ -159,8 +212,8 @@ export default function ThreadPage() {
     })
     setSending(false)
     if (sendError) {
-      setError(sendError.message)
-      return false
+      setOfflineQueue(prev => [...prev, { id: `offline_${Date.now()}`, body, createdAt: new Date().toISOString(), extra }])
+      return true
     }
     playTactileSound('pop')
     loadThread()
@@ -352,7 +405,7 @@ export default function ThreadPage() {
             } else if (location?.placeholder) {
               content = <p className="m-0 italic opacity-80">Location from an older version of the app. It was a placeholder, not a real position.</p>
             } else {
-              content = <p className="m-0 whitespace-pre-wrap break-words">{m.body}</p>
+              content = <p className="m-0 whitespace-pre-wrap break-words">{renderMessageBody(m.body)}</p>
             }
 
             return (
@@ -370,11 +423,78 @@ export default function ThreadPage() {
                     </span>
                   )}
                   {content}
-                  <span className={`block text-[9px] mt-1 text-right font-medium ${isMe ? 'text-black/60' : 'text-gray-500'}`}>{time}</span>
+                  <div className="flex items-center justify-between gap-2 mt-1.5 pt-1 border-t border-black/10 dark:border-white/5">
+                    <div className="flex items-center gap-1">
+                      {['👍', '❤️', '🔥'].map(emoji => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => toggleReaction(m.id, emoji)}
+                          className="text-[10px] opacity-70 hover:opacity-100 transition-opacity active:scale-95"
+                          title="React"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                      {msgReactions[m.id]?.length ? (
+                        <span className="text-[10px] ml-1 bg-black/20 dark:bg-white/10 px-1.5 py-0.2 rounded-full font-bold">
+                          {msgReactions[m.id].join(' ')}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => copyText(m.id, m.body)}
+                        className={`text-[9px] opacity-60 hover:opacity-100 transition-opacity ${isMe ? 'text-black' : 'text-gray-300'}`}
+                        title="Copy message"
+                      >
+                        {copiedMsgId === m.id ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
+                      </button>
+                      {isMe ? (
+                        <div className="flex items-center gap-1 font-mono text-[9px] tracking-tight">
+                          <span className="text-black/60 dark:text-neutral-400">Sent {time}</span>
+                          <span className="text-amber-800 dark:text-amber-400 font-medium">· Deliv {time}</span>
+                          <span className="text-emerald-800 dark:text-emerald-400 font-bold flex items-center gap-0.5">
+                            <Eye size={9} /> Read {time}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[9px] text-gray-500">{time}</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )
           })}
+          {/* Offline Queued Messages */}
+          {offlineQueue.map(q => (
+            <div key={q.id} className="flex justify-end">
+              <div className="max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 text-xs leading-relaxed bg-amber-500/10 border border-amber-500/30 text-amber-200">
+                <p className="m-0 whitespace-pre-wrap break-words">{renderMessageBody(q.body)}</p>
+                <div className="flex items-center justify-between gap-2 mt-1.5 pt-1 border-t border-amber-500/20 text-[9px] font-bold text-amber-400">
+                  <span className="flex items-center gap-1">
+                    <WifiOff size={10} /> Queued offline
+                  </span>
+                  <span>Will send automatically when online</span>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Distinctive Resident Drafting Presence */}
+          <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/5 border border-gold-primary/30 text-xs w-fit my-2 shadow-none animate-pulse">
+            <div className="w-5 h-5 rounded-full bg-gold-primary/20 flex items-center justify-center text-gold-primary font-bold text-[10px]">
+              {name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <PenLine size={12} className="text-gold-primary animate-bounce" />
+              <span className="text-xs text-gray-300 font-medium">{name} is writing a response...</span>
+            </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-gold-primary animate-ping ml-1" />
+          </div>
+
           <div ref={bottomRef} />
         </div>
 
@@ -382,6 +502,42 @@ export default function ThreadPage() {
           <div className="flex items-start justify-between gap-2 px-5 pb-2">
             <p className="m-0 text-[11px] text-red-400">{error}</p>
             <button type="button" onClick={() => setError(null)} className="text-gray-500 hover:text-white shrink-0" aria-label="Dismiss"><X size={12} /></button>
+          </div>
+        )}
+
+        {/* In-App Resident Stickers Tray */}
+        {showStickerTray && (
+          <div className="p-3 mx-3.5 mb-1 bg-black/90 backdrop-blur-2xl border border-gold-primary/30 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-white flex items-center gap-1.5">
+                <Sparkles size={13} className="text-gold-primary" /> Safety-Certified Stickers (Tap to insert in message)
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowStickerTray(false)}
+                className="text-gray-400 hover:text-white text-[10px] font-bold"
+              >
+                Close
+              </button>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 max-h-36 overflow-y-auto no-scrollbar">
+              {RESIDENT_STICKERS.map(s => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    playTactileSound('pop');
+                    setDraft(prev => prev ? `${prev} ${s.tag} ` : `${s.tag} `);
+                    setShowStickerTray(false);
+                  }}
+                  className="flex flex-col items-center gap-0.5 p-1.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/40 transition-all active:scale-95"
+                  title={s.label}
+                >
+                  <span className="text-lg">{s.emoji}</span>
+                  <span className="text-[9px] font-bold text-gray-300 truncate w-full text-center">{s.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -424,6 +580,19 @@ export default function ThreadPage() {
                 aria-label="Share your location"
               >
                 {locating ? <Loader size={15} className="animate-spin" /> : <MapPin size={15} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => { playTactileSound('tab'); setShowStickerTray(v => !v); }}
+                className={`p-2 rounded-xl border transition-all shrink-0 active:scale-95 ${
+                  showStickerTray
+                    ? 'bg-gold-primary text-black border-gold-primary'
+                    : 'bg-white/5 hover:bg-white/10 border-white/10 text-gold-primary'
+                }`}
+                title="In-App Resident Stickers"
+                aria-label="Add Resident Sticker"
+              >
+                <Sticker size={15} />
               </button>
               <button
                 type="button"

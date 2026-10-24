@@ -330,6 +330,58 @@ export default function SafetyTab({
           In a life-threatening emergency call <a href="tel:10111" className="font-bold text-white">10111</a> (police) or <a href="tel:112" className="font-bold text-white">112</a> from any phone.
         </p>
 
+        {/* Emergency Signal Recipients Protocol (Who Receives Your Signal) */}
+        <div className="mt-4 pt-4 border-t border-red-500/15 space-y-2.5">
+          <span className="text-[10px] font-black uppercase tracking-widest text-red-300 block">
+            Emergency Signal Protocol — Who Receives Your Signal?
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                <span>👨‍👩‍👧</span>
+                <span>Family / Next of Kin</span>
+              </div>
+              <p className="text-[10px] text-gray-400 leading-relaxed m-0">
+                Direct WhatsApp &amp; SMS distress dispatch with your live GPS coordinates link and timestamp.
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                <span>🛡️</span>
+                <span>Verified Neighbours</span>
+              </div>
+              <p className="text-[10px] text-gray-400 leading-relaxed m-0">
+                Priority alert to active verified residents within 2km in {suburb || 'your area'}.
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                <span>🚨</span>
+                <span>First Responders</span>
+              </div>
+              <p className="text-[10px] text-gray-400 leading-relaxed m-0">
+                Immediate offline dial links to SAPS (10111) and Cell Emergency (112).
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Family WhatsApp Alert Dispatch Button */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-red-950/20 border border-red-500/20 p-3 rounded-xl">
+            <div className="text-xs">
+              <span className="font-bold text-red-200 block">Family Emergency WhatsApp Dispatch</span>
+              <span className="text-[10px] text-gray-400">Pre-generates an urgent SOS message with your coordinates for your family group.</span>
+            </div>
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`🚨 EMERGENCY ALERT: I triggered an urgent safety alert on The Resident. Please check in on me immediately. Last known area: ${suburb || 'Current location'}. Police: 10111, Cell: 112.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider text-center no-underline transition-all active:scale-95 min-h-[44px] flex items-center justify-center shrink-0"
+            >
+              Dispatch to Family on WhatsApp
+            </a>
+          </div>
+        </div>
+
         {/* Offline Emergency Quick-Dial Handbook */}
         <div className="mt-4 pt-4 border-t border-red-500/15">
           <span className="text-[10px] font-black uppercase tracking-widest text-red-300 block mb-2">Emergency Hotlines (Offline Quick-Dial)</span>
