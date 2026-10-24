@@ -164,3 +164,27 @@ export function isochroneFeatures(center: LatLon | null) {
       : [],
   }
 }
+
+/** Semicircular detour bypass around a blocked point or closed street. [lon, lat] pairs. */
+export function detourBypassArc(point: LatLon, radiusM = 320, steps = 24): LngLatTuple[] {
+  const dLat = radiusM / 111_320
+  const dLon = radiusM / (111_320 * Math.max(0.01, Math.cos((point.lat * Math.PI) / 180)))
+  const pts: LngLatTuple[] = []
+  for (let i = 0; i <= steps; i++) {
+    const angle = Math.PI * (0.8 + (i / steps) * 1.4)
+    pts.push([point.lon + dLon * Math.cos(angle), point.lat + dLat * Math.sin(angle)])
+  }
+  return pts
+}
+
+/** Race / Marathon corridor circuit polyline around a race focal point. [lon, lat] pairs. */
+export function marathonCorridorPolyline(point: LatLon, radiusM = 550, steps = 36): LngLatTuple[] {
+  const dLat = radiusM / 111_320
+  const dLon = radiusM / (111_320 * Math.max(0.01, Math.cos((point.lat * Math.PI) / 180)))
+  const pts: LngLatTuple[] = []
+  for (let i = 0; i <= steps; i++) {
+    const angle = (i / steps) * 2 * Math.PI
+    pts.push([point.lon + dLon * 1.35 * Math.cos(angle), point.lat + dLat * 0.85 * Math.sin(angle)])
+  }
+  return pts
+}

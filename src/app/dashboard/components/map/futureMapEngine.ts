@@ -95,6 +95,7 @@ export const LAYER_GROUPS = {
   nightlife: ['fm-events-glow', 'fm-events-dot'],
   housing: ['fm-housing-cluster-glow', 'fm-housing-cluster', 'fm-housing-count', 'fm-housing-pill'],
   safety: ['fm-safety-halo', 'fm-safety-icon'],
+  traffic: ['fm-traffic-line-glow', 'fm-traffic-line', 'fm-safety-halo', 'fm-safety-icon'],
 } as const
 
 /** Clickable layers, topmost first. */
@@ -123,9 +124,24 @@ const addLayer = (map: MLMap, layer: LayerSpecification, before?: string) => {
  * Everything The Resident draws, re-added after every style load (a style
  * switch drops custom sources and layers). Data comes from the caller's latest.
  */
-export function installVibeLayers(map: MLMap, data: { events: FC; housing: FC; safety: FC; iso: FC }) {
+export function installVibeLayers(map: MLMap, data: { events: FC; housing: FC; safety: FC; iso: FC; traffic?: FC }) {
   ensureIcons(map)
   const below = firstSymbolId(map)
+
+  if (!map.getSource('fm-traffic')) map.addSource('fm-traffic', { type: 'geojson', data: (data.traffic || emptyFC()) as GeoJSON.FeatureCollection })
+  addLayer(map, {
+    id: 'fm-traffic-line-glow', type: 'line', source: 'fm-traffic',
+    paint: { 'line-color': ['coalesce', ['get', 'color'], '#06b6d4'], 'line-width': 7, 'line-opacity': 0.38, 'line-blur': 4 },
+  }, below)
+  addLayer(map, {
+    id: 'fm-traffic-line', type: 'line', source: 'fm-traffic',
+    paint: {
+      'line-color': ['coalesce', ['get', 'color'], '#06b6d4'],
+      'line-width': 3,
+      'line-opacity': 0.95,
+      'line-dasharray': [2, 1.5],
+    },
+  }, below)
 
   if (!map.getSource('fm-iso')) map.addSource('fm-iso', { type: 'geojson', data: data.iso as GeoJSON.FeatureCollection })
   addLayer(map, { id: 'fm-iso-fill', type: 'fill', source: 'fm-iso', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['interpolate', ['linear'], ['get', 'mins'], 5, 0.09, 10, 0.045] } }, below)
@@ -263,7 +279,18 @@ function ensureIcons(map: MLMap) {
       })
     }
   }
-  for (const [name, color, glyph] of [['fm-hazard-caution', '#f59e0b', 'bang'], ['fm-hazard-road', '#ef4444', 'bar']] as const) {
+  const hazardIcons = [
+    ['fm-hazard-caution', '#f59e0b', 'bang'],
+    ['fm-hazard-road', '#ef4444', 'bar'],
+    ['fm-hazard-funeral', '#a855f7', 'tent'],
+    ['fm-hazard-accident', '#ef4444', 'crash'],
+    ['fm-hazard-traffic', '#f59e0b', 'gridlock'],
+    ['fm-hazard-robots', '#eab308', 'robot'],
+    ['fm-hazard-marathon', '#f97316', 'flag'],
+    ['fm-hazard-party', '#ec4899', 'star'],
+    ['fm-hazard-detour', '#06b6d4', 'arrow'],
+  ] as const
+  for (const [name, color, glyph] of hazardIcons) {
     if (map.hasImage(name)) continue
     const S = 30
     const ctx = canvas2d(S * R, S * R)
@@ -279,8 +306,28 @@ function ensureIcons(map: MLMap) {
     if (glyph === 'bang') {
       roundRect(ctx, S / 2 - 2, 8, 4, 10, 2); ctx.fill()
       ctx.beginPath(); ctx.arc(S / 2, 21.5, 2.2, 0, Math.PI * 2); ctx.fill()
-    } else {
+    } else if (glyph === 'bar') {
       roundRect(ctx, 8, S / 2 - 2.5, S - 16, 5, 2.5); ctx.fill()
+    } else if (glyph === 'tent') {
+      ctx.beginPath(); ctx.moveTo(S / 2, 7.5); ctx.lineTo(S - 7.5, S - 8); ctx.lineTo(7.5, S - 8); ctx.closePath(); ctx.fill()
+    } else if (glyph === 'crash') {
+      ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'
+      ctx.beginPath(); ctx.moveTo(8.5, 8.5); ctx.lineTo(S - 8.5, S - 8.5); ctx.moveTo(S - 8.5, 8.5); ctx.lineTo(8.5, S - 8.5); ctx.stroke()
+    } else if (glyph === 'gridlock') {
+      roundRect(ctx, 7, 9.5, S - 14, 3.5, 1.5); ctx.fill()
+      roundRect(ctx, 7, 16.5, S - 14, 3.5, 1.5); ctx.fill()
+    } else if (glyph === 'robot') {
+      ctx.beginPath(); ctx.arc(S / 2, S / 2, 4.5, 0, Math.PI * 2); ctx.fill()
+      ctx.lineWidth = 2.5; ctx.strokeStyle = '#ffffff'
+      ctx.beginPath(); ctx.moveTo(7, 7); ctx.lineTo(S - 7, S - 7); ctx.stroke()
+    } else if (glyph === 'flag') {
+      roundRect(ctx, 8, 7, 2.5, S - 14, 1); ctx.fill()
+      ctx.beginPath(); ctx.moveTo(10.5, 7); ctx.lineTo(S - 8, 12); ctx.lineTo(10.5, 17); ctx.closePath(); ctx.fill()
+    } else if (glyph === 'arrow') {
+      ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'
+      ctx.beginPath(); ctx.moveTo(8.5, 15); ctx.lineTo(S - 8.5, 15); ctx.lineTo(S - 14, 9.5); ctx.stroke()
+    } else {
+      ctx.beginPath(); ctx.arc(S / 2, S / 2, 4.5, 0, Math.PI * 2); ctx.fill()
     }
     map.addImage(name, ctx.getImageData(0, 0, S * R, S * R), { pixelRatio: R })
   }

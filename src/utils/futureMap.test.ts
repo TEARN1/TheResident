@@ -11,6 +11,8 @@ import {
   parseLocalStart,
   pickStreams,
   rankHotspots,
+  detourBypassArc,
+  marathonCorridorPolyline,
 } from './futureMap'
 
 // Wednesday 8 Oct 2026, 20:00 local time.
@@ -94,3 +96,17 @@ test('formatDistance and metresPerPixel', () => {
   assert.ok(Math.abs(metresPerPixel(0, 0) - 40075016.686 / 512) < 1e-6)
   assert.ok(metresPerPixel(-26, 15) < metresPerPixel(0, 15))
 })
+
+test('detourBypassArc produces a semicircular bypass around a blocked point', () => {
+  const p = { lat: -26.1926, lon: 28.0305 };
+  const arc = detourBypassArc(p, 300, 20);
+  assert.strictEqual(arc.length, 21);
+  assert.notDeepStrictEqual(arc[0], [p.lon, p.lat]);
+});
+
+test('marathonCorridorPolyline produces a closed loop corridor', () => {
+  const p = { lat: -26.1926, lon: 28.0305 };
+  const loop = marathonCorridorPolyline(p, 500, 24);
+  assert.strictEqual(loop.length, 25);
+  assert.strictEqual(loop[0][0].toFixed(5), loop[24][0].toFixed(5));
+});
