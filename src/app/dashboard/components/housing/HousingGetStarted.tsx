@@ -2,8 +2,8 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Building2, ClipboardList, MessageCircle, Plus } from 'lucide-react'
-import { LAUNCH_AREA, conciergeWhatsAppUrl } from '../../../../utils/launch'
+import { Building2, ClipboardList, MessageSquare, Plus } from 'lucide-react'
+import { LAUNCH_AREA } from '../../../../utils/launch'
 import { track } from '../../../../utils/track'
 
 /**
@@ -19,7 +19,6 @@ interface Props {
 
 export default function HousingGetStarted({ isLandlord, isGuest, onListRoom }: Props) {
   const where = LAUNCH_AREA ? ` in ${LAUNCH_AREA}` : ' here'
-  const concierge = conciergeWhatsAppUrl(LAUNCH_AREA || undefined)
 
   return (
     <div className="glass-panel p-6 sm:p-8 text-center space-y-5">
@@ -38,29 +37,25 @@ export default function HousingGetStarted({ isLandlord, isGuest, onListRoom }: P
         {isLandlord ? (
           <button
             onClick={onListRoom}
-            className="bg-gold-primary text-black font-black px-5 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-glow"
+            className="bg-gold-primary hover:bg-gold-secondary text-black font-black px-5 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-all min-h-[44px] active:scale-95"
           >
             <Plus size={16} /> List a room
           </button>
         ) : (
           <Link
             href={isGuest ? '/auth?role=landlord' : '/dashboard/profile?role=landlord'}
-            className="no-underline bg-gold-primary text-black font-black px-5 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-glow"
+            className="no-underline bg-gold-primary hover:bg-gold-secondary text-black font-black px-5 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-all min-h-[44px] active:scale-95"
           >
             <Plus size={16} /> I have a room to rent
           </Link>
         )}
-        {concierge && (
-          <a
-            href={concierge}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => track('concierge_click', { area: LAUNCH_AREA || null })}
-            className="no-underline border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-black px-5 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider hover:bg-emerald-500/20"
-          >
-            <MessageCircle size={16} /> List it with our help on WhatsApp
-          </a>
-        )}
+        <Link
+          href="/dashboard/messages"
+          onClick={() => track('concierge_click', { area: LAUNCH_AREA || null })}
+          className="no-underline border border-gold-primary/30 bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary font-black px-5 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-all min-h-[44px] active:scale-95"
+        >
+          <MessageSquare size={16} /> In-App Listing Concierge
+        </Link>
       </div>
 
       <div className="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left max-w-md mx-auto">

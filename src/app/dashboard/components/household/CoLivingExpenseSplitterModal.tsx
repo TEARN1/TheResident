@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calculator, X, Plus, Trash2, Users, Copy, Check } from 'lucide-react'
+import { Calculator, X, Plus, Trash2, Users, Copy, Check, MessageSquare, Send } from 'lucide-react'
+import Link from 'next/link'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import { SUPPORTED_CURRENCIES } from '../../../../utils/currencies'
 
@@ -42,6 +43,8 @@ export default function CoLivingExpenseSplitterModal({
   const [newAmount, setNewAmount] = useState('')
   const [copied, setCopied] = useState(false)
   const [paidRoommates, setPaidRoommates] = useState<number[]>([])
+  const [pingedIdx, setPingedIdx] = useState<number | null>(null)
+  const [broadcastNotice, setBroadcastNotice] = useState<string | null>(null)
 
   const togglePaid = (idx: number) => {
     playTactileSound('click')
@@ -169,8 +172,8 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                       }}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 ${
                         active
-                          ? 'bg-gold-primary text-black shadow-glow'
-                          : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                          ? 'bg-gold-primary text-black font-black border border-gold-primary'
+                          : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/5'
                       }`}
                     >
                       <span>{c.flag}</span>
@@ -289,7 +292,7 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                         </button>
                       </div>
 
-                      {/* Payment tracking & WhatsApp ping */}
+                      {/* Payment tracking & In-App Resident ping */}
                       <div className="flex items-center justify-between pt-1.5 border-t border-white/5">
                         <label className="flex items-center gap-1.5 cursor-pointer">
                           <input
@@ -302,14 +305,21 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                             {paidRoommates.includes(idx) ? 'Paid' : 'Unpaid'}
                           </span>
                         </label>
-                        <a
-                          href={`https://wa.me/?text=${encodeURIComponent(`Hi ${rm.name}! Your co-living share for this month is ${currency} ${share.toLocaleString()} (Payment Ref: RES-${idx + 1}-HOUSE). Thanks!`)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[9px] font-bold text-emerald-400 hover:underline"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playTactileSound('click');
+                            const msg = `[BILL SPLIT] Hi ${rm.name}! Your co-living share for this month is ${currency} ${share.toLocaleString()} (Payment Ref: RES-${idx + 1}-HOUSE) [sticker:rent-settled]`;
+                            navigator.clipboard.writeText(msg);
+                            setPingedIdx(idx);
+                            setBroadcastNotice(`Copied bill ping for ${rm.name}! Paste into Resident Messages.`);
+                            setTimeout(() => setPingedIdx(null), 3000);
+                          }}
+                          className="text-[10px] font-bold text-gold-primary hover:text-white transition-colors flex items-center gap-1 min-h-[32px] px-1.5 rounded-md hover:bg-white/5"
                         >
-                          Ping on WA
-                        </a>
+                          <Send size={10} />
+                          <span>{pingedIdx === idx ? 'Copied!' : 'Ping on Resident'}</span>
+                        </button>
                       </div>
                     </div>
                   )
@@ -367,6 +377,12 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
           </div>
 
           {/* Modal Actions */}
+          {broadcastNotice && (
+            <div className="p-2.5 rounded-xl bg-gold-primary/10 border border-gold-primary/30 text-gold-primary text-xs font-bold text-center animate-in fade-in flex items-center justify-center gap-2">
+              <span>{broadcastNotice}</span>
+            </div>
+          )}
+
           <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -408,14 +424,24 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                       const share = Math.round((rm.roomSizeRatio / totalRatios) * totalExpense);
                       return `• ${rm.name}: ${currency} ${share.toLocaleString()}`;
                     }).join('\n') +
-                    `\n\nGenerated via The Resident.`;
-                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                    `\n\n[sticker:rent-settled] Tracked on The Resident.`;
+                  navigator.clipboard.writeText(text);
+                  setBroadcastNotice('Copied full house split! Ready to paste in Resident Messages.');
                 }}
-                className="px-4 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px]"
-                title="Send expense split to flatmates via WhatsApp"
+                className="px-4 py-2.5 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px]"
+                title="Copy and dispatch expense split to flatmates via Resident Messages"
               >
-                <span>WhatsApp House</span>
+                <MessageSquare size={13} />
+                <span>Dispatch to House Chat</span>
               </button>
+              <Link
+                href="/dashboard/messages"
+                onClick={() => { playTactileSound('pop'); onClose(); }}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px] no-underline"
+              >
+                <Send size={13} />
+                <span>Open Messages</span>
+              </Link>
             </div>
             <button
               onClick={() => { playTactileSound('pop'); onClose() }}

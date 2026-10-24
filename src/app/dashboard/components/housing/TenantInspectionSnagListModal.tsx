@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ClipboardList, X, CheckSquare, Square, Download, Trash2 } from 'lucide-react'
+import { ClipboardList, X, CheckSquare, Square, Download, Trash2, MessageSquare, Send, Check } from 'lucide-react'
+import Link from 'next/link'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface SnagItem {
@@ -36,6 +37,7 @@ export default function TenantInspectionSnagListModal({
   const [newRoom, setNewRoom] = useState('Bedroom')
   const [newDesc, setNewDesc] = useState('')
   const [newSeverity, setNewSeverity] = useState<SnagSeverity>('minor')
+  const [dispatchNotice, setDispatchNotice] = useState<string | null>(null)
 
   if (!isOpen) return null
 
@@ -220,6 +222,11 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
           </div>
 
           {/* Footer actions */}
+          {dispatchNotice && (
+            <div className="p-2.5 mb-3 rounded-xl bg-gold-primary/10 border border-gold-primary/30 text-gold-primary text-xs font-bold text-center animate-in fade-in flex items-center justify-center gap-2">
+              <span>{dispatchNotice}</span>
+            </div>
+          )}
           <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -251,14 +258,24 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
                   playTactileSound('click')
                   const text = `*MOVE-IN DEFECT & SNAG REPORT*\nProperty: ${propertyAddress}\nDate: ${new Date().toLocaleDateString()}\n\nRecorded Defects (${items.length}):\n` +
                     items.map((it, i) => `${i + 1}. [${it.room}] ${it.description} (${it.severity})`).join('\n') +
-                    `\n\nGenerated via The Resident.`
-                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+                    `\n\n[sticker:safe] Verified on The Resident.`
+                  navigator.clipboard.writeText(text)
+                  setDispatchNotice('Copied Snag List report! Ready to send to Landlord in Resident Messages.')
                 }}
-                className="px-4 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px]"
-                title="Send inspection snag report to landlord via WhatsApp"
+                className="px-4 py-2.5 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px]"
+                title="Copy inspection snag report to send to landlord via Resident Messages"
               >
-                <span>WhatsApp Landlord</span>
+                <MessageSquare size={13} />
+                <span>Dispatch to Landlord</span>
               </button>
+              <Link
+                href="/dashboard/messages"
+                onClick={() => { playTactileSound('pop'); onClose(); }}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px] no-underline"
+              >
+                <Send size={13} />
+                <span>Open Messages</span>
+              </Link>
             </div>
             <button
               onClick={() => { playTactileSound('pop'); onClose() }}

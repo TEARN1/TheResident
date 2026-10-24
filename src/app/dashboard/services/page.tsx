@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon
+  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare
 } from 'lucide-react'
 import {
   RootState,
@@ -32,6 +32,8 @@ import { directionsUrlForAddress } from '../../../utils/navigation'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents } from '../../../utils/gruvsEvents'
+import Link from 'next/link'
+import { playTactileSound } from '../../../utils/tactileSounds'
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
 const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
@@ -576,15 +578,28 @@ export default function ServicesPage() {
                         >
                            {srv.ownerId === currentUser?.id ? 'Manage My Card' : 'Hire Contractor'}
                         </button>
-                        {srv.contactNumber && srv.ownerId !== currentUser?.id && (
-                           <a
-                              href={`https://wa.me/${srv.contactNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hi ${srv.businessName}, I saw your service on The Resident. Could you give me an estimate for some work in ${srv.suburb}?`)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest no-underline min-h-[44px]"
-                           >
-                              WhatsApp Quick Quote
-                           </a>
+                        {srv.ownerId !== currentUser?.id && (
+                           <div className="grid grid-cols-2 gap-2">
+                              <button
+                                 type="button"
+                                 onClick={() => {
+                                    playTactileSound('click')
+                                    setSelectedBiz(srv)
+                                    setHireMessage(`Hi ${srv.businessName}, please provide an in-app price estimate for services in ${srv.suburb}.`)
+                                 }}
+                                 className="w-full bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs uppercase tracking-widest min-h-[44px] active:scale-95"
+                              >
+                                 <Calculator size={13} />
+                                 <span>In-App Quote</span>
+                              </button>
+                              <Link
+                                 href={`/dashboard/messages?to=${srv.ownerId || srv.id}`}
+                                 className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs uppercase tracking-widest no-underline min-h-[44px] active:scale-95 text-center"
+                              >
+                                 <MessageSquare size={13} />
+                                 <span>Message</span>
+                              </Link>
+                           </div>
                         )}
                         {srv.ownerId === currentUser?.id && !providerTiers[srv.ownerId] && (
                            <div className="space-y-2 pt-2 border-t border-white/5">
@@ -618,8 +633,8 @@ export default function ServicesPage() {
                           </div>
                           <p className="text-sm text-gray-400 bg-white/2 p-3 rounded-xl border border-white/5 font-medium leading-relaxed">&quot;{order.message}&quot;</p>
                           <div className="flex gap-2 pt-2">
-                             {order.status === 'pending' && <button onClick={() => dispatch(updateDispatchStatus({ dispatchId: order.id, status: 'accepted' }))} className="flex-1 bg-blue-500 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-widest shadow-xl shadow-blue-900/20">Accept Job</button>}
-                             {order.status === 'accepted' && <button onClick={() => setShowProofModal(order)} className="flex-1 bg-gold-primary text-black font-black py-2 rounded-lg text-[10px] uppercase tracking-widest shadow-xl shadow-gold-primary/20">Mark Complete</button>}
+                             {order.status === 'pending' && <button onClick={() => dispatch(updateDispatchStatus({ dispatchId: order.id, status: 'accepted' }))} className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-widest border border-blue-400/30 transition-all active:scale-95 min-h-[44px]">Accept Job</button>}
+                             {order.status === 'accepted' && <button onClick={() => setShowProofModal(order)} className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2 rounded-lg text-[10px] uppercase tracking-widest border border-gold-primary/40 transition-all active:scale-95 min-h-[44px]">Mark Complete</button>}
                           </div>
                        </div>
                     ))}

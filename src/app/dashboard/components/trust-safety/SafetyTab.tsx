@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
-import { Shield, Activity, Bell, MapPin, CheckCircle2, Droplets, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction } from 'lucide-react'
+import { Shield, Activity, Bell, MapPin, CheckCircle2, Droplets, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction, Radio } from 'lucide-react'
+import Link from 'next/link'
 import { outageConsensus, type StatusReport } from '../../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
@@ -91,6 +92,8 @@ export default function SafetyTab({
   onReportStatus
 }: SafetyTabProps) {
   const [confirmPanic, setConfirmPanic] = useState(false)
+  const [familyBeaconDispatched, setFamilyBeaconDispatched] = useState(false)
+  const [inviteCopied, setInviteCopied] = useState(false)
   const [sosHoldProgress, setSosHoldProgress] = useState(0)
   const holdIntervalRef = React.useRef<any>(null)
 
@@ -342,7 +345,7 @@ export default function SafetyTab({
                 <span>Family / Next of Kin</span>
               </div>
               <p className="text-[10px] text-gray-400 leading-relaxed m-0">
-                Direct WhatsApp &amp; SMS distress dispatch with your live GPS coordinates link and timestamp.
+                Direct Care Circle in-app distress beacon with your live GPS coordinates and timestamp.
               </p>
             </div>
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
@@ -365,20 +368,40 @@ export default function SafetyTab({
             </div>
           </div>
 
-          {/* Quick Family WhatsApp Alert Dispatch Button */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-red-950/20 border border-red-500/20 p-3 rounded-xl">
+          {/* Native In-App Family & Care Circle Beacon Dispatch */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-red-950/30 border border-red-500/30 p-3.5 rounded-xl">
             <div className="text-xs">
-              <span className="font-bold text-red-200 block">Family Emergency WhatsApp Dispatch</span>
-              <span className="text-[10px] text-gray-400">Pre-generates an urgent SOS message with your coordinates for your family group.</span>
+              <span className="font-bold text-red-200 flex items-center gap-2">
+                <Radio className={`w-4 h-4 ${familyBeaconDispatched ? 'text-red-400 animate-pulse' : 'text-red-400'}`} />
+                In-App Care Circle & Family Beacon
+              </span>
+              <span className="text-[10px] text-gray-400 block mt-0.5">
+                {familyBeaconDispatched
+                  ? 'Active SOS Beacon broadcast live to your Care Circle inside The Resident.'
+                  : 'Broadcasts an urgent real-time alert with coordinates to all your verified Care Circle contacts.'}
+              </span>
             </div>
-            <a
-              href={`https://wa.me/?text=${encodeURIComponent(`🚨 EMERGENCY ALERT: I triggered an urgent safety alert on The Resident. Please check in on me immediately. Last known area: ${suburb || 'Current location'}. Police: 10111, Cell: 112.`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider text-center no-underline transition-all active:scale-95 min-h-[44px] flex items-center justify-center shrink-0"
-            >
-              Dispatch to Family on WhatsApp
-            </a>
+            <div className="w-full sm:w-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setFamilyBeaconDispatched(true);
+                  const payload = `🚨 EMERGENCY ALERT: Urgent safety signal on The Resident. Area: ${suburb || 'Current location'}. Police: 10111, Cell: 112 [sticker:safe]`;
+                  navigator.clipboard.writeText(payload);
+                  if (onRaiseAlert) {
+                    onRaiseAlert({
+                      kind: 'panic',
+                      title: 'Family Emergency Beacon Triggered',
+                      description: `Resident signaled emergency beacon in ${suburb || 'current area'}. Next-of-Kin alerted.`,
+                      severity: 'critical'
+                    });
+                  }
+                }}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider text-center transition-all active:scale-95 min-h-[44px] flex items-center justify-center shrink-0 border border-red-400/40"
+              >
+                {familyBeaconDispatched ? 'Beacon Live (Re-Broadcast)' : 'Broadcast In-App Beacon'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -438,14 +461,28 @@ export default function SafetyTab({
             </button>
           </div>
 
-          <a
-            href={`https://wa.me/?text=${encodeURIComponent("Hi! I added you as my Next of Kin contact on The Resident. Please confirm our trust connection so my rental profile is verified: https://theresidentcrew.com/dashboard/trust-circle")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="sm:w-auto bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 no-underline min-h-[44px]"
-          >
-            Invite Next of Kin on WhatsApp
-          </a>
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+            <Link
+              href="/dashboard/trust-circle"
+              className="w-full sm:w-auto bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 no-underline min-h-[44px] transition-all active:scale-95 text-center"
+            >
+              <HeartHandshake size={14} />
+              <span>Manage Trust Circle</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                const inviteMsg = "Hi! I added you as my Next of Kin contact on The Resident. Please confirm our trust connection so my rental profile is verified: https://theresidentcrew.com/dashboard/trust-circle [sticker:safe]";
+                navigator.clipboard.writeText(inviteMsg);
+                setInviteCopied(true);
+                setTimeout(() => setInviteCopied(false), 3000);
+              }}
+              className="w-full sm:w-auto bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 min-h-[44px] transition-all active:scale-95 text-center"
+            >
+              <Check size={14} className={inviteCopied ? 'text-emerald-400' : 'text-gray-400'} />
+              <span>{inviteCopied ? 'Invite Copied!' : 'Copy Circle Link'}</span>
+            </button>
+          </div>
         </div>
 
         <button

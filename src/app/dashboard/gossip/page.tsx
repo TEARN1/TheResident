@@ -4,10 +4,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import Image from 'next/image'
 import {
-  MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, ExternalLink, Table2,
-  Search, EyeOff
+  MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2,
+  Search, EyeOff, Radio, Shield, Building2, Share2, Check
 } from 'lucide-react'
-import { GRUVS, TEARNS } from '../../../utils/sisterApps'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
@@ -136,6 +135,7 @@ export default function GossipPage() {
 
   // Interactive Vibe Reactions
   const [postReactions, setPostReactions] = useState<Record<string, { lit: number; tea: number; redflag: number; real: number; dead: number; userReacted?: string }>>({})
+  const [sharedPostId, setSharedPostId] = useState<string | null>(null)
 
   const handleReact = (postId: string, type: 'lit' | 'tea' | 'redflag' | 'real' | 'dead') => {
     playTactileSound('pop')
@@ -488,47 +488,46 @@ export default function GossipPage() {
 
   return (
     <div className="space-y-6">
-      {/* Sister-app ads, one line each so the feed itself starts near the top
-          of the screen (the Gruvs card used to fill half a phone screen).
-          Every word and link comes from utils/sisterApps.ts, which carries
-          the rules for what each app may and may not claim. */}
-      <div className="space-y-2">
-        <a
-          href={GRUVS.url ?? undefined}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="no-underline flex items-center gap-3 p-3 rounded-2xl bg-purple-500/10 border border-purple-500/25 hover:border-purple-400/50 transition-colors"
-        >
-          <Image src="/gruvs-logo.png" alt="" width={28} height={28} className="rounded-full object-cover shrink-0" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-bold text-white truncate">{GRUVS.headline}</span>
-            <span className="block text-[11px] text-gray-400 truncate">{GRUVS.name} · sister app</span>
-          </span>
-          <span className="text-[11px] font-bold text-purple-300 shrink-0 flex items-center gap-1">
-            {GRUVS.cta} <ExternalLink size={11} />
-          </span>
-        </a>
-
-        {/* TEARN's Excellence — hidden until it has a real address to send people to */}
-        {TEARNS.url && (
-          <a
-            href={TEARNS.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="no-underline flex items-center gap-3 p-3 rounded-2xl bg-gold-primary/10 border border-gold-primary/25 hover:border-gold-primary/50 transition-colors"
+      {/* Hyper-local Suburb Broadcast & Community Hub */}
+      <div className="p-3.5 rounded-2xl bg-gradient-to-r from-gold-primary/10 via-black/40 to-black/20 border border-gold-primary/25 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gold-primary/20 border border-gold-primary/30 flex items-center justify-center shrink-0">
+            <Radio className="w-4 h-4 text-gold-primary animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black uppercase tracking-wider text-white">Neighbourhood Live Feed</span>
+              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                Verified Resident Network
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-400">Direct hyper-local community updates, security signals, and co-living notices in your area.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              playTactileSound('click');
+              setActiveCategory('safety');
+            }}
+            className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold text-[11px] uppercase tracking-wider transition-all min-h-[38px] flex items-center justify-center gap-1.5 active:scale-95"
           >
-            <span className="w-7 h-7 rounded-full bg-white/5 border border-white/15 flex items-center justify-center shrink-0">
-              <Table2 size={15} className="text-gold-primary" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-white truncate">{TEARNS.headline}</span>
-              <span className="block text-[11px] text-gray-400 truncate">{TEARNS.name} · sister app</span>
-            </span>
-            <span className="text-[11px] font-bold text-gold-primary shrink-0 flex items-center gap-1">
-              {TEARNS.cta} <ExternalLink size={11} />
-            </span>
-          </a>
-        )}
+            <Shield size={12} />
+            <span>Safety Alerts</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              playTactileSound('click');
+              setActiveCategory('roommates');
+            }}
+            className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary font-bold text-[11px] uppercase tracking-wider transition-all min-h-[38px] flex items-center justify-center gap-1.5 active:scale-95"
+          >
+            <Building2 size={12} />
+            <span>Co-Living</span>
+          </button>
+        </div>
       </div>
 
       {/* TOPIC TABS & REAL-TIME SEARCH */}
@@ -766,7 +765,7 @@ export default function GossipPage() {
                   >
                     <div className="absolute top-4 right-4">
                       {post.author_id === myId ? (
-                        <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-black/60 hover:bg-red-500 text-white rounded-full p-2 transition-all shadow-md"><Trash2 size={13} /></button>
+                        <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-black/60 hover:bg-red-500 text-white rounded-full p-2 transition-all border border-white/10"><Trash2 size={13} /></button>
                       ) : !isAnon ? (
                         <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />
                       ) : null}
@@ -814,7 +813,7 @@ export default function GossipPage() {
                             onClick={() => handleReact(post.id, r.type)}
                             className={`px-2.5 py-1 rounded-xl text-xs flex items-center gap-1.5 border transition-all active:scale-95 ${
                               isChosen
-                                ? 'bg-gold-primary/20 border-gold-primary/60 text-gold-primary font-black shadow-sm'
+                                ? 'bg-gold-primary/20 border-gold-primary/60 text-gold-primary font-black'
                                 : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
                             }`}
                           >
@@ -922,10 +921,10 @@ export default function GossipPage() {
 
                 {post.media_url && post.media_type === 'image' && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={post.media_url} alt="" className="w-full max-h-96 object-cover rounded-2xl border border-white/10 shadow-md" />
+                  <img src={post.media_url} alt="" className="w-full max-h-96 object-cover rounded-2xl border border-white/10" />
                 )}
                 {post.media_url && post.media_type === 'video' && (
-                  <video src={post.media_url} controls className="w-full max-h-96 rounded-2xl border border-white/10 shadow-md" />
+                  <video src={post.media_url} controls className="w-full max-h-96 rounded-2xl border border-white/10" />
                 )}
 
                 {/* VIBE REACTIONS BAR */}
@@ -948,7 +947,7 @@ export default function GossipPage() {
                           onClick={() => handleReact(post.id, r.type)}
                           className={`px-2.5 py-1 rounded-xl text-xs flex items-center gap-1.5 border transition-all active:scale-95 ${
                             isChosen
-                              ? 'bg-gold-primary/20 border-gold-primary/60 text-gold-primary font-black shadow-sm'
+                              ? 'bg-gold-primary/20 border-gold-primary/60 text-gold-primary font-black'
                               : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
                           }`}
                         >
@@ -960,14 +959,23 @@ export default function GossipPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <a
-                      href={`https://wa.me/?text=${encodeURIComponent(`Neighbourhood update on The Resident: "${cleanBody.slice(0, 90)}..." https://theresidentcrew.com/dashboard/gossip`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[11px] font-bold text-emerald-400 hover:underline flex items-center gap-1"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playTactileSound('pop');
+                        const shareText = `Neighbourhood update on The Resident: "${cleanBody.slice(0, 90)}..." https://theresidentcrew.com/dashboard/gossip#${post.id}`;
+                        navigator.clipboard.writeText(shareText);
+                        setSharedPostId(post.id);
+                        setTimeout(() => setSharedPostId(null), 3000);
+                      }}
+                      className="text-[11px] font-bold text-gold-primary hover:text-white transition-colors flex items-center gap-1.5 min-h-[36px] px-2 rounded-lg hover:bg-white/5 active:scale-95"
+                      title="Copy in-app link to share in Resident Messages or Community"
                     >
-                      Share on WA
-                    </a>
+                      {sharedPostId === post.id ? <Check size={12} className="text-emerald-400" /> : <Share2 size={12} />}
+                      <span className={sharedPostId === post.id ? 'text-emerald-400' : ''}>
+                        {sharedPostId === post.id ? 'Copied Link!' : 'Share to Chat'}
+                      </span>
+                    </button>
                     <button
                       onClick={() => toggleExpand(post.id)}
                       className="flex items-center gap-1.5 text-[11px] text-gold-primary font-bold hover:underline"

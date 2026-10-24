@@ -427,7 +427,7 @@ export default function HousingPage() {
     setNewQuickPost(false)
     setNewListingType('rent')
     setNewEventId('')
-    setAlertNotification('Room listed. Share it on WhatsApp so people actually see it.')
+    setAlertNotification('Room listed! Share the listing in Messages or Community.')
   }
 
   // A signed-out guest has no id, so the request row it built was orphaned —
