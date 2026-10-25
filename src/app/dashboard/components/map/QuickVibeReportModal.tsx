@@ -12,7 +12,7 @@ import {
   type TrafficDensity, type ZoneEventType, type PointsmanStatus
 } from '../../../../utils/mapZones'
 
-interface QuickVibeReportModalProps {
+export interface QuickVibeReportModalProps {
   isOpen: boolean
   onClose: () => void
   currentCoords: { lat: number; lon: number } | null
@@ -20,9 +20,10 @@ interface QuickVibeReportModalProps {
   tracedWaypoints?: [number, number][] | null
   onStartTracing?: (type: 'marathon' | 'detour') => void
   onClearWaypoints?: () => void
+  initialCategory?: VibeCategory
 }
 
-type VibeCategory =
+export type VibeCategory =
   | 'funeral_closure'
   | 'road_closed'
   | 'heavy_traffic'
@@ -39,9 +40,13 @@ export default function QuickVibeReportModal({
   onReportSuccess,
   tracedWaypoints,
   onStartTracing,
-  onClearWaypoints
+  onClearWaypoints,
+  initialCategory
 }: QuickVibeReportModalProps) {
-  const [category, setCategory] = useState<VibeCategory>('funeral_closure')
+  const [category, setCategory] = useState<VibeCategory>(initialCategory || 'funeral_closure')
+  React.useEffect(() => {
+    if (initialCategory) setCategory(initialCategory)
+  }, [initialCategory])
   const [title, setTitle] = useState('')
   const [note, setNote] = useState('')
   const [trafficDensity, setTrafficDensity] = useState<TrafficDensity>('gridlock')

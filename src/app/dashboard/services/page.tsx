@@ -65,7 +65,7 @@ export default function ServicesPage() {
     const tab = params.get('tab')
     if (tab === 'moving' || tab === 'handymen' || tab === 'lifts' || tab === 'utilities') {
       setActiveTab(tab)
-    } else if (params.get('type')) {
+    } else if (tab === 'trades' || params.get('type')) {
       setActiveTab('handymen')
     }
   }, [])

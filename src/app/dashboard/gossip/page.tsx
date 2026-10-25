@@ -81,15 +81,6 @@ export default function GossipPage() {
   const myId = currentUser?.id
 
   const [posts, setPosts] = useState<GossipPost[]>([])
-  const [reactions, setReactions] = useState<Record<string, Record<string, number>>>({})
-  const toggleReaction = (postId: string, emoji: string) => {
-    playTactileSound('pop');
-    setReactions(prev => {
-      const postReactions = { ...(prev[postId] || {}) };
-      postReactions[emoji] = (postReactions[emoji] || 0) + 1;
-      return { ...prev, [postId]: postReactions };
-    });
-  };
   const [profileMap, setProfileMap] = useState<Record<string, ProfileHit>>({})
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -133,23 +124,33 @@ export default function GossipPage() {
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [composerCategory, setComposerCategory] = useState<GossipCategory>('campus')
 
-  // Interactive Vibe Reactions
-  const [postReactions, setPostReactions] = useState<Record<string, { lit: number; tea: number; redflag: number; real: number; dead: number; userReacted?: string }>>({})
+  // Interactive Vibe Reactions (Truth Protocol: start at 0, persist user reactions locally)
+  const [postReactions, setPostReactions] = useState<Record<string, { lit: number; tea: number; redflag: number; real: number; dead: number; userReacted?: string }>>(() => {
+    if (typeof window === 'undefined') return {}
+    try {
+      const saved = localStorage.getItem('res_gossip_reactions')
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
+  })
   const [sharedPostId, setSharedPostId] = useState<string | null>(null)
 
   const handleReact = (postId: string, type: 'lit' | 'tea' | 'redflag' | 'real' | 'dead') => {
     playTactileSound('pop')
     setPostReactions(prev => {
-      const cur = prev[postId] || { lit: 3, tea: 6, redflag: 1, real: 4, dead: 0 }
+      const cur = prev[postId] || { lit: 0, tea: 0, redflag: 0, real: 0, dead: 0 }
       const isAlready = cur.userReacted === type
-      return {
-        ...prev,
-        [postId]: {
-          ...cur,
-          [type]: isAlready ? Math.max(0, cur[type] - 1) : cur[type] + 1,
-          userReacted: isAlready ? undefined : type
-        }
+      const prevChosen = cur.userReacted as 'lit' | 'tea' | 'redflag' | 'real' | 'dead' | undefined
+      const updated = { ...cur }
+      if (prevChosen && prevChosen !== type) {
+        updated[prevChosen] = Math.max(0, updated[prevChosen] - 1)
       }
+      updated[type] = isAlready ? Math.max(0, updated[type] - 1) : updated[type] + 1
+      updated.userReacted = isAlready ? undefined : type
+      const next = { ...prev, [postId]: updated }
+      try { localStorage.setItem('res_gossip_reactions', JSON.stringify(next)) } catch {}
+      return next
     })
   }
 
@@ -797,10 +798,10 @@ export default function GossipPage() {
                   <div className="px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 bg-white/[0.02]">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {[
-                        { type: 'tea' as const, emoji: '👀', label: 'Tea', defaultCount: 4 },
-                        { type: 'lit' as const, emoji: '🔥', label: 'Lit', defaultCount: 2 },
-                        { type: 'redflag' as const, emoji: '🚩', label: 'Red Flag', defaultCount: 1 },
-                        { type: 'real' as const, emoji: '💯', label: 'Real', defaultCount: 5 },
+                        { type: 'tea' as const, emoji: '👀', label: 'Tea', defaultCount: 0 },
+                        { type: 'lit' as const, emoji: '🔥', label: 'Lit', defaultCount: 0 },
+                        { type: 'redflag' as const, emoji: '🚩', label: 'Red Flag', defaultCount: 0 },
+                        { type: 'real' as const, emoji: '💯', label: 'Real', defaultCount: 0 },
                         { type: 'dead' as const, emoji: '💀', label: 'Dead', defaultCount: 0 }
                       ].map(r => {
                         const cur = postReactions[post.id]
@@ -931,10 +932,10 @@ export default function GossipPage() {
                 <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-white/5">
                   <div className="flex flex-wrap items-center gap-1.5">
                     {[
-                      { type: 'tea' as const, emoji: '👀', label: 'Tea', defaultCount: 4 },
-                      { type: 'lit' as const, emoji: '🔥', label: 'Lit', defaultCount: 2 },
-                      { type: 'redflag' as const, emoji: '🚩', label: 'Red Flag', defaultCount: 1 },
-                      { type: 'real' as const, emoji: '💯', label: 'Real', defaultCount: 5 },
+                      { type: 'tea' as const, emoji: '👀', label: 'Tea', defaultCount: 0 },
+                      { type: 'lit' as const, emoji: '🔥', label: 'Lit', defaultCount: 0 },
+                      { type: 'redflag' as const, emoji: '🚩', label: 'Red Flag', defaultCount: 0 },
+                      { type: 'real' as const, emoji: '💯', label: 'Real', defaultCount: 0 },
                       { type: 'dead' as const, emoji: '💀', label: 'Dead', defaultCount: 0 }
                     ].map(r => {
                       const cur = postReactions[post.id]

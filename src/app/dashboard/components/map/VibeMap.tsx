@@ -18,7 +18,7 @@
  * fallback, and recenter.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './futureMap.css'
@@ -30,13 +30,14 @@ import { useSelector } from 'react-redux'
 import { RootState, type Listing } from '../../../../store'
 import { fetchSharedZones, parseZoneDetails, verifyZone, type SharedZone } from '../../../../utils/mapZones'
 import { distanceMetres } from '../../../../utils/logic'
-import { reverseGeocode } from '../../../../utils/geocode'
+import { reverseGeocode, searchPlaces } from '../../../../utils/geocode'
+import LiveLocationToggle from './LiveLocationToggle'
+import QuickVibeReportModal, { type VibeCategory } from './QuickVibeReportModal'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import MapSearchBox from './MapSearchBox'
 import { fetchUpcomingGruvsEvents, formatGruvsEventWhen, type GruvsEvent } from '../../../../utils/gruvsEvents'
 import { GRUVS } from '../../../../utils/sisterApps'
 import VibeBottomSheet, { type VibeItem } from './VibeBottomSheet'
-import QuickVibeReportModal from './QuickVibeReportModal'
 import {
  PULSE_COLOR, PULSE_HEIGHT, arcPoints, detourBypassArc, marathonCorridorPolyline, distanceKm, formatDistance, isochroneFeatures, pickStreams, rankHotspots,
  type EventPulse, type LatLon,
@@ -87,6 +88,7 @@ const pointFC = <P extends Record<string, unknown>>(items: { lat: number; lon: n
 
 export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }) {
  const listings = useSelector((state: RootState) => state.listings.items)
+ const currentUser = useSelector((state: RootState) => state.auth.currentUser)
 
  const mapContainerRef = useRef<HTMLDivElement>(null)
  const mapRef = useRef<MLMap | null>(null)
@@ -111,6 +113,8 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  const [selectedVibeItem, setSelectedVibeItem] = useState<VibeItem | null>(null)
  const [isoCenter, setIsoCenter] = useState<LatLon | null>(null)
  const [showDropVibeModal, setShowDropVibeModal] = useState(false)
+ const [dropInitialCategory, setDropInitialCategory] = useState<VibeCategory | undefined>(undefined)
+ const [liveLocSharing, setLiveLocSharing] = useState(false)
  const [gruvsEvents, setGruvsEvents] = useState<GruvsEvent[]>([])
  const [eventsAt, setEventsAt] = useState(0)
  const [sharedZones, setSharedZones] = useState<SharedZone[]>([])
@@ -148,6 +152,36 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  const queryLat = searchParams ? parseFloat(searchParams.get('lat') || '') : NaN
  const queryLon = searchParams ? parseFloat(searchParams.get('lon') || '') : NaN
  const isBeaconMode = searchParams ? searchParams.get('beacon') === 'true' : false
+ const queryAction = searchParams ? searchParams.get('action') : null
+ const queryPlace = searchParams ? searchParams.get('place') : null
+
+ useEffect(() => {
+   if (!queryAction) return
+   const mapActionToCategory: Record<string, VibeCategory> = {
+     drop: 'chill',
+     closure: 'funeral_closure',
+     marathon: 'marathon_route',
+     pointsman: 'dead_robots'
+   }
+   const cat = mapActionToCategory[queryAction]
+   if (cat) {
+     setDropInitialCategory(cat)
+     setShowDropVibeModal(true)
+   }
+ }, [queryAction])
+
+ useEffect(() => {
+   if (!queryPlace || queryPlace.trim().length < 3) return
+   let cancelled = false
+   searchPlaces(queryPlace).then(results => {
+     if (cancelled || results.length === 0) return
+     const top = results[0]
+     setCenter({ lat: top.lat, lon: top.lon })
+     setPendingTapCoords({ lat: top.lat, lon: top.lon, label: top.label })
+     mapRef.current?.flyTo({ center: [top.lon, top.lat], zoom: 15.2, duration: 1200 })
+   })
+   return () => { cancelled = true }
+ }, [queryPlace])
 
  // 1. Initial Geolocation (or focus directly if coordinates passed via beacon link)
  useEffect(() => {
@@ -186,7 +220,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  }, [queryLat, queryLon])
 
  // 2. Fetch Gruvs events & Shared community zones
- const loadData = async (lat: number, lon: number, horizonHours: number = timeHorizonHours) => {
+ const loadData = useCallback(async (lat: number, lon: number, horizonHours: number = timeHorizonHours) => {
     try {
       const targetTime = horizonHours > 0 ? new Date(Date.now() + horizonHours * 3600 * 1000) : new Date()
       const [events, zones] = await Promise.all([
@@ -199,12 +233,12 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     } catch {
       // Silently handle offline or network hiccups
     }
-  }
+  }, [timeHorizonHours])
 
   useEffect(() => {
     if (!center) return
     loadData(center.lat, center.lon, timeHorizonHours)
-  }, [center, timeHorizonHours])
+  }, [center, timeHorizonHours, loadData])
 
  // 3. MapLibre lifecycle — created once geolocation resolves.
  useEffect(() => {
@@ -1063,6 +1097,15 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  </span>
  </button>
 
+ {/* Live GPS Presence Toggle */}
+ <LiveLocationToggle
+   compact
+   userId={currentUser?.id || null}
+   sharing={liveLocSharing}
+   onSharingChange={setLiveLocSharing}
+   onPosition={pos => { if (pos) setUserLoc({ lat: pos.lat, lon: pos.lon }) }}
+ />
+
  {/* GPS Locate Me */}
  <button
  onClick={handleRecenter}
@@ -1081,6 +1124,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  <QuickVibeReportModal
     isOpen={showDropVibeModal}
     onClose={() => setShowDropVibeModal(false)}
+    initialCategory={dropInitialCategory}
     currentCoords={pendingTapCoords || center}
     onReportSuccess={() => {
       setTracedWaypoints([])

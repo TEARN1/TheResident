@@ -76,8 +76,6 @@ export default function AuthPage() {
   // up front are filled in later on the Profile page, where they already live.
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(true)
-  const EMAIL_DOMAINS = ['@gmail.com', '@outlook.com', '@icloud.com', '@yahoo.com']
 
   // Message states
   const [securityMessage, setSecurityMessage] = useState<string | null>(null)
@@ -416,16 +414,26 @@ export default function AuthPage() {
                   {resetEmailSending ? 'Sending link…' : 'Forgot password?'}
                 </button>
               </div>
-              <input
-                id="login-password"
-                type="password"
-                required
-                autoComplete="current-password"
-                placeholder="Your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={inputStyle}
-              />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  placeholder="Your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ ...inputStyle, paddingRight: '2.75rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  style={{ position: 'absolute', right: '0.85rem', background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             {resetEmailSent && (
@@ -496,16 +504,26 @@ export default function AuthPage() {
 
             <div style={inputGroupStyle}>
               <label style={labelStyle} htmlFor="signup-password">Password</label>
-              <input
-                id="signup-password"
-                type="password"
-                required
-                autoComplete="new-password"
-                placeholder="Choose a strong password"
-                value={password}
-                onChange={(e) => handlePasswordChange(e.target.value)}
-                style={inputStyle}
-              />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                  id="signup-password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="new-password"
+                  placeholder="Choose a strong password"
+                  value={password}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
+                  style={{ ...inputStyle, paddingRight: '2.75rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  style={{ position: 'absolute', right: '0.85rem', background: 'none', border: 'none', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               {passwordStrength && (
                 <div style={{ marginTop: '4px' }}>
                   <div style={{ display: 'flex', gap: '3px', marginBottom: '4px' }}>

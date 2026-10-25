@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Share2, Check, Copy } from 'lucide-react'
+import { Share2, Check } from 'lucide-react'
 import { listingShareText } from '../../../../utils/publicListings'
 import { track } from '../../../../utils/track'
 import { playTactileSound } from '../../../../utils/tactileSounds'

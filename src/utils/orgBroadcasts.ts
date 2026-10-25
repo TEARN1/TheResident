@@ -12,7 +12,7 @@ export interface OrgUnit {
   id: string
   parentId: string | null
   name: string
-  tier: 'department' | 'hod' | 'school' | 'teacher' | 'business' | 'branch'
+  tier: 'presidency' | 'premier' | 'mayor' | 'councillor' | 'department' | 'hod' | 'school' | 'teacher' | 'business' | 'branch'
   ownerUserId: string | null
 }
 

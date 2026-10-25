@@ -15,8 +15,16 @@ import { goldButtonClass } from '../../../../components/ui/GoldButton'
 import EmptyState from '../shared/EmptyState'
 
 const TIER_LABEL: Record<OrgUnit['tier'], string> = {
-  department: 'Department', hod: 'HOD', school: 'School',
-  teacher: 'Teacher', business: 'Business', branch: 'Branch'
+  presidency: 'Presidency (National)',
+  premier: 'Premier (Provincial)',
+  mayor: 'Executive Mayor (Metro)',
+  councillor: 'Ward Councillor (Suburb)',
+  department: 'Department',
+  hod: 'HOD',
+  school: 'School',
+  teacher: 'Teacher',
+  business: 'Business',
+  branch: 'Branch'
 }
 
 const sanitize = (text: string) => encodeHTMLEntities(cleanScriptTags(text))
@@ -149,8 +157,8 @@ export default function OrgBroadcastsPanel() {
             <Megaphone size={18} className="text-gold-primary" />
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-widest">Org & Business Broadcasts</p>
-            <p className="text-[10px] text-gray-500">Free, in-app announcements — opt-in only, no spam</p>
+            <p className="text-xs font-black text-white uppercase tracking-widest">Civic, Org & Business Broadcasts</p>
+            <p className="text-[10px] text-gray-500">Ward Councillors, Mayors, Departments, Schools & Local Businesses — opt-in cascade</p>
           </div>
         </div>
         <div className="flex items-center gap-2">

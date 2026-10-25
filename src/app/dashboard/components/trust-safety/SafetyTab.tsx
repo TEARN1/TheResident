@@ -95,36 +95,6 @@ export default function SafetyTab({
   const [familyBeaconDispatched, setFamilyBeaconDispatched] = useState(false)
   const [safeConfirmed, setSafeConfirmed] = useState(false)
   const [inviteCopied, setInviteCopied] = useState(false)
-  const [sosHoldProgress, setSosHoldProgress] = useState(0)
-  const holdIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const startSosHold = () => {
-    if (holdIntervalRef.current) clearInterval(holdIntervalRef.current)
-    setSosHoldProgress(0)
-    const startTime = Date.now()
-    holdIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime
-      const pct = Math.min(100, Math.round((elapsed / 2500) * 100))
-      setSosHoldProgress(pct)
-      if (pct >= 100) {
-        if (holdIntervalRef.current) {
-          clearInterval(holdIntervalRef.current)
-          holdIntervalRef.current = null
-        }
-        onRaiseAlert?.({ kind: 'panic', title: 'Urgent: help needed', description: 'A neighbour needs help now.', severity: 'critical' })
-        setConfirmPanic(false)
-        setSosHoldProgress(0)
-      }
-    }, 40)
-  }
-
-  const cancelSosHold = () => {
-    if (holdIntervalRef.current) {
-      clearInterval(holdIntervalRef.current)
-      holdIntervalRef.current = null
-    }
-    setSosHoldProgress(0)
-  }
   const [nightwalkActive, setNightwalkActive] = useState(false)
   const [nightwalkMinutes, setNightwalkMinutes] = useState(15)
   // How many people the alert will actually reach, shown before it is sent

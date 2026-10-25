@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, FileText, Calculator, Users, ClipboardList, Upload, Camera, Heart, Sparkles, Zap, Droplets, ArrowUpDown
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, FileText, Calculator, Users, ClipboardList, Upload, Camera, Heart, ArrowUpDown
 } from 'lucide-react'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import {
@@ -94,9 +94,8 @@ export default function HousingPage() {
   // distinguished by listing_type, same pattern as the quick-post merge above.
   const [filterListingType, setFilterListingType] = useState<'rent' | 'sale' | 'guesthouse'>('rent')
   const [filterParking, setFilterParking] = useState(false)
-  const [filterSolar, setFilterSolar] = useState(false)
-  const [filterBackupWater, setFilterBackupWater] = useState(false)
   const [filterEnsuite, setFilterEnsuite] = useState(false)
+  const [filterSavedOnly, setFilterSavedOnly] = useState(false)
   const [sortBy, setSortBy] = useState<'featured' | 'priceAsc' | 'priceDesc' | 'newest'>('featured')
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([])
 
@@ -239,6 +238,10 @@ export default function HousingPage() {
       setActiveTab('rooms')
       setFilterListingType('guesthouse')
       setFilterEventId(event)
+    } else if (tab === 'create') {
+      hasSteeredTab.current = true
+      setActiveTab('rooms')
+      setShowCreateModal(true)
     } else if (listing || tab === 'rooms' || tab === 'roommates' || tab === 'properties') {
       hasSteeredTab.current = true
       setActiveTab(tab === 'roommates' || tab === 'properties' ? tab : 'rooms')
@@ -315,9 +318,16 @@ export default function HousingPage() {
   const filteredListings = [...filteredListingsRaw]
     .filter(isVisible)
     .filter(l => !filterQuickPostOnly || l.quickPost)
+    .filter(l => !filterEnsuite || l.amenities.bathroom === 'ensuite' || l.amenities.bathroom === 'private')
+    .filter(l => !filterSavedOnly || bookmarkedIds.includes(l.id))
     .filter(l => (l.listingType || 'rent') === filterListingType)
     .filter(l => !filterEventId || l.eventId === filterEventId)
-    .sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
+    .sort((a, b) => {
+      if (sortBy === 'priceAsc') return a.price - b.price
+      if (sortBy === 'priceDesc') return b.price - a.price
+      if (sortBy === 'newest') return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      return Number(isFeatured(b)) - Number(isFeatured(a))
+    })
 
   // No budget cap: this used to pass 2000, which silently hid every ad with
   // a budget over R2,000 (all of them).
@@ -861,6 +871,50 @@ export default function HousingPage() {
             >
               Parking Only
             </button>
+
+            <button
+              type="button"
+              onClick={() => { setFilterEnsuite(v => !v); playTactileSound('click') }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] ${
+                filterEnsuite
+                  ? 'bg-gold-primary text-black border-gold-primary'
+                  : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+              }`}
+            >
+              Private / Ensuite
+            </button>
+
+            {bookmarkedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => { setFilterSavedOnly(v => !v); playTactileSound('click') }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] flex items-center gap-1.5 ${
+                  filterSavedOnly
+                    ? 'bg-rose-500 text-white border-rose-500'
+                    : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+                }`}
+              >
+                <Heart size={12} className={filterSavedOnly ? 'fill-current' : 'text-rose-400'} />
+                <span>Saved ({bookmarkedIds.length})</span>
+              </button>
+            )}
+
+            <div className="w-px h-5 bg-white/10 shrink-0 mx-1 ml-auto" />
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <ArrowUpDown size={13} className="text-gold-primary shrink-0" />
+              <select
+                value={sortBy}
+                onChange={e => { setSortBy(e.target.value as typeof sortBy); playTactileSound('tab') }}
+                aria-label="Sort listings"
+                className="bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-200 outline-none cursor-pointer min-h-[36px]"
+              >
+                <option value="featured" className="bg-black text-white">Featured First</option>
+                <option value="priceAsc" className="bg-black text-white">Price: Low to High</option>
+                <option value="priceDesc" className="bg-black text-white">Price: High to Low</option>
+                <option value="newest" className="bg-black text-white">Newest Listed</option>
+              </select>
+            </div>
           </div>
 
           <AnimatePresence>
@@ -1041,11 +1095,26 @@ export default function HousingPage() {
                         </span>
                       )}
                     </div>
-                    {isFeatured(item) && (
-                      <span className="bg-gradient-to-r from-amber-500 to-gold-primary text-black text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-glow">
-                        Featured
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 pointer-events-auto">
+                      {isFeatured(item) && (
+                        <span className="bg-gradient-to-r from-amber-500 to-gold-primary text-black text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full">
+                          Featured
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); toggleBookmark(item.id) }}
+                        aria-label={bookmarkedIds.includes(item.id) ? 'Remove from saved rooms' : 'Save room'}
+                        title={bookmarkedIds.includes(item.id) ? 'Saved' : 'Save room'}
+                        className={`p-2 rounded-full backdrop-blur-xl border transition-all active:scale-90 ${
+                          bookmarkedIds.includes(item.id)
+                            ? 'bg-rose-500/90 border-rose-400 text-white'
+                            : 'bg-black/60 border-white/20 text-white/80 hover:text-white hover:border-white/40'
+                        }`}
+                      >
+                        <Heart size={13} className={bookmarkedIds.includes(item.id) ? 'fill-current' : ''} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Bottom Price Pill Floating */}
