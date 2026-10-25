@@ -322,7 +322,7 @@ export default function ThreadPage() {
   }
 
   return (
-    <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-12">
+    <div className="p-1.5 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-12">
       <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col h-[calc(100dvh-11rem-env(safe-area-inset-bottom,0px))] md:h-[calc(100dvh-10rem)]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/2">
@@ -453,7 +453,15 @@ export default function ThreadPage() {
             }
 
             return (
-              <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+              <React.Fragment key={m.id}>
+                {showDateHeader && (
+                  <div className="flex justify-center my-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-white/5 border border-white/10 rounded-full px-3 py-1 select-none">
+                      {formatMessageDate(m.created_at)}
+                    </span>
+                  </div>
+                )}
+                <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-sm ${
                     isMe
@@ -521,6 +529,7 @@ export default function ThreadPage() {
                   </div>
                 </div>
               </div>
+              </React.Fragment>
             )
           })}
           {/* Offline Queued Messages */}
@@ -551,6 +560,17 @@ export default function ThreadPage() {
           </div>
 
           <div ref={bottomRef} />
+          {showScrollBottom && (
+            <button
+              type="button"
+              onClick={scrollToBottom}
+              className="absolute bottom-4 right-4 p-2.5 rounded-full bg-gold-primary text-black border border-gold-primary/60 hover:scale-105 active:scale-95 transition-all z-20 flex items-center justify-center touch-target-44"
+              title="Scroll to latest messages"
+              aria-label="Scroll to latest messages"
+            >
+              <ArrowDown size={16} />
+            </button>
+          )}
         </div>
 
         {error && (

@@ -168,8 +168,8 @@ export default function TrustCirclePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="glass-panel p-6">
+    <div className="p-3 sm:p-6 md:p-8 max-w-4xl mx-auto space-y-6 pb-28">
+      <div className="glass-panel p-4 sm:p-6">
         <div className="flex items-start gap-3 mb-4">
           <div className="p-2.5 bg-gold-primary/10 rounded-xl">
             <ShieldCheck size={22} className="text-gold-primary" />

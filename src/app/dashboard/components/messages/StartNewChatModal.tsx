@@ -90,8 +90,19 @@ export default function StartNewChatModal({
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.5 }}
+          onDragEnd={(e, info) => {
+            if (info.offset.y > 80 || info.velocity.y > 250) {
+              playTactileSound('pop')
+              onClose()
+            }
+          }}
           className="relative w-full max-w-lg bg-[var(--card-bg,rgba(11,43,38,0.9))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-t-3xl sm:rounded-3xl p-5 sm:p-7 backdrop-blur-2xl flex flex-col max-h-[85dvh] overflow-hidden pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
+          {/* Mobile Drag Indicator */}
+          <div className="sm:hidden w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-1 mb-2.5 shrink-0 cursor-grab active:cursor-grabbing" />
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
             <div className="flex items-center gap-3">

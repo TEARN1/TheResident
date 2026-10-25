@@ -489,7 +489,7 @@ export default function CommunityPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-32">
+    <div className="p-3 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 pb-32">
       {/* Duplicated what the top bar already shows (icon + "Community") —
           removed for the same reason as Housing's and Services'. Kept the
           VibeMap toggle, since that's the one thing here that actually does
@@ -506,7 +506,7 @@ export default function CommunityPage() {
       </header>
 
       {/* TWO-STEP DRILL-DOWN NAVIGATION */}
-      <div className="bg-black/60 p-3 md:p-4 rounded-3xl border border-white/10 shadow-glass backdrop-blur-2xl space-y-3">
+      <div className="bg-black/60 p-3 md:p-4 rounded-3xl border border-white/10 backdrop-blur-2xl space-y-3">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           <button
             onClick={() => goToTab('overview')}

@@ -314,7 +314,7 @@ export default function ProfilePage() {
 
   if (guest) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6 pb-24">
+      <div className="p-3 sm:p-6 md:p-8 max-w-3xl mx-auto space-y-6 pb-28">
         <div className="glass-panel p-10 text-center space-y-4">
           <UserIcon size={40} className="mx-auto text-gold-primary opacity-60" />
           <h2 className="text-xl font-bold text-white">No profile to show yet</h2>
@@ -386,7 +386,7 @@ export default function ProfilePage() {
           </span>
         </div>
       </Card>
-      <div className="glass-panel p-6 flex items-center gap-5 border-white/10 relative overflow-hidden shadow-2xl">
+      <div className="glass-panel p-4 sm:p-6 flex items-center gap-4 sm:gap-5 border-white/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
 
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gold-primary via-amber-300 to-gold-secondary text-black flex items-center justify-center text-2xl font-black shrink-0 shadow-[0_0_20px_rgb(var(--accent)/0.3)] relative">

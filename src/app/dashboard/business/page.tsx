@@ -114,8 +114,8 @@ export default function BusinessPage() {
   const completedCount = checklist.filter(c => c.done).length
 
   return (
-    <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6 pb-24">
-      <div className="glass-panel p-6">
+    <div className="p-3 sm:p-6 md:p-8 max-w-4xl mx-auto space-y-6 pb-28">
+      <div className="glass-panel p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-1">
           <div className="p-2 bg-gold-primary/10 rounded-lg text-gold-primary"><Briefcase size={22} /></div>
           <h1 className="text-2xl font-black text-white tracking-tight">My Business</h1>

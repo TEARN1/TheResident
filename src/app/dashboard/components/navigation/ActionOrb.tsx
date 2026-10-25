@@ -173,8 +173,18 @@ export default function ActionOrb({ onOpenReportModal }: ActionOrbProps) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.96 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.5 }}
+              onDragEnd={(e, info) => {
+                if (info.offset.y > 80 || info.velocity.y > 250) {
+                  toggleOpen()
+                }
+              }}
               className="relative w-full max-w-lg bg-black/95 backdrop-blur-3xl border border-white/15 rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 space-y-4 max-h-[85dvh] overflow-y-auto no-scrollbar z-10 pb-[max(env(safe-area-inset-bottom),1.5rem)]"
             >
+              {/* Mobile Drag Indicator */}
+              <div className="sm:hidden w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-1 mb-2 shrink-0 cursor-grab active:cursor-grabbing" />
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <div className="flex items-center gap-2.5">

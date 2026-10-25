@@ -461,8 +461,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* ============================================================== */}
         {/* MAIN WORKSPACE WRAPPER (With md:pl-20 lg:pl-64)                */}
         {/* ============================================================== */}
-        <div className="dashboard-main-content md:pl-20 lg:pl-64 min-h-screen min-h-dvh flex flex-col transition-all overflow-x-hidden">
-          <header className="sticky top-0 z-40 h-16 bg-black/60 backdrop-blur-2xl border-b border-white/15 px-3 sm:px-4 md:px-6 flex items-center justify-between transition-all">
+        <div className="dashboard-main-content pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] md:pl-20 lg:pl-64 min-h-screen min-h-dvh flex flex-col transition-all overflow-x-hidden">
+          <header className="sticky top-0 z-40 h-16 bg-black/60 backdrop-blur-2xl border-b border-white/15 px-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))] sm:px-4 md:px-6 flex items-center justify-between transition-all">
             {/* Left Header Title / Mobile Logo */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <Link

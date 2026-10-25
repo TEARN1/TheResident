@@ -220,8 +220,19 @@ export default function QuickVibeReportModal({
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.5 }}
+          onDragEnd={(e, info) => {
+            if (info.offset.y > 80 || info.velocity.y > 250) {
+              playTactileSound('pop')
+              onClose()
+            }
+          }}
           className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto custom-scrollbar bg-black/95 border border-gold-primary/30 rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 backdrop-blur-2xl pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
+          {/* Mobile Drag Indicator */}
+          <div className="sm:hidden w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-1 mb-2 shrink-0 cursor-grab active:cursor-grabbing" />
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">

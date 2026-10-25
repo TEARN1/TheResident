@@ -101,8 +101,19 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.5 }}
+          onDragEnd={(e, info) => {
+            if (info.offset.y > 80 || info.velocity.y > 250) {
+              playTactileSound('pop')
+              onClose()
+            }
+          }}
           className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 backdrop-blur-2xl overflow-hidden max-h-[90dvh] flex flex-col pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
+          {/* Mobile Drag Indicator */}
+          <div className="sm:hidden w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-1 mb-2.5 shrink-0 cursor-grab active:cursor-grabbing" />
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />
 
