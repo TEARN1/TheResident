@@ -19,7 +19,7 @@ create table if not exists public.res_org_units (
   id uuid primary key default uuid_generate_v4(),
   parent_id uuid references public.res_org_units(id) on delete cascade,
   name text not null,
-  tier text not null check (tier in ('presidency', 'premier', 'mayor', 'councillor', 'department', 'hod', 'school', 'teacher', 'business', 'branch')),
+  tier text not null check (tier in ('presidency', 'premier', 'mayor', 'councillor', 'political_party', 'party_branch', 'department', 'hod', 'school', 'teacher', 'utility_infra', 'estate_hoa', 'ngo_civic', 'business', 'branch')),
   owner_user_id uuid references public.profiles(id) on delete set null,
   created_at timestamptz default now()
 );
