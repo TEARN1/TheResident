@@ -54,6 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const isDirectMessageThread = Boolean(pathname?.startsWith('/dashboard/messages/') && pathname !== '/dashboard/messages')
   const dispatch = useDispatch()
   const [showNotifMenu, setShowNotifMenu] = useState(false)
   const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all')
@@ -605,7 +606,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Page content body */}
-          <main className="dashboard-page-body pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:pb-8 lg:pb-8">
+          <main className={`dashboard-page-body ${isDirectMessageThread ? 'pb-2 md:pb-8 lg:pb-8' : 'pb-[calc(7rem+env(safe-area-inset-bottom,0px))] md:pb-8 lg:pb-8'}`}>
+
             {children}
           </main>
         </div>
@@ -613,6 +615,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* ============================================================== */}
         {/* MOBILE 5-POINT KINETIC DOCK (Screen < 768px)                  */}
         {/* ============================================================== */}
+        {!isDirectMessageThread && (
         <nav
           className="md:hidden fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] left-3 right-3 max-w-md mx-auto z-50 bg-black/80 backdrop-blur-3xl border border-white/15 rounded-3xl p-1.5 flex items-center justify-between pointer-events-auto"
           aria-label="Mobile primary navigation"
@@ -665,6 +668,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             })}
           </div>
         </nav>
+        )}
 
         <PWAInstallBanner />
         <ThemeSwitcherModal

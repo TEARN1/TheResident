@@ -14,16 +14,17 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useParams, useRouter } from 'next/navigation'
 import {
-  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle, ArrowDown, Copy, Check, Smile, PenLine, Eye, WifiOff, CornerDownLeft, Search
+  Send, ArrowLeft, Clock, Sparkles, Phone, Video, MapPin, Loader, Mic, X, PhoneMissed, Trash2, MessageCircle, ArrowDown, Copy, Check, PenLine, WifiOff, CornerDownLeft, Search, Camera, Maximize2, ExternalLink
 } from 'lucide-react'
 import { RootState, isGuestUser } from '../../../../store'
 import Link from 'next/link'
 import EmptyState from '../../components/shared/EmptyState'
 import { supabase } from '../../../../utils/supabase'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import {
   VOICE_BUCKET, formatDuration, voiceNoteBody, voiceNoteDuration, voiceNotePath, uploadTypeFor,
-  locationBody, parseLegacyBeacon, isLegacyVoiceNote
+  locationBody, parseLegacyBeacon, isLegacyVoiceNote, photoBody
 } from '../../../../utils/dmMedia'
 import { useCall } from '../../components/messages/CallProvider'
 import VoiceNotePlayer from '../../components/messages/VoiceNotePlayer'
@@ -100,6 +101,12 @@ export default function ThreadPage() {
   const [threadSearch, setThreadSearch] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [offlineQueue, setOfflineQueue] = useState<Array<{ id: string; body: string; createdAt: string; extra?: Extra }>>([])
+  const [otherTyping, setOtherTyping] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const channelRef = useRef<RealtimeChannel | null>(null)
+  const lastTypingBroadcastRef = useRef<number>(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
 
   const [showScrollBottom, setShowScrollBottom] = useState(false)
@@ -184,7 +191,7 @@ export default function ThreadPage() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }, [loadThread])
 
-  // New messages from them (and call summaries written by either side).
+  // New messages, deletes and typing indicators over fast realtime channel
   useEffect(() => {
     if (!supabase || !myId || !otherId) return
     const sorted = [myId, otherId].sort()
@@ -192,8 +199,22 @@ export default function ThreadPage() {
       .channel(`dm_fast_${sorted[0]}_${sorted[1]}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${otherId}` }, () => { loadThread() })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${otherId}` }, () => { loadThread() })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, () => { loadThread() })
+      .on('broadcast', { event: 'typing' }, payload => {
+        if (payload?.payload?.userId === otherId) {
+          setOtherTyping(true)
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+          typingTimeoutRef.current = setTimeout(() => {
+            setOtherTyping(false)
+          }, 3000)
+        }
+      })
       .subscribe()
-    return () => { supabase!.removeChannel(channel) }
+    channelRef.current = channel
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      supabase!.removeChannel(channel)
+    }
   }, [myId, otherId, loadThread])
 
   useEffect(() => {
@@ -225,6 +246,63 @@ export default function ThreadPage() {
     playTactileSound('pop')
     loadThread()
     return true
+  }
+
+    const broadcastTyping = useCallback(() => {
+    const now = Date.now()
+    if (now - lastTypingBroadcastRef.current > 2000 && channelRef.current) {
+      lastTypingBroadcastRef.current = now
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { userId: myId }
+      })
+    }
+  }, [myId])
+
+  const deleteMessage = async (msgId: string) => {
+    if (!supabase || !myId) return
+    playTactileSound('click')
+    setMessages(prev => prev.filter(m => m.id !== msgId))
+    const { error: delErr } = await supabase.from('messages').delete().eq('id', msgId).eq('sender_id', myId)
+    if (delErr) {
+      loadThread()
+    }
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !supabase || !myId || !otherId) return
+    e.target.value = ''
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file (JPEG, PNG, WebP).')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image must be under 10MB.')
+      return
+    }
+    setUploadingImage(true)
+    setError(null)
+    const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const path = `dms/${myId}/${otherId}/${Date.now()}_${cleanName}`
+    const { error: upErr } = await supabase.storage.from('gossip-media').upload(path, file, { contentType: file.type })
+    setUploadingImage(false)
+    if (upErr) {
+      setError('Could not upload image. Check your connection and try again.')
+      return
+    }
+    const { data: urlData } = supabase.storage.from('gossip-media').getPublicUrl(path)
+    if (!urlData?.publicUrl) {
+      setError('Failed to get public image URL.')
+      return
+    }
+    playTactileSound('success')
+    await insertMessage(photoBody(), {
+      message_type: 'image',
+      media_url: urlData.publicUrl,
+      media_type: file.type
+    })
   }
 
   const sendText = async () => {
@@ -323,7 +401,7 @@ export default function ThreadPage() {
 
   return (
     <div className="p-1.5 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-12">
-      <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col h-[calc(100dvh-11rem-env(safe-area-inset-bottom,0px))] md:h-[calc(100dvh-10rem)]">
+      <div className="bg-black/60 backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col h-[calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px))] md:h-[calc(100dvh-8rem)]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/2">
           <div className="flex items-center gap-3 min-w-0">
@@ -334,7 +412,7 @@ export default function ThreadPage() {
             >
               <ArrowLeft size={16} />
             </button>
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gold-primary to-amber-600 flex items-center justify-center text-black font-black text-sm overflow-hidden shadow-sm shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-gold-primary to-amber-600 flex items-center justify-center text-black font-black text-sm overflow-hidden  shrink-0">
               {otherProfile?.avatar_url
                 ? // eslint-disable-next-line @next/next/no-img-element
                   <img src={otherProfile.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -440,7 +518,35 @@ export default function ThreadPage() {
               : legacyBeacon
 
             let content: React.ReactNode
-            if (m.message_type === 'voice' && m.media_url) {
+            if (m.message_type === 'image' && m.media_url) {
+              content = (
+                <div className="space-y-1.5">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setLightboxImage(m.media_url)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setLightboxImage(m.media_url) }}
+                    className="relative rounded-xl overflow-hidden cursor-pointer group bg-black/40 border border-white/10 hover:border-gold-primary/50 transition-colors"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={m.media_url}
+                      alt="Photo attachment"
+                      className="max-h-60 sm:max-h-80 w-auto rounded-xl object-contain group-hover:scale-[1.01] transition-transform duration-200"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <span className="p-2 rounded-full bg-black/60 text-white backdrop-blur-sm">
+                        <Maximize2 size={16} />
+                      </span>
+                    </div>
+                  </div>
+                  {m.body && m.body !== '📷 Photo attachment' && m.body !== '📷 Photo' && (
+                    <p className="m-0 whitespace-pre-wrap break-words">{renderMessageBody(m.body)}</p>
+                  )}
+                </div>
+              )
+            } else if (m.message_type === 'voice' && m.media_url) {
               content = <VoiceNotePlayer path={m.media_url} duration={voiceNoteDuration(m.body)} isMe={isMe} />
             } else if (isLegacyVoiceNote(m.body)) {
               content = <p className="m-0 italic opacity-80">Voice note ({voiceNoteDuration(m.body) || '?'}) from before recording worked, so there is no audio.</p>
@@ -463,7 +569,7 @@ export default function ThreadPage() {
                 )}
                 <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-sm ${
+                  className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 text-xs leading-relaxed  ${
                     isMe
                       ? 'bg-gradient-to-br from-gold-primary to-amber-500 text-black font-semibold rounded-br-xs'
                       : 'bg-white/5 backdrop-blur-xl border border-white/10 text-gray-100 rounded-bl-xs'
@@ -514,13 +620,21 @@ export default function ThreadPage() {
                       >
                         {copiedMsgId === m.id ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
                       </button>
+                      {isMe && (
+                        <button
+                          type="button"
+                          onClick={() => deleteMessage(m.id)}
+                          className="text-[9px] opacity-60 hover:opacity-100 text-black hover:text-red-700 transition-opacity"
+                          title="Delete message"
+                          aria-label="Delete message"
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      )}
                       {isMe ? (
-                        <div className="flex items-center gap-1 font-mono text-[9px] tracking-tight">
-                          <span className="text-black/60 dark:text-neutral-400">Sent {time}</span>
-                          <span className="text-amber-800 dark:text-amber-400 font-medium">· Deliv {time}</span>
-                          <span className="text-emerald-800 dark:text-emerald-400 font-bold flex items-center gap-0.5">
-                            <Eye size={9} /> Read {time}
-                          </span>
+                        <div className="flex items-center gap-1 font-mono text-[9px] tracking-tight text-black/70">
+                          <span>Sent {time}</span>
+                          <Check size={9} />
                         </div>
                       ) : (
                         <span className="text-[9px] text-gray-500">{time}</span>
@@ -547,17 +661,19 @@ export default function ThreadPage() {
             </div>
           ))}
 
-          {/* Distinctive Resident Drafting Presence */}
-          <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/5 border border-gold-primary/30 text-xs w-fit my-2 shadow-none animate-pulse">
-            <div className="w-5 h-5 rounded-full bg-gold-primary/20 flex items-center justify-center text-gold-primary font-bold text-[10px]">
-              {name.charAt(0).toUpperCase()}
+          {/* Realtime Typing Indicator: strictly Truth-Protocol compliant */}
+          {otherTyping && (
+            <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/5 border border-gold-primary/30 text-xs w-fit my-2 animate-in fade-in">
+              <div className="w-5 h-5 rounded-full bg-gold-primary/20 flex items-center justify-center text-gold-primary font-bold text-[10px]">
+                {name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <PenLine size={12} className="text-gold-primary animate-bounce" />
+                <span className="text-xs text-gray-300 font-medium">{name} is typing...</span>
+              </div>
+              <span className="w-1.5 h-1.5 rounded-full bg-gold-primary animate-ping ml-1" />
             </div>
-            <div className="flex items-center gap-1.5">
-              <PenLine size={12} className="text-gold-primary animate-bounce" />
-              <span className="text-xs text-gray-300 font-medium">{name} is writing a response...</span>
-            </div>
-            <span className="w-1.5 h-1.5 rounded-full bg-gold-primary animate-ping ml-1" />
-          </div>
+          )}
 
           <div ref={bottomRef} />
           {showScrollBottom && (
@@ -631,11 +747,28 @@ export default function ThreadPage() {
             </div>
           ) : (
             <div className="flex items-center gap-2 bg-black/60 backdrop-blur-2xl border border-white/15 focus-within:border-gold-primary/60 rounded-2xl px-2.5 py-1.5 transition-all">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage || sending}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gold-primary transition-all shrink-0 active:scale-95 disabled:opacity-50"
+                title="Send a photo"
+                aria-label="Send a photo"
+              >
+                {uploadingImage ? <Loader size={15} className="animate-spin" /> : <Camera size={15} />}
+              </button>
               <button
                 type="button"
                 onClick={() => setConfirmLocation(true)}
                 disabled={locating || sending}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gold-primary transition-all shrink-0 active:scale-95 disabled:opacity-50"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-amber-400 transition-all shrink-0 active:scale-95 disabled:opacity-50"
                 title="Share your location"
                 aria-label="Share your location"
               >
@@ -653,7 +786,7 @@ export default function ThreadPage() {
               </button>
               <input
                 value={draft}
-                onChange={e => setDraft(e.target.value)}
+                onChange={e => { setDraft(e.target.value); broadcastTyping() }}
                 onKeyDown={e => { if (e.key === 'Enter') void sendText() }}
                 placeholder="Write a message…"
                 className="flex-1 min-w-0 bg-transparent border-0 text-xs text-white placeholder:text-gray-500 outline-none p-2 font-medium"
@@ -670,6 +803,44 @@ export default function ThreadPage() {
           )}
         </div>
       </div>
+      {/* Photo Attachment Lightbox Viewer */}
+      {lightboxImage && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 animate-in fade-in"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div className="absolute top-4 right-4 flex items-center gap-2 z-10" onClick={e => e.stopPropagation()}>
+            <a
+              href={lightboxImage}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all flex items-center gap-1.5 text-xs font-bold"
+              title="Open full size"
+            >
+              <ExternalLink size={15} />
+              <span className="hidden sm:inline">Open Full Size</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => setLightboxImage(null)}
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all"
+              title="Close image"
+              aria-label="Close image"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightboxImage}
+            alt="Expanded photo attachment"
+            onClick={e => e.stopPropagation()}
+            className="max-h-[85vh] max-w-[95vw] rounded-2xl object-contain select-none"
+          />
+        </div>
+      )}
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert'
 import {
   formatDuration, voiceNoteBody, voiceNoteDuration, voiceNotePath, pickRecorderMime, uploadTypeFor,
-  locationBody, parseLegacyBeacon, isLegacyVoiceNote, tileFor, callSummaryBody
+  locationBody, parseLegacyBeacon, isLegacyVoiceNote, tileFor, callSummaryBody, photoBody
 } from './dmMedia'
 
 test('durations format as m:ss', () => {
@@ -55,4 +55,9 @@ test('tile maths puts Johannesburg in the right zoom-15 tile', () => {
 test('call summaries read naturally', () => {
   assert.strictEqual(callSummaryBody('audio', true), '📞 Missed voice call')
   assert.strictEqual(callSummaryBody('video', false), '📞 Video call')
+})
+
+test('photo body formats label with optional caption', () => {
+  assert.strictEqual(photoBody(), '📷 Photo attachment')
+  assert.strictEqual(photoBody('Lease agreement'), '📷 Photo: Lease agreement')
 })

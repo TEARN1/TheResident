@@ -92,3 +92,7 @@ export function callSummaryBody(type: 'audio' | 'video', missed: boolean): strin
   const what = type === 'video' ? 'video call' : 'voice call'
   return missed ? `📞 Missed ${what}` : `📞 ${what[0].toUpperCase()}${what.slice(1)}`
 }
+
+export function photoBody(caption?: string): string {
+  return caption?.trim() ? '📷 Photo: ' + caption.trim() : '📷 Photo attachment'
+}
