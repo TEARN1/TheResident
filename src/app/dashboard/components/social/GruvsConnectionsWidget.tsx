@@ -46,7 +46,7 @@ export default function GruvsConnectionsWidget() {
   const visible = connections.slice(scrollIndex, scrollIndex + 4)
 
   return (
-    <div className="glass-panel p-5 bg-gold-primary/5 border-gold-primary/10 flex flex-col md:flex-row items-start md:items-center gap-4">
+    <div className="glass-panel p-5 bg-gold-primary/5 border-gold-primary/10 flex flex-col md:flex-row items-start md:items-center gap-4 min-w-0 overflow-hidden">
       <div className="flex items-center gap-3 shrink-0">
         <div className="p-2 bg-gold-primary/10 rounded-xl">
           <Users size={18} className="text-gold-primary" />
@@ -59,13 +59,15 @@ export default function GruvsConnectionsWidget() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-1 min-w-0">
+      {/* w-full: in the phone (column) layout this row used to size to its
+          content, so the chips ran past the card and off the screen. */}
+      <div className="flex items-center gap-2 flex-1 min-w-0 w-full md:w-auto">
         {scrollIndex > 0 && (
           <button onClick={() => setScrollIndex(i => Math.max(0, i - 4))} className="text-gray-500 hover:text-white shrink-0" aria-label="Previous">
             <ChevronLeft size={16} />
           </button>
         )}
-        <div className="flex gap-3 overflow-x-auto no-scrollbar">
+        <div className="flex flex-wrap md:flex-nowrap gap-2 md:gap-3 min-w-0 md:overflow-x-auto no-scrollbar">
           {visible.map(person => (
             <div key={person.id} className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-xl px-3 py-2 shrink-0">
               {person.avatarUrl ? (

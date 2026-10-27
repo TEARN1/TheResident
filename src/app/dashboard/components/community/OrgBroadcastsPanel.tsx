@@ -15,8 +15,21 @@ import { goldButtonClass } from '../../../../components/ui/GoldButton'
 import EmptyState from '../shared/EmptyState'
 
 const TIER_LABEL: Record<OrgUnit['tier'], string> = {
-  department: 'Department', hod: 'HOD', school: 'School',
-  teacher: 'Teacher', business: 'Business', branch: 'Branch'
+  presidency: 'Presidency (National)',
+  premier: 'Premier (Provincial)',
+  mayor: 'Executive Mayor (Metro)',
+  councillor: 'Ward Councillor (Suburb)',
+  political_party: 'Political Party (National / Provincial HQ)',
+  party_branch: 'Political Party Branch (Ward / Suburb)',
+  department: 'Gov Department',
+  hod: 'Department HOD',
+  school: 'School / University',
+  teacher: 'Teacher / Class',
+  utility_infra: 'Utility / Infrastructure (Power, Water, Fiber)',
+  estate_hoa: 'Estate / Body Corporate / HOA',
+  ngo_civic: 'NGO / Ratepayers / CPF',
+  business: 'Business / Brand HQ',
+  branch: 'Local Store / Branch'
 }
 
 const sanitize = (text: string) => encodeHTMLEntities(cleanScriptTags(text))
@@ -149,8 +162,8 @@ export default function OrgBroadcastsPanel() {
             <Megaphone size={18} className="text-gold-primary" />
           </div>
           <div>
-            <p className="text-xs font-black text-white uppercase tracking-widest">Org & Business Broadcasts</p>
-            <p className="text-[10px] text-gray-500">Free, in-app announcements — opt-in only, no spam</p>
+            <p className="text-xs font-black text-white uppercase tracking-widest">Civic, Political, Org & Business Broadcasts</p>
+            <p className="text-[10px] text-gray-500">Government, Political Parties, Utilities, Estates, Schools & Businesses — opt-in cascade</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -171,11 +184,11 @@ export default function OrgBroadcastsPanel() {
 
       {showCreateUnit && (
         <div className="bg-black/40 border border-white/5 rounded-xl p-4 space-y-3">
-          <p className="text-[10px] text-gray-500">Claim a unit to send from — a business, a school, or a department. Creating one makes you its first sender.</p>
+          <p className="text-[10px] text-gray-500">Open an official broadcast unit — a Political Party, Ward Branch, Business, Estate/HOA, Utility, School, or Government Office. Creating one makes you its verified sender.</p>
           <input
             value={newUnitName}
             onChange={e => setNewUnitName(e.target.value)}
-            placeholder="Unit name (e.g. Sunnyside Spaza Shop)"
+            placeholder="Unit name (e.g. Ward 60 Party Branch, Sunnyside Spaza, Eskom Sandton)"
             className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
           />
           <div className="flex gap-2">

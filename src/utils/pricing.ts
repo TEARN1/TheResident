@@ -80,13 +80,34 @@ export const PRICING: Record<string, PriceEntry> = {
     reasoning: 'Framed as an hourly cost (~R0.20/hr over the 24h block it buys) but sold as one self-serve block, the same way room_boost sells "7 days" rather than literal per-day charges — a real per-second meter has no natural checkout UI and no payment processor bills that granularly anyway.'
   },
 
-  // ── B2B — anchors for a sales conversation, not self-serve amounts ────
+  // ── B2B & Civic / Political Accounts — commercial & campaign tiers ────
   local_business_sponsorship: {
     amountZarCents: 15000,
     cadence: 'monthly',
     billingType: 'contact_sales',
-    label: 'Local business sponsored placement',
-    reasoning: 'Sized for a spaza shop or small security firm\'s real marketing budget — meaningfully above consumer tiers since it\'s commercial spend, not personal.'
+    label: 'Local business sponsored placement & channel',
+    reasoning: 'Sized for a spaza shop, retail store, or local security firm\'s real marketing budget — meaningfully above consumer tiers since it\'s commercial spend, not personal.'
+  },
+  political_party_branch: {
+    amountZarCents: 49900,
+    cadence: 'monthly',
+    billingType: 'contact_sales',
+    label: 'Verified Political Party Ward / Branch Channel',
+    reasoning: 'Replaces R5,000+ of printed street posters and flyers per ward with a verified, opt-in digital megaphone + Live Rally Room + town-hall polls for local voters.'
+  },
+  political_party_hq: {
+    amountZarCents: 249900,
+    cadence: 'monthly',
+    billingType: 'contact_sales',
+    label: 'Political Party Metro / Provincial / National HQ Tree',
+    reasoning: 'Full cascading tree from National/Provincial HQ down to every ward branch beneath it — one announcement from Party Leadership reaches every opted-in branch follower.'
+  },
+  broadcast_blast_boost: {
+    amountZarCents: 5000,
+    cadence: 'one_time',
+    billingType: 'self_serve',
+    label: 'Pin an official broadcast / rally / promo for 24h',
+    reasoning: 'Allows a political branch, retailer, or civic body to pin a time-sensitive town hall, rally, or store special to the top of the ward broadcast feed for 24 hours.'
   },
   infra_partner_placement: {
     amountZarCents: 50000,

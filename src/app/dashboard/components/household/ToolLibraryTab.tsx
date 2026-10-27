@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { Wrench, ShieldCheck, MapPin, Info, Plus, X, Star } from 'lucide-react'
 import { playTactileSound } from '@/utils/tactileSounds'
+import EmptyState from '../shared/EmptyState'
 
 interface Tool {
   id: string
@@ -50,12 +51,12 @@ export default function ToolLibraryTab({
   return (
     <div className="space-y-6">
       <div className="glass-panel p-6">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center gap-3 mb-6">
            <div>
               <h3 className="text-xl font-bold text-gold-primary flex items-center gap-2">
                  <Wrench size={24} className="text-gold-primary" /> Community Tool Library
               </h3>
-              <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-black opacity-60">Rent expensive tools from your neighbors safely.</p>
+              <p className="text-xs text-gray-500 mt-1">Borrow or rent tools from neighbours.</p>
            </div>
            <button
               onClick={() => setShowForm(!showForm)}
@@ -94,71 +95,16 @@ export default function ToolLibraryTab({
            </form>
         )}
 
-        <div className="bg-gold-primary/5 border border-gold-primary/10 p-5 rounded-2xl mb-8 flex gap-4 items-start">
-           <Info size={20} className="text-gold-primary shrink-0 mt-0.5" />
-           <p className="text-xs text-gray-400 leading-relaxed italic">
-              All tool transactions are Peer-to-Peer. The app facilitates the listing and reputation tracking, but payments and condition verification happen directly between neighbors at the point of collection.
-           </p>
-        </div>
+        <p className="flex gap-2 items-start text-xs text-gray-400 mb-6">
+           <Info size={14} className="text-gold-primary shrink-0 mt-0.5" />
+           You pay and check the tool with your neighbour when you collect it. The app only lists it.
+        </p>
 
+        {/* Plain empty state. It used to offer "Drill / Ladder / Pressure
+            washer" presets that filled the form with invented specs and
+            places ("certified for up to 150kg", "Apt 4B"). */}
         {communityTools.length === 0 ? (
-          <div className="py-16 px-6 text-center text-gray-500 bg-white/[0.02] rounded-3xl border border-dashed border-white/10 relative overflow-hidden backdrop-blur-sm">
-             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gold-primary/10 border border-gold-primary/20 flex items-center justify-center text-gold-primary shadow-[0_0_30px_rgba(212,175,55,0.15)]">
-               <Wrench size={32} />
-             </div>
-             <p className="text-base font-black uppercase tracking-widest text-white">Neighborhood Tool Shed is Empty</p>
-             <p className="text-xs text-gray-400 mt-1.5 max-w-md mx-auto">
-               Lend spare DIY equipment to neighbors, earn side income, and boost your Citizen Reputation.
-             </p>
-
-             <div className="mt-6 flex flex-wrap justify-center gap-3">
-               <button
-                 type="button"
-                 onClick={() => {
-                   playTactileSound('tab')
-                   setTitle('Bosch Hammer Drill 800W')
-                   setDescription('Heavy-duty percussion drill with masonry bit set and case included.')
-                   setPricePerDay('65')
-                   setDeposit('200')
-                   setLocation('Apt 4B')
-                   setShowForm(true)
-                 }}
-                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
-               >
-                 <span>🔨 Drill Preset</span>
-               </button>
-               <button
-                 type="button"
-                 onClick={() => {
-                   playTactileSound('tab')
-                   setTitle('Aluminum 6-Step Folding Ladder')
-                   setDescription('Lightweight 1.8m ladder, rubber grips, certified for up to 150kg.')
-                   setPricePerDay('50')
-                   setDeposit('150')
-                   setLocation('Ground Floor')
-                   setShowForm(true)
-                 }}
-                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
-               >
-                 <span>🪜 Ladder Preset</span>
-               </button>
-               <button
-                 type="button"
-                 onClick={() => {
-                   playTactileSound('tab')
-                   setTitle('High-Pressure Washer 110 Bar')
-                   setDescription('Compact jet washer ideal for balconies, driveways, and vehicles. 5m hose.')
-                   setPricePerDay('120')
-                   setDeposit('350')
-                   setLocation('Block C')
-                   setShowForm(true)
-                 }}
-                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
-               >
-                 <span>🚿 Pressure Washer</span>
-               </button>
-             </div>
-          </div>
+          <EmptyState icon={Wrench} title="No tools listed yet" subtitle="Have a drill or ladder you rarely use? List it and neighbours can borrow it." />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {communityTools.map(tool => (

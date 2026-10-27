@@ -1,12 +1,12 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Megaphone, Wrench, Award, Gavel, ShieldCheck, Briefcase, Home, X, Shield, Users, Droplets, Lock,
-  LayoutGrid, AlertTriangle, ListChecks, Sparkles, DoorOpen, Map as MapIcon
+  LayoutGrid, AlertTriangle, ListChecks, Sparkles, DoorOpen, Map as MapIcon, Layers
 } from 'lucide-react'
 import {
   RootState,
@@ -64,25 +64,26 @@ const VibeMap = dynamic(() => import('../components/map/VibeMap'), {
   ssr: false,
   loading: () => <div className="p-12 text-slate-400 font-bold text-center">Loading VibeMap client engine...</div>
 })
-const TextbookScannerExchangeModal = dynamic(() => import('../components/community/TextbookScannerExchangeModal'), { ssr: false })
-const GuardianLensModal = dynamic(() => import('../components/community/GuardianLensModal'), { ssr: false })
-const MidnightTuckshopModal = dynamic(() => import('../components/residence/MidnightTuckshopModal'), { ssr: false })
-const LaundryMachineQueueModal = dynamic(() => import('../components/residence/LaundryMachineQueueModal'), { ssr: false })
-const LaundryUVPredictorModal = dynamic(() => import('../components/residence/LaundryUVPredictorModal'), { ssr: false })
-const CommunalFridgeGuardModal = dynamic(() => import('../components/residence/CommunalFridgeGuardModal'), { ssr: false })
-const PastPapersVaultModal = dynamic(() => import('../components/residence/PastPapersVaultModal'), { ssr: false })
-const NoiseSentinelDecibelModal = dynamic(() => import('../components/residence/NoiseSentinelDecibelModal'), { ssr: false })
-const CoLivingChoreWheelModal = dynamic(() => import('../components/residence/CoLivingChoreWheelModal'), { ssr: false })
-const MoveInSurvivalQuestModal = dynamic(() => import('../components/residence/MoveInSurvivalQuestModal'), { ssr: false })
-const JoJoWaterPurityModal = dynamic(() => import('../components/residence/JoJoWaterPurityModal'), { ssr: false })
-const USSDOfflineFallbackModal = dynamic(() => import('../components/social-dynamics/USSDOfflineFallbackModal'), { ssr: false })
+
+type CommunityTab = 'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'resources' | 'admin' | 'departments'
+const COMMUNITY_TABS: CommunityTab[] = ['overview', 'notices', 'tools', 'chores', 'disputes', 'safety', 'market', 'household', 'communities', 'vibemap', 'resources', 'admin', 'departments']
+
+// Deep links into Community: ?tab=<any tab>, plus the Ask box's older
+// ?action=panic / ?action=dispute_* and ?tab=nightwalk links.
+function tabFromParams(params: URLSearchParams | null): CommunityTab | null {
+  const tab = params?.get('tab') || ''
+  const action = params?.get('action') || ''
+  if ((COMMUNITY_TABS as string[]).includes(tab)) return tab as CommunityTab
+  if (tab === 'nightwalk' || action === 'panic') return 'safety'
+  if (action.startsWith('dispute')) return 'disputes'
+  return null
+}
 
 export default function CommunityPage() {
   const dispatch = useDispatch() as AppDispatch
   const searchParams = useSearchParams()
-  const [subTab, setSubTab] = useState<'overview' | 'notices' | 'tools' | 'chores' | 'disputes' | 'safety' | 'market' | 'household' | 'communities' | 'vibemap' | 'resources' | 'admin'>(
-    searchParams.get('tab') === 'vibemap' ? 'vibemap' : 'overview'
-  )
+  const router = useRouter()
+  const [subTab, setSubTab] = useState<CommunityTab>(tabFromParams(searchParams) ?? 'overview')
   const [preMapTab, setPreMapTab] = useState<Exclude<typeof subTab, 'vibemap'>>('overview')
   // Arriving via the top bar's "Map" quick-link (?tab=vibemap) means the
   // user wants the map, not the Community Hub chrome around it — so that
@@ -95,7 +96,10 @@ export default function CommunityPage() {
   // page was already mounted — the useState initializer above only fires on
   // first mount, so a repeat visit needs this effect to still catch the param.
   useEffect(() => {
-    if (searchParams.get('tab') === 'vibemap') { setSubTab('vibemap'); setMapFullscreen(true) }
+    const tab = tabFromParams(searchParams)
+    if (!tab) return
+    setSubTab(tab)
+    setMapFullscreen(tab === 'vibemap')
   }, [searchParams])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
@@ -107,20 +111,6 @@ export default function CommunityPage() {
 
   // Create-community modal state (CommunitiesTab is presentation-only; the form lives here)
   const [showCreateCommunity, setShowCreateCommunity] = useState(false)
-
-  // Advanced Campus & Safety Modals
-  const [showTextbookModal, setShowTextbookModal] = useState(false)
-  const [showGuardianModal, setShowGuardianModal] = useState(false)
-  const [showTuckshopModal, setShowTuckshopModal] = useState(false)
-  const [showLaundryQueueModal, setShowLaundryQueueModal] = useState(false)
-  const [showLaundryUVModal, setShowLaundryUVModal] = useState(false)
-  const [showFridgeGuardModal, setShowFridgeGuardModal] = useState(false)
-  const [showPastPapersModal, setShowPastPapersModal] = useState(false)
-  const [showNoiseSentinelModal, setShowNoiseSentinelModal] = useState(false)
-  const [showChoreWheelModal, setShowChoreWheelModal] = useState(false)
-  const [showSurvivalQuestModal, setShowSurvivalQuestModal] = useState(false)
-  const [showJoJoPurityModal, setShowJoJoPurityModal] = useState(false)
-  const [showUSSDModal, setShowUSSDModal] = useState(false)
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const lang = useSelector((state: RootState) => state.ui.language)
@@ -402,16 +392,17 @@ export default function CommunityPage() {
   const clusters = [
     {
       id: 'feed',
-      label: 'Feed & Social',
+      label: 'Notices',
       accent: 'text-sky-400 bg-sky-400/10',
       tabs: [
         { id: 'notices', label: 'Notices', icon: Megaphone },
+        { id: 'departments', label: 'Organisations', icon: Layers },
         { id: 'communities', label: 'Groups', icon: Users },
       ],
     },
     {
       id: 'trade',
-      label: 'Trade & Resources',
+      label: 'Trade',
       accent: 'text-emerald-400 bg-emerald-400/10',
       tabs: [
         { id: 'market', label: 'Market', icon: Briefcase },
@@ -421,7 +412,7 @@ export default function CommunityPage() {
     },
     {
       id: 'safety',
-      label: 'Safety & Household',
+      label: 'Safety & home',
       accent: 'text-rose-400 bg-rose-400/10',
       tabs: [
         { id: 'safety', label: 'Safety', icon: ShieldCheck },
@@ -446,6 +437,20 @@ export default function CommunityPage() {
   // Overview stat card jumping straight to Disputes).
   const activeCluster = clusters.find(c => c.tabs.some(t => t.id === subTab)) ?? null
 
+  // A brand-new suburb has nothing in most tabs, and a row of empty tabs
+  // reads as a dead app. Tabs with nothing in them yet fold behind a
+  // "+N quiet" chip (still one tap away, and the open tab always shows).
+  // Only tabs with a cheap, already-loaded count are folded; the core ones
+  // (Notices, Groups, Safety, Household, Organisations, Resources) always show.
+  const [showQuietTabs, setShowQuietTabs] = useState(false)
+  const tabItemCounts: Partial<Record<string, number>> = {
+    market: marketItems.length + vendors.length + groupBuys.length + lostFound.length,
+    tools: communityTools.length,
+    disputes: communityDisputes.length,
+    chores: communityChores.length,
+  }
+  const isQuietTab = (id: string) => tabItemCounts[id] === 0
+
   // ── Overview stat cards ────────────────────────────────────────────────
   const activeAlertsCount = alerts.filter(a => a.status === 'active').length
   const myPendingChoresCount = communityChores.filter(c => c.roommateId === currentUser?.id && c.status !== 'completed').length
@@ -469,7 +474,7 @@ export default function CommunityPage() {
   // VibeMap alone, with its own exit control to get back.
   if (subTab === 'vibemap' && mapFullscreen) {
     return (
-      <div className="fixed inset-0 z-[1000] bg-black">
+      <div className="fixed inset-0 z-[1000] bg-black overscroll-none" data-map-open="">
         <button
           onClick={exitFullscreenMap}
           aria-label="Exit fullscreen map"
@@ -484,7 +489,7 @@ export default function CommunityPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-32">
+    <div className="p-3 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 pb-32">
       {/* Duplicated what the top bar already shows (icon + "Community") —
           removed for the same reason as Housing's and Services'. Kept the
           VibeMap toggle, since that's the one thing here that actually does
@@ -494,19 +499,19 @@ export default function CommunityPage() {
           onClick={toggleVibeMap}
           title="VibeMap"
           aria-label="Toggle VibeMap"
-          className={`hidden md:inline-flex items-center justify-center w-11 h-11 rounded-2xl border shrink-0 transition-all ${subTab === 'vibemap' ? 'bg-gold-primary text-black border-gold-primary' : 'bg-black/40 text-gray-500 border-white/5 hover:text-gold-primary hover:border-gold-primary/30'}`}
+          className={`hidden md:inline-flex items-center justify-center w-11 h-11 rounded-2xl border shrink-0 transition-all ${subTab === 'vibemap' ? 'bg-gold-primary text-black border-gold-primary shadow-lg shadow-gold-primary/20' : 'bg-black/40 text-gray-500 border-white/5 hover:text-gold-primary hover:border-gold-primary/30'}`}
         >
           <MapIcon size={18} />
         </button>
       </header>
 
       {/* TWO-STEP DRILL-DOWN NAVIGATION */}
-      <div className="bg-black/60 p-3 md:p-4 rounded-3xl border border-white/10 shadow-glass backdrop-blur-2xl space-y-3">
-        <div className="flex flex-wrap items-center gap-2 overflow-x-auto no-scrollbar">
+      <div className="bg-black/60 p-3 md:p-4 rounded-3xl border border-white/10 backdrop-blur-2xl space-y-3">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           <button
             onClick={() => goToTab('overview')}
             className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap ${
-              subTab === 'overview' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
+              subTab === 'overview' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
             }`}
           >
             <LayoutGrid size={13} /> Overview
@@ -517,9 +522,13 @@ export default function CommunityPage() {
             return (
               <button
                 key={cluster.id}
-                onClick={() => goToTab(cluster.tabs[0].id as typeof subTab)}
+                onClick={() => {
+                  setShowQuietTabs(false)
+                  const first = cluster.tabs.find(t => !isQuietTab(t.id)) ?? cluster.tabs[0]
+                  goToTab(first.id as typeof subTab)
+                }}
                 className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap ${
-                  active ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
+                  active ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white bg-white/5 border border-white/5'
                 }`}
               >
                 <span className={`p-0.5 rounded ${active ? '' : cluster.accent}`}>
@@ -533,131 +542,25 @@ export default function CommunityPage() {
             onClick={toggleVibeMap}
             className={`px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap border ${
               subTab === 'vibemap'
-                ? 'bg-gradient-to-r from-gold-primary to-amber-500 text-black border-gold-primary'
+                ? 'bg-gradient-to-r from-gold-primary to-amber-500 text-black border-gold-primary shadow-[0_0_25px_rgb(var(--accent)/0.4)]'
                 : 'text-amber-300 hover:text-white bg-gold-primary/10 border-gold-primary/30 hover:bg-gold-primary/20'
             }`}
           >
-            <Sparkles size={13} className="text-gold-primary animate-pulse" />
-            <span>Vibe Radar</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowTextbookModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30"
-          >
-            <span>📚 Textbook Swap</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowGuardianModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30"
-          >
-            <span>🛡️ GuardianLens</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowTuckshopModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30"
-            title="Peer Midnight Tuckshop & Study Snack Pool"
-          >
-            <span>🍜 Tuckshop</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowLaundryQueueModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30"
-            title="Communal Laundry Machine Queue & Cycle Buzzer"
-          >
-            <span>🧺 Laundry Queue</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowLaundryUVModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"
-            title="Highveld UV Index & Drying Window Radar"
-          >
-            <span>☀️ Laundry UV Radar</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowFridgeGuardModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
-            title="Communal Fridge Guard - Expiry & Free Food Claims"
-          >
-            <span>🧊 Fridge Guard</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowPastPapersModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30"
-            title="Past Exam Papers Vault & Quiet Study Bookings"
-          >
-            <span>📑 Past Papers Vault</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowNoiseSentinelModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30"
-            title="Noise Sentinel Corridor Decibel Meter & Quiet Beacons"
-          >
-            <span>🔊 Noise Sentinel</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowChoreWheelModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-            title="Co-Living Inertia Chore Wheel Spinner"
-          >
-            <span>🎡 Chore Wheel</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowSurvivalQuestModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-            title="Move-In Survival Quest - 7-Day Res Onboarding"
-          >
-            <span>🎒 Survival Quest</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowJoJoPurityModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30"
-            title="JoJo Water Tank Sensor Monitor - pH & TDS Purity"
-          >
-            <span>💧 JoJo Water Purity</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowUSSDModal(true)}
-            className="px-4 py-2 rounded-2xl transition-all text-xs font-black uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30"
-            title="Offline Zero-Rated USSD / SMS Mode (*120*737#)"
-          >
-            <span>📱 USSD Offline</span>
+            <MapIcon size={13} className="text-gold-primary" />
+            <span>Map</span>
           </button>
         </div>
 
         {/* Second-level tabs for active cluster */}
         {activeCluster && (
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 border-t border-white/10">
-            {activeCluster.tabs.map(t => (
+            {activeCluster.tabs.filter(t => showQuietTabs || t.id === subTab || !isQuietTab(t.id)).map(t => (
               <button
                 key={t.id}
                 onClick={() => goToTab(t.id as typeof subTab)}
                 className={`px-3 py-1.5 rounded-xl transition-all text-[11px] font-bold tracking-wide flex items-center gap-1.5 whitespace-nowrap border ${
                   subTab === t.id
-                    ? 'bg-white/15 text-white border-white/20'
+                    ? 'bg-white/15 text-white border-white/20 shadow-sm'
                     : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/5'
                 }`}
               >
@@ -667,6 +570,20 @@ export default function CommunityPage() {
                 {t.label}
               </button>
             ))}
+            {(() => {
+              const quiet = activeCluster.tabs.filter(t => t.id !== subTab && isQuietTab(t.id)).length
+              if (showQuietTabs || quiet === 0) return null
+              return (
+                <button
+                  type="button"
+                  onClick={() => setShowQuietTabs(true)}
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-bold text-gray-500 border border-dashed border-white/10 hover:text-gray-200 hover:border-white/20 whitespace-nowrap"
+                  title="Tabs with nothing posted yet"
+                >
+                  +{quiet} quiet
+                </button>
+              )
+            })()}
           </div>
         )}
       </div>
@@ -682,37 +599,26 @@ export default function CommunityPage() {
           >
             {subTab === 'overview' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="glass-panel p-5 bg-rose-400/5 border-rose-400/10 space-y-3">
-                    <div className="p-2 bg-rose-400/10 rounded-xl w-fit text-rose-400"><AlertTriangle size={18} /></div>
-                    <div>
-                      <p className="text-2xl font-black text-white italic">{activeAlertsCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active Alerts</p>
-                    </div>
-                  </div>
-                  <div className="glass-panel p-5 bg-gold-primary/5 border-gold-primary/10 space-y-3">
-                    <div className="p-2 bg-gold-primary/10 rounded-xl w-fit text-gold-primary"><ListChecks size={18} /></div>
-                    <div>
-                      <p className="text-2xl font-black text-white italic">{myPendingChoresCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Chores Assigned To You</p>
-                    </div>
-                  </div>
-                  <div className="glass-panel p-5 bg-emerald-400/5 border-emerald-400/10 space-y-3">
-                    <div className="p-2 bg-emerald-400/10 rounded-xl w-fit text-emerald-400"><Sparkles size={18} /></div>
-                    <div>
-                      <p className="text-2xl font-black text-white italic">{newMarketItemsCount}</p>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">New Market Items (48h)</p>
-                    </div>
-                  </div>
-                  {isLandlord && (
-                    <div className="glass-panel p-5 bg-sky-400/5 border-sky-400/10 space-y-3">
-                      <div className="p-2 bg-sky-400/10 rounded-xl w-fit text-sky-400"><DoorOpen size={18} /></div>
-                      <div>
-                        <p className="text-2xl font-black text-white italic">{openRoomRequestsCount}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Open Room Requests</p>
-                      </div>
-                    </div>
-                  )}
+                {/* Small tappable counts (these were four half-screen cards that
+                    mostly said 0). Each opens the tab it counts. */}
+                <div className={`grid ${isLandlord ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-2`}>
+                  {[
+                    { n: activeAlertsCount, label: 'Active alerts', icon: AlertTriangle, tone: 'text-rose-400', go: () => goToTab('safety') },
+                    { n: myPendingChoresCount, label: 'Your chores', icon: ListChecks, tone: 'text-gold-primary', go: () => goToTab('chores') },
+                    { n: newMarketItemsCount, label: 'New in market', icon: Sparkles, tone: 'text-emerald-400', go: () => goToTab('market') },
+                    ...(isLandlord ? [{ n: openRoomRequestsCount, label: 'Room requests', icon: DoorOpen, tone: 'text-sky-400', go: () => router.push('/dashboard/housing?tab=properties') }] : [])
+                  ].map(c => (
+                    <button
+                      key={c.label}
+                      type="button"
+                      onClick={c.go}
+                      className="flex flex-col items-start gap-1 p-3 rounded-2xl bg-black/40 border border-white/10 hover:border-white/25 text-left"
+                    >
+                      <c.icon size={15} className={c.tone} />
+                      <span className="text-xl font-black text-white leading-none">{c.n}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{c.label}</span>
+                    </button>
+                  ))}
                 </div>
                 <GruvsConnectionsWidget />
               </div>
@@ -731,8 +637,13 @@ export default function CommunityPage() {
                     isModerator={isModerator}
                     onModerate={handleModerate}
                  />
-                <OrgBroadcastsPanel />
               </div>
+            )}
+            {/* Real notices from organisations people follow (res_org_*).
+                This tab used to show made-up "official directives" from
+                real government departments and universities. */}
+            {subTab === 'departments' && (
+              <OrgBroadcastsPanel />
             )}
             {subTab === 'market' && (
               <MarketTab
@@ -900,7 +811,7 @@ export default function CommunityPage() {
         {showCreateCommunity && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowCreateCommunity(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-6">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">New <span className="text-gold-primary">Community</span></h3>
                 <button onClick={() => setShowCreateCommunity(false)} className="text-gray-500 hover:text-white"><X /></button>
@@ -935,7 +846,7 @@ export default function CommunityPage() {
         {showDisputeModal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowDisputeModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-6">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-lg max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">File a <span className="text-gold-primary">Dispute</span></h3>
                 <button onClick={() => setShowDisputeModal(false)} className="text-gray-500 hover:text-white"><X /></button>
@@ -965,92 +876,19 @@ export default function CommunityPage() {
                initial={{ y: 100, opacity: 0 }}
                animate={{ y: 0, opacity: 1 }}
                exit={{ y: 100, opacity: 0 }}
-               className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
+               className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] md:bottom-20 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-5 sm:px-8 py-3.5 sm:py-4 rounded-2xl flex items-center gap-3 sm:gap-4 max-w-[calc(100vw-2rem)] w-auto min-w-[280px] sm:min-w-[320px]"
             >
-               <div className="p-2 bg-green-500/20 rounded-full text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Shield size={24} /></div>
-               <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">Update</p>
-                  <p className="text-sm font-black text-white italic tracking-tight uppercase">{alertNotification}</p>
+               <div className="p-2 bg-green-500/20 rounded-full text-green-500"><Shield size={24} /></div>
+               <div className="space-y-0.5 min-w-0">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Update</p>
+                  <p className="text-sm font-black text-white italic tracking-tight uppercase truncate">{alertNotification}</p>
                </div>
-               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-700 hover:text-white transition-colors"><X size={16} /></button>
+               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-500 hover:text-white transition-colors shrink-0"><X size={16} /></button>
             </motion.div>
          )}
       </AnimatePresence>
-
-      {/* TEXTBOOK SCANNER & EXCHANGE MODAL */}
-      <TextbookScannerExchangeModal
-        isOpen={showTextbookModal}
-        onClose={() => setShowTextbookModal(false)}
-      />
-
-      {/* GUARDIAN LENS MODAL */}
-      <GuardianLensModal
-        isOpen={showGuardianModal}
-        onClose={() => setShowGuardianModal(false)}
-      />
-
-      {/* MIDNIGHT TUCKSHOP MODAL */}
-      <MidnightTuckshopModal
-        isOpen={showTuckshopModal}
-        onClose={() => setShowTuckshopModal(false)}
-      />
-
-      {/* LAUNDRY MACHINE QUEUE MODAL */}
-      <LaundryMachineQueueModal
-        isOpen={showLaundryQueueModal}
-        onClose={() => setShowLaundryQueueModal(false)}
-      />
-
-      {/* LAUNDRY UV PREDICTOR MODAL */}
-      <LaundryUVPredictorModal
-        isOpen={showLaundryUVModal}
-        onClose={() => setShowLaundryUVModal(false)}
-      />
-
-      {/* COMMUNAL FRIDGE GUARD MODAL */}
-      <CommunalFridgeGuardModal
-        isOpen={showFridgeGuardModal}
-        onClose={() => setShowFridgeGuardModal(false)}
-      />
-
-      {/* PAST EXAM PAPERS VAULT MODAL */}
-      <PastPapersVaultModal
-        isOpen={showPastPapersModal}
-        onClose={() => setShowPastPapersModal(false)}
-      />
-
-      {/* NOISE SENTINEL DECIBEL METER MODAL */}
-      <NoiseSentinelDecibelModal
-        isOpen={showNoiseSentinelModal}
-        onClose={() => setShowNoiseSentinelModal(false)}
-      />
-
-      {/* CO-LIVING CHORE WHEEL MODAL */}
-      <CoLivingChoreWheelModal
-        isOpen={showChoreWheelModal}
-        onClose={() => setShowChoreWheelModal(false)}
-      />
-
-      {/* MOVE-IN SURVIVAL QUEST ONBOARDING MODAL */}
-      <MoveInSurvivalQuestModal
-        isOpen={showSurvivalQuestModal}
-        onClose={() => setShowSurvivalQuestModal(false)}
-      />
-
-      {/* JOJO WATER TANK PURITY SENSOR MODAL */}
-      <JoJoWaterPurityModal
-        isOpen={showJoJoPurityModal}
-        onClose={() => setShowJoJoPurityModal(false)}
-      />
-
-      {/* ZERO-RATED USSD OFFLINE FALLBACK MODAL */}
-      <USSDOfflineFallbackModal
-        isOpen={showUSSDModal}
-        onClose={() => setShowUSSDModal(false)}
-      />
 
       {lang === 'en' && null /* lang currently drives translations elsewhere; kept in scope for the sidebar language switch */}
     </div>
   )
 }
-

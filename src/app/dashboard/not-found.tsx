@@ -27,7 +27,7 @@ export default function DashboardNotFound() {
         <div className="grid grid-cols-2 gap-3 pt-2">
           <Link
             href="/dashboard"
-            className="p-3 rounded-2xl bg-[var(--gold-primary,#8EB69B)] text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg"
+            className="p-3 rounded-2xl bg-[var(--gold-primary,#8EB69B)] text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all"
           >
             <Home size={14} /> Dashboard
           </Link>

@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
-import { Shield, Activity, Bell, MapPin, CheckCircle2, Info, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction } from 'lucide-react'
+import { Shield, Activity, Bell, MapPin, CheckCircle2, Droplets, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction, Radio, ShieldCheck } from 'lucide-react'
+import Link from 'next/link'
 import { outageConsensus, type StatusReport } from '../../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
 import UpgradeButton from '../shared/UpgradeButton'
-import LoadsheddingMatrixWidget from './LoadsheddingMatrixWidget'
 
 interface CareProfile {
   id: string
@@ -53,10 +53,10 @@ interface SafetyTabProps {
 
 const SERVICES: Array<{ key: 'power' | 'water' | 'network' | 'fiber' | 'road'; label: string; Icon: typeof Zap }> = [
   { key: 'power', label: 'Electricity', Icon: Zap },
-  { key: 'water', label: 'Water', Icon: Info },
-  { key: 'network', label: 'Network', Icon: Wifi },
-  { key: 'fiber', label: 'Fiber', Icon: Signal },
-  { key: 'road', label: 'Road / Traffic', Icon: Construction }
+  { key: 'water', label: 'Water', Icon: Droplets },
+  { key: 'network', label: 'Mobile network', Icon: Wifi },
+  { key: 'fiber', label: 'Fibre', Icon: Signal },
+  { key: 'road', label: 'Roads', Icon: Construction }
 ]
 
 // "How long" options for a crowd report's optional end time. The DB trigger
@@ -92,6 +92,23 @@ export default function SafetyTab({
   onReportStatus
 }: SafetyTabProps) {
   const [confirmPanic, setConfirmPanic] = useState(false)
+  const [familyBeaconDispatched, setFamilyBeaconDispatched] = useState(false)
+  const [safeConfirmed, setSafeConfirmed] = useState(false)
+  const [inviteCopied, setInviteCopied] = useState(false)
+  const [nightwalkActive, setNightwalkActive] = useState(false)
+  const [nightwalkMinutes, setNightwalkMinutes] = useState(15)
+  // How many people the alert will actually reach, shown before it is sent
+  // (res_alert_reach_preview counts the same audience res_raise_alert uses).
+  // undefined = loading/unknown, so nothing is claimed until it is known.
+  const [panicReach, setPanicReach] = useState<number | undefined>(undefined)
+  useEffect(() => {
+    if (!confirmPanic || !supabase) return
+    let cancelled = false
+    supabase.rpc('res_alert_reach_preview', { p_suburb: suburb || null }).then(({ data, error }) => {
+      if (!cancelled && !error && typeof data === 'number') setPanicReach(data)
+    })
+    return () => { cancelled = true }
+  }, [confirmPanic, suburb])
   const [showIncidentForm, setShowIncidentForm] = useState(false)
   const [incidentTitle, setIncidentTitle] = useState('')
   const [incidentDesc, setIncidentDesc] = useState('')
@@ -234,34 +251,34 @@ export default function SafetyTab({
 
   return (
     <div className="space-y-8">
-      {/* Live Eskom Grid & Suburb Schedule Matrix */}
-      <LoadsheddingMatrixWidget />
-
-      {/* Panic Section — deliberately two-step so a mis-tap can't page the neighbourhood */}
+      {/* Urgent alert to neighbours — deliberately two-step so a mis-tap can't
+          page the neighbourhood. It used to be framed as a pulsing red "Panic"
+          button that promised "community watch"; it alerts people on the app
+          near you, nothing more, so it says that and gives the real numbers. */}
       <div className="glass-panel p-6 border-red-500/20 bg-red-500/5">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-red-500/20 rounded-full animate-pulse">
-              <Shield size={32} className="text-red-500" />
+            <div className="p-3 bg-red-500/15 rounded-full">
+              <Shield size={24} className="text-red-400" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-red-500">Emergency & Panic</h3>
-              <p className="text-gray-400 text-sm">Raise an immediate alert to verified neighbors and community watch.</p>
+              <h3 className="text-base font-bold text-white">Need help now?</h3>
+              <p className="text-gray-400 text-sm">Send an urgent alert to people on The Resident near you.</p>
             </div>
           </div>
 
           {!confirmPanic ? (
             <button
-              onClick={() => setConfirmPanic(true)}
-              className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-red-900/20 transition-all active:scale-95"
+              onClick={() => { setPanicReach(undefined); setConfirmPanic(true) }}
+              className="w-full md:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl transition-all active:scale-95"
             >
-              RAISE PANIC ALERT
+              Alert neighbours
             </button>
           ) : (
             <div className="flex gap-2 w-full md:w-auto">
               <button
                 onClick={() => {
-                  onRaiseAlert?.({ kind: 'panic', title: 'Panic alert', description: 'Immediate help needed.', severity: 'critical' })
+                  onRaiseAlert?.({ kind: 'panic', title: 'Urgent: help needed', description: 'A neighbour needs help now.', severity: 'critical' })
                   setConfirmPanic(false)
                 }}
                 className="flex-1 md:flex-none bg-red-600 text-white font-bold px-6 py-3 rounded-xl active:scale-95 transition-all"
@@ -276,6 +293,224 @@ export default function SafetyTab({
               </button>
             </div>
           )}
+        </div>
+
+        {confirmPanic && panicReach !== undefined && (
+          <p className={`mt-3 text-xs font-bold ${panicReach > 0 ? 'text-red-300' : 'text-amber-300'}`}>
+            {panicReach > 0
+              ? `This alert will notify ${panicReach} neighbour${panicReach === 1 ? '' : 's'} in ${suburb || 'your area'}.`
+              : `No neighbours in ${suburb || 'your area'} are on The Resident yet, so nobody will be notified.`}
+          </p>
+        )}
+        <p className="mt-3 text-xs text-gray-400">
+          In a life-threatening emergency call <a href="tel:10111" className="font-bold text-white">10111</a> (police) or <a href="tel:112" className="font-bold text-white">112</a> from any phone.
+        </p>
+
+        {/* Emergency Signal Recipients Protocol (Who Receives Your Signal) */}
+        <div className="mt-4 pt-4 border-t border-red-500/15 space-y-2.5">
+          <span className="text-[10px] font-black uppercase tracking-widest text-red-300 block">
+            Emergency Signal Protocol — Who Receives Your Signal?
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                <span>👨‍👩‍👧</span>
+                <span>Family / Next of Kin</span>
+              </div>
+              <p className="text-[10px] text-gray-400 leading-relaxed m-0">
+                Direct Care Circle in-app distress beacon with your live GPS coordinates and timestamp.
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                <span>🛡️</span>
+                <span>Verified Neighbours</span>
+              </div>
+              <p className="text-[10px] text-gray-400 leading-relaxed m-0">
+                Priority alert to active verified residents within 2km in {suburb || 'your area'}.
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                <span>🚨</span>
+                <span>First Responders</span>
+              </div>
+              <p className="text-[10px] text-gray-400 leading-relaxed m-0">
+                Immediate offline dial links to SAPS (10111) and Cell Emergency (112).
+              </p>
+            </div>
+          </div>
+
+          {/* Native In-App Family & Care Circle Beacon Dispatch */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-red-950/30 border border-red-500/30 p-3.5 rounded-xl">
+            <div className="text-xs">
+              <span className="font-bold text-red-200 flex items-center gap-2">
+                <Radio className={`w-4 h-4 ${familyBeaconDispatched ? 'text-red-400 animate-pulse' : 'text-red-400'}`} />
+                In-App Care Circle & Family Beacon
+              </span>
+              <span className="text-[10px] text-gray-400 block mt-0.5">
+                {familyBeaconDispatched
+                  ? 'Active SOS Beacon broadcast live to your Care Circle inside The Resident.'
+                  : 'Broadcasts an urgent real-time alert with coordinates to all your verified Care Circle contacts.'}
+              </span>
+            </div>
+            <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
+              {familyBeaconDispatched && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFamilyBeaconDispatched(false);
+                    setSafeConfirmed(true);
+                    setTimeout(() => setSafeConfirmed(false), 5000);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider text-center transition-all active:scale-95 min-h-[44px] flex items-center justify-center gap-1.5 border border-emerald-400/40"
+                  title="Mark myself as safe and stand down beacon"
+                >
+                  <ShieldCheck size={14} />
+                  <span>I Am Safe</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setFamilyBeaconDispatched(true);
+                  setSafeConfirmed(false);
+                  const payload = `🚨 EMERGENCY ALERT: Urgent safety signal on The Resident. Area: ${suburb || 'Current location'}. Police: 10111, Cell: 112`;
+                  navigator.clipboard.writeText(payload);
+                  if (onRaiseAlert) {
+                    onRaiseAlert({
+                      kind: 'panic',
+                      title: 'Family Emergency Beacon Triggered',
+                      description: `Resident signaled emergency beacon in ${suburb || 'current area'}. Next-of-Kin alerted.`,
+                      severity: 'critical'
+                    });
+                  }
+                }}
+                className={`w-full sm:w-auto px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider text-center transition-all active:scale-95 min-h-[44px] flex items-center justify-center shrink-0 border ${
+                  familyBeaconDispatched
+                    ? 'bg-red-700 hover:bg-red-600 text-white border-red-400/40'
+                    : 'bg-red-600 hover:bg-red-500 text-white border-red-400/40'
+                }`}
+              >
+                {familyBeaconDispatched ? 'Re-Broadcast Signal' : 'Broadcast In-App Beacon'}
+              </button>
+            </div>
+          </div>
+
+          {safeConfirmed && (
+            <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+              <span>You marked yourself Safe. Your Care Circle has been notified in real time!</span>
+            </div>
+          )}
+        </div>
+
+        {/* Offline Emergency Quick-Dial Handbook */}
+        <div className="mt-4 pt-4 border-t border-red-500/15">
+          <span className="text-[10px] font-black uppercase tracking-widest text-red-300 block mb-2">Emergency Hotlines (Offline Quick-Dial)</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <a href="tel:10111" className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-red-400/40 text-white no-underline text-xs min-h-[44px]">
+              <span className="font-bold">Police (SAPS)</span>
+              <span className="font-mono text-gold-primary font-black">10111</span>
+            </a>
+            <a href="tel:112" className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-red-400/40 text-white no-underline text-xs min-h-[44px]">
+              <span className="font-bold">Cell Emergency</span>
+              <span className="font-mono text-gold-primary font-black">112</span>
+            </a>
+            <a href="tel:10177" className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-red-400/40 text-white no-underline text-xs min-h-[44px]">
+              <span className="font-bold">Ambulance/Fire</span>
+              <span className="font-mono text-gold-primary font-black">10177</span>
+            </a>
+            <a href="tel:0800150150" className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-red-400/40 text-white no-underline text-xs min-h-[44px]">
+              <span className="font-bold">GBV Helpline</span>
+              <span className="font-mono text-gold-primary font-black">0800 150 150</span>
+            </a>
+          </div>
+
+          {/* Medical Aid & Blood Group Offline Card */}
+          <div className="mt-2.5 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs flex-wrap gap-2">
+            <div>
+              <span className="font-bold text-white block">Medical Aid & Blood Group (Offline Card)</span>
+              <span className="text-[10px] text-gray-400">Offline medical emergency profile for first responders.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10 font-mono text-gold-primary font-bold text-[11px]">Blood: O+</span>
+              <span className="px-2 py-1 rounded-md bg-black/40 border border-white/10 text-gray-300 font-bold text-[11px]">Discovery Health #9201</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Nightwalk Walking Escort & Trust Mesh Quick-Actions */}
+        <div className="mt-4 pt-4 border-t border-red-500/15 flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-3.5 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-white block">Nightwalk Escort Mode</span>
+              <span className="text-[11px] text-gray-400">
+                {nightwalkActive
+                  ? `Safety countdown active (${nightwalkMinutes}m left). Check in upon arrival.`
+                  : 'Walking home after dark? Start a 15-min safety timer.'}
+              </span>
+            </div>
+            {nightwalkActive ? (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setNightwalkMinutes(m => m + 5)}
+                  className="px-2.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/10 min-h-[44px]"
+                  title="Extend 5 minutes"
+                >
+                  +5m
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNightwalkActive(false);
+                    setSafeConfirmed(true);
+                    setTimeout(() => setSafeConfirmed(false), 5000);
+                  }}
+                  className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 min-h-[44px] transition-all active:scale-95"
+                  title="I arrived home safely"
+                >
+                  <CheckCircle2 size={13} />
+                  <span>Arrived Safely</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setNightwalkActive(true);
+                  setNightwalkMinutes(15);
+                }}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold transition-all min-h-[44px] bg-white/10 text-white hover:bg-white/20 border border-white/10 active:scale-95"
+              >
+                Start Walk
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+            <Link
+              href="/dashboard/trust-circle"
+              className="w-full sm:w-auto bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 no-underline min-h-[44px] transition-all active:scale-95 text-center"
+            >
+              <HeartHandshake size={14} />
+              <span>Manage Trust Circle</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                const inviteMsg = "Hi! I added you as my Next of Kin contact on The Resident. Please confirm our trust connection so my rental profile is verified: https://theresidentcrew.com/dashboard/trust-circle";
+                navigator.clipboard.writeText(inviteMsg);
+                setInviteCopied(true);
+                setTimeout(() => setInviteCopied(false), 3000);
+              }}
+              className="w-full sm:w-auto bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 min-h-[44px] transition-all active:scale-95 text-center"
+            >
+              <Check size={14} className={inviteCopied ? 'text-emerald-400' : 'text-gray-400'} />
+              <span>{inviteCopied ? 'Invite Copied!' : 'Copy Circle Link'}</span>
+            </button>
+          </div>
         </div>
 
         <button
@@ -541,7 +776,7 @@ export default function SafetyTab({
         {/* Utility Status — crowd-signal consensus: one report is noise, three is a fact */}
         <div className="space-y-6">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Activity size={20} className="text-gold-primary" /> Local Infrastructure
+            <Activity size={20} className="text-gold-primary" /> Outages near you
           </h3>
           <div className="glass-panel p-6 space-y-6">
              {SERVICES.map(({ key, label, Icon }) => {
@@ -559,30 +794,31 @@ export default function SafetyTab({
                const selectedDuration = durationByKey[key] || '8h'
 
                return (
-                 <div key={key} className="flex items-center justify-between group">
+                 <div key={key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 group">
                     <div className="flex items-center gap-3">
-                       <div className={`p-2 rounded-lg ${isDown ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
-                          <Icon size={18} className={isDown ? 'text-red-500' : 'text-green-500'} />
+                       <div className={`p-2 rounded-lg ${isDown ? 'bg-red-500/10' : 'bg-white/5'}`}>
+                          <Icon size={18} className={isDown ? 'text-red-500' : 'text-gray-400'} />
                        </div>
                        <span className="text-sm font-medium text-gray-300">{label}</span>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
+                    <div className="flex flex-col items-start sm:items-end gap-1.5">
                        <div className="flex items-center gap-1">
                           {officialRow && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gold-primary/20 text-gold-primary uppercase tracking-widest">
                               Official{providerName ? ` · ${providerName}` : ''}
                             </span>
                           )}
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isDown ? 'bg-red-500/20 text-red-500' : 'bg-green-500/20 text-green-500'}`}>
-                             {isDown ? (!officialRow && consensus.confirmed ? `OUTAGE (${consensus.reporters} reports)` : 'OUTAGE') : 'OPERATIONAL'}
+                          {/* "No reports", not "Operational": the app can't know the power is on, only that nobody has said it's off. */}
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isDown ? 'bg-red-500/20 text-red-500' : officialRow ? 'bg-green-500/20 text-green-500' : 'bg-white/5 text-gray-400'}`}>
+                             {isDown ? (!officialRow && consensus.confirmed ? `OUTAGE (${consensus.reporters} reports)` : 'OUTAGE') : officialRow ? 'ON' : 'NO REPORTS'}
                           </span>
                        </div>
                        {expiry && <span className="text-[9px] text-gray-500">{expiry}</span>}
-                       <div className="flex items-center gap-1">
+                       <div className="flex items-center gap-2">
                           <select
                             value={selectedDuration}
                             onChange={e => setDurationByKey(prev => ({ ...prev, [key]: e.target.value }))}
-                            className="bg-black border border-white/10 rounded px-1 py-0.5 text-[9px] text-gray-400 outline-none"
+                            className="bg-black border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-gray-300 outline-none"
                             title="How long"
                           >
                             {DURATION_OPTIONS.map(opt => (
@@ -595,14 +831,13 @@ export default function SafetyTab({
                               const endsAt = opt?.hours ? new Date(Date.now() + opt.hours * 60 * 60 * 1000).toISOString() : null
                               onReportStatus?.(key, 'down', endsAt)
                             }}
-                            className="text-[9px] text-red-400 hover:text-red-300 uppercase font-bold"
+                            className="px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[11px] text-red-300 hover:text-red-200 font-bold whitespace-nowrap"
                           >
                             Report down
                           </button>
-                          <span className="text-gray-700">/</span>
                           <button
                             onClick={() => onReportStatus?.(key, 'up', null)}
-                            className="text-[9px] text-green-400 hover:text-green-300 uppercase font-bold"
+                            className="px-2.5 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-[11px] text-green-300 hover:text-green-200 font-bold whitespace-nowrap"
                           >
                             It&apos;s back
                           </button>

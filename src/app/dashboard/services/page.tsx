@@ -5,8 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Droplets,
-  Flame, BatteryCharging, ShoppingBag, Wrench, Tag, Package, Navigation
+  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare
 } from 'lucide-react'
 import {
   RootState,
@@ -27,31 +26,14 @@ import FollowButton from '../components/social/FollowButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
 import OpenInMapsButton from '../components/map/OpenInMapsButton'
 import UpgradeButton from '../components/shared/UpgradeButton'
+import { realImage } from '../../public-services'
 import EmptyState from '../components/shared/EmptyState'
 import { directionsUrlForAddress } from '../../../utils/navigation'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents } from '../../../utils/gruvsEvents'
-import MovingLogisticsPortal from '../components/services/MovingLogisticsPortal'
-import PlumbingTradesModal from '../components/services/PlumbingTradesModal'
-import dynamic from 'next/dynamic'
-
-const MovingInventoryEstimatorModal = dynamic(() => import('../components/services/MovingInventoryEstimatorModal'), { ssr: false })
-const LiveBakkieRadarModal = dynamic(() => import('../components/services/LiveBakkieRadarModal'), { ssr: false })
-const DriverLicenseScannerModal = dynamic(() => import('../components/services/DriverLicenseScannerModal'), { ssr: false })
-const QuantumPartyShuttleModal = dynamic(() => import('../components/services/QuantumPartyShuttleModal'), { ssr: false })
-const FlatpackAssemblyModal = dynamic(() => import('../components/services/FlatpackAssemblyModal'), { ssr: false })
-const DepositSaverCleaningModal = dynamic(() => import('../components/services/DepositSaverCleaningModal'), { ssr: false })
-const RubbishClearanceModal = dynamic(() => import('../components/services/RubbishClearanceModal'), { ssr: false })
-const HandymanMilestoneEscrowModal = dynamic(() => import('../components/services/HandymanMilestoneEscrowModal'), { ssr: false })
-const GasCylinderRefillModal = dynamic(() => import('../components/residence/GasCylinderRefillModal'), { ssr: false })
-const GeneratorDieselPoolModal = dynamic(() => import('../components/residence/GeneratorDieselPoolModal'), { ssr: false })
-const SolarBatteryBridgeModal = dynamic(() => import('../components/residence/SolarBatteryBridgeModal'), { ssr: false })
-const ResHustleGigBoardModal = dynamic(() => import('../components/residence/ResHustleGigBoardModal'), { ssr: false })
-const ResShedToolLibraryModal = dynamic(() => import('../components/residence/ResShedToolLibraryModal'), { ssr: false })
-const ReverseAuctionBargainModal = dynamic(() => import('../components/social-dynamics/ReverseAuctionBargainModal'), { ssr: false })
-const GatekeeperParcelSafeModal = dynamic(() => import('../components/residence/GatekeeperParcelSafeModal'), { ssr: false })
-const TaxiHandSignGuideModal = dynamic(() => import('../components/social-dynamics/TaxiHandSignGuideModal'), { ssr: false })
+import Link from 'next/link'
+import { playTactileSound } from '../../../utils/tactileSounds'
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
 const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
@@ -74,26 +56,20 @@ const TIER_RANK: Record<'premium' | 'priority' | 'none', number> = { premium: 0,
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
   const [activeTab, setActiveTab] = useState<'moving' | 'handymen' | 'lifts' | 'utilities'>('moving')
-  const [showPlumbingModal, setShowPlumbingModal] = useState(false)
+  const [selectedTradeCategory, setSelectedTradeCategory] = useState<string>('All')
+  const [filterEmergency247, setFilterEmergency247] = useState(false)
+  // Deep links: ?tab=moving|handymen|lifts|utilities (Feed "Share a lift",
+  // the Ask box on Home). ?type=locksmith from the Ask box opens Trades.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tab = params.get('tab')
+    if (tab === 'moving' || tab === 'handymen' || tab === 'lifts' || tab === 'utilities') {
+      setActiveTab(tab)
+    } else if (tab === 'trades' || params.get('type')) {
+      setActiveTab('handymen')
+    }
+  }, [])
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
-
-  // Advanced Services & Moving Modals State
-  const [showEstimatorModal, setShowEstimatorModal] = useState(false)
-  const [showBakkieRadarModal, setShowBakkieRadarModal] = useState(false)
-  const [showLicenseScannerModal, setShowLicenseScannerModal] = useState(false)
-  const [showQuantumShuttleModal, setShowQuantumShuttleModal] = useState(false)
-  const [showFlatpackModal, setShowFlatpackModal] = useState(false)
-  const [showDepositCleaningModal, setShowDepositCleaningModal] = useState(false)
-  const [showRubbishModal, setShowRubbishModal] = useState(false)
-  const [showHandymanEscrowModal, setShowHandymanEscrowModal] = useState(false)
-  const [showGasModal, setShowGasModal] = useState(false)
-  const [showDieselModal, setShowDieselModal] = useState(false)
-  const [showSolarBatteryModal, setShowSolarBatteryModal] = useState(false)
-  const [showHustleGigModal, setShowHustleGigModal] = useState(false)
-  const [showToolLibraryModal, setShowToolLibraryModal] = useState(false)
-  const [showReverseAuctionModal, setShowReverseAuctionModal] = useState(false)
-  const [showParcelSafeModal, setShowParcelSafeModal] = useState(false)
-  const [showTaxiGuideModal, setShowTaxiGuideModal] = useState(false)
 
   // Business Registration State
   const [showBusinessRegModal, setShowBusinessRegModal] = useState(false)
@@ -291,7 +267,8 @@ export default function ServicesPage() {
       contactNumber: bizPhone,
       priceEstimate: bizPrice,
       description: bizDesc,
-      image: 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?auto=format&fit=crop&w=600&q=80',
+      // No stock photo: a picture that isn't the business misleads people.
+      image: '',
       reviewsCount: 0,
       showPublicly: bizPublic
     }
@@ -320,6 +297,16 @@ export default function ServicesPage() {
     setAlertNotification('Contract dispatched successfully!')
   }
 
+  const filteredByCategory = services.filter(s => {
+    if (activeTab === 'moving') return MOVE_ASSIST_CATEGORIES.includes(s.category);
+    if (selectedTradeCategory !== 'All' && s.category !== selectedTradeCategory) return false;
+    if (filterEmergency247) {
+      const text = (s.description + ' ' + s.businessName).toLowerCase();
+      return text.includes('24/7') || text.includes('emergency') || text.includes('urgent') || text.includes('locksmith') || text.includes('plumb');
+    }
+    return true;
+  });
+  const visibleServices = filteredByCategory
   const myBiz = services.find(s => s.ownerId === currentUser?.id)
   const incomingOrders = myBiz ? dispatches.filter(d => d.serviceId === myBiz.id) : []
 
@@ -328,7 +315,7 @@ export default function ServicesPage() {
       <header className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-xl font-black text-white uppercase tracking-tight">Community <span className="text-gold-primary">Services</span></h2>
-          <p className="text-xs text-gray-400 font-medium mt-0.5">Verified local transport, trades, and direct utilities management.</p>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Moving, repairs, lifts and utilities near you.</p>
         </div>
 
         <div className="flex bg-black/60 p-1.5 rounded-2xl border border-white/10 shadow-glass backdrop-blur-2xl w-full md:w-auto overflow-x-auto no-scrollbar gap-1">
@@ -342,7 +329,7 @@ export default function ServicesPage() {
               key={t.id}
               onClick={() => setActiveTab(t.id as 'moving' | 'handymen' | 'lifts' | 'utilities')}
               className={`flex-1 md:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 whitespace-nowrap ${
-                activeTab === t.id ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
+                activeTab === t.id ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
               }`}
             >
               <t.icon size={14} /> {t.label}
@@ -351,169 +338,6 @@ export default function ServicesPage() {
         </div>
       </header>
 
-      {/* Services Rapid Actions Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
-        <button
-          type="button"
-          onClick={() => setShowEstimatorModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 transition"
-        >
-          <Truck size={13} />
-          <span>m³ Inventory Estimator</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowBakkieRadarModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
-        >
-          <Clock size={13} />
-          <span>Live Bakkie Radar</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowLicenseScannerModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 transition"
-        >
-          <ShieldCheck size={13} />
-          <span>PDP / NATIS Disc Scan</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowQuantumShuttleModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0 transition"
-        >
-          <Car size={13} />
-          <span>Quantum Minibus Shuttle</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowFlatpackModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 transition"
-        >
-          <Briefcase size={13} />
-          <span>Flatpack Guild</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowDepositCleaningModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 shrink-0 transition"
-        >
-          <Droplets size={13} />
-          <span>Deposit-Saver Clean</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowRubbishModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
-        >
-          <Truck size={13} />
-          <span>Rubbish Clearance</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowHandymanEscrowModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0 transition"
-        >
-          <Lock size={13} />
-          <span>Trade Milestone Escrow</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowGasModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 shrink-0 transition"
-          title="9kg LPG Gas Cylinder Refill & Dispatch"
-        >
-          <Flame size={13} />
-          <span>Gas Refill</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowDieselModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 shrink-0 transition"
-          title="Communal Generator Diesel Fuel Pool & Meter"
-        >
-          <Zap size={13} />
-          <span>Generator Diesel</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowSolarBatteryModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
-          title="Solar Inverter Battery Outage Bridge"
-        >
-          <BatteryCharging size={13} />
-          <span>Solar Battery</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowHustleGigModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 shrink-0 transition"
-          title="Student Campus Micro-Gig Errand Board"
-        >
-          <ShoppingBag size={13} />
-          <span>Res Hustle Gigs</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowToolLibraryModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 transition"
-          title="P2P Communal Tool Library with Escrow Collateral"
-        >
-          <Wrench size={13} />
-          <span>Tool Shed</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowReverseAuctionModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0 transition"
-          title="Reverse Dutch Auction Bargain Bin - Price drops every 4 hours"
-        >
-          <Tag size={13} />
-          <span>Dutch Auction</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowParcelSafeModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0 transition"
-          title="Gatekeeper Parcel Safe - Secure Courier OTP Lockbox"
-        >
-          <Package size={13} />
-          <span>Parcel Safe</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowTaxiGuideModal(true)}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-gold-primary/10 hover:bg-gold-primary/20 text-gold-primary border border-gold-primary/30 shrink-0 transition"
-          title="SA Minibus Taxi Hand Gesture Signs & Cash Fares"
-        >
-          <Navigation size={13} />
-          <span>Taxi Guide</span>
-        </button>
-      </div>
-
-      {/* 1. Moving & Bakkie Logistics Portal */}
-      {activeTab === 'moving' && (
-        <MovingLogisticsPortal
-          onSelectProvider={(phone, name) => {
-            setAlertNotification(`Connecting with ${name} (${phone})`)
-          }}
-        />
-      )}
 
       {activeTab === 'lifts' && (
         <div className="space-y-4">
@@ -602,7 +426,7 @@ export default function ServicesPage() {
                         setAlertNotification('Added to the waitlist — you get the next seat that opens up.')
                       }
                     }}
-                    className="flex-1 lg:flex-none bg-gold-primary hover:bg-gold-secondary text-black font-black px-10 py-4 rounded-2xl transition-all active:scale-95 shadow-xl shadow-gold-primary/10 uppercase tracking-widest text-xs"
+                    className="flex-1 lg:flex-none bg-gold-primary hover:bg-gold-secondary text-black font-black px-10 py-4 rounded-2xl transition-all active:scale-95 uppercase tracking-widest text-xs min-h-[44px] touch-target-44"
                   >
                     {lift.availableSeats > 0 ? 'Request Ride' : 'Join Waitlist'}
                   </button>
@@ -618,39 +442,20 @@ export default function ServicesPage() {
         </div>
       )}
 
-      {activeTab === 'handymen' && (
+      {/* Moving and Trades both list REAL services (res_services); Moving is
+          the bakkie/transport categories. Moving used to show invented
+          movers with real-looking phone numbers, and Trades a "dispatched in
+          30 mins" emergency button that sent nothing to anyone. */}
+      {(activeTab === 'handymen' || activeTab === 'moving') && (
         <div className="space-y-8">
-          {/* Emergency Plumbing & Trades Dispatch Banner */}
-          <div className="flex flex-col sm:flex-row items-center justify-between p-5 rounded-3xl bg-blue-950/40 border border-blue-500/30 gap-4 shadow-glass">
-            <div className="flex items-center gap-3.5">
-              <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-glow">
-                <Droplets size={22} />
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-white uppercase tracking-tight">Need Emergency Plumbing or Repairs?</h4>
-                <p className="text-xs text-gray-300">Geyser leak, burst pipe, blocked drain, or electrical trip dispatched in 30 mins.</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowPlumbingModal(true)}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-900/40 transition-all shrink-0 active:scale-95"
-            >
-              Request Emergency Trades
-            </button>
-          </div>
-
-          <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
-              <div className="glass-panel p-6 bg-blue-500/5 border-blue-500/10 flex-1 flex flex-col md:flex-row gap-6 items-center shadow-2xl">
-                 <div className="p-4 bg-blue-500/20 rounded-2xl shadow-xl shadow-blue-900/10">
-                    <Star size={32} className="text-blue-400" />
-                 </div>
-                 <div className="text-center md:text-left">
-                    <h3 className="text-lg font-black text-white uppercase tracking-widest italic">Local Verified <span className="text-blue-400">Professionals</span></h3>
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest opacity-60">Verified skills helping to grow the local economy</p>
-                 </div>
-              </div>
+          {/* One line plus the button; this was a large decorative card with
+              a star icon that pushed the actual list below the fold. */}
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+              <p className="m-0 text-xs text-gray-400">
+                {activeTab === 'moving' ? 'Bakkies and movers' : 'Local pros'} listed by people near you, rated by your neighbours.
+              </p>
               {trustGate && !trustGate.unlocked ? (
-                 <a href="/dashboard/trust-circle" className="w-full lg:w-auto flex items-center gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-6 py-4 hover:border-gold-primary/40 transition-all">
+                 <a href="/dashboard/trust-circle" className="w-full sm:w-auto flex items-center gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-4 py-3 hover:border-gold-primary/40 transition-all shrink-0">
                     <Lock size={16} className="text-gold-primary shrink-0" />
                     <span className="text-left">
                        <span className="block text-[11px] font-black text-white uppercase tracking-widest">Build trust to list</span>
@@ -660,33 +465,74 @@ export default function ServicesPage() {
               ) : (
                  <button
                     onClick={() => openBusinessForm(null)}
-                    className="w-full lg:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
+                    className="w-full sm:w-auto shrink-0 bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-5 py-3 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
                  >
-                    <Plus size={20} /> Advertise My Skills
+                    <Plus size={16} /> List my service
                  </button>
               )}
            </div>
 
-           {services.length === 0 ? (
+           
+           {activeTab === 'handymen' && (
+             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+               <button
+                 type="button"
+                 onClick={() => { playTactileSound('click'); setFilterEmergency247(v => !v) }}
+                 className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] flex items-center gap-1.5 ${
+                   filterEmergency247
+                     ? 'bg-red-600 text-white border-red-400'
+                     : 'bg-white/5 text-red-300 border-red-500/20 hover:border-red-500/40'
+                 }`}
+               >
+                 <AlertTriangle size={12} /> 24/7 Urgent
+               </button>
+               {['All', 'Plumbing', 'Electrical', 'Cleaning', 'Security', 'Bakkie / Transport', 'General Services'].map(cat => (
+                 <button
+                   key={cat}
+                   type="button"
+                   onClick={() => setSelectedTradeCategory(cat)}
+                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] ${
+                     selectedTradeCategory === cat
+                       ? 'bg-gold-primary text-black border-gold-primary'
+                       : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+                   }`}
+                 >
+                   {cat}
+                 </button>
+               ))}
+             </div>
+           )}
+
+           {visibleServices.length === 0 ? (
              <div className="glass-panel">
-               <EmptyState icon={Briefcase} title="No local pros listed yet" subtitle="Be the first to advertise your skills to the neighbourhood." />
+               {activeTab === 'moving' ? (
+                 <EmptyState icon={Truck} title="No bakkies or movers listed yet" subtitle="Have a bakkie? List it and get booked by your neighbours." />
+               ) : (
+                 <EmptyState icon={Briefcase} title="No local pros listed yet" subtitle="Be the first to advertise your skills to the neighbourhood." />
+               )}
              </div>
            ) : (
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-             {services.map(srv => (
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+             {visibleServices.map(srv => (
                <motion.div key={srv.id} whileHover={{ y: -5 }} className="glass-panel overflow-hidden flex flex-col group bg-black/40 hover:border-gold-primary/40 transition-all duration-500 shadow-2xl">
                   <div className="h-44 bg-gray-900 relative overflow-hidden">
-                     {srv.image ? (
-                       <Image src={srv.image} alt={srv.businessName} fill className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
+                     {/* realImage() drops the stock photo every new service used to get: it isn't the business. */}
+                     {realImage(srv.image) ? (
+                       <Image src={realImage(srv.image)!} alt={srv.businessName} fill className="object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-100" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
                      ) : (
                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
                          <ImageIcon size={32} className="text-gold-primary/20" />
                        </div>
                      )}
                      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-xl border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-2xl">
-                        <Star size={14} className="text-gold-primary fill-gold-primary" />
-                        <span className="text-xs font-black text-white">{srv.rating}</span>
-                        <span className="text-[10px] text-gray-500 font-bold">({srv.reviewsCount})</span>
+                        {/* A new service is stored with rating 5.0 and no reviews; show "New" until someone reviews it. */}
+                        {srv.reviewsCount > 0 ? (<>
+                          <Star size={14} className="text-gold-primary fill-gold-primary" />
+                          <span className="text-xs font-black text-white">{Number(srv.rating).toFixed(1)}</span>
+                          <span className="text-[10px] text-gray-500 font-bold">({srv.reviewsCount})</span>
+                        </>) : (
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">New</span>
+                        )}
                      </div>
                      <div className="absolute bottom-4 left-4 flex gap-2">
                         <span className="bg-gold-primary text-black px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-xl">{srv.category}</span>
@@ -726,7 +572,7 @@ export default function ServicesPage() {
                            <div className="space-y-1.5">
                               <button
                                  onClick={() => openMoveAssist(srv)}
-                                 className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-gold-primary/10"
+                                 className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2 "
                               >
                                  <Truck size={16} /> Request Move Assist
                               </button>
@@ -739,10 +585,33 @@ export default function ServicesPage() {
                         )}
                         <button
                            onClick={() => srv.ownerId === currentUser?.id ? openBusinessForm(srv) : setSelectedBiz(srv)}
-                           className="w-full bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black py-4 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest"
+                           className="w-full bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black py-3.5 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest min-h-[44px]"
                         >
                            {srv.ownerId === currentUser?.id ? 'Manage My Card' : 'Hire Contractor'}
                         </button>
+                        {srv.ownerId !== currentUser?.id && (
+                           <div className="grid grid-cols-2 gap-2">
+                              <button
+                                 type="button"
+                                 onClick={() => {
+                                    playTactileSound('click')
+                                    setSelectedBiz(srv)
+                                    setHireMessage(`Hi ${srv.businessName}, please provide an in-app price estimate for services in ${srv.suburb}.`)
+                                 }}
+                                 className="w-full bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary font-black py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs uppercase tracking-widest min-h-[44px] active:scale-95"
+                              >
+                                 <Calculator size={13} />
+                                 <span>In-App Quote</span>
+                              </button>
+                              <Link
+                                 href={`/dashboard/messages?to=${srv.ownerId || srv.id}`}
+                                 className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black py-3 rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs uppercase tracking-widest no-underline min-h-[44px] active:scale-95 text-center"
+                              >
+                                 <MessageSquare size={13} />
+                                 <span>Message</span>
+                              </Link>
+                           </div>
+                        )}
                         {srv.ownerId === currentUser?.id && !providerTiers[srv.ownerId] && (
                            <div className="space-y-2 pt-2 border-t border-white/5">
                               <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest text-center">Free listing — get seen first</p>
@@ -775,8 +644,8 @@ export default function ServicesPage() {
                           </div>
                           <p className="text-sm text-gray-400 bg-white/2 p-3 rounded-xl border border-white/5 font-medium leading-relaxed">&quot;{order.message}&quot;</p>
                           <div className="flex gap-2 pt-2">
-                             {order.status === 'pending' && <button onClick={() => dispatch(updateDispatchStatus({ dispatchId: order.id, status: 'accepted' }))} className="flex-1 bg-blue-500 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-widest shadow-xl shadow-blue-900/20">Accept Job</button>}
-                             {order.status === 'accepted' && <button onClick={() => setShowProofModal(order)} className="flex-1 bg-gold-primary text-black font-black py-2 rounded-lg text-[10px] uppercase tracking-widest shadow-xl shadow-gold-primary/20">Mark Complete</button>}
+                             {order.status === 'pending' && <button onClick={() => dispatch(updateDispatchStatus({ dispatchId: order.id, status: 'accepted' }))} className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-widest border border-blue-400/30 transition-all active:scale-95 min-h-[44px]">Accept Job</button>}
+                             {order.status === 'accepted' && <button onClick={() => setShowProofModal(order)} className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2 rounded-lg text-[10px] uppercase tracking-widest border border-gold-primary/40 transition-all active:scale-95 min-h-[44px]">Mark Complete</button>}
                           </div>
                        </div>
                     ))}
@@ -791,7 +660,7 @@ export default function ServicesPage() {
            <div className="bg-gold-primary/5 border border-gold-primary/20 p-8 rounded-[2rem] flex items-center gap-10 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-gold-primary/5 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
               <div className="flex items-center gap-6 relative z-10">
-                 <div className="p-5 bg-gold-primary rounded-3xl shadow-[0_0_30px_rgba(212,175,55,0.4)] animate-pulse">
+                 <div className="p-5 bg-gold-primary rounded-3xl shadow-[0_0_30px_rgb(var(--accent)/0.4)] animate-pulse">
                     <Zap size={40} className="text-black" />
                  </div>
                  <div className="space-y-1">
@@ -801,7 +670,7 @@ export default function ServicesPage() {
               </div>
            </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {utilityTokens.filter(t => t.status === 'available').map(token => (
                 <motion.div key={token.id} whileHover={{ scale: 1.02 }} className="glass-panel p-8 border-gold-primary/10 bg-black/40 space-y-8 group transition-all cursor-pointer hover:border-gold-primary/50 shadow-2xl">
                    <div className="flex justify-between items-start">
@@ -822,7 +691,7 @@ export default function ServicesPage() {
                    </div>
                    <button
                     onClick={() => { dispatch(claimVoucher(token.id)); setAlertNotification('Voucher Purchased!') }}
-                    className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-gold-primary/10 active:scale-95 transition-all"
+                    className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl text-xs uppercase tracking-widest  active:scale-95 transition-all"
                    >
                     Buy Voucher Now
                    </button>
@@ -867,12 +736,12 @@ export default function ServicesPage() {
          {showBusinessRegModal && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBusinessRegModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10">
                   <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">{editingBiz ? <>Edit <span className="text-gold-primary">Business</span></> : <>Business <span className="text-gold-primary">Onboarding</span></>}</h3>
                      <button onClick={() => setShowBusinessRegModal(false)} className="text-gray-500 hover:text-white"><X /></button>
                   </div>
-                  <form onSubmit={handleRegisterBusiness} className="p-8 space-y-6">
+                  <form onSubmit={handleRegisterBusiness} className="p-6 sm:p-8 space-y-6">
                      <div className="space-y-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Business or Skill Name</label>
@@ -921,7 +790,7 @@ export default function ServicesPage() {
                            </span>
                         </label>
                      </div>
-                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 active:scale-95 transition-all">{editingBiz ? 'Save Changes' : 'Publish Business Card'}</button>
+                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs active:scale-95 transition-all">{editingBiz ? 'Save Changes' : 'Publish Business Card'}</button>
                   </form>
                </motion.div>
             </div>
@@ -932,7 +801,7 @@ export default function ServicesPage() {
          {selectedBiz && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedBiz(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-8">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6 sm:space-y-8">
                   <div className="flex justify-between items-center">
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Hire <span className="text-gold-primary">Contractor</span></h3>
@@ -941,6 +810,58 @@ export default function ServicesPage() {
                      <button onClick={() => setSelectedBiz(null)} className="text-gray-500 hover:text-white transition-colors"><X /></button>
                   </div>
                   <form onSubmit={handleDispatchContract} className="space-y-6">
+                     {/* Quick Scope Starters */}
+                     <div className="space-y-1.5">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Quick Scope Starters</span>
+                        <div className="flex flex-wrap gap-1.5">
+                           {[
+                              { label: 'Diagnostic Callout', text: `Hi ${selectedBiz.businessName}, requesting a diagnostic inspection and price estimate in ${selectedBiz.suburb || 'my area'}.` },
+                              { label: 'Bakkie / Moving Job', text: `Hi ${selectedBiz.businessName}, need assistance with moving furniture / household items with a bakkie in ${selectedBiz.suburb || 'my area'}.` },
+                              { label: 'Urgent Repair', text: `Hi ${selectedBiz.businessName}, emergency repair needed for geyser / electricity / plumbing fault at residence.` }
+                           ].map(q => (
+                              <button
+                                 key={q.label}
+                                 type="button"
+                                 onClick={() => {
+                                    playTactileSound('click')
+                                    setHireMessage(q.text)
+                                 }}
+                                 className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-[10px] font-bold text-gray-300 hover:text-white transition-all active:scale-95"
+                              >
+                                 {q.label}
+                              </button>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* Moving Vehicle / Payload Selector if Moving Assist */}
+                     {MOVE_ASSIST_CATEGORIES.includes(selectedBiz.category) && (
+                        <div className="space-y-1.5">
+                           <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Moving Payload Size</span>
+                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                              {[
+                                 { label: 'Single-Cab Bakkie', icon: '🛻' },
+                                 { label: 'Double-Cab Bakkie', icon: '🛻' },
+                                 { label: '1-Ton Enclosed Van', icon: '🚐' },
+                                 { label: 'Helpers Only', icon: '💪' }
+                              ].map(v => (
+                                 <button
+                                    key={v.label}
+                                    type="button"
+                                    onClick={() => {
+                                       playTactileSound('pop')
+                                       setHireMessage(prev => prev ? `${prev} [Payload: ${v.label}]` : `[Payload: ${v.label}] `)
+                                    }}
+                                    className="p-2 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-[10px] font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1.5 transition-all active:scale-95 text-center"
+                                 >
+                                    <span>{v.icon}</span>
+                                    <span className="truncate">{v.label}</span>
+                                 </button>
+                              ))}
+                           </div>
+                        </div>
+                     )}
+
                      <div className="space-y-2">
                         <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Job Details & Scope</label>
                         <textarea value={hireMessage} onChange={e => setHireMessage(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-4 text-sm text-white h-32 resize-none outline-none focus:border-gold-primary/40" placeholder="Explain the problem or help you need, your address, and preferred date..." />
@@ -949,7 +870,7 @@ export default function ServicesPage() {
                         <p className="text-[10px] text-gold-primary font-black uppercase tracking-widest mb-1 flex items-center gap-2"><Info size={12}/> Security Tip</p>
                         <p className="text-[10px] text-gray-500 leading-relaxed font-bold">Payments are handled offline. Request a quote after the contractor inspects the site.</p>
                      </div>
-                     <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+                     <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all">
                         Dispatch Callout <Send size={14} />
                      </button>
                   </form>
@@ -963,12 +884,12 @@ export default function ServicesPage() {
          {showLiftModal && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLiftModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden max-h-[90vh] overflow-y-auto">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10">
                   <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Post a <span className="text-gold-primary">Lift</span></h3>
                      <button onClick={() => setShowLiftModal(false)} className="text-gray-500 hover:text-white"><X /></button>
                   </div>
-                  <form onSubmit={handleCreateLift} className="p-8 space-y-6">
+                  <form onSubmit={handleCreateLift} className="p-6 sm:p-8 space-y-6">
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Origin</label>
@@ -989,7 +910,7 @@ export default function ServicesPage() {
                            <input value={liftDays} onChange={e => setLiftDays(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. Mon-Fri" />
                         </div>
                      </div>
-                     <div className="grid grid-cols-3 gap-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Price / Seat</label>
                            <input type="number" min="0" value={liftPrice} onChange={e => setLiftPrice(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40" placeholder="e.g. 20" />
@@ -1012,7 +933,7 @@ export default function ServicesPage() {
                            ))}
                         </select>
                      </div>
-                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 active:scale-95 transition-all">Post Lift Club</button>
+                     <button type="submit" className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs active:scale-95 transition-all">Post Lift Club</button>
                   </form>
                </motion.div>
             </div>
@@ -1024,7 +945,7 @@ export default function ServicesPage() {
          {moveAssistTarget && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoveAssistTarget(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-6">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6">
                   <div className="flex justify-between items-center">
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Request <span className="text-gold-primary">Move Assist</span></h3>
@@ -1056,7 +977,7 @@ export default function ServicesPage() {
                            <p className="text-[10px] text-red-400 leading-relaxed font-bold">{moveAssistError}</p>
                         </div>
                      )}
-                     <button type="submit" disabled={moveAssistSubmitting} className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50">
+                     <button type="submit" disabled={moveAssistSubmitting} className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50">
                         {moveAssistSubmitting ? 'Sending…' : 'Send Move-Assist Request'} <Send size={14} />
                      </button>
                   </form>
@@ -1070,8 +991,8 @@ export default function ServicesPage() {
          {showProofModal && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowProofModal(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-md bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 text-center space-y-6">
-                  <div className="w-20 h-20 bg-gold-primary/10 rounded-full flex items-center justify-center mx-auto shadow-2xl">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-md max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 text-center space-y-6">
+                  <div className="w-20 h-20 bg-gold-primary/10 rounded-full flex items-center justify-center mx-auto">
                      <ShieldCheck size={40} className="text-gold-primary" />
                   </div>
                   <div className="space-y-2">
@@ -1081,7 +1002,7 @@ export default function ServicesPage() {
                   <div className="pt-4 flex flex-col gap-3">
                      <button
                        onClick={() => { dispatch(updateDispatchStatus({ dispatchId: showProofModal.id, status: 'completed' })); setShowProofModal(null); setAlertNotification('Order marked as Completed!') }}
-                       className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/10 active:scale-95 transition-all"
+                       className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs active:scale-95 transition-all"
                      >
                         Confirm & Complete
                      </button>
@@ -1099,122 +1020,18 @@ export default function ServicesPage() {
                initial={{ y: 100, opacity: 0 }}
                animate={{ y: 0, opacity: 1 }}
                exit={{ y: 100, opacity: 0 }}
-               className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
+               className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] md:bottom-20 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-5 sm:px-8 py-3.5 sm:py-4 rounded-2xl flex items-center gap-3 sm:gap-4 max-w-[calc(100vw-2rem)] w-auto min-w-[280px] sm:min-w-[320px]"
             >
-               <div className="p-2 bg-green-500/20 rounded-full text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"><Check size={24} /></div>
-               <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">Notification</p>
-                  <p className="text-sm font-black text-white italic tracking-tight uppercase">{alertNotification}</p>
+               <div className="p-2 bg-green-500/20 rounded-full text-green-500"><Check size={24} /></div>
+               <div className="space-y-0.5 min-w-0">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Notification</p>
+                  <p className="text-sm font-black text-white italic tracking-tight uppercase truncate">{alertNotification}</p>
                </div>
-               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-700 hover:text-white transition-colors"><X size={16} /></button>
+               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-500 hover:text-white transition-colors shrink-0"><X size={16} /></button>
             </motion.div>
          )}
       </AnimatePresence>
 
-      {/* Emergency Plumbing & Trades Dispatch Modal */}
-      <PlumbingTradesModal
-        isOpen={showPlumbingModal}
-        onClose={() => setShowPlumbingModal(false)}
-        onSuccess={data => {
-          setAlertNotification(`Emergency ${data.category} dispatch broadcasted to local pros!`)
-        }}
-      />
-
-      {/* Moving Inventory & Volume Estimator Modal */}
-      <MovingInventoryEstimatorModal
-        isOpen={showEstimatorModal}
-        onClose={() => setShowEstimatorModal(false)}
-      />
-
-      {/* Live Bakkie GPS Radar Modal */}
-      <LiveBakkieRadarModal
-        isOpen={showBakkieRadarModal}
-        onClose={() => setShowBakkieRadarModal(false)}
-      />
-
-      {/* Driver License & PDP NATIS Scanner Modal */}
-      <DriverLicenseScannerModal
-        isOpen={showLicenseScannerModal}
-        onClose={() => setShowLicenseScannerModal(false)}
-      />
-
-      {/* Quantum Party Shuttle Minibus Pool Modal */}
-      <QuantumPartyShuttleModal
-        isOpen={showQuantumShuttleModal}
-        onClose={() => setShowQuantumShuttleModal(false)}
-      />
-
-      {/* Flatpack Furniture Assembly Guild Modal */}
-      <FlatpackAssemblyModal
-        isOpen={showFlatpackModal}
-        onClose={() => setShowFlatpackModal(false)}
-      />
-
-      {/* Deposit Saver Move-Out Cleaning Modal */}
-      <DepositSaverCleaningModal
-        isOpen={showDepositCleaningModal}
-        onClose={() => setShowDepositCleaningModal(false)}
-      />
-
-      {/* Rubbish & Clutter Clearance Modal */}
-      <RubbishClearanceModal
-        isOpen={showRubbishModal}
-        onClose={() => setShowRubbishModal(false)}
-      />
-
-      {/* Handyman Milestone Escrow Vault Modal */}
-      <HandymanMilestoneEscrowModal
-        isOpen={showHandymanEscrowModal}
-        onClose={() => setShowHandymanEscrowModal(false)}
-      />
-
-      {/* 9kg LPG GAS CYLINDER REFILL & DISPATCH MODAL */}
-      <GasCylinderRefillModal
-        isOpen={showGasModal}
-        onClose={() => setShowGasModal(false)}
-      />
-
-      {/* COMMUNAL GENERATOR DIESEL FUEL POOL MODAL */}
-      <GeneratorDieselPoolModal
-        isOpen={showDieselModal}
-        onClose={() => setShowDieselModal(false)}
-      />
-
-      {/* SOLAR BATTERY INVERTER OUTAGE BRIDGE MODAL */}
-      <SolarBatteryBridgeModal
-        isOpen={showSolarBatteryModal}
-        onClose={() => setShowSolarBatteryModal(false)}
-      />
-
-      {/* RES HUSTLE STUDENT CAMPUS ERRAND GIG BOARD MODAL */}
-      <ResHustleGigBoardModal
-        isOpen={showHustleGigModal}
-        onClose={() => setShowHustleGigModal(false)}
-      />
-
-      {/* RES SHED COMMUNAL TOOL LIBRARY MODAL */}
-      <ResShedToolLibraryModal
-        isOpen={showToolLibraryModal}
-        onClose={() => setShowToolLibraryModal(false)}
-      />
-
-      {/* REVERSE DUTCH AUCTION BARGAIN BIN MODAL */}
-      <ReverseAuctionBargainModal
-        isOpen={showReverseAuctionModal}
-        onClose={() => setShowReverseAuctionModal(false)}
-      />
-
-      {/* GATEKEEPER PARCEL SAFE OTP LOCKBOX MODAL */}
-      <GatekeeperParcelSafeModal
-        isOpen={showParcelSafeModal}
-        onClose={() => setShowParcelSafeModal(false)}
-      />
-
-      {/* SA MINIBUS TAXI HAND GESTURE & FARES GUIDE MODAL */}
-      <TaxiHandSignGuideModal
-        isOpen={showTaxiGuideModal}
-        onClose={() => setShowTaxiGuideModal(false)}
-      />
     </div>
   )
 }

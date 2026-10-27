@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ClipboardList, X, CheckSquare, Square, Download, Trash2 } from 'lucide-react'
+import { ClipboardList, X, CheckSquare, Square, Download, Trash2, MessageSquare, Send, Printer } from 'lucide-react'
+import Link from 'next/link'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 interface SnagItem {
@@ -36,6 +37,7 @@ export default function TenantInspectionSnagListModal({
   const [newRoom, setNewRoom] = useState('Bedroom')
   const [newDesc, setNewDesc] = useState('')
   const [newSeverity, setNewSeverity] = useState<SnagSeverity>('minor')
+  const [dispatchNotice, setDispatchNotice] = useState<string | null>(null)
 
   if (!isOpen) return null
 
@@ -94,13 +96,24 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(212,175,55,0.15)] backdrop-blur-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.5 }}
+          onDragEnd={(e, info) => {
+            if (info.offset.y > 80 || info.velocity.y > 250) {
+              playTactileSound('pop')
+              onClose()
+            }
+          }}
+          className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 backdrop-blur-2xl overflow-hidden max-h-[90dvh] flex flex-col pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
+          {/* Mobile Drag Indicator */}
+          <div className="sm:hidden w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-1 mb-2.5 shrink-0 cursor-grab active:cursor-grabbing" />
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -114,7 +127,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
 
           {/* Header */}
           <div className="flex items-center gap-3 mb-5 shrink-0">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 flex items-center justify-center text-black shadow-lg">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 border border-gold-primary/30 flex items-center justify-center text-black">
               <ClipboardList size={24} />
             </div>
             <div>
@@ -220,14 +233,31 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
           </div>
 
           {/* Footer actions */}
+          {dispatchNotice && (
+            <div className="p-2.5 mb-3 rounded-xl bg-gold-primary/10 border border-gold-primary/30 text-gold-primary text-xs font-bold text-center animate-in fade-in flex items-center justify-center gap-2">
+              <span>{dispatchNotice}</span>
+            </div>
+          )}
           <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleExport}
-                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-gold-primary/10"
+                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 min-h-[44px]"
               >
                 <Download size={14} />
                 <span>Export (.txt)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('pop')
+                  if (typeof window !== 'undefined') window.print()
+                }}
+                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 active:scale-95 min-h-[44px]"
+                title="Print inspection snag certificate"
+              >
+                <Printer size={14} />
+                <span>Print</span>
               </button>
               <button
                 onClick={() => {
@@ -240,11 +270,35 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
                   )
                   window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
                 }}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px]"
                 title="Email inspection snag report directly to property owner or landlord"
               >
                 <span>Email Landlord</span>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('click')
+                  const text = `*MOVE-IN DEFECT & SNAG REPORT*\nProperty: ${propertyAddress}\nDate: ${new Date().toLocaleDateString()}\n\nRecorded Defects (${items.length}):\n` +
+                    items.map((it, i) => `${i + 1}. [${it.room}] ${it.description} (${it.severity})`).join('\n') +
+                    `\n\nVerified on The Resident.`
+                  navigator.clipboard.writeText(text)
+                  setDispatchNotice('Copied Snag List report! Ready to send to Landlord in Resident Messages.')
+                }}
+                className="px-4 py-2.5 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px]"
+                title="Copy inspection snag report to send to landlord via Resident Messages"
+              >
+                <MessageSquare size={13} />
+                <span>Dispatch to Landlord</span>
+              </button>
+              <Link
+                href="/dashboard/messages"
+                onClick={() => { playTactileSound('pop'); onClose(); }}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px] no-underline"
+              >
+                <Send size={13} />
+                <span>Open Messages</span>
+              </Link>
             </div>
             <button
               onClick={() => { playTactileSound('pop'); onClose() }}

@@ -32,28 +32,36 @@ export default function ThemeSwitcherModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-xl bg-black/95 border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.5 }}
+          onDragEnd={(e, info) => {
+            if (info.offset.y > 80 || info.velocity.y > 250) {
+              playTactileSound('pop')
+              onClose()
+            }
+          }}
+          className="relative w-full max-w-xl bg-black/95 border border-white/15 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 backdrop-blur-2xl overflow-hidden flex flex-col max-h-[90dvh] pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
+          {/* Mobile Drag Indicator */}
+          <div className="sm:hidden w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-1 mb-2.5 shrink-0 cursor-grab active:cursor-grabbing" />
           {/* Header */}
           <div className="flex items-center justify-between pb-5 border-b border-white/10 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary shadow-glow">
+              <div className="w-10 h-10 rounded-2xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary">
                 <Palette size={20} />
               </div>
               <div>
                 <h3 className="text-base font-black text-white uppercase tracking-tight flex items-center gap-2">
-                  <span>Visual Theme Studio</span>
-                  <span className="text-[9px] font-black uppercase tracking-wider bg-gold-primary/15 text-gold-primary px-2 py-0.5 rounded-full border border-gold-primary/30">
-                    Live Engine
-                  </span>
+                  <span>Theme</span>
                 </h3>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Select your preferred liquid glass aesthetic &amp; color spectrum
+                  Every screen recolours instantly.
                 </p>
               </div>
             </div>
@@ -78,7 +86,7 @@ export default function ThemeSwitcherModal({
                   }}
                   className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
                     isActive
-                      ? 'border-gold-primary bg-white/[0.06] shadow-glow scale-[1.01]'
+                      ? 'border-gold-primary bg-white/[0.06] scale-[1.01]'
                       : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/20'
                   }`}
                 >

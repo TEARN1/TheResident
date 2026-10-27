@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, PhoneOff, Video, ShieldCheck } from 'lucide-react'
+import { Phone, PhoneOff, Video } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 
 export interface IncomingCallData {
@@ -40,7 +40,7 @@ export default function IncomingCallBanner({
 
   return (
     <AnimatePresence>
-      <div className="fixed top-4 inset-x-0 z-[10000] flex justify-center px-4 pointer-events-none">
+      <div className="fixed top-[calc(1rem+env(safe-area-inset-top,0px))] inset-x-0 z-[10000] flex justify-center px-4 pointer-events-none">
         <motion.div
           initial={{ opacity: 0, y: -40, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -64,22 +64,21 @@ export default function IncomingCallBanner({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-black text-white truncate">{incomingCall.callerName}</span>
-              <ShieldCheck size={12} className="text-[var(--gold-primary,#8EB69B)] shrink-0" />
             </div>
             <p className="text-[10px] text-gray-300 font-medium flex items-center gap-1 mt-0.5">
               {incomingCall.callType === 'video' ? (
                 <>
                   <Video size={10} className="text-[var(--gold-primary,#8EB69B)]" />
-                  <span>Incoming Resident Video Call...</span>
+                  <span>Incoming video call…</span>
                 </>
               ) : (
                 <>
                   <Phone size={10} className="text-[var(--gold-primary,#8EB69B)]" />
-                  <span>Incoming Resident Voice Call...</span>
+                  <span>Incoming voice call…</span>
                 </>
               )}
             </p>
-            <p className="text-[9px] text-gray-500 capitalize">{incomingCall.callerRole || 'Verified Resident'}</p>
+            <p className="text-[9px] text-gray-500 capitalize">{incomingCall.callerRole || 'On The Resident'}</p>
           </div>
 
           {/* Action Call Buttons: Decline & Accept */}
@@ -89,7 +88,7 @@ export default function IncomingCallBanner({
                 playTactileSound('alert')
                 onDecline()
               }}
-              className="p-3 rounded-2xl bg-red-600/20 hover:bg-red-600 border border-red-500/40 text-red-300 hover:text-white transition-all active:scale-95 shadow-md flex items-center justify-center"
+              className="p-3 rounded-2xl bg-red-600/20 hover:bg-red-600 border border-red-500/40 text-red-300 hover:text-white transition-all active:scale-95 flex items-center justify-center"
               title="Decline Call"
               aria-label="Decline Call"
             >
@@ -100,7 +99,7 @@ export default function IncomingCallBanner({
                 playTactileSound('success')
                 onAccept(incomingCall)
               }}
-              className="p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black transition-all active:scale-95 shadow-glow flex items-center justify-center animate-bounce"
+              className="p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black transition-all active:scale-95 flex items-center justify-center animate-bounce"
               title="Accept Call"
               aria-label="Accept Call"
             >

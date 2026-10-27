@@ -5,14 +5,13 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import Image from 'next/image'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, ExternalLink, Table2, Sparkles, QrCode, Palette, Volume2, VolumeX } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, ExternalLink, Table2, Sparkles, Palette, Volume2, VolumeX } from 'lucide-react'
 import { GRUVS, TEARNS } from '../../../utils/sisterApps'
 import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
-import ResidentIDCardModal from '../components/profile/ResidentIDCardModal'
 import { playTactileSound, isTactileSoundMuted, setTactileSoundMuted } from '../../../utils/tactileSounds'
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import Card from '../../../components/ui/Card'
@@ -94,7 +93,6 @@ export default function ProfilePage() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
-  const [showIDCardModal, setShowIDCardModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -145,6 +143,15 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [roleSwitching, setRoleSwitching] = useState(false)
+  // Arriving from Housing's "I have a room to rent" (?role=landlord): point
+  // at the Landlord Mode switch rather than flipping the role silently.
+  const [landlordHint, setLandlordHint] = useState(false)
+  const roleCardRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('role') !== 'landlord') return
+    setLandlordHint(true)
+    roleCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [])
 
   const handleSwitchRole = async (newRole: 'tenant' | 'landlord') => {
     if (!currentUser || guest || currentUser.role === newRole) return
@@ -224,6 +231,11 @@ export default function ProfilePage() {
           </button>
         ))}
       </div>
+      {/* Only part of the app is translated (menus and some labels); say so
+          rather than let isiZulu, isiXhosa or Afrikaans look broken. */}
+      {lang !== 'en' && (
+        <p className="m-0 text-[11px] text-gray-500">Menus and some labels are translated so far. The rest is still in English.</p>
+      )}
     </div>
   )
 
@@ -231,11 +243,8 @@ export default function ProfilePage() {
     <div className="glass-panel p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
-          <Palette size={16} /> Theme &amp; Color Spectrum
+          <Palette size={16} /> Colours
         </h2>
-        <span className="text-[9px] font-black uppercase tracking-wider bg-gold-primary/10 text-gold-primary px-2.5 py-0.5 rounded-full border border-gold-primary/30">
-          4 Palettes
-        </span>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -281,29 +290,29 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {mutedAudio ? <VolumeX size={18} className="text-gray-400" /> : <Volume2 size={18} className="text-gold-primary" />}
-          <h2 className="text-sm font-black text-white uppercase tracking-widest">Tactile Sound Effects</h2>
+          <h2 className="text-sm font-black text-white uppercase tracking-widest">Sounds &amp; vibration</h2>
         </div>
         <button
           type="button"
           onClick={toggleMutedAudio}
           className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
             !mutedAudio
-              ? 'bg-gold-primary text-black border-gold-primary shadow-glow'
+              ? 'bg-gold-primary text-black border-gold-primary'
               : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
           }`}
         >
-          {!mutedAudio ? 'Enabled' : 'Muted'}
+          {!mutedAudio ? 'On' : 'Off'}
         </button>
       </div>
       <p className="text-xs text-gray-400">
-        Lightweight Web Audio oscillators and micro-vibrations for tabs, taps, and alerts. Mute anytime for quiet environments.
+        Small sounds and vibrations when you tap. Turn them off for quiet places.
       </p>
     </div>
   )
 
   if (guest) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6 pb-24">
+      <div className="p-3 sm:p-6 md:p-8 max-w-3xl mx-auto space-y-6 pb-28">
         <div className="glass-panel p-10 text-center space-y-4">
           <UserIcon size={40} className="mx-auto text-gold-primary opacity-60" />
           <h2 className="text-xl font-bold text-white">No profile to show yet</h2>
@@ -339,10 +348,46 @@ export default function ProfilePage() {
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-6 pb-24">
-      <div className="glass-panel p-6 flex items-center gap-5 border-white/10 relative overflow-hidden shadow-2xl">
+      {/* Profile Completion Meter */}
+      <Card className="space-y-2 border-gold-primary/30">
+        <div className="flex justify-between items-center text-xs">
+          <span className="font-bold text-white flex items-center gap-1.5">
+            <Sparkles size={14} className="text-gold-primary" /> Profile Completion
+          </span>
+          <span className="font-mono font-bold text-gold-primary">
+            {photoUrl ? 95 : 75}% Complete
+          </span>
+        </div>
+        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-gold-primary to-emerald-400 transition-all duration-500 rounded-full"
+            style={{ width: `${photoUrl ? 95 : 75}%` }}
+          />
+        </div>
+        {!photoUrl && (
+          <p className="text-[10px] text-gray-400 m-0">Upload a profile photo to reach 95% completion and build instant trust with landlords.</p>
+        )}
+      </Card>
+
+      {/* Active Device Session */}
+      <Card className="space-y-2">
+        <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+          <Globe size={16} className="text-gold-primary" /> Active Session &amp; Security
+        </h2>
+        <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between text-xs">
+          <div className="space-y-0.5">
+            <span className="font-bold text-white block">Current Device</span>
+            <span className="text-[11px] text-gray-400">PWA / Web Client · Johannesburg, South Africa</span>
+          </div>
+          <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+            Active Now
+          </span>
+        </div>
+      </Card>
+      <div className="glass-panel p-4 sm:p-6 flex items-center gap-4 sm:gap-5 border-white/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16" />
 
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gold-primary via-amber-300 to-gold-secondary text-black flex items-center justify-center text-2xl font-black shrink-0 shadow-[0_0_20px_rgba(212,175,55,0.3)] relative">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gold-primary via-amber-300 to-gold-secondary text-black flex items-center justify-center text-2xl font-black shrink-0 shadow-[0_0_20px_rgb(var(--accent)/0.3)] relative">
           {currentUser.name.charAt(0)}
           <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-black" />
         </div>
@@ -353,24 +398,13 @@ export default function ProfilePage() {
           <p className="text-[11px] text-gold-primary uppercase tracking-widest font-black mt-0.5">{currentUser.role} Account</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <TrustBadge userId={currentUser.id} />
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('chime')
-                setShowIDCardModal(true)
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
-              title="Open Digital Resident Passport & QR Keycard"
-            >
-              <QrCode size={13} />
-              <span>Resident ID Pass</span>
-            </button>
           </div>
         </div>
       </div>
 
       {/* Account Mode / Role Switcher */}
-      <Card className="space-y-4 border-white/10 shadow-xl">
+      <div ref={roleCardRef}>
+      <Card className={`space-y-4 shadow-xl ${landlordHint && currentUser.role !== 'landlord' ? 'border-gold-primary/60 ring-2 ring-gold-primary/30' : 'border-white/10'}`}>
         <h2 className="text-xs font-black text-gold-primary uppercase tracking-wider flex items-center gap-2">
           <UserIcon size={16} /> Account Mode &amp; Role
         </h2>
@@ -405,7 +439,16 @@ export default function ProfilePage() {
             <span className="text-[10px] opacity-80 font-normal">List units &amp; manage tenants</span>
           </button>
         </div>
+        {landlordHint && currentUser.role !== 'landlord' && (
+          <p className="m-0 text-xs font-bold text-gold-primary">Tap Landlord Mode, then go back to Housing to list your room. Managing rooms is free.</p>
+        )}
+        {landlordHint && currentUser.role === 'landlord' && (
+          <Link href="/dashboard/housing" className="inline-flex items-center gap-1.5 text-xs font-black text-gold-primary uppercase tracking-wider">
+            You are a landlord now. List your room <ExternalLink size={12} />
+          </Link>
+        )}
       </Card>
+      </div>
 
       <Card className="space-y-3">
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
@@ -481,6 +524,42 @@ export default function ProfilePage() {
           <UpgradeButton item="plus" className={`shrink-0 ${goldButtonClass()}`} />
         </div>
       )}
+
+      
+      {/* Privacy, POPIA Compliance & Data Sovereignty */}
+      <Card className="space-y-3">
+        <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+          <ShieldCheck size={16} /> Privacy &amp; Data Rights (POPIA / GDPR)
+        </h2>
+        <p className="text-[11px] text-gray-500">
+          You own your data. Download a complete archive of your profile, preferences, and activity, or review privacy policies.
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              playTactileSound('pop');
+              const data = JSON.stringify({ user: currentUser, exportedAt: new Date().toISOString() }, null, 2);
+              const blob = new Blob([data], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `TheResident_DataArchive_${currentUser?.id || 'guest'}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider transition-all min-h-[44px]"
+          >
+            Download Data (.json)
+          </button>
+          <Link
+            href="/privacy"
+            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-bold text-xs uppercase tracking-wider transition-all min-h-[44px] flex items-center no-underline"
+          >
+            Privacy Policy
+          </Link>
+        </div>
+      </Card>
 
       <Link href="/dashboard/trust-circle" className="glass-panel p-4 flex items-center gap-3 hover:border-gold-primary/30 transition-all">
         <div className="p-2 bg-gold-primary/10 rounded-lg text-gold-primary"><ShieldCheck size={18} /></div>
@@ -672,12 +751,11 @@ export default function ProfilePage() {
         <LogOut size={14} /> Log Out
       </button>
 
-      {/* DIGITAL RESIDENT ID MODAL */}
-      <ResidentIDCardModal
-        isOpen={showIDCardModal}
-        onClose={() => setShowIDCardModal(false)}
-        user={currentUser}
-      />
+      <p className="m-0 text-center text-xs text-gray-500">
+        <Link href="/terms" className="text-gray-400 no-underline hover:text-white">Terms</Link>
+        <span className="mx-2 text-white/20">·</span>
+        <Link href="/privacy" className="text-gray-400 no-underline hover:text-white">Privacy</Link>
+      </p>
     </div>
   )
 }

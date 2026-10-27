@@ -33,7 +33,6 @@ export default function StartNewChatModal({
 }: StartNewChatModalProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState<'all' | 'landlord' | 'tenant' | 'handyman'>('all')
   const [residents, setResidents] = useState<ResidentContact[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -51,14 +50,13 @@ export default function StartNewChatModal({
       .then(({ data, error }) => {
         setLoading(false)
         if (error || !data) return
+        // Only what the profile really says. Role, suburb and a "verified"
+        // tick used to be invented from each person's position in the list.
         const contacts: ResidentContact[] = data.map((p: { id: string; username: string | null; display_name: string | null; avatar_url: string | null }, idx: number) => ({
           id: p.id,
           name: p.display_name || p.username || `Resident #${idx + 1}`,
           username: p.username || undefined,
-          avatarUrl: p.avatar_url,
-          role: idx % 3 === 0 ? 'landlord' : idx % 3 === 1 ? 'handyman' : 'tenant',
-          suburb: idx % 2 === 0 ? 'Braamfontein' : 'Cape Town CBD',
-          verified: true
+          avatarUrl: p.avatar_url
         }))
         setResidents(contacts)
       })
@@ -76,15 +74,8 @@ export default function StartNewChatModal({
 
   if (!isOpen) return null
 
-  const filtered = residents.filter(r => {
-    const matchesSearch =
-      r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (r.suburb && r.suburb.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (r.username && r.username.toLowerCase().includes(searchQuery.toLowerCase()))
-
-    const matchesRole = roleFilter === 'all' || r.role === roleFilter
-    return matchesSearch && matchesRole
-  })
+  const q = searchQuery.toLowerCase()
+  const filtered = residents.filter(r => r.name.toLowerCase().includes(q) || (r.username?.toLowerCase().includes(q) ?? false))
 
   const handleSelectContact = (contactId: string) => {
     playTactileSound('click')
@@ -94,17 +85,28 @@ export default function StartNewChatModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md">
+      <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/80 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-lg bg-[var(--card-bg,rgba(11,43,38,0.9))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-2xl flex flex-col max-h-[85vh] overflow-hidden"
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.5 }}
+          onDragEnd={(e, info) => {
+            if (info.offset.y > 80 || info.velocity.y > 250) {
+              playTactileSound('pop')
+              onClose()
+            }
+          }}
+          className="relative w-full max-w-lg bg-[var(--card-bg,rgba(11,43,38,0.9))] border border-[var(--glass-border,rgba(142,182,155,0.3))] rounded-t-3xl sm:rounded-3xl p-5 sm:p-7 backdrop-blur-2xl flex flex-col max-h-[85dvh] overflow-hidden pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
+          {/* Mobile Drag Indicator */}
+          <div className="sm:hidden w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-1 mb-2.5 shrink-0 cursor-grab active:cursor-grabbing" />
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[var(--gold-dim,rgba(142,182,155,0.1))] border border-[var(--glass-border,rgba(142,182,155,0.3))] text-[var(--gold-primary,#8EB69B)] flex items-center justify-center shadow-glow">
+              <div className="w-10 h-10 rounded-2xl bg-[var(--gold-dim,rgba(142,182,155,0.1))] border border-[var(--glass-border,rgba(142,182,155,0.3))] text-[var(--gold-primary,#8EB69B)] flex items-center justify-center">
                 <MessageSquare size={18} />
               </div>
               <div>
@@ -137,7 +139,7 @@ export default function StartNewChatModal({
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search by name, landlord, or suburb..."
-                className="w-full bg-transparent text-xs text-white placeholder:text-gray-500 outline-none font-medium"
+                className="w-full bg-transparent border-0 text-xs text-white placeholder:text-gray-500 outline-none font-medium"
                 autoFocus
               />
               {searchQuery && (
@@ -147,30 +149,6 @@ export default function StartNewChatModal({
               )}
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {[
-                { id: 'all', label: 'All Residents' },
-                { id: 'landlord', label: 'Landlords' },
-                { id: 'tenant', label: 'Roommates' },
-                { id: 'handyman', label: 'Service Pros' }
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => {
-                    playTactileSound('tab')
-                    setRoleFilter(f.id as 'all' | 'landlord' | 'tenant' | 'handyman')
-                  }}
-                  className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-all border ${
-                    roleFilter === f.id
-                      ? 'bg-[var(--gold-primary,#8EB69B)] text-black border-[var(--gold-primary,#8EB69B)] shadow-glow'
-                      : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Directory Results List */}
@@ -211,12 +189,9 @@ export default function StartNewChatModal({
                           <ShieldCheck size={12} className="text-[var(--gold-primary,#8EB69B)] shrink-0" />
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] text-gray-400 mt-0.5">
-                        <span className="capitalize font-bold text-gray-300">
-                          {contact.role === 'landlord' ? 'Landlord' : contact.role === 'handyman' ? 'Handyman Pro' : 'Resident'}
-                        </span>
-                        {contact.suburb && <span>• {contact.suburb}</span>}
-                      </div>
+                      {contact.username && (
+                        <div className="text-[10px] text-gray-400 mt-0.5">@{contact.username}</div>
+                      )}
                     </div>
                   </div>
 

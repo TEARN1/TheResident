@@ -13,54 +13,56 @@ export interface ThemeDefinition {
   description: string
 }
 
+// Swatches mirror the token values in globals.css; the CSS is the source
+// of truth for what actually renders.
 export const APP_THEMES: ThemeDefinition[] = [
   {
     id: 'minimal-green',
-    name: 'Minimal Emerald',
-    subtitle: 'Creator Brands & Digital Products',
-    accentColor: '#8EB69B',
-    accentSecondary: '#235347',
-    accentName: 'Emerald Sage',
-    previewGradient: 'linear-gradient(135deg, #051F20 0%, #0B2B26 40%, #235347 70%, #8EB69B 100%)',
-    glowColor: 'rgba(142, 182, 155, 0.35)',
+    name: 'Emerald',
+    subtitle: 'The Resident default',
+    accentColor: '#6EE7B7',
+    accentSecondary: '#107A5C',
+    accentName: 'Mint',
+    previewGradient: 'linear-gradient(135deg, #020D0E 0%, #041617 45%, #107A5C 80%, #6EE7B7 100%)',
+    glowColor: 'rgba(110, 231, 183, 0.4)',
     mode: 'dark',
-    description: 'Deep forest greens (#051F20, #0B2B26) paired with soft sage (#8EB69B) and mint highlights (#DAF1DE).'
+    description: 'Deep green-black glass with a bright mint signal colour.'
   },
   {
     id: 'crimson-cyber',
-    name: 'Neon Crimson Glass',
-    subtitle: 'High-Impact Cyberpunk UI',
-    accentColor: '#FF2A4D',
-    accentSecondary: '#8B0018',
-    accentName: 'Neon Crimson',
-    previewGradient: 'linear-gradient(135deg, #080305 0%, #1A050B 40%, #5C0817 75%, #FF2A4D 100%)',
-    glowColor: 'rgba(255, 42, 77, 0.45)',
+    name: 'Crimson',
+    subtitle: 'High contrast',
+    accentColor: '#FF4064',
+    accentSecondary: '#9F1239',
+    accentName: 'Neon red',
+    previewGradient: 'linear-gradient(135deg, #050103 0%, #0A0306 45%, #9F1239 80%, #FF4064 100%)',
+    glowColor: 'rgba(255, 64, 100, 0.45)',
     mode: 'dark',
-    description: 'Obsidian glass surfaces with intense neon red underglows, glossy specular pills, and high-contrast badges.'
+    description: 'Near-black surfaces with a hot red accent and strong glow.'
   },
   {
     id: 'liquid-glass',
-    name: 'Liquid Glass Frost',
-    subtitle: 'Prismatic Neomorphic Elegance',
-    accentColor: '#6366F1',
-    accentSecondary: '#06B6D4',
-    accentName: 'Prismatic Iris',
-    previewGradient: 'linear-gradient(135deg, #F0F4F8 0%, #DDE7F0 40%, #C7D9EC 75%, #E8EEF5 100%)',
-    glowColor: 'rgba(99, 102, 241, 0.25)',
+    name: 'Liquid Glass',
+    subtitle: 'Light mode',
+    accentColor: '#4F46E5',
+    accentSecondary: '#0891B2',
+    accentName: 'Iris',
+    previewGradient: 'linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 45%, #A5B4FC 80%, #4F46E5 100%)',
+    glowColor: 'rgba(79, 70, 229, 0.25)',
     mode: 'light',
-    description: 'Ultra-clean frosted glass tiles with smooth pill drop-shadows, iridescent pastel borders, and crisp dark text.'
+    description: 'Bright frosted panels, dark text and an iris-blue accent. Best in daylight.'
   },
   {
     id: 'midnight-violet',
-    name: 'Midnight Lavender Glass',
-    subtitle: 'Deep Night & Cosmic Glow',
+    name: 'Midnight',
+    subtitle: 'Cosmic violet',
     accentColor: '#C084FC',
     accentSecondary: '#7E22CE',
-    accentName: 'Cosmic Amethyst',
-    previewGradient: 'linear-gradient(135deg, #090514 0%, #150D2A 40%, #341857 75%, #C084FC 100%)',
+    accentName: 'Lavender',
+    previewGradient: 'linear-gradient(135deg, #05030D 0%, #0A0616 45%, #7E22CE 80%, #C084FC 100%)',
     glowColor: 'rgba(192, 132, 252, 0.4)',
     mode: 'dark',
-    description: 'Dark royal violet glass with luminous magenta-lavender rim lighting, glossy floating capsules, and stellar accents.'
+    description: 'Deep violet night with a soft lavender glow.'
   }
 ]
 

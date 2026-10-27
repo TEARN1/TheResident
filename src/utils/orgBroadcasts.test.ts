@@ -60,3 +60,53 @@ test('unitBreadcrumb walks from root to the given unit', () => {
   const chain = unitBreadcrumb(units, 'teacher-a1').map(u => u.id)
   assert.deepStrictEqual(chain, ['dept', 'hod', 'school-a', 'teacher-a1'])
 })
+
+// Civic Governance Hierarchy: Presidency -> Premier -> Executive Mayor -> Ward Councillor
+const civicUnits: OrgUnit[] = [
+  { id: 'za-pres', parentId: null, name: 'The Presidency (RSA)', tier: 'presidency', ownerUserId: 'pres-1' },
+  { id: 'gp-premier', parentId: 'za-pres', name: 'Gauteng Office of the Premier', tier: 'premier', ownerUserId: 'prem-1' },
+  { id: 'jhb-mayor', parentId: 'gp-premier', name: 'City of Johannesburg Executive Mayor', tier: 'mayor', ownerUserId: 'mayor-1' },
+  { id: 'ward-60', parentId: 'jhb-mayor', name: 'Ward 60 Councillor (Braamfontein)', tier: 'councillor', ownerUserId: 'councillor-60' },
+  { id: 'ward-58', parentId: 'jhb-mayor', name: 'Ward 58 Councillor (Fordsburg)', tier: 'councillor', ownerUserId: 'councillor-58' }
+]
+
+const civicFollows = [
+  { unitId: 'ward-60', followerUserId: 'resident-braam' },
+  { unitId: 'ward-58', followerUserId: 'resident-fordsburg' }
+]
+
+test('Civic cascade: Presidency and Executive Mayor broadcasts reach all Ward followers, while a Ward Councillor broadcast stays scoped to their Ward', () => {
+  const nationalAudience = resolveAudience(civicUnits, civicFollows, 'za-pres')
+  assert.deepStrictEqual(new Set(nationalAudience), new Set(['resident-braam', 'resident-fordsburg']))
+
+  const mayoralAudience = resolveAudience(civicUnits, civicFollows, 'jhb-mayor')
+  assert.deepStrictEqual(new Set(mayoralAudience), new Set(['resident-braam', 'resident-fordsburg']))
+
+  const ward60Audience = resolveAudience(civicUnits, civicFollows, 'ward-60')
+  assert.deepStrictEqual(ward60Audience, ['resident-braam'])
+  assert.strictEqual(canPostAsUnit(civicUnits, ['jhb-mayor'], 'ward-60'), true)
+  assert.strictEqual(canPostAsUnit(civicUnits, ['ward-60'], 'ward-58'), false)
+})
+
+// Political Party Hierarchy: National HQ -> Provincial Structure -> Ward Branch
+const partyUnits: OrgUnit[] = [
+  { id: 'party-hq', parentId: null, name: 'National Party HQ', tier: 'political_party', ownerUserId: 'sec-gen' },
+  { id: 'party-gp', parentId: 'party-hq', name: 'Gauteng Provincial Structure', tier: 'political_party', ownerUserId: 'prov-chair' },
+  { id: 'branch-soweto', parentId: 'party-gp', name: 'Soweto Ward 39 Branch', tier: 'party_branch', ownerUserId: 'branch-sec-39' },
+  { id: 'branch-alex', parentId: 'party-gp', name: 'Alexandra Ward 105 Branch', tier: 'party_branch', ownerUserId: 'branch-sec-105' }
+]
+
+const partyFollows = [
+  { unitId: 'branch-soweto', followerUserId: 'voter-soweto' },
+  { unitId: 'branch-alex', followerUserId: 'voter-alex' }
+]
+
+test('Political Party cascade: National HQ rally announcement reaches all Ward Branch voters, while a Ward Branch meeting notice only reaches that Ward Branch', () => {
+  const hqAudience = resolveAudience(partyUnits, partyFollows, 'party-hq')
+  assert.deepStrictEqual(new Set(hqAudience), new Set(['voter-soweto', 'voter-alex']))
+
+  const sowetoBranchAudience = resolveAudience(partyUnits, partyFollows, 'branch-soweto')
+  assert.deepStrictEqual(sowetoBranchAudience, ['voter-soweto'])
+  assert.strictEqual(canPostAsUnit(partyUnits, ['party-hq'], 'branch-soweto'), true)
+  assert.strictEqual(canPostAsUnit(partyUnits, ['branch-soweto'], 'branch-alex'), false)
+})

@@ -82,7 +82,7 @@ JURISDICTION: ${selectedJur.flag} ${selectedJur.label.toUpperCase()} (${selected
 
 4. FINANCIAL COVENANTS:
    Monthly Rental:    ${currency} ${monthlyRent.toLocaleString()} per calendar month, payable in advance on or before the 1st of each month.
-   Security Deposit:  ${currency} ${depositAmount.toLocaleString()} held under official statutory protection regulations.
+   Security Deposit:  ${currency} ${depositAmount.toLocaleString()} held and refunded as required by ${selectedJur.law}.
 
 5. HOUSEHOLD RULES & COMMUNITY CONDUCT:
    - Quiet hours observed 22:00 - 07:00.
@@ -190,13 +190,24 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(212,175,55,0.15)] backdrop-blur-2xl overflow-hidden"
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.5 }}
+          onDragEnd={(e, info) => {
+            if (info.offset.y > 80 || info.velocity.y > 250) {
+              playTactileSound('pop')
+              onClose()
+            }
+          }}
+          className="relative w-full max-w-xl max-h-[90dvh] overflow-y-auto custom-scrollbar bg-black/95 border border-gold-primary/30 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 backdrop-blur-2xl pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
+          {/* Mobile Drag Indicator */}
+          <div className="sm:hidden w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-1 mb-2.5 shrink-0 cursor-grab active:cursor-grabbing" />
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -210,7 +221,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
 
               {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 flex items-center justify-center text-black shadow-lg">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 flex items-center justify-center text-black">
               <FileText size={24} />
             </div>
             <div>
@@ -224,6 +235,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
               <p className="text-xs text-gray-400">
                 {selectedJur.law}
               </p>
+              <p className="text-[10px] text-gray-500 mt-0.5">A starting template, not legal advice. Both parties should read it before signing.</p>
             </div>
           </div>
 
@@ -250,7 +262,7 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
                         }}
                         className={`p-2 rounded-xl text-left border transition-all text-xs flex items-center gap-2 ${
                           isSelected
-                            ? 'bg-gold-primary/20 border-gold-primary text-white shadow-[0_0_15px_rgba(212,175,55,0.2)]'
+                            ? 'bg-gold-primary/20 border-gold-primary text-white'
                             : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
                         }`}
                       >
@@ -355,14 +367,14 @@ DEPOSIT: ${currency} ${depositAmount.toLocaleString()}`}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={handleDownload}
-                  className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 active:scale-98"
+                  className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-98"
                 >
                   <Download size={14} /> Download (.txt)
                 </button>
                 <button
                   onClick={handlePrint}
                   className="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                  title="Print official lease agreement or save directly as PDF"
+                  title="Print the lease or save it as a PDF"
                 >
                   <Printer size={14} className="text-gold-primary" />
                   <span>Print / PDF</span>

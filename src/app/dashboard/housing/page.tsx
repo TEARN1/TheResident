@@ -5,8 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, Radar, FileText, HeartHandshake, Calculator, ClipboardList, Upload, Camera,
-  LayoutGrid, Compass, Sun, Scan, Film, ShieldAlert, Sparkles, CheckCircle2, Scale, Radio
+  Search, MapPin, Home, Loader, Filter, X, Plus, Info, AlertTriangle, Check, Send, ShieldCheck, Building2, ExternalLink, FileText, Calculator, Users, ClipboardList, Upload, Camera, Heart, ArrowUpDown
 } from 'lucide-react'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import {
@@ -23,7 +22,7 @@ import {
 } from '../../../store'
 import { approveRequest, rejectRequest, waitlistRequest, saveRequest } from '../../../store/actions'
 import { useGeolocation } from '../../../hooks/useGeolocation'
-import { formatCurrency, suburbPriceStats, isSuspiciousPrice, type SearchFilters } from '../../../utils/logic'
+import { formatCurrency, suburbPriceStats, isSuspiciousPrice, priceVerdict, type PriceStats, type SearchFilters } from '../../../utils/logic'
 import { supabase } from '../../../utils/supabase'
 import FollowButton from '../components/social/FollowButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
@@ -32,33 +31,19 @@ import ReviewForm from '../components/social/ReviewForm'
 import ReviewsList from '../components/social/ReviewsList'
 import dynamic from 'next/dynamic'
 import SavedSearches from '../components/housing/SavedSearches'
+import ListingTrustPanel from '../components/housing/ListingTrustPanel'
+import HousingGetStarted from '../components/housing/HousingGetStarted'
+import ShareListingButton from '../components/housing/ShareListingButton'
+import { LAUNCH_AREA } from '../../../utils/launch'
+import { track } from '../../../utils/track'
 import Link from 'next/link'
 import PropertiesPanel, { type ResProperty } from '../components/housing/PropertiesPanel'
 import EmptyState from '../components/shared/EmptyState'
+import RoommateAdForm from '../components/housing/RoommateAdForm'
 
-const RoommateCompatibilityModal = dynamic(() => import('../components/housing/RoommateCompatibilityModal'), { ssr: false })
 const SALeaseAgreementModal = dynamic(() => import('../components/housing/SALeaseAgreementModal'), { ssr: false })
 const CoLivingExpenseSplitterModal = dynamic(() => import('../components/household/CoLivingExpenseSplitterModal'), { ssr: false })
 const TenantInspectionSnagListModal = dynamic(() => import('../components/housing/TenantInspectionSnagListModal'), { ssr: false })
-const LandlordRoomManagerModal = dynamic(() => import('../components/housing/LandlordRoomManagerModal'), { ssr: false })
-const DepositEscrowVaultModal = dynamic(() => import('../components/housing/DepositEscrowVaultModal'), { ssr: false })
-const MoveInOutInspectionModal = dynamic(() => import('../components/housing/MoveInOutInspectionModal'), { ssr: false })
-const RentReceiptTaxModal = dynamic(() => import('../components/housing/RentReceiptTaxModal'), { ssr: false })
-const NSFASHousingModal = dynamic(() => import('../components/housing/NSFASHousingModal'), { ssr: false })
-const RoomSpatialRulerModal = dynamic(() => import('../components/housing/RoomSpatialRulerModal'), { ssr: false })
-const RoomFloorplanCanvasModal = dynamic(() => import('../components/spatial/RoomFloorplanCanvasModal'), { ssr: false })
-const Panoramic360TourModal = dynamic(() => import('../components/spatial/Panoramic360TourModal'), { ssr: false })
-const ARSolarWindowSimulatorModal = dynamic(() => import('../components/spatial/ARSolarWindowSimulatorModal'), { ssr: false })
-const ARFurnitureBoundingBoxModal = dynamic(() => import('../components/spatial/ARFurnitureBoundingBoxModal'), { ssr: false })
-const LeaseTrapDetectorModal = dynamic(() => import('../components/identity/LeaseTrapDetectorModal'), { ssr: false })
-const UVBlacklightInspectorModal = dynamic(() => import('../components/identity/UVBlacklightInspectorModal'), { ssr: false })
-const StudentCardScannerModal = dynamic(() => import('../components/identity/StudentCardScannerModal'), { ssr: false })
-const LandlordDeedsCheckerModal = dynamic(() => import('../components/identity/LandlordDeedsCheckerModal'), { ssr: false })
-const NFCKeycardHandoverModal = dynamic(() => import('../components/identity/NFCKeycardHandoverModal'), { ssr: false })
-const RentCreditBureauModal = dynamic(() => import('../components/identity/RentCreditBureauModal'), { ssr: false })
-const ResidentPassportModal = dynamic(() => import('../components/identity/ResidentPassportModal'), { ssr: false })
-const RoomStoriesReelModal = dynamic(() => import('../components/social-dynamics/RoomStoriesReelModal'), { ssr: false })
-import { HolographicTiltCard } from '../components/shared/HolographicTiltCard'
 
 import { fetchUpcomingGruvsEvents, fetchGruvsEventsByIds, formatGruvsEventWhen } from '../../../utils/gruvsEvents'
 
@@ -109,6 +94,29 @@ export default function HousingPage() {
   // distinguished by listing_type, same pattern as the quick-post merge above.
   const [filterListingType, setFilterListingType] = useState<'rent' | 'sale' | 'guesthouse'>('rent')
   const [filterParking, setFilterParking] = useState(false)
+  const [filterEnsuite, setFilterEnsuite] = useState(false)
+  const [filterSavedOnly, setFilterSavedOnly] = useState(false)
+  const [sortBy, setSortBy] = useState<'featured' | 'priceAsc' | 'priceDesc' | 'newest'>('featured')
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('res_bookmarks')
+      if (stored) setBookmarkedIds(JSON.parse(stored))
+    } catch {}
+  }, [])
+
+  const toggleBookmark = (id: string) => {
+    playTactileSound('pop')
+    setBookmarkedIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      try { localStorage.setItem('res_bookmarks', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+  // "Stay near this event" deep link from The Gruvs (?event=<gruvs event id>):
+  // guest houses linked to that one event.
+  const [filterEventId, setFilterEventId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
 
   // Create Modal State
@@ -145,10 +153,13 @@ export default function HousingPage() {
   const [auditActionLoading, setAuditActionLoading] = useState<string | null>(null)
 
   // Lifestyle Compatibility Modal
-  const [compatModalTarget, setCompatModalTarget] = useState<{ name: string; suburb: string } | null>(null)
 
   // Legal Lease Modal
   const [leaseModalListing, setLeaseModalListing] = useState<Partial<Listing> | null>(null)
+
+  // Lease, bill splitter and snag list sit behind one "Tools" button, so
+  // the rooms are the first thing on the page.
+  const [showTools, setShowTools] = useState(false)
 
   // Expense Splitter Modal
   const [showSplitterModal, setShowSplitterModal] = useState(false)
@@ -156,37 +167,30 @@ export default function HousingPage() {
   // Move-in Snag List Modal
   const [showSnagModal, setShowSnagModal] = useState(false)
 
-  // Landlord Multi-Room & Tenant Reviews Manager Modal
-  const [showRoomManagerModal, setShowRoomManagerModal] = useState(false)
-  const [roomManagerPropertyInfo, setRoomManagerPropertyInfo] = useState<{ name: string; address: string }>({
-    name: 'Main Residence Complex',
-    address: 'Johannesburg / Braamfontein'
-  })
 
   // Room Image Uploads State
   const [newImages, setNewImages] = useState<string[]>([])
 
-  // Advanced Housing Modals State
-  const [showDepositVaultModal, setShowDepositVaultModal] = useState(false)
-  const [showMoveInspectionModal, setShowMoveInspectionModal] = useState(false)
-  const [showRentReceiptModal, setShowRentReceiptModal] = useState(false)
-  const [showNSFASModal, setShowNSFASModal] = useState(false)
-  const [showSpatialRulerModal, setShowSpatialRulerModal] = useState(false)
-  const [showFloorplanModal, setShowFloorplanModal] = useState(false)
-  const [showPanoramicModal, setShowPanoramicModal] = useState(false)
-  const [showARSolarModal, setShowARSolarModal] = useState(false)
-  const [showARBoundingModal, setShowARBoundingModal] = useState(false)
-  const [showRoomStoriesModal, setShowRoomStoriesModal] = useState(false)
-  const [showLeaseTrapModal, setShowLeaseTrapModal] = useState(false)
-  const [showUVBlacklightModal, setShowUVBlacklightModal] = useState(false)
-  const [showStudentCardModal, setShowStudentCardModal] = useState(false)
-  const [showDeedsCheckerModal, setShowDeedsCheckerModal] = useState(false)
-  const [showNFCKeycardModal, setShowNFCKeycardModal] = useState(false)
-  const [showCreditBureauModal, setShowCreditBureauModal] = useState(false)
-  const [showPassportModal, setShowPassportModal] = useState(false)
-
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const allListings = useSelector((state: RootState) => state.listings.items)
+
+  // Real price benchmarks per suburb + currency, from the listings loaded
+  // here. Replaces a hardcoded "Fair Value" badge that every card showed.
+  const priceStatsByArea = useMemo(() => {
+    const prices = new Map<string, number[]>()
+    for (const l of allListings) {
+      if (!l.suburb || l.listingType !== 'rent') continue
+      const key = `${l.suburb.toLowerCase()}|${l.currency}`
+      const list = prices.get(key) ?? []
+      list.push(l.price)
+      prices.set(key, list)
+    }
+    const stats = new Map<string, PriceStats | null>()
+    for (const [key, list] of prices) stats.set(key, suburbPriceStats(list))
+    return stats
+  }, [allListings])
+  const statsFor = (l: Listing) =>
+    l.suburb && l.listingType === 'rent' ? priceStatsByArea.get(`${l.suburb.toLowerCase()}|${l.currency}`) ?? null : null
   const requests = useSelector((state: RootState) => state.requests.items)
 
   // Search Debouncer
@@ -216,6 +220,44 @@ export default function HousingPage() {
   // session bootstrap). Guarded by a ref so it never yanks the tab back while
   // a landlord is deliberately browsing Rooms.
   const hasSteeredTab = React.useRef(false)
+
+  // Deep links, read once on arrival:
+  //   ?listing=<id>  a room shared on WhatsApp (via /rooms/<id>): open it
+  //   ?event=<id>    The Gruvs' "stay near this event": guest houses for it
+  //   ?tab=rooms|roommates|properties
+  // Declared before the role steering below so a deep link wins over it.
+  const pendingListingId = React.useRef<string | null>(null)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const listing = params.get('listing')
+    const event = params.get('event')
+    const tab = params.get('tab')
+    if (listing) pendingListingId.current = listing
+    if (event && /^[0-9a-zA-Z-]{1,64}$/.test(event)) {
+      hasSteeredTab.current = true
+      setActiveTab('rooms')
+      setFilterListingType('guesthouse')
+      setFilterEventId(event)
+    } else if (tab === 'create') {
+      hasSteeredTab.current = true
+      setActiveTab('rooms')
+      setShowCreateModal(true)
+    } else if (listing || tab === 'rooms' || tab === 'roommates' || tab === 'properties') {
+      hasSteeredTab.current = true
+      setActiveTab(tab === 'roommates' || tab === 'properties' ? tab : 'rooms')
+    }
+  }, [])
+
+  // The shared room opens once the listings it lives in have loaded.
+  useEffect(() => {
+    const id = pendingListingId.current
+    if (!id) return
+    const found = allListings.find(l => l.id === id)
+    if (!found) return
+    pendingListingId.current = null
+    setActiveListing(found)
+  }, [allListings])
+
   useEffect(() => {
     if (hasSteeredTab.current || !currentUser) return
     hasSteeredTab.current = true
@@ -248,13 +290,13 @@ export default function HousingPage() {
 
   useEffect(() => {
     let cancelled = false
-    const ids = [...new Set(allListings.map(l => l.eventId).filter((id): id is string => !!id))]
+    const ids = [...new Set([...allListings.map(l => l.eventId), filterEventId].filter((id): id is string => !!id))]
     if (ids.length === 0) return
     fetchGruvsEventsByIds(ids).then(info => {
       if (!cancelled) setGruvsEventInfo(prev => ({ ...prev, ...info }))
     })
     return () => { cancelled = true }
-  }, [allListings])
+  }, [allListings, filterEventId])
 
   const filteredListingsRaw = useSelector((state: RootState) => selectFilteredListings(
     state,
@@ -276,14 +318,25 @@ export default function HousingPage() {
   const filteredListings = [...filteredListingsRaw]
     .filter(isVisible)
     .filter(l => !filterQuickPostOnly || l.quickPost)
+    .filter(l => !filterEnsuite || l.amenities.bathroom === 'ensuite' || l.amenities.bathroom === 'private')
+    .filter(l => !filterSavedOnly || bookmarkedIds.includes(l.id))
     .filter(l => (l.listingType || 'rent') === filterListingType)
-    .sort((a, b) => Number(isFeatured(b)) - Number(isFeatured(a)))
+    .filter(l => !filterEventId || l.eventId === filterEventId)
+    .sort((a, b) => {
+      if (sortBy === 'priceAsc') return a.price - b.price
+      if (sortBy === 'priceDesc') return b.price - a.price
+      if (sortBy === 'newest') return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      return Number(isFeatured(b)) - Number(isFeatured(a))
+    })
 
+  // No budget cap: this used to pass 2000, which silently hid every ad with
+  // a budget over R2,000 (all of them).
   const filteredRoommates = useSelector((state: RootState) => selectMatchedRoommates(
     state,
     'all',
-    2000
+    0
   ))
+  const myRoommateAd = currentUser ? filteredRoommates.find(rm => rm.id === currentUser.id) : undefined
 
   // What rooms actually go for near this listing, in the same currency —
   // comparing ZAR to EUR would produce a meaningless "median".
@@ -294,29 +347,49 @@ export default function HousingPage() {
     : null
   const newListingLooksSuspicious = isSuspiciousPrice(newPrice, newListingPriceStats)
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Room photos go to storage and the listing keeps their URLs. They used to
+  // be stored inline as base64 (up to 30MB in one row), which made every
+  // listings fetch heavy and gave WhatsApp previews nothing to show.
+  const [photosUploading, setPhotosUploading] = useState(0)
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
-    const maxAllowed = 6 - newImages.length
+    const maxAllowed = 6 - newImages.length - photosUploading
     if (maxAllowed <= 0) {
       setAlertNotification('Maximum 6 room photos allowed.')
       return
     }
     const chosen = Array.from(files).slice(0, maxAllowed)
-    chosen.forEach(file => {
-      if (!file.type.startsWith('image/')) return
+    e.target.value = ''
+    for (const file of chosen) {
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        setAlertNotification('Use JPG, PNG or WebP photos.')
+        continue
+      }
       if (file.size > 5 * 1024 * 1024) {
         setAlertNotification('Photo too large (max 5MB)')
-        return
+        continue
       }
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setNewImages(prev => [...prev, reader.result as string])
-        }
+      if (!supabase || !currentUser?.id) {
+        // Demo mode (no backend): keep a local preview only.
+        const url = URL.createObjectURL(file)
+        setNewImages(prev => [...prev, url])
+        continue
       }
-      reader.readAsDataURL(file)
-    })
+      setPhotosUploading(n => n + 1)
+      try {
+        const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+        const path = `${currentUser.id}/rooms/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+        const { error } = await supabase.storage.from('gossip-media').upload(path, file, { contentType: file.type })
+        if (error) throw error
+        const { data } = supabase.storage.from('gossip-media').getPublicUrl(path)
+        setNewImages(prev => [...prev, data.publicUrl])
+      } catch {
+        setAlertNotification('A photo failed to upload. Check your connection and try again.')
+      } finally {
+        setPhotosUploading(n => n - 1)
+      }
+    }
   }
 
   const handleCreateListing = (e: React.FormEvent) => {
@@ -329,14 +402,16 @@ export default function HousingPage() {
       currency: newCurrency,
       location: newLocation,
       suburb: newSuburb,
-      safetyRating: 'high',
-      safetyNotes: 'Verified community watch area.',
+      // Nobody has assessed the area yet, so claim nothing: tenant reviews
+      // (res_listing_safety) are what speak to safety, not the poster.
+      safetyRating: 'medium',
+      safetyNotes: '',
       landlordId: currentUser?.id || '',
       landlordName: currentUser?.name || '',
       landlordLivesHere: newLivesHere,
-      images: newImages.length > 0
-        ? newImages
-        : ['https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80'],
+      // No stock photo stand-in: a stranger's flat passed off as this room
+      // is exactly what rental scams do. Cards show a plain placeholder.
+      images: newImages,
       amenities: { wifi: newWifi, parking: newParking, bathroom: newBathroom },
       requirements: {
         genderPreference: newGenderPref,
@@ -355,13 +430,14 @@ export default function HousingPage() {
       visibleUntil: newListingType === 'guesthouse' ? GUESTHOUSE_SEASON_END : null
     }
     dispatch(addListing(listing))
+    track('listing_created', { type: newListingType, suburb: newSuburb || null, photos: newImages.length }, currentUser?.id)
     setShowCreateModal(false)
     setNewImages([])
     setNewPropertyId('')
     setNewQuickPost(false)
     setNewListingType('rent')
     setNewEventId('')
-    setAlertNotification('Property listed successfully with verified photos!')
+    setAlertNotification('Room listed! Share the listing in Messages or Community.')
   }
 
   // A signed-out guest has no id, so the request row it built was orphaned —
@@ -393,6 +469,7 @@ export default function HousingPage() {
       timestamp: new Date().toLocaleDateString()
     }
     dispatch(addRequest(request))
+    track('apply_sent', { type: activeListing.listingType || 'rent' }, currentUser?.id)
     setActiveListing(null)
     setApplyMessage('')
     setAlertNotification('Application sent to landlord.')
@@ -464,7 +541,7 @@ export default function HousingPage() {
       <header className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-xl font-black text-white uppercase tracking-tight">Find A <span className="text-gold-primary">Home</span></h2>
-          <p className="text-xs text-gray-400 font-medium mt-0.5">Explore verified rooms, compatible roommates, and managed properties.</p>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Rooms posted by their landlords, people looking to share, and your own properties.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
@@ -473,7 +550,7 @@ export default function HousingPage() {
             <button
               onClick={() => setActiveTab('rooms')}
               className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-                activeTab === 'rooms' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
+                activeTab === 'rooms' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
               }`}
             >
               Rooms
@@ -481,7 +558,7 @@ export default function HousingPage() {
             <button
               onClick={() => setActiveTab('roommates')}
               className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-                activeTab === 'roommates' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
+                activeTab === 'roommates' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
               }`}
             >
               Roommates
@@ -490,7 +567,7 @@ export default function HousingPage() {
               <button
                 onClick={() => setActiveTab('properties')}
                 className={`flex-1 sm:flex-none px-4 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 ${
-                  activeTab === 'properties' ? 'bg-gold-primary text-black' : 'text-gray-400 hover:text-white'
+                  activeTab === 'properties' ? 'bg-gold-primary text-black shadow-glow' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 <Building2 size={13} />
@@ -499,276 +576,70 @@ export default function HousingPage() {
             )}
           </div>
 
-          {/* Civic Utility Action Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setLeaseModalListing({
-                  id: 'custom-draft',
-                  title: 'Urban Co-Living Suite',
-                  suburb: 'Central District',
-                  location: 'Central District',
-                  price: 1200,
-                  currency: 'USD'
-                })
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
-              title="Generate international legally compliant co-living lease agreement"
-            >
-              <FileText size={13} className="text-gold-primary" />
-              <span>Lease Gen</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowSplitterModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
-              title="Calculate and split household rent, electricity, and bills"
-            >
-              <Calculator size={13} className="text-gold-primary" />
-              <span>Splitter</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowSnagModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
-              title="Record move-in defects and generate official snag report"
-            >
-              <ClipboardList size={13} className="text-gold-primary" />
-              <span>Snag List</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowDepositVaultModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-emerald-300 hover:text-emerald-400 bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/30 shrink-0"
-              title="RHA Act 50 Deposit Escrow Holding Pool & PayShap Payout"
-            >
-              <ShieldCheck size={13} className="text-emerald-400" />
-              <span>Escrow Vault</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowMoveInspectionModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
-              title="Side-by-side Day 1 vs Move-out photo comparator"
-            >
-              <Camera size={13} className="text-gold-primary" />
-              <span>Inspection</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowRentReceiptModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
-              title="SARS Tax proof of rent certificates"
-            >
-              <FileText size={13} className="text-gold-primary" />
-              <span>Tax Proof</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowNSFASModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-teal-300 hover:text-teal-400 bg-teal-950/30 hover:bg-teal-900/40 border border-teal-500/30 shrink-0"
-              title="NSFAS annual accommodation cap and DHET compliance calculator"
-            >
-              <Building2 size={13} className="text-teal-400" />
-              <span>NSFAS Cap</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowSpatialRulerModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-cyan-300 hover:text-cyan-400 bg-cyan-950/30 hover:bg-cyan-900/40 border border-cyan-500/30 shrink-0"
-              title="3D Room Spatial Ruler - Will My Bed Fit?"
-            >
-              <Radar size={13} className="text-cyan-400" />
-              <span>AR Ruler</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowFloorplanModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-blue-300 hover:text-blue-400 bg-blue-950/30 hover:bg-blue-900/40 border border-blue-500/30 shrink-0"
-              title="2.5D Interactive Room Floorplan & Furniture Placer"
-            >
-              <LayoutGrid size={13} className="text-blue-400" />
-              <span>Floorplan</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowPanoramicModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-amber-300 hover:text-amber-400 bg-amber-950/30 hover:bg-amber-900/40 border border-amber-500/30 shrink-0"
-              title="360° Panoramic Virtual Room Tour with Spatial Hotspots"
-            >
-              <Compass size={13} className="text-amber-400" />
-              <span>360 Tour</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowARSolarModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-yellow-300 hover:text-yellow-400 bg-yellow-950/30 hover:bg-yellow-900/40 border border-yellow-500/30 shrink-0"
-              title="AR Winter vs Summer Sunlight Trajectory Simulator"
-            >
-              <Sun size={13} className="text-yellow-400" />
-              <span>AR Solar</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowARBoundingModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-purple-300 hover:text-purple-400 bg-purple-950/30 hover:bg-purple-900/40 border border-purple-500/30 shrink-0"
-              title="AR LiDAR Camera 3D Furniture Bounding Box"
-            >
-              <Scan size={13} className="text-purple-400" />
-              <span>AR LiDAR</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowRoomStoriesModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-rose-300 hover:text-rose-400 bg-rose-950/30 hover:bg-rose-900/40 border border-rose-500/30 shrink-0"
-              title="Room Stories 9:16 Vertical Video Tour"
-            >
-              <Film size={13} className="text-rose-400" />
-              <span>Stories</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowLeaseTrapModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-red-300 hover:text-red-400 bg-red-950/30 hover:bg-red-900/40 border border-red-500/30 shrink-0"
-              title="Rental Housing Act 50 Illegal Lease Trap Scanner"
-            >
-              <ShieldAlert size={13} className="text-red-400" />
-              <span>Trap Scanner</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowUVBlacklightModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-violet-300 hover:text-violet-400 bg-violet-950/30 hover:bg-violet-900/40 border border-violet-500/30 shrink-0"
-              title="Virtual 395nm UV Blacklight Hygiene Torch"
-            >
-              <Sparkles size={13} className="text-violet-400" />
-              <span>UV Light</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowStudentCardModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-emerald-300 hover:text-emerald-400 bg-emerald-950/30 hover:bg-emerald-900/40 border border-emerald-500/30 shrink-0"
-              title="Optical Hologram Student Card Scanner & OCR"
-            >
-              <CheckCircle2 size={13} className="text-emerald-400" />
-              <span>Student ID</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowDeedsCheckerModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-amber-300 hover:text-amber-400 bg-amber-950/30 hover:bg-amber-900/40 border border-amber-500/30 shrink-0"
-              title="Deeds Office & Municipal Rates Clearance Checker"
-            >
-              <Scale size={13} className="text-amber-400" />
-              <span>Deeds Check</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowNFCKeycardModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-indigo-300 hover:text-indigo-400 bg-indigo-950/30 hover:bg-indigo-900/40 border border-indigo-500/30 shrink-0"
-              title="Smart NFC Keycard & Handover Token"
-            >
-              <Radio size={13} className="text-indigo-400" />
-              <span>NFC Key</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowCreditBureauModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-sky-300 hover:text-sky-400 bg-sky-950/30 hover:bg-sky-900/40 border border-sky-500/30 shrink-0"
-              title="TransUnion & Experian Rent Credit Bureau Score Builder"
-            >
-              <Check size={13} className="text-sky-400" />
-              <span>Rent Score</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playTactileSound('tab')
-                setShowPassportModal(true)
-              }}
-              className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gold-primary hover:text-amber-300 bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 shrink-0"
-              title="Verified Tenant Resume Passport Stamps"
-            >
-              <ShieldCheck size={13} className="text-gold-primary" />
-              <span>Passport</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowTools(v => !v)}
+            aria-expanded={showTools}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-all shrink-0 ${showTools ? 'bg-white/15 text-white border-white/20' : 'bg-white/5 text-gray-300 border-white/10 hover:text-white'}`}
+          >
+            <ClipboardList size={13} className="text-gold-primary" /> Tools
+          </button>
+          <Link
+            href="/dashboard/community?tab=vibemap"
+            className="px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 border transition-all shrink-0 bg-white/5 text-gray-300 border-white/10 hover:text-white no-underline"
+          >
+            <MapPin size={13} className="text-gold-primary" /> Map View
+          </Link>
         </div>
+        {showTools && (
+          <div className="w-full flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('tab')
+                  setLeaseModalListing({
+                    id: 'custom-draft',
+                    title: 'Room',
+                    suburb: '',
+                    location: '',
+                    price: 3000,
+                    currency: 'ZAR'
+                  })
+                }}
+                className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+                title="Fill in a lease template"
+              >
+                <FileText size={13} className="text-gold-primary" />
+                <span>Lease template</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('tab')
+                  setShowSplitterModal(true)
+                }}
+                className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+                title="Calculate and split household rent, electricity, and bills"
+              >
+                <Calculator size={13} className="text-gold-primary" />
+                <span>Split bills</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('tab')
+                  setShowSnagModal(true)
+                }}
+                className="px-3 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 text-gray-300 hover:text-gold-primary bg-white/5 hover:bg-white/10 border border-white/10 shrink-0"
+                title="Record what is broken when you move in"
+              >
+                <ClipboardList size={13} className="text-gold-primary" />
+                <span>Move-in check</span>
+              </button>
+          </div>
+        )}
       </header>
 
       {activeTab === 'rooms' && (
@@ -777,7 +648,7 @@ export default function HousingPage() {
             <button
               onClick={() => setFilterListingType('rent')}
               className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-                filterListingType === 'rent' ? 'bg-white/15 text-white' : 'text-gray-400 hover:text-white'
+                filterListingType === 'rent' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
               }`}
             >
               Rent
@@ -785,7 +656,7 @@ export default function HousingPage() {
             <button
               onClick={() => setFilterListingType('sale')}
               className={`flex-1 sm:flex-none px-5 py-2 rounded-xl transition-all text-xs font-black uppercase tracking-wider ${
-                filterListingType === 'sale' ? 'bg-white/15 text-white' : 'text-gray-400 hover:text-white'
+                filterListingType === 'sale' ? 'bg-white/15 text-white shadow-sm' : 'text-gray-400 hover:text-white'
               }`}
             >
               Buy
@@ -801,30 +672,23 @@ export default function HousingPage() {
             </button>
           </div>
 
-          {/* Connected Network Callout: The Gruvs Event Stays */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-black/60 to-gold-primary/10 border border-purple-500/20 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gold-primary/20 border border-gold-primary/40 flex items-center justify-center shrink-0">
-                <Image src="/gruvs-logo.png" alt="The Gruvs" width={20} height={20} className="rounded-full object-cover" />
+          {/* Only relevant to short stays, so only shown under Guest Houses. */}
+          {filterListingType === 'guesthouse' && (
+            <div className="p-3.5 rounded-2xl bg-purple-950/30 border border-purple-500/20 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Image src="/gruvs-logo.png" alt="" width={22} height={22} className="rounded-full object-cover shrink-0" />
+                <p className="m-0 text-xs text-gray-300">Going to an event on The Gruvs? Stays near events show here.</p>
               </div>
-              <div>
-                <p className="text-xs font-bold text-white flex items-center gap-2">
-                  <span>Traveling for a festival or event on The Gruvs?</span>
-                  <span className="text-[9px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">Partner Network</span>
-                </p>
-                <p className="text-[11px] text-gray-400">Filter by &quot;Guest Houses&quot; above to find short stays reserved for Gruvs party-goers, or check live events on their portal.</p>
-              </div>
+              <a
+                href="https://thegruvs.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-[10px] uppercase tracking-wider shrink-0"
+              >
+                Events <ExternalLink size={10} />
+              </a>
             </div>
-            <a
-              href="https://thegruvs.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-[10px] uppercase tracking-wider transition-all shadow-md shrink-0 active:scale-95"
-            >
-              <span>See Gruvs Events</span>
-              <ExternalLink size={10} />
-            </a>
-          </div>
+          )}
         </div>
       )}
 
@@ -880,6 +744,16 @@ export default function HousingPage() {
                       className="bg-transparent border-none text-white w-full outline-none text-xs font-semibold placeholder:text-gray-500"
                       autoComplete="off"
                    />
+                   {searchInputValue && (
+                      <button
+                         type="button"
+                         onClick={() => { setSearchInputValue(''); setSearchLocation(''); playTactileSound('click') }}
+                         className="p-1 text-gray-400 hover:text-white shrink-0 mr-1"
+                         aria-label="Clear search"
+                      >
+                         <X size={15} />
+                      </button>
+                   )}
                    <button
                       onClick={() => handleGetLiveLocation(setSearchInputValue)}
                       className={`p-1.5 transition-all rounded-lg shrink-0 ${locationLoading ? 'text-gold-primary' : 'text-gray-400 hover:text-gold-primary hover:bg-gold-primary/10'}`}
@@ -930,27 +804,117 @@ export default function HousingPage() {
                      type="button"
                      onClick={() => {
                        playTactileSound('tab')
-                       setRoomManagerPropertyInfo({
-                         name: 'My Property Portfolio',
-                         address: 'Managed Rental Units'
-                       })
-                       setShowRoomManagerModal(true)
+                       setActiveTab('properties')
                      }}
                      className="bg-white/5 hover:bg-gold-primary/10 border border-gold-primary/30 hover:border-gold-primary text-gold-primary font-black px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 uppercase tracking-wider text-xs"
-                     title="Manage multi-room units, photos, snags and review tenant feedback"
+                     title="Your properties: rooms, tenants and vacancies"
                   >
-                     <ClipboardList size={16} /> Manage Rooms & Reviews
+                     <ClipboardList size={16} /> Manage rooms
                   </button>
                 </div>
              ) : (
                 <Link
-                   href="/dashboard/profile"
+                   href={isGuest ? '/auth?role=landlord' : '/dashboard/profile?role=landlord'}
                    className="bg-white/5 hover:bg-gold-primary/10 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary font-bold px-5 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all text-xs shrink-0"
                    title="Want to list a room? Switch to Landlord mode in your profile."
                 >
                    <Building2 size={16} /> Rent out a room
                 </Link>
              )}
+          </div>
+
+          {/* Quick Filter Chips (Pill Bar) */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider shrink-0">Budget:</span>
+            {[
+              { label: 'All', max: 0 },
+              { label: '< R2,000', max: 2000 },
+              { label: '< R3,500', max: 3500 },
+              { label: '< R5,000', max: 5000 },
+            ].map(tier => (
+              <button
+                key={tier.label}
+                type="button"
+                onClick={() => { setFilterPrice(tier.max); playTactileSound('click') }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] ${
+                  filterPrice === tier.max
+                    ? 'bg-gold-primary text-black border-gold-primary'
+                    : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+                }`}
+              >
+                {tier.label}
+              </button>
+            ))}
+
+            <div className="w-px h-5 bg-white/10 shrink-0 mx-1" />
+
+            <button
+              type="button"
+              onClick={() => { setFilterWifi(v => !v); playTactileSound('click') }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] ${
+                filterWifi
+                  ? 'bg-gold-primary text-black border-gold-primary'
+                  : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+              }`}
+            >
+              WiFi Only
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setFilterParking(v => !v); playTactileSound('click') }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] ${
+                filterParking
+                  ? 'bg-gold-primary text-black border-gold-primary'
+                  : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+              }`}
+            >
+              Parking Only
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setFilterEnsuite(v => !v); playTactileSound('click') }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] ${
+                filterEnsuite
+                  ? 'bg-gold-primary text-black border-gold-primary'
+                  : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+              }`}
+            >
+              Private / Ensuite
+            </button>
+
+            {bookmarkedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => { setFilterSavedOnly(v => !v); playTactileSound('click') }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 min-h-[36px] flex items-center gap-1.5 ${
+                  filterSavedOnly
+                    ? 'bg-rose-500 text-white border-rose-500'
+                    : 'bg-white/5 text-gray-300 border-white/10 hover:border-white/20'
+                }`}
+              >
+                <Heart size={12} className={filterSavedOnly ? 'fill-current' : 'text-rose-400'} />
+                <span>Saved ({bookmarkedIds.length})</span>
+              </button>
+            )}
+
+            <div className="w-px h-5 bg-white/10 shrink-0 mx-1 ml-auto" />
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <ArrowUpDown size={13} className="text-gold-primary shrink-0" />
+              <select
+                value={sortBy}
+                onChange={e => { setSortBy(e.target.value as typeof sortBy); playTactileSound('tab') }}
+                aria-label="Sort listings"
+                className="bg-white/5 border border-white/10 hover:border-white/20 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-200 outline-none cursor-pointer min-h-[36px]"
+              >
+                <option value="featured" className="bg-black text-white">Featured First</option>
+                <option value="priceAsc" className="bg-black text-white">Price: Low to High</option>
+                <option value="priceDesc" className="bg-black text-white">Price: High to Low</option>
+                <option value="newest" className="bg-black text-white">Newest Listed</option>
+              </select>
+            </div>
           </div>
 
           <AnimatePresence>
@@ -1044,19 +1008,54 @@ export default function HousingPage() {
           {/* Listings Grid — previously if filters excluded everything this
               area just rendered a blank grid with no explanation, reading as
               a broken page rather than "your filters are too narrow". */}
-          {filteredListings.length === 0 ? (
+          {(filterEventId || (LAUNCH_AREA && !searchInputValue && allListings.length > 0)) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {filterEventId && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-[11px] font-bold text-purple-200">
+                  Stays near {gruvsEventInfo[filterEventId]?.title || 'this event'}
+                  <button type="button" onClick={() => setFilterEventId(null)} className="text-purple-300 hover:text-white" aria-label="Show all stays"><X size={12} /></button>
+                </span>
+              )}
+              {LAUNCH_AREA && !searchInputValue && allListings.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInputValue(LAUNCH_AREA)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gold-primary/30 bg-gold-primary/10 px-3 py-1.5 text-[11px] font-bold text-gold-primary hover:bg-gold-primary/20"
+                >
+                  <MapPin size={12} /> Now live in {LAUNCH_AREA}: show rooms there
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Listings Grid. No rooms at all is a different situation from
+              filters hiding them: the first says so honestly and offers a
+              way to change it, the second says to widen the filters. */}
+          {allListings.length === 0 ? (
+            <HousingGetStarted
+              isLandlord={currentUser?.role === 'landlord'}
+              isGuest={isGuest}
+              onListRoom={() => { setShowCreateModal(true); playTactileSound('pop') }}
+            />
+          ) : filteredListings.length === 0 ? (
             <div className="glass-panel">
-              <EmptyState icon={Home} title="No rooms match your filters" subtitle="Try widening your price ceiling or clearing a filter." />
+              {filterEventId ? (
+                <EmptyState icon={Home} title="No stays listed near this event yet" subtitle="Have a room nearby? List it as a guest house and link it to this event." />
+              ) : (
+                <EmptyState icon={Home} title="No rooms match your filters" subtitle="Try widening your price ceiling or clearing a filter." />
+              )}
             </div>
           ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
             {filteredListings.map((item) => (
-              <HolographicTiltCard key={item.id} className="h-full">
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/50 rounded-3xl overflow-hidden flex flex-col shadow-[0_10px_30px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.6),0_0_25px_var(--glow-color,rgba(142,182,155,0.25))] transition-all duration-500 group h-full"
-                >
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -4 }}
+                data-spotlight
+                className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/50 rounded-3xl overflow-hidden flex flex-col shadow-[0_10px_30px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.15)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.6),0_0_25px_var(--glow-color,rgba(142,182,155,0.25))] transition-all duration-500 group"
+              >
                 <div className="relative h-60 bg-gray-950 overflow-hidden">
                   {item.images[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -1075,9 +1074,11 @@ export default function HousingPage() {
                   {/* Top Badges */}
                   <div className="absolute top-3.5 left-3.5 right-3.5 flex justify-between items-center pointer-events-none">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="bg-black/70 backdrop-blur-xl border border-white/20 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
-                        Verified
-                      </span>
+                      {item.lastVerifiedAt && (
+                        <span className="bg-black/70 backdrop-blur-xl border border-white/20 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
+                          Verified
+                        </span>
+                      )}
                       {item.quickPost && (
                         <span className="bg-gold-primary text-black text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-glow">
                           Quick Post
@@ -1094,11 +1095,26 @@ export default function HousingPage() {
                         </span>
                       )}
                     </div>
-                    {isFeatured(item) && (
-                      <span className="bg-gradient-to-r from-amber-500 to-gold-primary text-black text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-glow">
-                        Featured
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 pointer-events-auto">
+                      {isFeatured(item) && (
+                        <span className="bg-gradient-to-r from-amber-500 to-gold-primary text-black text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full">
+                          Featured
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); toggleBookmark(item.id) }}
+                        aria-label={bookmarkedIds.includes(item.id) ? 'Remove from saved rooms' : 'Save room'}
+                        title={bookmarkedIds.includes(item.id) ? 'Saved' : 'Save room'}
+                        className={`p-2 rounded-full backdrop-blur-xl border transition-all active:scale-90 ${
+                          bookmarkedIds.includes(item.id)
+                            ? 'bg-rose-500/90 border-rose-400 text-white'
+                            : 'bg-black/60 border-white/20 text-white/80 hover:text-white hover:border-white/40'
+                        }`}
+                      >
+                        <Heart size={13} className={bookmarkedIds.includes(item.id) ? 'fill-current' : ''} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Bottom Price Pill Floating */}
@@ -1109,13 +1125,20 @@ export default function HousingPage() {
                         <span>{item.suburb || item.location}</span>
                       </div>
                     </div>
-                    <div className="bg-black/80 backdrop-blur-2xl border border-gold-primary/40 px-3.5 py-1.5 rounded-2xl shadow-xl flex items-baseline gap-1">
-                      <span className="text-base font-black text-gold-primary tracking-tight">
-                        {formatCurrency(item.price, item.currency)}
-                      </span>
-                      <span className="text-[9px] text-gray-400 font-black uppercase">
-                        /{item.listingType === 'guesthouse' ? 'night' : 'mo'}
-                      </span>
+                    <div className="bg-black/80 backdrop-blur-2xl border border-gold-primary/40 px-3.5 py-1.5 rounded-2xl shadow-xl flex flex-col items-end">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-base font-black text-gold-primary tracking-tight">
+                          {formatCurrency(item.price, item.currency)}
+                        </span>
+                        {item.listingType !== 'sale' && (
+                          <span className="text-[9px] text-gray-400 font-black uppercase">
+                            /{item.listingType === 'guesthouse' ? 'night' : 'mo'}
+                          </span>
+                        )}
+                      </div>
+                      {item.listingType === 'rent' && (
+                        <span className="text-[9px] text-gray-400 font-medium">1 mo deposit</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1126,24 +1149,18 @@ export default function HousingPage() {
                       <h3 className="text-base font-bold text-white group-hover:text-gold-primary transition-colors line-clamp-1 leading-snug">
                         {item.title}
                       </h3>
-                      {item.suburb && (
-                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
-                          Fair Value
-                        </span>
-                      )}
+                      <PriceVerdictBadge verdict={priceVerdict(item.price, statsFor(item))} />
                     </div>
                     <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
                       {item.description}
                     </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
-                        <ShieldCheck size={11} className="text-gold-primary" /> Verified Zone
-                      </span>
-                      <span className="text-[10px] text-gray-500">•</span>
-                      <span className="text-[10px] text-gray-400 font-medium">
-                        Suburb Benchmark: <strong className="text-white">Fair</strong>
-                      </span>
-                    </div>
+                    {statsFor(item) && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] text-gray-400 font-medium">
+                          {item.suburb} median: <strong className="text-white">{formatCurrency(statsFor(item)!.median, item.currency)}</strong>
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Amenities Chips */}
@@ -1167,7 +1184,7 @@ export default function HousingPage() {
                   <div className="pt-2 flex items-center gap-2">
                     <button
                       onClick={() => { setActiveListing(item); playTactileSound('pop') }}
-                      className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black text-xs font-black py-2.5 rounded-xl uppercase tracking-wider transition-all shadow-md active:scale-98"
+                      className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black text-xs font-black py-2.5 rounded-xl uppercase tracking-wider transition-all active:scale-98 min-h-[44px] touch-target-44 flex items-center justify-center"
                     >
                       View Details
                     </button>
@@ -1175,36 +1192,12 @@ export default function HousingPage() {
                       type="button"
                       onClick={() => { playTactileSound('chime'); setLeaseModalListing(item) }}
                       className="p-2.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary transition-all flex items-center gap-1.5 text-xs font-bold"
-                      title="Generate official South African Lease Agreement (Act 50)"
+                      title="Lease template (Rental Housing Act 50 of 1999)"
                     >
                       <FileText size={14} className="text-gold-primary" />
                       <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Lease</span>
                     </button>
-                    <Link
-                      href={`/dashboard/housing?tab=rooms&lat=${encodeURIComponent(item.location)}`}
-                      onClick={() => playTactileSound('click')}
-                      className="p-2.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary transition-all flex items-center gap-1.5 text-xs font-bold"
-                      title="View building coordinates & safety on VibeMap"
-                    >
-                      <Radar size={14} className="text-gold-primary animate-pulse" />
-                      <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Radar</span>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playTactileSound('tab')
-                        setRoomManagerPropertyInfo({
-                          name: item.title,
-                          address: `${item.suburb}, ${item.location}`
-                        })
-                        setShowRoomManagerModal(true)
-                      }}
-                      className="p-2.5 rounded-xl bg-white/5 hover:bg-gold-primary/20 border border-white/10 hover:border-gold-primary/30 text-gray-300 hover:text-gold-primary transition-all flex items-center gap-1.5 text-xs font-bold"
-                      title="Inspect room condition, photos, snags, and landlord reviews"
-                    >
-                      <ClipboardList size={14} className="text-gold-primary" />
-                      <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Rooms</span>
-                    </button>
+                    <ShareListingButton listing={item} userId={currentUser?.id} />
                     {item.landlordLivesHere && (
                       <span className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 shrink-0" title="Landlord lives on property">
                         <Home size={14} className="text-gold-primary" />
@@ -1213,19 +1206,31 @@ export default function HousingPage() {
                   </div>
                 </div>
               </motion.div>
-            </HolographicTiltCard>
             ))}
           </div>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
+        {currentUser && !isGuest && (
+          <RoommateAdForm
+            key={myRoommateAd ? 'edit' : 'new'}
+            currentUser={currentUser}
+            myAd={myRoommateAd}
+            onDone={msg => { setAlertNotification(msg); setTimeout(() => setAlertNotification(null), 3000) }}
+          />
+        )}
+        {filteredRoommates.length === 0 ? (
+          <EmptyState icon={Users} title="No roommate ads yet" subtitle={isGuest ? 'Sign in to post one.' : 'Post yours and people looking to share can message you.'} />
+        ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
            {filteredRoommates.map(rm => (
              <motion.div
                key={rm.id}
                initial={{ opacity: 0, y: 12 }}
                animate={{ opacity: 1, y: 0 }}
                whileHover={{ y: -4 }}
+                data-spotlight
                className="bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/30 rounded-3xl p-6 flex flex-col justify-between gap-5 shadow-glass transition-all group"
              >
                 <div className="flex justify-between items-start gap-3">
@@ -1253,7 +1258,7 @@ export default function HousingPage() {
                 <div className="grid grid-cols-2 gap-2 text-center">
                    <div className="bg-white/4 border border-white/5 rounded-2xl p-2">
                       <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Gender</span>
-                      <span className="text-xs text-white font-bold capitalize">{rm.gender}</span>
+                      <span className="text-xs text-white font-bold">{rm.gender === 'women' ? 'Woman' : 'Man'}</span>
                    </div>
                    <div className="bg-white/4 border border-white/5 rounded-2xl p-2">
                       <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Dependents</span>
@@ -1261,29 +1266,23 @@ export default function HousingPage() {
                    </div>
                 </div>
 
+                {rm.id === currentUser?.id ? (
+                  <p className="pt-2 m-0 text-center text-[11px] font-bold uppercase tracking-wider text-gray-500">Your ad</p>
+                ) : (
                 <div className="pt-2 flex items-center gap-2">
                   <Link
                     href={`/dashboard/messages?to=${rm.id}`}
-                    className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 rounded-xl transition-all text-xs uppercase tracking-wider active:scale-98 flex items-center justify-center shadow-md"
+                    className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 rounded-xl transition-all text-xs uppercase tracking-wider active:scale-98 flex items-center justify-center border border-gold-primary/30 min-h-[44px]"
                   >
-                     Invite to Share
+                     Message
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playTactileSound('tab')
-                      setCompatModalTarget({ name: rm.name, suburb: rm.suburb })
-                    }}
-                    className="p-2.5 rounded-xl bg-white/5 hover:bg-pink-500/20 border border-white/10 hover:border-pink-500/40 text-gray-300 hover:text-pink-400 transition-all flex items-center gap-1.5 text-xs font-bold"
-                    title="Run Lifestyle Match Matrix AI Quiz"
-                  >
-                    <HeartHandshake size={14} className="text-pink-400" />
-                    <span className="hidden sm:inline text-[10px] uppercase font-black tracking-wider">Match</span>
-                  </button>
                   <FollowButton targetUserId={rm.id} currentUserId={currentUser?.id} />
                 </div>
+                )}
              </motion.div>
            ))}
+        </div>
+        )}
         </div>
       )}
 
@@ -1297,7 +1296,7 @@ export default function HousingPage() {
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">List Your <span className="text-gold-primary">Property</span></h3>
                      <button onClick={() => setShowCreateModal(false)} className="p-2 text-gray-500 hover:text-white transition-colors"><X /></button>
                   </div>
-                  <form onSubmit={handleCreateListing} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                  <form onSubmit={handleCreateListing} className="p-6 space-y-6 max-h-[80dvh] overflow-y-auto custom-scrollbar">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                            <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Listing Title</label>
@@ -1394,7 +1393,7 @@ export default function HousingPage() {
                            </div>
                            <label className="cursor-pointer bg-gold-primary hover:bg-gold-secondary text-black px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all shrink-0">
                               <Upload size={13} />
-                              <span>Select Photos</span>
+                              <span>{photosUploading > 0 ? 'Uploading…' : 'Select Photos'}</span>
                               <input
                                  type="file"
                                  multiple
@@ -1405,32 +1404,14 @@ export default function HousingPage() {
                            </label>
                         </div>
 
-                        {/* Quick Presets */}
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                           <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Quick Presets:</span>
-                           {[
-                              { label: '+ Sunny Bedroom', url: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80' },
-                              { label: '+ Clean Ensuite', url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80' },
-                              { label: '+ Modern Kitchen', url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80' },
-                              { label: '+ Private Balcony', url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80' }
-                           ].map(preset => (
-                              <button
-                                 key={preset.label}
-                                 type="button"
-                                 onClick={() => {
-                                    if (newImages.length >= 6) {
-                                       setAlertNotification('Max 6 photos allowed')
-                                       return
-                                    }
-                                    setNewImages(prev => [...prev, preset.url])
-                                    playTactileSound('pop')
-                                 }}
-                                 className="text-[10px] font-bold text-gray-300 hover:text-gold-primary bg-black/40 hover:bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 transition-all"
-                              >
-                                 {preset.label}
-                              </button>
-                           ))}
-                        </div>
+                        {/* No stock "presets": a stranger's photos on a room listing is
+                            exactly how rental scams work. Real photos or none. */}
+                        {photosUploading > 0 && (
+                           <p className="m-0 text-[10px] font-bold text-gold-primary">Uploading {photosUploading} photo{photosUploading === 1 ? '' : 's'}…</p>
+                        )}
+                        {newImages.length === 0 && photosUploading === 0 && (
+                           <p className="m-0 text-[10px] text-amber-400/90">Rooms with real photos get far more replies, and tenants trust them more. Add at least one if you can.</p>
+                        )}
 
                         {/* Uploaded Photos Grid */}
                         {newImages.length > 0 && (
@@ -1515,7 +1496,7 @@ export default function HousingPage() {
                      </div>
                      <div className="pt-4 border-t border-white/5 flex gap-4">
                         <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 bg-white/5 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs">Cancel</button>
-                        <button type="submit" className="flex-1 bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20">Publish Listing</button>
+                        <button type="submit" disabled={photosUploading > 0} className="flex-1 bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl shadow-gold-primary/20 disabled:opacity-50">{photosUploading > 0 ? 'Uploading photos…' : 'Publish Listing'}</button>
                      </div>
                   </form>
                </motion.div>
@@ -1528,7 +1509,7 @@ export default function HousingPage() {
          {activeListing && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveListing(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl bg-black border-gold-primary/20 shadow-2xl relative z-10 p-8 space-y-8">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6 sm:space-y-8">
                   <div className="flex justify-between items-center">
                      <div className="space-y-1">
                         <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Apply for <span className="text-gold-primary">Room</span></h3>
@@ -1536,15 +1517,38 @@ export default function HousingPage() {
                      </div>
                      <button onClick={() => setActiveListing(null)} className="text-gray-500 hover:text-white"><X /></button>
                   </div>
+                  <ListingTrustPanel
+                    listingId={activeListing.id}
+                    price={activeListing.price}
+                    currency={activeListing.currency}
+                    suburb={activeListing.suburb}
+                    stats={statsFor(activeListing)}
+                    verdict={priceVerdict(activeListing.price, statsFor(activeListing))}
+                  />
+                  <ShareListingButton listing={activeListing} userId={currentUser?.id} variant="full" />
+                  {isGuest ? (
+                    // Said up front instead of after a guest has typed a whole
+                    // message. Signing up returns them to this same room.
+                    <div className="space-y-3 text-center">
+                      <p className="m-0 text-xs text-gray-400">A landlord needs to know who is asking, so requests need a free account.</p>
+                      <Link
+                        href={`/auth?signup=1&next=${encodeURIComponent(`/dashboard/housing?listing=${activeListing.id}`)}`}
+                        className="no-underline w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                      >
+                        Sign up to request this room <Send size={14} />
+                      </Link>
+                    </div>
+                  ) : (
                   <form onSubmit={handleApply} className="space-y-6">
                      <div className="space-y-2">
                         <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Message to Landlord</label>
-                        <textarea value={applyMessage} onChange={e => setApplyMessage(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-4 text-sm text-white h-32 resize-none outline-none focus:border-gold-primary/40" placeholder="Introduce yourself, mentioned your move-in date and any questions..." />
+                        <textarea value={applyMessage} onChange={e => setApplyMessage(e.target.value)} required className="w-full box-border bg-black border border-white/10 rounded-xl p-4 text-sm text-white h-32 resize-none outline-none focus:border-gold-primary/40" placeholder="Introduce yourself, mention your move-in date and any questions..." />
                      </div>
-                     <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl flex items-center justify-center gap-2">
+                     <button type="submit" className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-2">
                         Send Request <Send size={14} />
                      </button>
                   </form>
+                  )}
                </motion.div>
             </div>
          )}
@@ -1555,12 +1559,12 @@ export default function HousingPage() {
          {activeAuditRequest && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActiveAuditRequest(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl bg-black border-gold-primary/20 shadow-2xl relative z-10 overflow-hidden">
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-2xl max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10">
                   <div className="bg-gold-primary/5 p-6 border-b border-white/5 flex justify-between items-center">
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Tenant <span className="text-gold-primary">Audit</span></h3>
                      <button onClick={() => setActiveAuditRequest(null)} className="text-gray-500 hover:text-white"><X /></button>
                   </div>
-                  <div className="p-8 space-y-8">
+                  <div className="p-6 sm:p-8 space-y-6 sm:space-y-8">
                      <div className="flex gap-6 items-start">
                         <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center text-2xl font-black text-gold-primary border border-white/5 shadow-inner">{activeAuditRequest.tenantName.charAt(0)}</div>
                         <div className="space-y-1.5">
@@ -1626,27 +1630,17 @@ export default function HousingPage() {
                initial={{ y: 100, opacity: 0 }}
                animate={{ y: 0, opacity: 1 }}
                exit={{ y: 100, opacity: 0 }}
-               className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[320px]"
+               className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] md:bottom-20 left-1/2 -translate-x-1/2 z-[300] bg-black border border-gold-primary px-5 sm:px-8 py-3.5 sm:py-4 rounded-2xl flex items-center gap-3 sm:gap-4 max-w-[calc(100vw-2rem)] w-auto min-w-[280px] sm:min-w-[320px]"
             >
-               <div className="p-2 bg-green-500/20 rounded-full text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]"><ShieldCheck size={24} /></div>
-               <div className="space-y-0.5">
-                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em]">Success</p>
-                  <p className="text-sm font-black text-white italic tracking-tight uppercase">{alertNotification}</p>
+               <div className="p-2 bg-green-500/20 rounded-full text-green-500"><ShieldCheck size={24} /></div>
+               <div className="space-y-0.5 min-w-0">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Success</p>
+                  <p className="text-sm font-black text-white italic tracking-tight uppercase truncate">{alertNotification}</p>
                </div>
-               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-700 hover:text-white transition-colors"><X size={16} /></button>
+               <button onClick={() => setAlertNotification(null)} className="ml-auto text-gray-500 hover:text-white transition-colors shrink-0"><X size={16} /></button>
             </motion.div>
          )}
       </AnimatePresence>
-
-      {/* ROOMMATE COMPATIBILITY MATRIX MODAL */}
-      {compatModalTarget && (
-        <RoommateCompatibilityModal
-          isOpen={!!compatModalTarget}
-          onClose={() => setCompatModalTarget(null)}
-          roommateName={compatModalTarget.name}
-          roommateSuburb={compatModalTarget.suburb}
-        />
-      )}
 
       {/* SA LEASE AGREEMENT MODAL */}
       {leaseModalListing && (
@@ -1671,116 +1665,23 @@ export default function HousingPage() {
         isOpen={showSnagModal}
         onClose={() => setShowSnagModal(false)}
       />
-
-      {/* LANDLORD MULTI-ROOM & TENANT ACCOUNTABILITY MANAGER MODAL */}
-      <LandlordRoomManagerModal
-        isOpen={showRoomManagerModal}
-        onClose={() => setShowRoomManagerModal(false)}
-        propertyName={roomManagerPropertyInfo.name}
-        propertyAddress={roomManagerPropertyInfo.address}
-      />
-
-      {/* RHA ACT 50 DEPOSIT ESCROW VAULT MODAL */}
-      <DepositEscrowVaultModal
-        isOpen={showDepositVaultModal}
-        onClose={() => setShowDepositVaultModal(false)}
-      />
-
-      {/* MOVE-IN / MOVE-OUT SIDE-BY-SIDE INSPECTION MODAL */}
-      <MoveInOutInspectionModal
-        isOpen={showMoveInspectionModal}
-        onClose={() => setShowMoveInspectionModal(false)}
-      />
-
-      {/* SARS TAX RECEIPT & PROOF OF RENT CERTIFICATE MODAL */}
-      <RentReceiptTaxModal
-        isOpen={showRentReceiptModal}
-        onClose={() => setShowRentReceiptModal(false)}
-      />
-
-      {/* NSFAS CAP & UNIVERSITY ACCREDITATION MODAL */}
-      <NSFASHousingModal
-        isOpen={showNSFASModal}
-        onClose={() => setShowNSFASModal(false)}
-      />
-
-      {/* 3D AR ROOM SPATIAL RULER MODAL */}
-      <RoomSpatialRulerModal
-        isOpen={showSpatialRulerModal}
-        onClose={() => setShowSpatialRulerModal(false)}
-      />
-
-      {/* 2.5D ROOM FLOORPLAN CANVAS MODAL */}
-      <RoomFloorplanCanvasModal
-        isOpen={showFloorplanModal}
-        onClose={() => setShowFloorplanModal(false)}
-      />
-
-      {/* 360 PANORAMIC VIRTUAL TOUR MODAL */}
-      <Panoramic360TourModal
-        isOpen={showPanoramicModal}
-        onClose={() => setShowPanoramicModal(false)}
-      />
-
-      {/* AR SOLAR SUNLIGHT TRAJECTORY MODAL */}
-      <ARSolarWindowSimulatorModal
-        isOpen={showARSolarModal}
-        onClose={() => setShowARSolarModal(false)}
-      />
-
-      {/* AR LIDAR FURNITURE BOUNDING BOX MODAL */}
-      <ARFurnitureBoundingBoxModal
-        isOpen={showARBoundingModal}
-        onClose={() => setShowARBoundingModal(false)}
-      />
-
-      {/* ROOM STORIES VIDEO TOUR MODAL */}
-      <RoomStoriesReelModal
-        isOpen={showRoomStoriesModal}
-        onClose={() => setShowRoomStoriesModal(false)}
-      />
-
-      {/* RENTAL HOUSING ACT LEASE TRAP DETECTOR MODAL */}
-      <LeaseTrapDetectorModal
-        isOpen={showLeaseTrapModal}
-        onClose={() => setShowLeaseTrapModal(false)}
-      />
-
-      {/* 395nm UV BLACKLIGHT HYGIENE INSPECTOR MODAL */}
-      <UVBlacklightInspectorModal
-        isOpen={showUVBlacklightModal}
-        onClose={() => setShowUVBlacklightModal(false)}
-      />
-
-      {/* OPTICAL STUDENT CARD OCR SCANNER MODAL */}
-      <StudentCardScannerModal
-        isOpen={showStudentCardModal}
-        onClose={() => setShowStudentCardModal(false)}
-      />
-
-      {/* DEEDS OFFICE & RATES CLEARANCE CHECKER MODAL */}
-      <LandlordDeedsCheckerModal
-        isOpen={showDeedsCheckerModal}
-        onClose={() => setShowDeedsCheckerModal(false)}
-      />
-
-      {/* SMART NFC KEYCARD HANDOVER TOKEN MODAL */}
-      <NFCKeycardHandoverModal
-        isOpen={showNFCKeycardModal}
-        onClose={() => setShowNFCKeycardModal(false)}
-      />
-
-      {/* TRANSUNION & EXPERIAN RENT CREDIT BUREAU MODAL */}
-      <RentCreditBureauModal
-        isOpen={showCreditBureauModal}
-        onClose={() => setShowCreditBureauModal(false)}
-      />
-
-      {/* VERIFIED RESIDENT PASSPORT STAMPS MODAL */}
-      <ResidentPassportModal
-        isOpen={showPassportModal}
-        onClose={() => setShowPassportModal(false)}
-      />
     </div>
+  )
+}
+
+const VERDICT_BADGE: Record<string, { label: string; cls: string }> = {
+  suspicious: { label: 'Check price', cls: 'bg-red-500/10 text-red-400 border-red-500/30' },
+  below: { label: 'Good value', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  fair: { label: 'Fair price', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  above: { label: 'Above median', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' }
+}
+
+function PriceVerdictBadge({ verdict }: { verdict: ReturnType<typeof priceVerdict> }) {
+  const badge = VERDICT_BADGE[verdict]
+  if (!badge) return null
+  return (
+    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border shrink-0 ${badge.cls}`}>
+      {badge.label}
+    </span>
   )
 }

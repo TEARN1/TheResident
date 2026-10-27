@@ -2,174 +2,155 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #051F20;
-  --foreground: #ededed;
-  --gold-primary: #8EB69B;
-  --gold-secondary: #235347;
-  --gold-dim: rgba(142, 182, 155, 0.16);
-  --glass-border: rgba(142, 182, 155, 0.2);
-  --card-bg: rgba(11, 43, 38, 0.65);
-  --input-bg: rgba(5, 31, 32, 0.7);
-  --glass-bg: rgba(11, 43, 38, 0.55);
-  --shadow-color: rgba(0, 0, 0, 0.5);
-  --glow-color: rgba(142, 182, 155, 0.35);
-  --accent-teal: #8EB69B;
-  --accent-violet: #235347;
-  --accent-rose: #DAF1DE;
+/* Preflight is off (tailwind.config.ts), so a <button> with no background
+   utility fell back to the browser's light-grey default: inactive tabs
+   rendered as bright white pills on the dark theme. :where() keeps this at
+   zero specificity, so any Tailwind class or inline style still wins. */
+:where(button) {
+  background-color: transparent;
+  border: 0 solid;
 }
 
-/* Palette 1: Minimal Emerald (Default Creator Brands & Digital Products) */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THEME TOKENS
+   Every colour in the app comes from these channels. tailwind.config.ts maps
+   black / white / gray-* / gold-primary / gold-secondary onto them, so the
+   ~3,000 hardcoded utilities across the pages (bg-black, text-white,
+   text-gray-400, border-gold-primary/30, …) recolour with the theme. A theme
+   is complete by construction: define these and nothing is left behind.
+
+   --bg       page background
+   --surface  panels and cards (what `bg-black` paints)
+   --fg       primary text (what `text-white` paints; `white/5` tints)
+   --accent   signal colour (`gold-primary`), --accent-2 its deep partner
+   --gray-*   text and divider steps between surface and fg
+   Values are "R G B" channels so Tailwind opacity modifiers keep working.
+   ═══════════════════════════════════════════════════════════════════════ */
+/* Emerald (default): deep green-black with a mint signal colour */
+:root,
 [data-theme='minimal-green'],
 [data-theme='night'] {
-  --background: #051F20;
-  --foreground: #F0F7F4;
-  --gold-primary: #8EB69B;
-  --gold-secondary: #235347;
-  --gold-dim: rgba(142, 182, 155, 0.16);
-  --glass-border: rgba(142, 182, 155, 0.2);
-  --card-bg: rgba(11, 43, 38, 0.7);
-  --input-bg: rgba(5, 31, 32, 0.7);
-  --glass-bg: rgba(11, 43, 38, 0.55);
-  --shadow-color: rgba(0, 0, 0, 0.6);
-  --glow-color: rgba(142, 182, 155, 0.4);
+  color-scheme: dark;
+  --bg: 4 22 23;
+  --surface: 2 13 14;
+  --fg: 236 247 241;
+  --accent: 110 231 183;
+  --accent-2: 16 122 92;
+  --gray-100: 225 238 232;
+  --gray-200: 200 220 211;
+  --gray-300: 172 196 186;
+  --gray-400: 136 163 152;
+  --gray-500: 104 130 120;
+  --gray-600: 76 99 91;
+  --gray-700: 52 71 65;
+  --gray-800: 33 48 44;
+  --gray-900: 18 30 28;
+  --glass-alpha: 0.6;
 }
 
-/* Palette 2: Neon Crimson Cyber Glass (High-tech red glass with specular glow) */
+/* Crimson: near-black with a hot red signal colour */
 [data-theme='crimson-cyber'] {
-  --background: #080305;
-  --foreground: #FFF0F2;
-  --gold-primary: #FF2A4D;
-  --gold-secondary: #99001A;
-  --gold-dim: rgba(255, 42, 77, 0.18);
-  --glass-border: rgba(255, 42, 77, 0.28);
-  --card-bg: rgba(26, 5, 11, 0.7);
-  --input-bg: rgba(12, 2, 4, 0.75);
-  --glass-bg: rgba(26, 5, 11, 0.55);
-  --shadow-color: rgba(0, 0, 0, 0.75);
-  --glow-color: rgba(255, 42, 77, 0.45);
+  color-scheme: dark;
+  --bg: 10 3 6;
+  --surface: 5 1 3;
+  --fg: 255 240 243;
+  --accent: 255 64 100;
+  --accent-2: 159 18 57;
+  --gray-100: 245 228 232;
+  --gray-200: 228 204 210;
+  --gray-300: 205 175 183;
+  --gray-400: 170 136 146;
+  --gray-500: 133 102 112;
+  --gray-600: 100 74 83;
+  --gray-700: 70 50 57;
+  --gray-800: 45 31 36;
+  --gray-900: 25 16 20;
+  --glass-alpha: 0.6;
 }
 
-/* Palette 3: Liquid Glass (Light prismatic frost, soft pill drops, iridescent highlights) */
+/* Midnight: cosmic violet */
+[data-theme='midnight-violet'] {
+  color-scheme: dark;
+  --bg: 10 6 22;
+  --surface: 5 3 13;
+  --fg: 247 243 255;
+  --accent: 192 132 252;
+  --accent-2: 126 34 206;
+  --gray-100: 236 231 248;
+  --gray-200: 214 207 236;
+  --gray-300: 188 179 218;
+  --gray-400: 152 142 188;
+  --gray-500: 118 108 152;
+  --gray-600: 88 80 116;
+  --gray-700: 61 55 84;
+  --gray-800: 39 35 56;
+  --gray-900: 22 19 34;
+  --glass-alpha: 0.6;
+}
+
+/* Liquid Glass: light frosted UI; the grey scale is inverted so text-gray-300
+   (light text on dark) becomes dark text on light, and so on */
 [data-theme='liquid-glass'],
 [data-theme='light'] {
-  --background: #F1F5F9;
-  --foreground: #0F172A;
-  --gold-primary: #4F46E5;
-  --gold-secondary: #0891B2;
-  --gold-dim: rgba(79, 70, 229, 0.12);
-  --glass-border: rgba(255, 255, 255, 0.8);
-  --card-bg: rgba(255, 255, 255, 0.75);
-  --input-bg: rgba(255, 255, 255, 0.85);
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --shadow-color: rgba(99, 102, 241, 0.12);
-  --glow-color: rgba(79, 70, 229, 0.25);
+  color-scheme: light;
+  --bg: 241 245 249;
+  --surface: 255 255 255;
+  --fg: 15 23 42;
+  --accent: 79 70 229;
+  --accent-2: 8 145 178;
+  --gray-100: 30 41 59;
+  --gray-200: 51 65 85;
+  --gray-300: 71 85 105;
+  --gray-400: 100 116 139;
+  --gray-500: 120 134 156;
+  --gray-600: 148 163 184;
+  --gray-700: 203 213 225;
+  --gray-800: 226 232 240;
+  --gray-900: 241 245 249;
+  --glass-alpha: 0.75;
 }
 
-/* Palette 4: Midnight Violet Glass (Dark cosmic purple, vivid lavender rim glow) */
-[data-theme='midnight-violet'] {
-  --background: #090514;
-  --foreground: #FAF5FF;
-  --gold-primary: #C084FC;
-  --gold-secondary: #7E22CE;
-  --gold-dim: rgba(192, 132, 252, 0.18);
-  --glass-border: rgba(192, 132, 252, 0.28);
-  --card-bg: rgba(21, 13, 42, 0.7);
-  --input-bg: rgba(12, 6, 26, 0.75);
-  --glass-bg: rgba(21, 13, 42, 0.55);
-  --shadow-color: rgba(0, 0, 0, 0.7);
-  --glow-color: rgba(192, 132, 252, 0.4);
+/* Legacy names, still read by inline styles across the app. */
+:root,
+[data-theme] {
+  --background: rgb(var(--bg));
+  --foreground: rgb(var(--fg));
+  --gold-primary: rgb(var(--accent));
+  --gold-secondary: rgb(var(--accent-2));
+  --gold-dim: rgb(var(--accent) / 0.16);
+  --glass-border: rgb(var(--accent) / 0.22);
+  --card-bg: rgb(var(--surface) / var(--glass-alpha));
+  --input-bg: rgb(var(--surface) / 0.7);
+  --glass-bg: rgb(var(--surface) / 0.55);
+  --shadow-color: rgb(0 0 0 / 0.45);
+  --glow-color: rgb(var(--accent) / 0.4);
+  --accent-teal: rgb(var(--accent));
+  --accent-violet: rgb(var(--accent-2));
+  --accent-rose: rgb(var(--fg));
 }
 
+html,
 body {
+  max-width: 100vw;
+  overflow-x: hidden;
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  overflow-x: hidden;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Dashboard light-mode override layer.
-   Every dashboard page is written with hardcoded dark Tailwind utilities
-   (bg-black, text-white, border-white/10, …) rather than the CSS variables
-   above — rewriting every page to use variables instead is a much bigger
-   job than this pass. This block remaps the small set of utility classes
-   that account for the vast majority of dashboard surfaces, scoped to
-   `.dashboard-wrapper` under `[data-theme='light']` so it can never leak
-   into the (already-correct) dark dashboard or the auth/landing pages.
-   Anything NOT covered here (a one-off inline style, a rare utility class)
-   will still render dark-on-light in a few spots — this is a real, usable
-   light dashboard, not a pixel-perfect one yet. */
-[data-theme='light'] .dashboard-wrapper,
-[data-theme='liquid-glass'] .dashboard-wrapper {
-  background: var(--background);
-}
-[data-theme='light'] .dashboard-wrapper .bg-black,
-[data-theme='light'] .dashboard-wrapper .bg-black\/80,
-[data-theme='light'] .dashboard-wrapper .bg-black\/70,
-[data-theme='light'] .dashboard-wrapper .bg-black\/60,
-[data-theme='light'] .dashboard-wrapper .bg-black\/40,
-[data-theme='light'] .dashboard-wrapper .bg-black\/20,
-[data-theme='liquid-glass'] .dashboard-wrapper .bg-black,
-[data-theme='liquid-glass'] .dashboard-wrapper .bg-black\/80,
-[data-theme='liquid-glass'] .dashboard-wrapper .bg-black\/70,
-[data-theme='liquid-glass'] .dashboard-wrapper .bg-black\/60,
-[data-theme='liquid-glass'] .dashboard-wrapper .bg-black\/40,
-[data-theme='liquid-glass'] .dashboard-wrapper .bg-black\/20 {
-  background-color: #ffffff !important;
-}
-[data-theme='light'] .dashboard-wrapper .bg-black\/2,
-[data-theme='light'] .dashboard-wrapper .bg-white\/2,
-[data-theme='light'] .dashboard-wrapper .bg-white\/5,
-[data-theme='light'] .dashboard-wrapper .bg-white\/10,
-[data-theme='liquid-glass'] .dashboard-wrapper .bg-black\/2,
-[data-theme='liquid-glass'] .dashboard-wrapper .bg-white\/2,
-[data-theme='liquid-glass'] .dashboard-wrapper .bg-white\/5,
-[data-theme='liquid-glass'] .dashboard-wrapper .bg-white\/10 {
-  background-color: rgba(20, 17, 10, 0.04) !important;
-}
-[data-theme='light'] .dashboard-wrapper .text-white,
-[data-theme='liquid-glass'] .dashboard-wrapper .text-white {
-  color: #1a1712 !important;
-}
-[data-theme='light'] .dashboard-wrapper .text-gray-300,
-[data-theme='light'] .dashboard-wrapper .text-gray-400,
-[data-theme='liquid-glass'] .dashboard-wrapper .text-gray-300,
-[data-theme='liquid-glass'] .dashboard-wrapper .text-gray-400 {
-  color: #4a463d !important;
-}
-[data-theme='light'] .dashboard-wrapper .text-gray-500,
-[data-theme='light'] .dashboard-wrapper .text-gray-600,
-[data-theme='light'] .dashboard-wrapper .text-gray-700,
-[data-theme='liquid-glass'] .dashboard-wrapper .text-gray-500,
-[data-theme='liquid-glass'] .dashboard-wrapper .text-gray-600,
-[data-theme='liquid-glass'] .dashboard-wrapper .text-gray-700 {
-  color: #7a7568 !important;
-}
-[data-theme='light'] .dashboard-wrapper .border-white\/5,
-[data-theme='light'] .dashboard-wrapper .border-white\/10,
-[data-theme='light'] .dashboard-wrapper .border-white\/20,
-[data-theme='liquid-glass'] .dashboard-wrapper .border-white\/5,
-[data-theme='liquid-glass'] .dashboard-wrapper .border-white\/10,
-[data-theme='liquid-glass'] .dashboard-wrapper .border-white\/20 {
-  border-color: rgba(20, 17, 10, 0.12) !important;
-}
-[data-theme='light'] .dashboard-wrapper input,
-[data-theme='light'] .dashboard-wrapper textarea,
-[data-theme='light'] .dashboard-wrapper select,
-[data-theme='liquid-glass'] .dashboard-wrapper input,
-[data-theme='liquid-glass'] .dashboard-wrapper textarea,
-[data-theme='liquid-glass'] .dashboard-wrapper select {
-  color: #1a1712 !important;
-}
-[data-theme='light'] .dashboard-wrapper .bottom-nav-bar,
-[data-theme='liquid-glass'] .dashboard-wrapper .bottom-nav-bar {
-  background: #ffffff;
-  border-top-color: rgba(20, 17, 10, 0.1);
-}
-[data-theme='light'] .dashboard-wrapper .dashboard-top-bar,
-[data-theme='liquid-glass'] .dashboard-wrapper .dashboard-top-bar {
-  background: rgba(255, 255, 255, 0.85) !important;
-  border-bottom-color: rgba(20, 17, 10, 0.1);
+::selection {
+  background: rgb(var(--accent) / 0.35);
+  color: rgb(var(--fg));
 }
 
 /* Dashboard Specific Layout */
@@ -182,13 +163,15 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--background);
+  /* transparent so .ambient-backdrop (z-index -1) shows through;
+     body still paints var(--background) underneath */
+  background: transparent;
 }
 
 .more-panel {
   width: 280px;
   max-width: 85vw;
-  background: #0d0d0d;
+  background: rgb(var(--surface));
   border-right: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
@@ -214,9 +197,9 @@ body {
 
 .dashboard-top-bar {
   height: 64px;
-  background: rgba(10, 10, 10, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgb(var(--surface) / 0.55);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
   border-bottom: 1px solid var(--glass-border);
   display: flex;
   align-items: center;
@@ -248,7 +231,7 @@ body {
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
   border: 1px solid var(--glass-border);
-  background: rgba(212, 175, 55, 0.08);
+  background: rgb(var(--accent) / 0.08);
   color: var(--gold-primary);
   font-size: 0.65rem;
   font-weight: 800;
@@ -259,13 +242,25 @@ body {
 }
 
 .dashboard-role-chip:hover {
-  background: rgba(212, 175, 55, 0.16);
-  border-color: rgba(212, 175, 55, 0.4);
+  background: rgb(var(--accent) / 0.16);
+  border-color: rgb(var(--accent) / 0.4);
+}
+
+/* Tailwind's reset (preflight) is off, so the browser default underlined
+   every link in the app: bottom-bar labels, page titles, buttons built as
+   links. :where() keeps this at zero specificity, so a link that asks for
+   an underline (the "underline" utility) still gets one. */
+:where(.dashboard-wrapper) a {
+  text-decoration: none;
 }
 
 .dashboard-page-body {
   flex: 1;
   overflow-y: auto;
+  /* overflow-y: auto quietly makes x scrollable too, so one too-wide row
+     (e.g. the connections chips) let the whole page slide sideways and cut
+     cards off at the edge on phones. */
+  overflow-x: hidden;
 }
 
 /* Used on horizontal-scroll rows (map quick-filters, Gruvs connections,
@@ -326,7 +321,7 @@ body {
 
 .sidebar-profile-role {
   font-size: 0.7rem;
-  color: #666;
+  color: rgb(var(--gray-500));
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -345,7 +340,7 @@ body {
   font-weight: 800;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: #555;
+  color: rgb(var(--gray-600));
 }
 
 .sidebar-nav-item {
@@ -353,7 +348,7 @@ body {
   align-items: center;
   gap: 0.8rem;
   padding: 0.8rem 1rem;
-  color: #888;
+  color: rgb(var(--gray-400));
   border-radius: 8px;
   border-left: 3px solid transparent;
   transition: all 0.2s;
@@ -363,13 +358,13 @@ body {
 }
 
 .sidebar-nav-item:hover {
-  color: #ccc;
-  background: rgba(255, 255, 255, 0.03);
+  color: rgb(var(--gray-200));
+  background: rgb(var(--fg) / 0.03);
 }
 
 .sidebar-nav-item.active {
   color: var(--gold-primary);
-  background: rgba(212, 175, 55, 0.08);
+  background: rgb(var(--accent) / 0.08);
   border-left-color: var(--gold-primary);
 }
 
@@ -385,9 +380,9 @@ body {
   display: flex;
   gap: 4px;
   padding: 0.4rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgb(var(--fg) / 0.03);
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgb(var(--fg) / 0.05);
   margin-bottom: 0.4rem;
 }
 
@@ -395,7 +390,7 @@ body {
   flex: 1;
   padding: 0.35rem 0;
   background: transparent;
-  color: #888;
+  color: rgb(var(--gray-400));
   border: none;
   border-radius: 8px;
   font-size: 0.65rem;
@@ -406,12 +401,12 @@ body {
 
 .lang-switcher-btn.active {
   background: var(--gold-primary);
-  color: #000;
+  color: rgb(var(--surface));
 }
 
 .lang-switcher-btn:not(.active):hover {
-  color: #ccc;
-  background: rgba(255, 255, 255, 0.05);
+  color: rgb(var(--gray-200));
+  background: rgb(var(--fg) / 0.05);
 }
 
 /* Dashboard loading gate (pre-auth / session bootstrap) */
@@ -423,14 +418,14 @@ body {
   gap: 1rem;
   height: 100vh;
   background: var(--background);
-  color: #666;
+  color: rgb(var(--gray-500));
 }
 
 .dashboard-loading-spinner {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 2px solid rgba(212, 175, 55, 0.2);
+  border: 2px solid rgb(var(--accent) / 0.2);
   border-top-color: var(--gold-primary);
   animation: dashboard-spin 0.8s linear infinite;
 }
@@ -440,22 +435,36 @@ body {
 }
 
 /* Glass UI Elements - Liquid Glass System */
+/* Frosted glass. Colour is zero-specificity so a page's own bg-* utility
+   still wins; the sheen and cursor spotlight are background-image layers, so
+   no positioning or pseudo-elements are needed. --mx/--my are set by
+   PointerSpotlight on the panel under the pointer. */
+:where(.glass-panel) {
+  background-color: rgb(var(--surface) / 0.55);
+}
 .glass-panel {
-  background: var(--card-bg, rgba(12, 12, 12, 0.65));
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  background-image:
+    radial-gradient(420px circle at var(--mx, -999px) var(--my, -999px), rgb(var(--accent) / 0.12), transparent 60%),
+    linear-gradient(180deg, rgb(var(--fg) / 0.06), rgb(var(--fg) / 0.01) 40%);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgb(var(--fg) / 0.1);
   border-radius: 1.5rem;
-  box-shadow: 0 10px 35px 0 var(--shadow-color, rgba(0, 0, 0, 0.37)), inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+  box-shadow:
+    inset 0 1px 0 rgb(var(--fg) / 0.12),
+    0 24px 60px -24px var(--shadow-color, rgb(0 0 0 / 0.5));
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.glass-panel:hover {
+  border-color: rgb(var(--accent) / 0.25);
 }
 
 .liquid-glass-pill {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(var(--fg) / 0.06);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
-  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), 0 4px 15px var(--shadow-color);
+  box-shadow: inset 0 1px 1px 0 rgb(var(--fg) / 0.25), 0 4px 15px var(--shadow-color);
 }
 
 /* Positions the whole group; individual banners just stack inside it —
@@ -474,10 +483,10 @@ body {
 }
 
 .top-alert-banner {
-  background: rgba(10, 10, 10, 0.85);
+  background: rgb(var(--surface) / 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(212, 175, 55, 0.4);
+  border: 1px solid rgb(var(--accent) / 0.4);
   padding: 0.65rem 1.25rem;
   border-radius: 9999px;
   display: flex;
@@ -485,32 +494,32 @@ body {
   gap: 0.65rem;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #fff;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(212, 175, 55, 0.15);
+  color: rgb(var(--fg));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgb(var(--accent) / 0.15);
 }
 
 .guest-summary-banner {
   margin: 0 1rem 0.75rem;
   padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.02));
-  border: 1px solid rgba(212,175,55,0.2);
+  background: linear-gradient(135deg, rgb(var(--accent) / 0.08), rgb(var(--accent) / 0.02));
+  border: 1px solid rgb(var(--accent) / 0.2);
   border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.75);
+  color: rgb(var(--fg) / 0.75);
   line-height: 1.4;
 }
 
 .guest-summary-banner strong {
-  color: #fff;
+  color: rgb(var(--fg));
 }
 
 .guest-summary-banner-cta {
   flex-shrink: 0;
   background: var(--gold-primary);
-  color: #000;
+  color: rgb(var(--surface));
   font-weight: 900;
   font-size: 0.65rem;
   text-transform: uppercase;
@@ -524,12 +533,12 @@ body {
   flex-shrink: 0;
   background: transparent;
   border: none;
-  color: rgba(255,255,255,0.4);
+  color: rgb(var(--fg) / 0.4);
   cursor: pointer;
   padding: 0.25rem;
 }
 .guest-summary-banner-dismiss:hover {
-  color: rgba(255,255,255,0.8);
+  color: rgb(var(--fg) / 0.8);
 }
 
 .notif-badge {
@@ -540,12 +549,10 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid #0a0a0a;
+  border: 2px solid rgb(var(--surface));
 }
 
 /* Utilities */
-.text-gold-primary { color: var(--gold-primary); }
-.bg-gold-primary { background-color: var(--gold-primary); }
 
 /*
  * Shared button system. These two class names are used as `className` on
@@ -578,8 +585,8 @@ body {
 .btn-gold {
   background: var(--gold-primary);
   border: 1px solid var(--gold-primary);
-  color: #0a0a0a;
-  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.18);
+  color: rgb(var(--surface));
+  box-shadow: 0 4px 14px rgb(var(--accent) / 0.18);
 }
 
 .btn-primary:hover,
@@ -606,13 +613,13 @@ body {
    primary gold button, but never so faint it disappears (0.05-opacity fills
    with a dashed border, as this used to be, read as "disabled"). */
 .btn-outline {
-  background: rgba(212, 175, 55, 0.1);
+  background: rgb(var(--accent) / 0.1);
   border: 1.5px solid var(--gold-primary);
   color: var(--gold-primary);
 }
 
 .btn-outline:hover {
-  background: rgba(212, 175, 55, 0.18);
+  background: rgb(var(--accent) / 0.18);
 }
 
 /* The hamburger is now the ONLY entry point to .more-panel (profile,
@@ -625,7 +632,7 @@ body {
   justify-content: center;
   background: transparent;
   border: none;
-  color: #aaa;
+  color: rgb(var(--gray-300));
   padding: 0.4rem;
   border-radius: 8px;
   cursor: pointer;
@@ -634,7 +641,7 @@ body {
 
 .mobile-menu-btn:hover {
   color: var(--gold-primary);
-  background: rgba(212, 175, 55, 0.08);
+  background: rgb(var(--accent) / 0.08);
 }
 
 .sidebar-logo .mobile-menu-btn {
@@ -660,7 +667,7 @@ body {
   right: 0;
   display: flex;
   overflow-x: auto;
-  background: rgba(10, 10, 10, 0.92);
+  background: rgb(var(--surface) / 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--glass-border);
@@ -677,7 +684,7 @@ body {
   justify-content: center;
   gap: 0.2rem;
   padding: 0.5rem 0.4rem 0.6rem;
-  color: #888;
+  color: rgb(var(--gray-400));
   text-decoration: none;
   font-size: 0.6rem;
   font-weight: 700;
@@ -688,7 +695,7 @@ body {
 }
 
 .bottom-nav-item:hover {
-  color: #ccc;
+  color: rgb(var(--gray-200));
 }
 
 .bottom-nav-item.active {
@@ -697,15 +704,31 @@ body {
 }
 
 /* Room for the fixed bottom bar so the last bit of page content is never
-   hidden behind it — the bar's own height varies slightly with the safe-area
-   inset, so this is a deliberately generous flat estimate rather than a
-   brittle exact match. */
+   hidden behind it — accounts for the safe-area inset on notch/island phones. */
 .dashboard-page-body {
-  padding-bottom: 5rem;
+  padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+  min-height: calc(100vh - 4rem);
+}
+
+/* Modal Responsive Sheet System:
+   Full width on small phones, bottom-sheet style with max-height constraint
+   and smooth inertial scrolling so users can always interact and close. */
+.modal-responsive-sheet {
+  max-height: min(88dvh, 88vh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 640px) {
+  .modal-responsive-sheet {
+    max-height: min(85dvh, 85vh);
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
 }
 
 @media (max-width: 1024px) {
-
   .dashboard-page-title span {
     display: none; /* icon only on small screens to save top-bar space */
   }
@@ -715,9 +738,293 @@ body {
   width: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255,255,255,0.02);
+  background: rgb(var(--fg) / 0.02);
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.1);
+  background: rgb(var(--fg) / 0.1);
   border-radius: 10px;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOTION & GLASS
+   Everything here is GPU-cheap (transform/opacity/background-position)
+   and switched off under prefers-reduced-motion at the bottom.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Living background behind the dashboard: three slow-drifting light orbs in
+   the theme's accent colours and a faint grid. Radial gradients, not blur
+   filters, so drifting them costs nothing to repaint. */
+.ambient-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  --orb-strength: 1;
+}
+[data-theme='liquid-glass'] .ambient-backdrop,
+[data-theme='light'] .ambient-backdrop {
+  --orb-strength: 0.7;
+}
+/* The fullscreen map covers everything; stop the blurred background orbs
+   animating underneath it so the GPU is free for the map. */
+body:has([data-map-open]) .ambient-backdrop { display: none; }
+
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+}
+.ambient-orb--a {
+  width: 70vmax; height: 70vmax; top: -30vmax; left: -20vmax;
+  background: radial-gradient(circle, rgb(var(--accent) / calc(0.20 * var(--orb-strength))), transparent 62%);
+  animation: orb-drift-a 28s ease-in-out infinite alternate;
+}
+.ambient-orb--b {
+  width: 65vmax; height: 65vmax; bottom: -32vmax; right: -22vmax;
+  background: radial-gradient(circle, rgb(var(--accent-2) / calc(0.32 * var(--orb-strength))), transparent 62%);
+  animation: orb-drift-b 34s ease-in-out infinite alternate;
+}
+.ambient-orb--c {
+  width: 45vmax; height: 45vmax; top: 30%; left: 40%;
+  background: radial-gradient(circle, rgb(var(--accent) / calc(0.10 * var(--orb-strength))), transparent 62%);
+  animation: orb-drift-c 22s ease-in-out infinite alternate;
+}
+.ambient-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(var(--fg) / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--fg) / 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
+}
+/* On phones the orbs hold still. They drift over 20-30s, so you can barely
+   see the motion, but every frame of it made the browser re-blur every glass
+   card on screen (backdrop-filter over a moving background): steady GPU work
+   and battery drain while scrolling. */
+@media (hover: none), (pointer: coarse) {
+  .ambient-orb { animation: none; will-change: auto; }
+}
+@keyframes orb-drift-a { to { transform: translate3d(14vmax, 10vmax, 0) scale(1.15); } }
+@keyframes orb-drift-b { to { transform: translate3d(-12vmax, -8vmax, 0) scale(1.1); } }
+@keyframes orb-drift-c { to { transform: translate3d(-18vmax, 6vmax, 0) scale(0.85); } }
+
+/* Solid dashboard surfaces become see-through glass over the backdrop.
+   Only the plain class: bg-black/80 etc. keep their own opacity. */
+.dashboard-wrapper .bg-black {
+  background-color: rgb(var(--surface) / 0.72);
+}
+
+/* Cursor spotlight for cards that opt in with data-spotlight. */
+[data-spotlight] {
+  background-image: radial-gradient(380px circle at var(--mx, -999px) var(--my, -999px), rgb(var(--accent) / 0.12), transparent 60%);
+}
+
+/* Every page fades in briefly (see app/template.tsx). */
+@keyframes page-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.page-enter {
+  animation: page-enter 0.2s ease-out backwards;
+}
+
+/* Panels float up into place when a page opens, in a short stagger.
+   `backwards` (not `both`) so nothing is held once the animation ends. */
+@keyframes rise-in {
+  from { opacity: 0; translate: 0 14px; }
+  to { opacity: 1; translate: 0 0; }
+}
+.dashboard-page-body .glass-panel {
+  animation: rise-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.dashboard-page-body .glass-panel:nth-child(2) { animation-delay: 0.05s; }
+.dashboard-page-body .glass-panel:nth-child(3) { animation-delay: 0.1s; }
+.dashboard-page-body .glass-panel:nth-child(4) { animation-delay: 0.15s; }
+.dashboard-page-body .glass-panel:nth-child(5) { animation-delay: 0.2s; }
+.dashboard-page-body .glass-panel:nth-child(n+6) { animation-delay: 0.25s; }
+
+/* A light sweep across primary buttons on hover. */
+@keyframes sheen-sweep {
+  from { background-position: 130% 0; }
+  to { background-position: -30% 0; }
+}
+button.bg-gold-primary,
+a.bg-gold-primary {
+  background-image: linear-gradient(110deg, transparent 35%, rgb(255 255 255 / 0.4) 50%, transparent 65%);
+  background-size: 250% 100%;
+  background-position: 130% 0;
+  background-repeat: no-repeat;
+}
+button.bg-gold-primary:hover:not(:disabled):not([class*='animate-']),
+a.bg-gold-primary:hover:not([class*='animate-']) {
+  animation: sheen-sweep 0.9s ease;
+}
+
+/* Tactile press on every button. Uses the individual `scale` property so it
+   composes with any transform utilities the button already has. */
+:where(button, a, [role='button']) {
+  transition: scale 0.12s ease;
+}
+:where(button, a, [role='button']):active:not(:disabled) {
+  scale: 0.97;
+}
+
+/* Keyboard focus that matches the theme. */
+:where(button, a, input, textarea, select):focus-visible {
+  outline: 2px solid rgb(var(--accent) / 0.7);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .ambient-orb,
+  .dashboard-page-body .glass-panel,
+  button.bg-gold-primary,
+  a.bg-gold-primary {
+    animation: none !important;
+  }
+  :where(button, a, [role='button']):active:not(:disabled) {
+    scale: none;
+  }
+}
+
+
+/* =========================================================================
+   Mobile Ergonomics & Responsive Safe-Area Utilities (100-Point UX Master)
+   ========================================================================= */
+
+/* Viewport height utilities preventing keyboard jump on iOS/Android */
+.h-dvh {
+  height: 100vh;
+  height: 100dvh;
+}
+.min-h-dvh {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Touch targets conforming to Apple Human Interface & Material Design (min 44px / 48px) */
+.touch-target-44 {
+  min-height: 44px;
+  min-width: 44px;
+}
+.touch-target-48 {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Bottom safe-area padding for bottom navigation and docked action bars */
+.pb-safe-nav {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+.pb-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Scrollable chip containers with hidden scrollbars for clean filter rows */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Map touch containment preventing accidental vertical scroll trapping */
+.map-touch-container {
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+}
+
+/* Skeleton shimmer utility */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.8s ease-in-out infinite;
+}
+
+
+/* =========================================================================
+   Phase 2: Mobile Tap Response, Standalone PWA & Skeleton Blurhash (Points 91-96)
+   ========================================================================= */
+
+/* Eliminate 300ms double-tap delay on mobile browsers */
+button,
+a,
+input,
+select,
+textarea,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* Standalone PWA viewport boundary enforcement */
+@media all and (display-mode: standalone) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input, textarea {
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
+}
+
+/* Progressive low-res image blur placeholder */
+.blur-placeholder {
+  filter: blur(12px);
+  transform: scale(1.05);
+  transition: filter 0.4s ease, transform 0.4s ease;
+}
+.blur-placeholder.loaded {
+  filter: blur(0);
+  transform: scale(1);
+}
+
+/* =========================================================================
+   Phase 3: Mobile Viewport & Modal Ergonomics (Points 291-300)
+   ========================================================================= */
+
+/* Mobile modal sheet elastic scroll prevention */
+.modal-sheet {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent iOS Safari 100%+ auto-zoom by enforcing 16px input font size on mobile */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Landscape & Notch Safe Area Utilities */
+.px-safe {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+.pl-safe {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+}
+.pr-safe {
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+
+html {
+  overscroll-behavior-y: none;
+}
+

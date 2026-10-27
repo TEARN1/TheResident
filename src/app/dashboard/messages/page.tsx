@@ -5,14 +5,16 @@ import { useSelector } from 'react-redux'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   MessageCircle, Loader, Plus, Search,
-  Phone, Video, ShieldCheck, X
+  Phone, Video, ShieldCheck, X, Camera, Mic, MapPin
 } from 'lucide-react'
-import { RootState } from '../../../store'
+import { RootState, isGuestUser } from '../../../store'
+import Link from 'next/link'
 import { supabase } from '../../../utils/supabase'
 import { playTactileSound } from '../../../utils/tactileSounds'
 import EmptyState from '../components/shared/EmptyState'
 import StartNewChatModal from '../components/messages/StartNewChatModal'
-import ActiveCallModal, { type CallType } from '../components/messages/ActiveCallModal'
+import { useCall, type CallType } from '../components/messages/CallProvider'
+import { voiceNoteDuration } from '../../../utils/dmMedia'
 
 interface DbMessage {
   id: string
@@ -21,6 +23,8 @@ interface DbMessage {
   body: string
   is_request: boolean | null
   created_at: string
+  message_type?: string | null
+  media_url?: string | null
 }
 
 interface ProfileHit {
@@ -37,7 +41,10 @@ interface Thread {
 
 export default function MessagesPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
-  const myId = currentUser?.id
+  // Guests have a placeholder id and no messages; they get a sign-up prompt
+  // below instead of a search that never loads.
+  const guest = isGuestUser(currentUser)
+  const myId = guest ? undefined : currentUser?.id
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -51,22 +58,16 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'requests' | 'chats'>('all')
 
-  // Calling state
-  const [showCallModal, setShowCallModal] = useState(false)
-  const [callType, setCallType] = useState<CallType>('audio')
-  const [callTarget, setCallTarget] = useState<{
-    id: string
-    name: string
-    avatarUrl?: string | null
-    role?: string
-  } | null>(null)
+  // Real calls (CallProvider in the dashboard layout); the old screen here
+  // only simulated one.
+  const { available: callsAvailable, startCall } = useCall()
 
   const loadThreads = useCallback(async () => {
     if (!supabase || !myId) { setLoading(false); return }
     setLoading(true)
     const { data, error: msgError } = await supabase
       .from('messages')
-      .select('id, sender_id, recipient_id, body, is_request, created_at')
+      .select('id, sender_id, recipient_id, body, is_request, created_at, message_type, media_url')
       .or(`sender_id.eq.${myId},recipient_id.eq.${myId}`)
       .order('created_at', { ascending: false })
       .limit(200)
@@ -141,10 +142,9 @@ export default function MessagesPage() {
     type: CallType
   ) => {
     e.stopPropagation()
+    if (!callsAvailable) return
     playTactileSound('click')
-    setCallTarget(target)
-    setCallType(type)
-    setShowCallModal(true)
+    startCall({ id: target.id, name: target.name, avatarUrl: target.avatarUrl }, type)
   }
 
   const ThreadRow = ({ t }: { t: Thread }) => {
@@ -166,10 +166,10 @@ export default function MessagesPage() {
             router.push(`/dashboard/messages/${t.otherId}`)
           }
         }}
-        className="w-full flex items-center justify-between gap-3 p-3.5 bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/30 rounded-2xl transition-all text-left shadow-glass hover:shadow-glow group cursor-pointer"
+        className="w-full flex items-center justify-between gap-3 p-3.5 bg-black/60 backdrop-blur-2xl border border-white/10 hover:border-gold-primary/30 rounded-2xl transition-all text-left  group cursor-pointer"
       >
         <div className="flex items-center gap-3.5 min-w-0 flex-1">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-gold-primary/20 to-amber-500/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary text-sm font-black overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform shadow-sm">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-gold-primary/20 to-amber-500/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary text-sm font-black overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform ">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -189,9 +189,29 @@ export default function MessagesPage() {
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-400 truncate mt-0.5 leading-relaxed">
-              {t.lastMessage.body}
-            </p>
+            <div className="text-xs text-gray-400 truncate mt-0.5 leading-relaxed flex items-center">
+              {t.lastMessage.message_type === 'image' ? (
+                <span className="flex items-center gap-1.5 text-gold-primary font-medium">
+                  <Camera size={13} className="shrink-0" /> Photo attachment
+                </span>
+              ) : t.lastMessage.message_type === 'voice' ? (
+                <span className="flex items-center gap-1.5 text-rose-400 font-medium">
+                  <Mic size={13} className="shrink-0" /> Voice note {voiceNoteDuration(t.lastMessage.body) ? `(${voiceNoteDuration(t.lastMessage.body)})` : ''}
+                </span>
+              ) : t.lastMessage.message_type === 'location' ? (
+                <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                  <MapPin size={13} className="shrink-0" /> Shared location
+                </span>
+              ) : t.lastMessage.message_type === 'call' ? (
+                <span className="flex items-center gap-1.5 text-blue-400 font-medium">
+                  <Phone size={13} className="shrink-0" /> {t.lastMessage.body.replace('📞 ', '')}
+                </span>
+              ) : (
+                <span className="truncate">
+                  {t.lastMessage.body.replace(/^\[quote:[^:]+:\s*[^]]+\]\s*/i, '').replace(/\[sticker:[a-z0-9-]+\]\s*/gi, '').trim() || t.lastMessage.body}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -202,7 +222,7 @@ export default function MessagesPage() {
               onClick={e =>
                 handleStartCall(
                   e,
-                  { id: t.otherId, name: contactName, avatarUrl, role: 'Verified Resident' },
+                  { id: t.otherId, name: contactName, avatarUrl, role: 'On The Resident' },
                   'audio'
                 )
               }
@@ -216,7 +236,7 @@ export default function MessagesPage() {
               onClick={e =>
                 handleStartCall(
                   e,
-                  { id: t.otherId, name: contactName, avatarUrl, role: 'Verified Resident' },
+                  { id: t.otherId, name: contactName, avatarUrl, role: 'On The Resident' },
                   'video'
                 )
               }
@@ -235,6 +255,23 @@ export default function MessagesPage() {
     )
   }
 
+  if (guest) {
+    return (
+      <div className="p-4 md:p-8 max-w-4xl mx-auto pb-32">
+        <EmptyState
+          icon={MessageCircle}
+          title="Messages need an account"
+          subtitle="Sign up free to message landlords, roommates and neighbours, send voice notes and call."
+          action={
+            <Link href="/auth?signup=1" className="no-underline inline-flex px-5 py-2.5 rounded-2xl bg-gold-primary text-black font-black text-xs uppercase tracking-wider">
+              Sign up
+            </Link>
+          }
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6 pb-32">
       {/* Top Header */}
@@ -244,7 +281,7 @@ export default function MessagesPage() {
             <MessageCircle size={22} className="text-gold-primary" /> Direct <span className="text-gold-primary">Messages</span>
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            Encrypted resident-to-resident private communications, calls, and location radar.
+            Private chats with your neighbours: messages, voice notes, calls and location.
           </p>
         </div>
 
@@ -254,7 +291,7 @@ export default function MessagesPage() {
               playTactileSound('click')
               setShowNewChatModal(true)
             }}
-            className="px-4 py-2 rounded-2xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-glow active:scale-95 transition-all"
+            className="px-4 py-2 rounded-2xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider flex items-center gap-2  active:scale-95 transition-all"
           >
             <Plus size={16} />
             <span>Start New Chat</span>
@@ -264,14 +301,14 @@ export default function MessagesPage() {
 
       {/* Search & Filter Toolbar */}
       <div className="flex flex-col sm:flex-row items-center gap-3 justify-between">
-        <div className="w-full sm:max-w-md flex items-center gap-2 bg-black/60 border border-white/15 focus-within:border-gold-primary/60 rounded-2xl px-3.5 py-2 transition-all shadow-inner">
+        <div className="w-full sm:max-w-md flex items-center gap-2 bg-black/60 border border-white/15 focus-within:border-gold-primary/60 rounded-2xl px-3.5 py-2 transition-all ">
           <Search size={15} className="text-gray-400 shrink-0" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search conversations by name or message..."
-            className="w-full bg-transparent text-xs text-white placeholder:text-gray-500 outline-none font-medium"
+            className="w-full bg-transparent border-0 text-xs text-white placeholder:text-gray-500 outline-none font-medium"
           />
           {searchQuery && (
             <button
@@ -299,7 +336,7 @@ export default function MessagesPage() {
               }}
               className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-all border ${
                 activeTab === tab.id
-                  ? 'bg-gold-primary text-black border-gold-primary shadow-glow'
+                  ? 'bg-gold-primary text-black border-gold-primary '
                   : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'
               }`}
             >
@@ -330,7 +367,7 @@ export default function MessagesPage() {
                 playTactileSound('click')
                 setShowNewChatModal(true)
               }}
-              className="px-5 py-2.5 rounded-2xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-glow active:scale-95 transition-all"
+              className="px-5 py-2.5 rounded-2xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider flex items-center gap-2  active:scale-95 transition-all"
             >
               <Plus size={16} />
               <span>Start Resident Chat</span>
@@ -358,18 +395,6 @@ export default function MessagesPage() {
         currentUserId={myId}
       />
 
-      {/* Active Voice & Video Calling Screen / Floating Phone Badge */}
-      {callTarget && (
-        <ActiveCallModal
-          isOpen={showCallModal}
-          onClose={() => {
-            setShowCallModal(false)
-            setCallTarget(null)
-          }}
-          callType={callType}
-          contact={callTarget}
-        />
-      )}
     </div>
   )
 }

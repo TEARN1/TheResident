@@ -11,6 +11,7 @@ import {
   outageConsensus,
   suburbPriceStats,
   isSuspiciousPrice,
+  priceVerdict,
   mentionsOffPlatformPayment,
   isOpenNow,
   decayedScore,
@@ -237,4 +238,17 @@ test('formatCurrency never throws on an unrecognised ISO code', () => {
   const result = formatCurrency(500, 'XYZ')
   assert.match(result, /XYZ/)
   assert.match(result, /500/)
+})
+
+test('priceVerdict places a price against the suburb quartiles', () => {
+  const stats = suburbPriceStats([3000, 4000, 5000, 6000, 7000])
+  assert.strictEqual(priceVerdict(1000, stats), 'suspicious')
+  assert.strictEqual(priceVerdict(3500, stats), 'below')
+  assert.strictEqual(priceVerdict(5000, stats), 'fair')
+  assert.strictEqual(priceVerdict(9000, stats), 'above')
+})
+
+test('priceVerdict says nothing when there are too few comparable listings', () => {
+  assert.strictEqual(priceVerdict(5000, suburbPriceStats([5000, 6000])), 'unknown')
+  assert.strictEqual(priceVerdict(0, suburbPriceStats([3000, 4000, 5000])), 'unknown')
 })

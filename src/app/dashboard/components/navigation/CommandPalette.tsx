@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, Home, MessageSquare,
-  Sparkles, ExternalLink, Table2, Zap, MapPin, X, ArrowRight, User
+  Search, Home, MessageSquare, MessageCircle, Briefcase, Car, ShieldCheck,
+  Sparkles, ExternalLink, Table2, Zap, MapPin, X, ArrowRight, User, Layers
 } from 'lucide-react'
 import { GRUVS, TEARNS } from '../../../../utils/sisterApps'
 import { playTactileSound } from '../../../../utils/tactileSounds'
@@ -54,40 +54,22 @@ export default function CommandPalette() {
     }
   }, [open])
 
+  const go = (href: string) => () => { router.push(href); setOpen(false) }
+
+  // Plain names for the pages that exist. These used to promise a "Planetary
+  // Command Bridge", "Triangular Department Directives" and "3D radars".
   const commandItems: CommandItem[] = [
     // App Navigation
-    {
-      id: 'nav-map',
-      title: 'VibeMap & Neighborhood Radars',
-      subtitle: 'Explore incident zones, verified pins & street walkability',
-      category: 'App Navigation',
-      icon: MapPin,
-      action: () => { router.push('/dashboard/housing'); setOpen(false) }
-    },
-    {
-      id: 'nav-rooms',
-      title: 'Find Rooms & Accommodations',
-      subtitle: 'Browse student co-living, commune rooms and rentals',
-      category: 'App Navigation',
-      icon: Home,
-      action: () => { router.push('/dashboard/housing'); setOpen(false) }
-    },
-    {
-      id: 'nav-gossip',
-      title: 'Suburb Gossip Wall',
-      subtitle: 'Neighborhood chatter, community notices and tips',
-      category: 'App Navigation',
-      icon: MessageSquare,
-      action: () => { router.push('/dashboard/gossip'); setOpen(false) }
-    },
-    {
-      id: 'nav-profile',
-      title: 'Citizen Profile & Verification',
-      subtitle: 'Switch between Tenant & Landlord modes',
-      category: 'App Navigation',
-      icon: User,
-      action: () => { router.push('/dashboard/profile'); setOpen(false) }
-    },
+    { id: 'nav-home', title: 'Home', subtitle: "What's on the app right now", category: 'App Navigation', icon: Home, action: go('/dashboard') },
+    { id: 'nav-rooms', title: 'Find a room', subtitle: 'Rooms and rentals near you', category: 'App Navigation', icon: Home, action: go('/dashboard/housing') },
+    { id: 'nav-services', title: 'Services', subtitle: 'Plumbers, movers, spazas and more', category: 'App Navigation', icon: Briefcase, action: go('/dashboard/services') },
+    { id: 'nav-lifts', title: 'Lift clubs', subtitle: 'Share a ride with neighbours', category: 'App Navigation', icon: Car, action: go('/dashboard/services?tab=lifts') },
+    { id: 'nav-map', title: 'Map', subtitle: 'Alerts, places and rooms on a map', category: 'App Navigation', icon: MapPin, action: go('/dashboard/community?tab=vibemap') },
+    { id: 'nav-safety', title: 'Safety', subtitle: 'Alerts from your street', category: 'App Navigation', icon: ShieldCheck, action: go('/dashboard/community?tab=safety') },
+    { id: 'nav-orgs', title: 'Organisations', subtitle: 'Notices from local organisations', category: 'App Navigation', icon: Layers, action: go('/dashboard/community?tab=departments') },
+    { id: 'nav-feed', title: 'Feed', subtitle: 'Neighbourhood posts and notices', category: 'App Navigation', icon: MessageSquare, action: go('/dashboard/gossip') },
+    { id: 'nav-messages', title: 'Messages', subtitle: 'Chats, voice notes and calls', category: 'App Navigation', icon: MessageCircle, action: go('/dashboard/messages') },
+    { id: 'nav-profile', title: 'Profile', subtitle: 'Your details, tenant or landlord mode', category: 'App Navigation', icon: User, action: go('/dashboard/profile') },
 
     // The Gruvs Nightlife Ecosystem
     {
@@ -102,8 +84,8 @@ export default function CommandPalette() {
     },
     {
       id: 'gruvs-sso',
-      title: 'Unified Cross-App Identity',
-      subtitle: 'Your Resident login works seamlessly across The Gruvs',
+      title: 'Use the same account on The Gruvs',
+      subtitle: 'Log in there with your Resident account',
       category: 'The Gruvs Nightlife',
       icon: Zap,
       action: () => { window.open(GRUVS.url ?? '', '_blank'); setOpen(false) },
@@ -136,10 +118,22 @@ export default function CommandPalette() {
 
   return (
     <>
-      {/* Floating launcher indicator in dashboard */}
+      {/* Mobile & Tablet search trigger */}
       <button
+        type="button"
         onClick={() => { setOpen(true); playTactileSound('pop') }}
-        className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all text-xs font-semibold shadow-sm"
+        className="flex lg:hidden w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 items-center justify-center text-gray-300 hover:text-gold-primary transition-all touch-target-44 shrink-0"
+        title="Search pages and quick actions"
+        aria-label="Open search command palette"
+      >
+        <Search size={16} className="text-gold-primary" />
+      </button>
+
+      {/* Desktop floating launcher indicator in dashboard */}
+      <button
+        type="button"
+        onClick={() => { setOpen(true); playTactileSound('pop') }}
+        className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all text-xs font-semibold"
         title="Open Command Palette (Ctrl+K)"
       >
         <Search size={13} className="text-gold-primary" />
@@ -152,7 +146,7 @@ export default function CommandPalette() {
       {/* Spotlight Modal Overlay */}
       <AnimatePresence>
         {open && (
-          <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-16 md:pt-24 px-4">
+          <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-12 sm:pt-16 md:pt-24 px-3 sm:px-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -166,7 +160,7 @@ export default function CommandPalette() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="relative w-full max-w-xl bg-neutral-950/95 border border-gold-primary/30 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_35px_rgba(212,175,55,0.15)] overflow-hidden z-10 backdrop-blur-3xl flex flex-col"
+              className="relative w-full max-w-xl bg-neutral-950/95 border border-gold-primary/30 rounded-3xl overflow-hidden z-10 backdrop-blur-3xl flex flex-col max-h-[85dvh]"
             >
               {/* Input Header */}
               <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10">
@@ -178,7 +172,19 @@ export default function CommandPalette() {
                     setQuery(e.target.value)
                     setSelectedIndex(0)
                   }}
-                  placeholder="Type a command, jump to Gruvs, or search..."
+                  onKeyDown={e => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      setSelectedIndex(i => Math.min(i + 1, filteredItems.length - 1))
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      setSelectedIndex(i => Math.max(i - 1, 0))
+                    } else if (e.key === 'Enter' && filteredItems[selectedIndex]) {
+                      e.preventDefault()
+                      handleSelect(filteredItems[selectedIndex])
+                    }
+                  }}
+                  placeholder="Search pages..."
                   className="w-full bg-transparent text-sm text-white placeholder-gray-500 outline-none font-medium"
                 />
                 {query && (
@@ -223,7 +229,7 @@ export default function CommandPalette() {
               </div>
 
               {/* Items List */}
-              <div className="max-h-80 overflow-y-auto p-3 space-y-1 custom-scrollbar">
+              <div className="max-h-[min(20rem,50dvh)] overflow-y-auto p-3 space-y-1 custom-scrollbar">
                 {filteredItems.length === 0 ? (
                   <div className="py-12 text-center text-gray-500 text-xs font-medium">
                     No matching commands found.

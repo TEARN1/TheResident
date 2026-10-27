@@ -13,17 +13,19 @@ import { getTrustInfo, type TrustInfo } from '../../../utils/trust'
 import { PRICING, formatPrice } from '../../../utils/pricing'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import ReviewsList from '../components/social/ReviewsList'
+import AdminFunnelCard from '../components/shared/AdminFunnelCard'
+import OrgBroadcastsPanel from '../components/community/OrgBroadcastsPanel'
 
 /**
  * "My Business" — one screen for anyone earning through the app (a landlord
- * letting rooms, or a provider running a handyman/spaza listing) to see
- * where they stand and what actually moves the needle: visibility tier,
- * verification, a completeness checklist, and live counts pulled from data
- * that already exists elsewhere in the app rather than fabricated metrics.
+ * letting rooms, or a provider running a handyman/spaza listing) OR any
+ * Political Party, Civic Office, Estate/HOA, Utility, School, or Commercial
+ * Business opening an Official Public Broadcast Channel.
  *
  * Competitive framing, not vanity metrics: every number here maps to
  * something a resident can act on today (boost a listing, get verified,
- * finish a profile) rather than a dashboard that just reports at you.
+ * finish a profile, or broadcast to opted-in followers) rather than a
+ * dashboard that just reports at you.
  */
 export default function BusinessPage() {
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
@@ -62,16 +64,16 @@ export default function BusinessPage() {
 
   if (guest || (!isLandlord && !isProvider)) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl mx-auto">
-        <div className="glass-panel p-10 text-center space-y-4">
+      <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6 pb-28">
+        <div className="glass-panel p-8 sm:p-10 text-center space-y-4">
           <Briefcase size={40} className="mx-auto text-gold-primary opacity-60" />
-          <h2 className="text-xl font-bold text-white">Nothing to manage yet</h2>
+          <h2 className="text-xl font-bold text-white">Open Your Business, Political Party, or Civic Account</h2>
           <p className="text-sm text-gray-400">
             {guest
-              ? 'Sign up as a landlord, or list a service, and this becomes your business dashboard.'
-              : 'List a room or a service and this becomes your business dashboard — visibility tier, verification, and performance in one place.'}
+              ? 'Sign up to list a room, offer a local service, or open an official public broadcast channel for your Political Party, Ward Office, Estate, School, or Business.'
+              : 'List a room, register a local trade/spaza service, or claim your Official Broadcast Unit below to communicate directly with opted-in residents.'}
           </p>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <Link href={guest ? '/auth' : '/dashboard/housing'} className="inline-flex items-center gap-2 bg-gold-primary text-black font-black px-5 py-3 rounded-xl text-xs uppercase tracking-widest">
               <Home size={14} /> {guest ? 'Sign up' : 'List a room'}
             </Link>
@@ -82,6 +84,9 @@ export default function BusinessPage() {
             )}
           </div>
         </div>
+        {!guest && <OrgBroadcastsPanel />}
+        {!guest && <CommercialTiersCard />}
+        {!guest && <AdminFunnelCard />}
       </div>
     )
   }
@@ -112,16 +117,18 @@ export default function BusinessPage() {
   const completedCount = checklist.filter(c => c.done).length
 
   return (
-    <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6 pb-24">
-      <div className="glass-panel p-6">
+    <div className="p-3 sm:p-6 md:p-8 max-w-4xl mx-auto space-y-6 pb-28">
+      <div className="glass-panel p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-1">
           <div className="p-2 bg-gold-primary/10 rounded-lg text-gold-primary"><Briefcase size={22} /></div>
-          <h1 className="text-2xl font-black text-white tracking-tight">My Business</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight">My Business & Organization</h1>
         </div>
         <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">
           {isLandlord && isProvider ? 'Landlord & Service Provider' : isLandlord ? 'Landlord' : myService?.businessName}
         </p>
       </div>
+
+      <AdminFunnelCard />
 
       {/* Visibility tier */}
       <div id="tiers" className="glass-panel p-6 space-y-4">
@@ -164,7 +171,7 @@ export default function BusinessPage() {
           </>
         ) : (
           <>
-            <StatCard icon={Star} label="Rating" value={myService ? myService.rating.toFixed(1) : '—'} accent="text-gold-primary" />
+            <StatCard icon={Star} label="Rating" value={myService && myService.reviewsCount > 0 ? myService.rating.toFixed(1) : '—'} accent="text-gold-primary" />
             <StatCard icon={Users} label="Reviews" value={myService?.reviewsCount ?? 0} />
             <StatCard icon={Clock} label="New leads" value={pendingLeads} accent={pendingLeads > 0 ? 'text-amber-400' : undefined} />
             <StatCard icon={CheckCircle2} label="Jobs completed" value={completedJobs} accent="text-green-400" />
@@ -208,6 +215,12 @@ export default function BusinessPage() {
         </Link>
       </div>
 
+      {/* Official Broadcast Channel & Political / Org Tree */}
+      <OrgBroadcastsPanel />
+
+      {/* Commercial, Political & Institutional Broadcast Tiers */}
+      <CommercialTiersCard />
+
       {/* Reviews */}
       <div className="glass-panel p-6 space-y-3">
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
@@ -219,6 +232,52 @@ export default function BusinessPage() {
       <p className="text-[10px] text-gray-600 text-center px-4">
         Pricing is self-serve and pay-for-priority: {formatPrice('priority')} / {formatPrice('premium')} per month. {PRICING.priority.reasoning}
       </p>
+    </div>
+  )
+}
+
+function CommercialTiersCard() {
+  const b2bKeys: (keyof typeof PRICING)[] = [
+    'local_business_sponsorship',
+    'political_party_branch',
+    'political_party_hq',
+    'infra_partner_placement',
+    'white_label_base'
+  ]
+  return (
+    <div className="glass-panel p-6 space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+            <Crown size={16} /> Political Party, Civic & Commercial Broadcast Plans
+          </h2>
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            Open your unit for free above. Upgrade to a verified commercial, political campaign, or infrastructure tier for sponsored reach and Live Town-Hall Priority.
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {b2bKeys.map(key => {
+          const item = PRICING[key]
+          return (
+            <div key={key} className="p-4 rounded-xl bg-white/[0.03] border border-white/10 flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black text-white">{item.label}</span>
+                  <span className="text-xs font-black text-gold-primary shrink-0">{formatPrice(key)}</span>
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">{item.reasoning}</p>
+              </div>
+              <Link
+                href={`/contact?plan=${encodeURIComponent(key)}`}
+                className="inline-flex items-center justify-center bg-gold-primary/15 hover:bg-gold-primary hover:text-black border border-gold-primary/30 text-gold-primary font-black py-2 px-3 rounded-lg text-[10px] uppercase tracking-widest transition-all"
+              >
+                Activate / Contact Sales
+              </Link>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

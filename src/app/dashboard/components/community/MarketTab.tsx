@@ -269,7 +269,7 @@ export default function MarketTab({
                        <p className="text-sm text-gray-400 leading-relaxed">{v.description || 'No description added yet.'}</p>
                        <div className="flex items-center gap-4 text-xs text-gray-500">
                           {v.contactNumber && <span>📞 {v.contactNumber}</span>}
-                          <span>⭐ {v.rating.toFixed(1)} ({v.reviewsCount} reviews)</span>
+                          <span>{v.reviewsCount > 0 ? `⭐ ${v.rating.toFixed(1)} (${v.reviewsCount} review${v.reviewsCount === 1 ? '' : 's'})` : 'No reviews yet'}</span>
                           {v.hours && <span>🕒 {v.hours}</span>}
                           {v.suburb && <span>📍 {v.suburb}</span>}
                        </div>
@@ -304,7 +304,7 @@ export default function MarketTab({
                           <span className="text-gold-primary">{Math.round(pct)}%</span>
                        </div>
                        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden border border-white/5">
-                          <div className="h-full bg-gold-primary transition-all duration-1000 shadow-[0_0_10px_#D4AF37]" style={{ width: `${pct}%` }}></div>
+                          <div className="h-full bg-gold-primary transition-all duration-1000 shadow-[0_0_10px_rgb(var(--accent))]" style={{ width: `${pct}%` }}></div>
                        </div>
                     </div>
                     <button
@@ -365,7 +365,7 @@ export default function MarketTab({
                 <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Post an <span className="text-gold-primary">Item</span></h3>
                 <button onClick={resetForm} className="p-2 text-gray-500 hover:text-white transition-colors"><X /></button>
               </div>
-              <form onSubmit={handleSubmitItem} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <form onSubmit={handleSubmitItem} className="p-6 space-y-4 max-h-[80dvh] overflow-y-auto custom-scrollbar">
                 <p className="text-xs text-gray-500">Leave the price blank to give it away. Payment happens between you and the buyer — never through the app.</p>
 
                 <div>

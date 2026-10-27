@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calculator, X, Plus, Trash2, Users, Copy, Check } from 'lucide-react'
+import { Calculator, X, Plus, Trash2, Users, Copy, Check, MessageSquare, Send, Wifi } from 'lucide-react'
+import Link from 'next/link'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import { SUPPORTED_CURRENCIES } from '../../../../utils/currencies'
 
@@ -41,6 +42,21 @@ export default function CoLivingExpenseSplitterModal({
   const [newLabel, setNewLabel] = useState('')
   const [newAmount, setNewAmount] = useState('')
   const [copied, setCopied] = useState(false)
+  const [paidRoommates, setPaidRoommates] = useState<number[]>([])
+  const [pingedIdx, setPingedIdx] = useState<number | null>(null)
+  const [broadcastNotice, setBroadcastNotice] = useState<string | null>(null)
+  const [wifiCopied, setWifiCopied] = useState(false)
+  const isQuietHours = (() => { const h = new Date().getHours(); return h >= 22 || h < 6; })()
+
+  const togglePaid = (idx: number) => {
+    playTactileSound('click')
+    setPaidRoommates(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])
+  }
+
+  const setRatio = (idx: number, ratio: number) => {
+    playTactileSound('click')
+    setRoommates(prev => prev.map((rm, i) => i === idx ? { ...rm, roomSizeRatio: ratio } : rm))
+  }
 
   if (!isOpen) return null
 
@@ -106,13 +122,24 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(212,175,55,0.15)] backdrop-blur-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.5 }}
+          onDragEnd={(e, info) => {
+            if (info.offset.y > 80 || info.velocity.y > 250) {
+              playTactileSound('pop')
+              onClose()
+            }
+          }}
+          className="relative w-full max-w-xl bg-black/95 border border-gold-primary/30 rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 backdrop-blur-2xl overflow-hidden max-h-[90dvh] flex flex-col pb-[max(env(safe-area-inset-bottom),1.5rem)]"
         >
+          {/* Mobile Drag Indicator */}
+          <div className="sm:hidden w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-1 mb-2.5 shrink-0 cursor-grab active:cursor-grabbing" />
           {/* Ambient Glow */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -126,7 +153,7 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
 
           {/* Header */}
           <div className="flex items-center gap-3 mb-5 shrink-0">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 flex items-center justify-center text-black shadow-lg">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-gold-primary to-amber-500 border border-gold-primary/30 flex items-center justify-center text-black">
               <Calculator size={24} />
             </div>
             <div>
@@ -143,6 +170,40 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-6 pr-1 custom-scrollbar">
+            {/* Quiet Hours & Fibre Co-Living Status Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                isQuietHours
+                  ? 'bg-purple-950/30 border-purple-500/30 text-purple-200'
+                  : 'bg-white/[0.03] border-white/5 text-gray-300'
+              }`}>
+                <div className="flex items-center gap-2 font-bold">
+                  <span>{isQuietHours ? '🤫' : '☀️'}</span>
+                  <span>{isQuietHours ? 'Quiet Hours Active' : 'Daytime Living'}</span>
+                </div>
+                <span className="text-[10px] opacity-75">{isQuietHours ? '22:00 – 06:00' : 'House active'}</span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 text-gray-300">
+                  <Wifi size={13} className="text-gold-primary" />
+                  <span className="font-bold text-white">House Fibre 5G</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playTactileSound('click');
+                    navigator.clipboard.writeText('ResidentHouse-5G');
+                    setWifiCopied(true);
+                    setTimeout(() => setWifiCopied(false), 2500);
+                  }}
+                  className="px-2 py-0.5 rounded-lg bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary font-bold text-[10px] transition-all"
+                >
+                  {wifiCopied ? 'Copied SSID!' : 'Copy Wi-Fi'}
+                </button>
+              </div>
+            </div>
+
             {/* Currency Selector Bar */}
             <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar">
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider shrink-0">Currency:</span>
@@ -158,8 +219,8 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                       }}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 ${
                         active
-                          ? 'bg-gold-primary text-black shadow-glow'
-                          : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                          ? 'bg-gold-primary text-black font-black border border-gold-primary'
+                          : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-white/5'
                       }`}
                     >
                       <span>{c.flag}</span>
@@ -183,6 +244,24 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                 <div className="text-lg font-black text-white tracking-tight flex items-center justify-end gap-1">
                   <Users size={16} className="text-gold-primary" /> {roommates.length}
                 </div>
+              </div>
+            </div>
+
+            {/* Collection Progress Bar */}
+            <div className="space-y-1.5 p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-gray-400 font-bold">House Fund Collection:</span>
+                <span className="font-mono font-bold text-emerald-400">
+                  {currency} {roommates.reduce((acc, rm, i) => paidRoommates.includes(i) ? acc + Math.round((rm.roomSizeRatio / totalRatios) * totalExpense) : acc, 0).toLocaleString()} / {currency} {totalExpense.toLocaleString()}
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-gold-primary to-emerald-400 transition-all duration-500 rounded-full"
+                  style={{
+                    width: `${totalExpense > 0 ? Math.min(100, Math.round((roommates.reduce((acc, rm, i) => paidRoommates.includes(i) ? acc + Math.round((rm.roomSizeRatio / totalRatios) * totalExpense) : acc, 0) / totalExpense) * 100)) : 0}%`
+                  }}
+                />
               </div>
             </div>
 
@@ -220,8 +299,75 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
                         {currency} {share.toLocaleString()}
                       </div>
                       <span className="text-[10px] text-gray-500 block">
-                        {Math.round((rm.roomSizeRatio / totalRatios) * 100)}% of expenses
+                        {Math.round((rm.roomSizeRatio / totalRatios) * 100)}% of expenses · Ref: RES-{idx + 1}
                       </span>
+
+                      {/* Room size ratio quick presets */}
+                      <div className="flex items-center gap-1 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setRatio(idx, 1.2)}
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all ${
+                            rm.roomSizeRatio > 1.05
+                              ? 'bg-gold-primary text-black border-gold-primary'
+                              : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          Master (+20%)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRatio(idx, 1.0)}
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all ${
+                            Math.abs(rm.roomSizeRatio - 1.0) < 0.05
+                              ? 'bg-gold-primary text-black border-gold-primary'
+                              : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          Equal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRatio(idx, 0.85)}
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all ${
+                            rm.roomSizeRatio < 0.95
+                              ? 'bg-gold-primary text-black border-gold-primary'
+                              : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          Compact (-15%)
+                        </button>
+                      </div>
+
+                      {/* Payment tracking & In-App Resident ping */}
+                      <div className="flex items-center justify-between pt-1.5 border-t border-white/5">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={paidRoommates.includes(idx)}
+                            onChange={() => togglePaid(idx)}
+                            className="accent-gold-primary w-3.5 h-3.5 cursor-pointer"
+                          />
+                          <span className={`text-[10px] font-bold ${paidRoommates.includes(idx) ? 'text-emerald-400' : 'text-gray-400'}`}>
+                            {paidRoommates.includes(idx) ? 'Paid' : 'Unpaid'}
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playTactileSound('click');
+                            const msg = `[BILL SPLIT] Hi ${rm.name}! Your co-living share for this month is ${currency} ${share.toLocaleString()} (Payment Ref: RES-${idx + 1}-HOUSE)`;
+                            navigator.clipboard.writeText(msg);
+                            setPingedIdx(idx);
+                            setBroadcastNotice(`Copied bill ping for ${rm.name}! Paste into Resident Messages.`);
+                            setTimeout(() => setPingedIdx(null), 3000);
+                          }}
+                          className="text-[10px] font-bold text-gold-primary hover:text-white transition-colors flex items-center gap-1 min-h-[32px] px-1.5 rounded-md hover:bg-white/5"
+                        >
+                          <Send size={10} />
+                          <span>{pingedIdx === idx ? 'Copied!' : 'Ping on Resident'}</span>
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
@@ -278,11 +424,17 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
           </div>
 
           {/* Modal Actions */}
+          {broadcastNotice && (
+            <div className="p-2.5 rounded-xl bg-gold-primary/10 border border-gold-primary/30 text-gold-primary text-xs font-bold text-center animate-in fade-in flex items-center justify-center gap-2">
+              <span>{broadcastNotice}</span>
+            </div>
+          )}
+
           <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleCopyBreakdown}
-                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-gold-primary/10"
+                className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 "
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
                 <span>{copied ? 'Copied Breakdown!' : 'Copy for Chat'}</span>
@@ -310,6 +462,33 @@ Calculated via The Resident (TEARN Ecosystem | South Africa)
               >
                 <span>Email House</span>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playTactileSound('click');
+                  const text = `*MONTHLY CO-LIVING EXPENSE SPLIT*\nTotal: ${currency} ${totalExpense.toLocaleString()}\n\nContributions:\n` +
+                    roommates.map(rm => {
+                      const share = Math.round((rm.roomSizeRatio / totalRatios) * totalExpense);
+                      return `• ${rm.name}: ${currency} ${share.toLocaleString()}`;
+                    }).join('\n') +
+                    `\n\nTracked on The Resident.`;
+                  navigator.clipboard.writeText(text);
+                  setBroadcastNotice('Copied full house split! Ready to paste in Resident Messages.');
+                }}
+                className="px-4 py-2.5 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px]"
+                title="Copy and dispatch expense split to flatmates via Resident Messages"
+              >
+                <MessageSquare size={13} />
+                <span>Dispatch to House Chat</span>
+              </button>
+              <Link
+                href="/dashboard/messages"
+                onClick={() => { playTactileSound('pop'); onClose(); }}
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5 min-h-[44px] no-underline"
+              >
+                <Send size={13} />
+                <span>Open Messages</span>
+              </Link>
             </div>
             <button
               onClick={() => { playTactileSound('pop'); onClose() }}

@@ -6,6 +6,7 @@ import UpgradeButton from '../shared/UpgradeButton'
 import { formatGruvsEventWhen } from '../../../../utils/gruvsEvents'
 import { goldButtonClass } from '../../../../components/ui/GoldButton'
 import { playTactileSound } from '@/utils/tactileSounds'
+import EmptyState from '../shared/EmptyState'
 
 const NOTICE_FREE_WINDOW_MS = 8 * 60 * 60 * 1000
 
@@ -143,7 +144,7 @@ export default function NoticeBoardTab({
         {showForm && (
            <form
               onSubmit={onPostSubmit}
-              className="bg-black/40 border border-gold-primary/20 rounded-2xl p-6 mb-8 space-y-4 shadow-[0_0_20px_rgba(212,175,55,0.05)] animate-in fade-in slide-in-from-top-4 duration-300"
+              className="bg-black/40 border border-gold-primary/20 rounded-2xl p-6 mb-8 space-y-4 shadow-[0_0_20px_rgb(var(--accent)/0.05)] animate-in fade-in slide-in-from-top-4 duration-300"
            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {type !== 'event' && (
@@ -252,65 +253,15 @@ export default function NoticeBoardTab({
                     className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 transition-all font-medium"
                  />
               </div>
-              <button type="submit" className="w-full bg-gold-primary text-black font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all hover:bg-gold-secondary shadow-lg shadow-gold-primary/10 active:scale-95">Publish to Community Wall</button>
+              <button type="submit" className="w-full bg-gold-primary text-black font-black py-3 rounded-xl text-xs uppercase tracking-widest transition-all hover:bg-gold-secondary border border-gold-primary/30 active:scale-95 min-h-[44px]">Publish to Community Wall</button>
            </form>
         )}
 
+        {/* Plain empty state. It used to offer one-tap "Rooftop social /
+            Elevator maintenance / Lost keys" notices with invented details
+            (a lift, a time, "left with security") that could be posted as real. */}
         {communityNotices.length === 0 ? (
-          <div className="py-16 px-6 text-center text-gray-500 bg-white/[0.02] rounded-3xl border border-dashed border-white/10 relative overflow-hidden backdrop-blur-sm">
-             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.15)]">
-               <Megaphone size={32} />
-             </div>
-             <p className="text-base font-black uppercase tracking-widest text-white">Your Neighborhood Wall is Clear</p>
-             <p className="text-xs text-gray-400 mt-1.5 max-w-md mx-auto">
-               Be the spark in your building. Post building updates, organize floor meetups, or alert neighbors about maintenance.
-             </p>
-
-             <div className="mt-6 flex flex-wrap justify-center gap-3">
-               <button
-                 type="button"
-                 onClick={() => {
-                   playTactileSound('tab')
-                   setTitle('Weekend Rooftop Sunset Social 🌅')
-                   setDesc('Bring your own drinks and chill on the rooftop lounge this Saturday from 5 PM! Great chance to meet everyone.')
-                   setType('event')
-                   setAudience('everyone')
-                   setShowForm(true)
-                 }}
-                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
-               >
-                 <span>🌇 Rooftop Social</span>
-               </button>
-               <button
-                 type="button"
-                 onClick={() => {
-                   playTactileSound('tab')
-                   setTitle('Scheduled Elevator Maintenance Notice 🛠️')
-                   setDesc('Elevator B will undergo quarterly inspection this Thursday between 10:00 and 13:00. Please plan accordingly.')
-                   setType('notice')
-                   setAudience('everyone')
-                   setShowForm(true)
-                 }}
-                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
-               >
-                 <span>🛠️ Maintenance Alert</span>
-               </button>
-               <button
-                 type="button"
-                 onClick={() => {
-                   playTactileSound('tab')
-                   setTitle('Lost Set of Keys in Lobby 🔑')
-                   setDesc('Found a key ring with a blue carabiner near the mailboxes. Left with security reception.')
-                   setType('notice')
-                   setAudience('everyone')
-                   setShowForm(true)
-                 }}
-                 className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/40 text-xs font-bold text-gray-300 transition-all active:scale-95 flex items-center gap-2"
-               >
-                 <span>🔑 Lost & Found</span>
-               </button>
-             </div>
-          </div>
+          <EmptyState icon={Megaphone} title="No notices yet" subtitle="Post a building update, a meetup, or something neighbours should know." />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {communityNotices.map(notice => (
@@ -318,7 +269,7 @@ export default function NoticeBoardTab({
                 key={notice.id}
                 className={`glass-panel p-6 flex flex-col justify-between gap-5 transition-all duration-300 group relative overflow-hidden ${
                   isFeatured(notice)
-                    ? 'border-gold-primary/50 shadow-[0_0_24px_rgba(212,175,55,0.15)] bg-gradient-to-b from-gold-primary/10 via-black/40 to-black/30'
+                    ? 'border-gold-primary/50 shadow-[0_0_24px_rgb(var(--accent)/0.15)] bg-gradient-to-b from-gold-primary/10 via-black/40 to-black/30'
                     : 'border-white/10 hover:border-gold-primary/30 hover:shadow-xl hover:shadow-black/40'
                 }`}
               >
@@ -333,7 +284,7 @@ export default function NoticeBoardTab({
                         notice.type === 'event'
                           ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
                           : notice.type === 'landlord_announcement'
-                          ? 'bg-gold-primary/15 text-gold-primary border-gold-primary/30 shadow-[0_0_12px_rgba(212,175,55,0.2)]'
+                          ? 'bg-gold-primary/15 text-gold-primary border-gold-primary/30 shadow-[0_0_12px_rgb(var(--accent)/0.2)]'
                           : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
                       }`}>
                         {notice.type === 'landlord_announcement' ? 'Official Announcement' : notice.type}

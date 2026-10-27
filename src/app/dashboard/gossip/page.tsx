@@ -3,32 +3,17 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import Image from 'next/image'
-import dynamic from 'next/dynamic'
 import {
-  MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2, ExternalLink, Table2, Zap, Car,
-  Search, GraduationCap, BookOpen, EyeOff
+  MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2,
+  Search, EyeOff, Radio, Shield, Building2, Share2, Check
 } from 'lucide-react'
-import { GRUVS, GRUVS_TOUCH_DOWN, TEARNS } from '../../../utils/sisterApps'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import { humanizeSupabaseError } from '../../../utils/humanizeError'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
 import EmptyState from '../components/shared/EmptyState'
-import EventRidePoolerModal from '../components/community/EventRidePoolerModal'
-import { fetchUpcomingGruvsEvents, type GruvsEvent } from '../../../utils/gruvsEvents'
 import { playTactileSound } from '../../../utils/tactileSounds'
 
-const InstitutionalBroadcastsPortal = dynamic(() => import('../components/community/InstitutionalBroadcastsPortal'), { ssr: false })
-const AudioGossipRecorderModal = dynamic(() => import('../components/social/AudioGossipRecorderModal'), { ssr: false })
-const PlateShareFoodHubModal = dynamic(() => import('../components/social/PlateShareFoodHubModal'), { ssr: false })
-const AudioSpacesTownHallModal = dynamic(() => import('../components/social/AudioSpacesTownHallModal'), { ssr: false })
-const ResidentKarmaModal = dynamic(() => import('../components/social/ResidentKarmaModal'), { ssr: false })
-const RoommateSpiderRadarModal = dynamic(() => import('../components/social-dynamics/RoommateSpiderRadarModal'), { ssr: false })
-const PeacekeeperMediatorModal = dynamic(() => import('../components/social-dynamics/PeacekeeperMediatorModal'), { ssr: false })
-const FloorSecretCrushModal = dynamic(() => import('../components/social-dynamics/FloorSecretCrushModal'), { ssr: false })
-const LostAndFoundPhotoMatcherModal = dynamic(() => import('../components/social-dynamics/LostAndFoundPhotoMatcherModal'), { ssr: false })
-const PayShapTapToSettleModal = dynamic(() => import('../components/social-dynamics/PayShapTapToSettleModal'), { ssr: false })
-const NightWatchSafeRouteModal = dynamic(() => import('../components/social-dynamics/NightWatchSafeRouteModal'), { ssr: false })
 
 export type GossipCategory = 'all' | 'campus' | 'landlords' | 'gruvs' | 'roommates' | 'safety'
 
@@ -130,20 +115,6 @@ export default function GossipPage() {
   const [commentDraft, setCommentDraft] = useState<Record<string, string>>({})
   const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({})
 
-  // Institutional Broadcasts Modal
-  const [showInstitutionalModal, setShowInstitutionalModal] = useState(false)
-
-  // Advanced Social & Gossip Modals
-  const [showAudioGossipModal, setShowAudioGossipModal] = useState(false)
-  const [showPlateShareModal, setShowPlateShareModal] = useState(false)
-  const [showAudioSpacesModal, setShowAudioSpacesModal] = useState(false)
-  const [showResidentKarmaModal, setShowResidentKarmaModal] = useState(false)
-  const [showRadarModal, setShowRadarModal] = useState(false)
-  const [showMediatorModal, setShowMediatorModal] = useState(false)
-  const [showSecretCrushModal, setShowSecretCrushModal] = useState(false)
-  const [showLostFoundModal, setShowLostFoundModal] = useState(false)
-  const [showPayShapModal, setShowPayShapModal] = useState(false)
-  const [showNightWatchModal, setShowNightWatchModal] = useState(false)
 
   // Advanced Category & Search Filter
   const [activeCategory, setActiveCategory] = useState<GossipCategory>('all')
@@ -153,35 +124,38 @@ export default function GossipPage() {
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [composerCategory, setComposerCategory] = useState<GossipCategory>('campus')
 
-  // Interactive Vibe Reactions
-  const [postReactions, setPostReactions] = useState<Record<string, { lit: number; tea: number; redflag: number; real: number; dead: number; userReacted?: string }>>({})
+  // Interactive Vibe Reactions (Truth Protocol: start at 0, persist user reactions locally)
+  const [postReactions, setPostReactions] = useState<Record<string, { lit: number; tea: number; redflag: number; real: number; dead: number; userReacted?: string }>>(() => {
+    if (typeof window === 'undefined') return {}
+    try {
+      const saved = localStorage.getItem('res_gossip_reactions')
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
+  })
+  const [sharedPostId, setSharedPostId] = useState<string | null>(null)
 
   const handleReact = (postId: string, type: 'lit' | 'tea' | 'redflag' | 'real' | 'dead') => {
     playTactileSound('pop')
     setPostReactions(prev => {
-      const cur = prev[postId] || { lit: 3, tea: 6, redflag: 1, real: 4, dead: 0 }
+      const cur = prev[postId] || { lit: 0, tea: 0, redflag: 0, real: 0, dead: 0 }
       const isAlready = cur.userReacted === type
-      return {
-        ...prev,
-        [postId]: {
-          ...cur,
-          [type]: isAlready ? Math.max(0, cur[type] - 1) : cur[type] + 1,
-          userReacted: isAlready ? undefined : type
-        }
+      const prevChosen = cur.userReacted as 'lit' | 'tea' | 'redflag' | 'real' | 'dead' | undefined
+      const updated = { ...cur }
+      if (prevChosen && prevChosen !== type) {
+        updated[prevChosen] = Math.max(0, updated[prevChosen] - 1)
       }
+      updated[type] = isAlready ? Math.max(0, updated[type] - 1) : updated[type] + 1
+      updated.userReacted = isAlready ? undefined : type
+      const next = { ...prev, [postId]: updated }
+      try { localStorage.setItem('res_gossip_reactions', JSON.stringify(next)) } catch {}
+      return next
     })
   }
 
   const isPostAnonymous = (body: string) => body.includes('[🕶️ ANONYMOUS RESIDENT]')
   const cleanPostBody = (body: string) => body.replace(/\[🕶️ ANONYMOUS RESIDENT\]\s*/g, '')
-
-  // Event Ride Pooler
-  const [showRidePoolerModal, setShowRidePoolerModal] = useState(false)
-  const [upcomingGruvsEvents, setUpcomingGruvsEvents] = useState<GruvsEvent[]>([])
-
-  useEffect(() => {
-    fetchUpcomingGruvsEvents(10).then(events => setUpcomingGruvsEvents(events)).catch(() => {})
-  }, [])
 
   const sentinelRef = useRef<HTMLDivElement>(null)
   const loadingMoreRef = useRef(false)
@@ -515,270 +489,46 @@ export default function GossipPage() {
 
   return (
     <div className="space-y-6">
-      {/* Sister-app ads. Every word and link comes from utils/sisterApps.ts,
-          which carries the rules for what each app may and may not claim. */}
-      <div className={`grid grid-cols-1 ${TEARNS.url ? 'md:grid-cols-2' : ''} gap-4`}>
-        {/* The Gruvs */}
-        <div className="glass-panel p-5 bg-gradient-to-br from-purple-900/25 via-black/50 to-gold-primary/10 border-purple-500/30 hover:border-gold-primary/40 rounded-3xl relative overflow-hidden group shadow-2xl transition-all duration-300">
-          <div className="absolute top-0 right-0 w-44 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16 group-hover:bg-purple-500/20 transition-all duration-700" />
-          <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="flex h-2.5 w-2.5 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-pink-500" />
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-wider text-pink-400 bg-pink-500/10 px-2.5 py-0.5 rounded-full border border-pink-500/20">
-                  What&apos;s on tonight
-                </span>
-              </div>
-              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Sister app</span>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gold-primary/20 border border-gold-primary/40 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                  <Image
-                    src="/gruvs-logo.png"
-                    alt="The Gruvs"
-                    width={22}
-                    height={22}
-                    className="rounded-full object-cover group-hover:scale-110 transition-transform"
-                  />
-                </div>
-                <h3 className="text-lg font-black text-white tracking-tight group-hover:text-gold-primary transition-colors">
-                  {GRUVS.headline}
-                </h3>
-              </div>
-              <p className="text-xs text-gray-300 leading-relaxed font-normal">
-                {GRUVS.body}
-              </p>
-              <p className="text-xs text-gray-400 leading-relaxed font-normal">
-                {GRUVS_TOUCH_DOWN}
-              </p>
-            </div>
-
-            <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
-              <a
-                href={GRUVS.url ?? undefined}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:brightness-110 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95"
-              >
-                <span>{GRUVS.cta}</span>
-                <ExternalLink size={12} />
-              </a>
-
-              <button
-                type="button"
-                onClick={() => {
-                  playTactileSound('chime')
-                  setShowRidePoolerModal(true)
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-200 hover:text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95"
-                title="Coordinate shared Uber/Bolt or carpool to Gruvs events"
-              >
-                <Car size={13} className="text-pink-400" />
-                <span>Share Ride Pool</span>
-              </button>
-            </div>
+      {/* Hyper-local Suburb Broadcast & Community Hub */}
+      <div className="p-3.5 rounded-2xl bg-gradient-to-r from-gold-primary/10 via-black/40 to-black/20 border border-gold-primary/25 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gold-primary/20 border border-gold-primary/30 flex items-center justify-center shrink-0">
+            <Radio className="w-4 h-4 text-gold-primary animate-pulse" />
           </div>
-        </div>
-
-        {/* TEARN's Excellence — hidden until it has a real address to send people to */}
-        {TEARNS.url && (
-        <div className="glass-panel p-5 bg-gradient-to-br from-gold-primary/15 via-black/50 to-emerald-950/20 border-gold-primary/30 hover:border-gold-primary/50 rounded-3xl relative overflow-hidden group shadow-2xl transition-all duration-300">
-          <div className="absolute top-0 right-0 w-44 h-44 bg-gold-primary/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16 group-hover:bg-gold-primary/20 transition-all duration-700" />
-          <div className="relative z-10 flex flex-col justify-between h-full space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap size={14} className="text-gold-primary animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-gold-primary bg-gold-primary/10 px-2.5 py-0.5 rounded-full border border-gold-primary/30">
-                  {TEARNS.name}
-                </span>
-              </div>
-              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Sister app</span>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-white/5 border border-white/15 flex items-center justify-center shrink-0">
-                  <Table2 size={18} className="text-gold-primary group-hover:rotate-12 transition-transform" />
-                </div>
-                <h3 className="text-lg font-black text-white tracking-tight group-hover:text-gold-primary transition-colors">
-                  {TEARNS.headline}
-                </h3>
-              </div>
-              <p className="text-xs text-gray-300 leading-relaxed font-normal">
-                {TEARNS.body}
-              </p>
-            </div>
-
-            <div className="pt-2 flex items-center justify-between">
-              <a
-                href={TEARNS.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-gold-primary via-amber-300 to-gold-secondary text-black font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-gold-primary/20 hover:brightness-105"
-              >
-                <span>{TEARNS.cta}</span>
-                <ExternalLink size={12} />
-              </a>
-            </div>
-          </div>
-        </div>
-        )}
-      </div>
-
-      {/* INSTITUTIONAL BROADCASTS & CIRCULARS PORTAL BANNER */}
-      <div className="glass-panel p-5 bg-gradient-to-r from-amber-950/40 via-black/70 to-blue-950/30 border border-amber-500/30 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
-            <GraduationCap size={24} />
-          </div>
-          <div className="space-y-0.5">
+          <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-white uppercase tracking-tight">Institutional & School Circulars</h3>
-              <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30">
-                Official Directives
+              <span className="text-xs font-black uppercase tracking-wider text-white">Neighbourhood Live Feed</span>
+              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                Verified Resident Network
               </span>
             </div>
-            <p className="text-xs text-gray-300">
-              Direct official circulars from the <strong>Department of Education (DBE/GDE)</strong>, <strong>University Res Wardens</strong>, and <strong>School Teachers</strong> (homework schedules, exams, quiet hours).
-            </p>
+            <p className="text-[11px] text-gray-400">Direct hyper-local community updates, security signals, and co-living notices in your area.</p>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('chime')
-            setShowInstitutionalModal(true)
-          }}
-          className="bg-amber-500 hover:bg-amber-400 text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all active:scale-95 shrink-0 flex items-center gap-2"
-        >
-          <BookOpen size={14} />
-          <span>Open School & Uni Notices</span>
-        </button>
-      </div>
-
-      {/* Advanced Social Hub Action Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowAudioGossipModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30 shrink-0 transition"
-        >
-          <span>🎙️ Voice Memo Disguise</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowPlateShareModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 shrink-0 transition"
-        >
-          <span>🍲 PlateShare Food Hub</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowAudioSpacesModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0 transition"
-        >
-          <span>📻 Live Town Hall Space</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowResidentKarmaModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 transition"
-        >
-          <span>🏆 Street Credit & Karma</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowRadarModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 transition"
-          title="5-Axis Roommate Spider Radar Compatibility Chart"
-        >
-          <span>🕸️ Roommate Radar</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowMediatorModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
-          title="Peacekeeper Neutral Conflict De-Escalation AI Bot"
-        >
-          <span>🕊️ Peacekeeper Bot</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowSecretCrushModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 shrink-0 transition"
-          title="Floor Secret Crush Double-Blind Mutual Match"
-        >
-          <span>💘 Floor Secret Crush</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowLostFoundModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 shrink-0 transition"
-          title="Lost & Found Visual Photo Matcher & Campus Claim Desk"
-        >
-          <span>🔍 Lost & Found AI</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowPayShapModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0 transition"
-          title="PayShap Tap-To-Settle Instant Shared Debt Clearing"
-        >
-          <span>💳 PayShap Settle</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            playTactileSound('pop')
-            setShowNightWatchModal(true)
-          }}
-          className="px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0 transition"
-          title="Night-Watch Safe-Route Pedestrian Escort & Streetlight Radar"
-        >
-          <span>🛡️ Safe Walk Escort</span>
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              playTactileSound('click');
+              setActiveCategory('safety');
+            }}
+            className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold text-[11px] uppercase tracking-wider transition-all min-h-[38px] flex items-center justify-center gap-1.5 active:scale-95"
+          >
+            <Shield size={12} />
+            <span>Safety Alerts</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              playTactileSound('click');
+              setActiveCategory('roommates');
+            }}
+            className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary font-bold text-[11px] uppercase tracking-wider transition-all min-h-[38px] flex items-center justify-center gap-1.5 active:scale-95"
+          >
+            <Building2 size={12} />
+            <span>Co-Living</span>
+          </button>
+        </div>
       </div>
 
       {/* TOPIC TABS & REAL-TIME SEARCH */}
@@ -794,7 +544,7 @@ export default function GossipPage() {
               }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider shrink-0 transition-all border ${
                 activeCategory === tab.key
-                  ? 'bg-gold-primary text-black border-gold-primary'
+                  ? 'bg-gold-primary text-black border-gold-primary shadow-glow'
                   : 'bg-black/50 text-gray-400 border-white/10 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -822,7 +572,7 @@ export default function GossipPage() {
             feel a little more alive than a bare textarea. */}
         <div
           className="absolute -top-24 -right-24 w-64 h-64 rounded-full opacity-[0.08] pointer-events-none"
-          style={{ background: 'radial-gradient(circle, #D4AF37 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, var(--gold-primary) 0%, transparent 70%)' }}
         />
         <div className="flex items-center gap-2 mb-4 relative">
           <div className="p-1.5 bg-gold-primary/10 rounded-lg">
@@ -847,7 +597,7 @@ export default function GossipPage() {
             onFocus={() => setComposerExpanded(true)}
             maxLength={2000}
             placeholder="Spotted something? Heard something? Say it here…"
-            className="w-full bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08)] transition-all relative"
+            className="w-full bg-black/60 border border-white/10 rounded-xl p-4 text-sm text-white h-24 resize-none outline-none focus:border-gold-primary/50 focus:shadow-[0_0_0_3px_rgb(var(--accent)/0.08)] transition-all relative"
           />
         )}
         {composerExpanded && composerBody.length > 0 && (
@@ -982,7 +732,7 @@ export default function GossipPage() {
           <button
             onClick={() => { submitPost(); playTactileSound('pop') }}
             disabled={posting || uploading || (!composerBody.trim() && !mediaFile)}
-            className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-gold-primary/10 hover:shadow-gold-primary/25"
+            className="flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 px-6 rounded-xl text-xs uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 min-h-[44px]"
           >
             {uploading ? <Loader size={13} className="animate-spin" /> : <Send size={13} />}
             {uploading ? 'Uploading…' : posting ? 'Posting…' : 'Post'}
@@ -1016,7 +766,7 @@ export default function GossipPage() {
                   >
                     <div className="absolute top-4 right-4">
                       {post.author_id === myId ? (
-                        <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-black/60 hover:bg-red-500 text-white rounded-full p-2 transition-all shadow-md"><Trash2 size={13} /></button>
+                        <button onClick={() => deletePost(post.id)} aria-label="Delete post" title="Delete post" className="bg-black/60 hover:bg-red-500 text-white rounded-full p-2 transition-all border border-white/10"><Trash2 size={13} /></button>
                       ) : !isAnon ? (
                         <BlockUserButton targetUserId={post.author_id} currentUserId={myId} />
                       ) : null}
@@ -1048,10 +798,10 @@ export default function GossipPage() {
                   <div className="px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 bg-white/[0.02]">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {[
-                        { type: 'tea' as const, emoji: '👀', label: 'Tea', defaultCount: 4 },
-                        { type: 'lit' as const, emoji: '🔥', label: 'Lit', defaultCount: 2 },
-                        { type: 'redflag' as const, emoji: '🚩', label: 'Red Flag', defaultCount: 1 },
-                        { type: 'real' as const, emoji: '💯', label: 'Real', defaultCount: 5 },
+                        { type: 'tea' as const, emoji: '👀', label: 'Tea', defaultCount: 0 },
+                        { type: 'lit' as const, emoji: '🔥', label: 'Lit', defaultCount: 0 },
+                        { type: 'redflag' as const, emoji: '🚩', label: 'Red Flag', defaultCount: 0 },
+                        { type: 'real' as const, emoji: '💯', label: 'Real', defaultCount: 0 },
                         { type: 'dead' as const, emoji: '💀', label: 'Dead', defaultCount: 0 }
                       ].map(r => {
                         const cur = postReactions[post.id]
@@ -1064,7 +814,7 @@ export default function GossipPage() {
                             onClick={() => handleReact(post.id, r.type)}
                             className={`px-2.5 py-1 rounded-xl text-xs flex items-center gap-1.5 border transition-all active:scale-95 ${
                               isChosen
-                                ? 'bg-gold-primary/20 border-gold-primary/60 text-gold-primary font-black shadow-sm'
+                                ? 'bg-gold-primary/20 border-gold-primary/60 text-gold-primary font-black'
                                 : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
                             }`}
                           >
@@ -1172,20 +922,20 @@ export default function GossipPage() {
 
                 {post.media_url && post.media_type === 'image' && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={post.media_url} alt="" className="w-full max-h-96 object-cover rounded-2xl border border-white/10 shadow-md" />
+                  <img src={post.media_url} alt="" className="w-full max-h-96 object-cover rounded-2xl border border-white/10" />
                 )}
                 {post.media_url && post.media_type === 'video' && (
-                  <video src={post.media_url} controls className="w-full max-h-96 rounded-2xl border border-white/10 shadow-md" />
+                  <video src={post.media_url} controls className="w-full max-h-96 rounded-2xl border border-white/10" />
                 )}
 
                 {/* VIBE REACTIONS BAR */}
                 <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-white/5">
                   <div className="flex flex-wrap items-center gap-1.5">
                     {[
-                      { type: 'tea' as const, emoji: '👀', label: 'Tea', defaultCount: 4 },
-                      { type: 'lit' as const, emoji: '🔥', label: 'Lit', defaultCount: 2 },
-                      { type: 'redflag' as const, emoji: '🚩', label: 'Red Flag', defaultCount: 1 },
-                      { type: 'real' as const, emoji: '💯', label: 'Real', defaultCount: 5 },
+                      { type: 'tea' as const, emoji: '👀', label: 'Tea', defaultCount: 0 },
+                      { type: 'lit' as const, emoji: '🔥', label: 'Lit', defaultCount: 0 },
+                      { type: 'redflag' as const, emoji: '🚩', label: 'Red Flag', defaultCount: 0 },
+                      { type: 'real' as const, emoji: '💯', label: 'Real', defaultCount: 0 },
                       { type: 'dead' as const, emoji: '💀', label: 'Dead', defaultCount: 0 }
                     ].map(r => {
                       const cur = postReactions[post.id]
@@ -1198,7 +948,7 @@ export default function GossipPage() {
                           onClick={() => handleReact(post.id, r.type)}
                           className={`px-2.5 py-1 rounded-xl text-xs flex items-center gap-1.5 border transition-all active:scale-95 ${
                             isChosen
-                              ? 'bg-gold-primary/20 border-gold-primary/60 text-gold-primary font-black shadow-sm'
+                              ? 'bg-gold-primary/20 border-gold-primary/60 text-gold-primary font-black'
                               : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
                           }`}
                         >
@@ -1209,13 +959,32 @@ export default function GossipPage() {
                     })}
                   </div>
 
-                  <button
-                    onClick={() => toggleExpand(post.id)}
-                    className="flex items-center gap-1.5 text-[11px] text-gold-primary font-bold hover:underline"
-                  >
-                    {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                    {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playTactileSound('pop');
+                        const shareText = `Neighbourhood update on The Resident: "${cleanBody.slice(0, 90)}..." https://theresidentcrew.com/dashboard/gossip#${post.id}`;
+                        navigator.clipboard.writeText(shareText);
+                        setSharedPostId(post.id);
+                        setTimeout(() => setSharedPostId(null), 3000);
+                      }}
+                      className="text-[11px] font-bold text-gold-primary hover:text-white transition-colors flex items-center gap-1.5 min-h-[36px] px-2 rounded-lg hover:bg-white/5 active:scale-95"
+                      title="Copy in-app link to share in Resident Messages or Community"
+                    >
+                      {sharedPostId === post.id ? <Check size={12} className="text-emerald-400" /> : <Share2 size={12} />}
+                      <span className={sharedPostId === post.id ? 'text-emerald-400' : ''}>
+                        {sharedPostId === post.id ? 'Copied Link!' : 'Share to Chat'}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => toggleExpand(post.id)}
+                      className="flex items-center gap-1.5 text-[11px] text-gold-primary font-bold hover:underline"
+                    >
+                      {expanded[post.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                      {expanded[post.id] ? 'Hide comments' : `Comments${comments[post.id] ? ` (${comments[post.id].length})` : ''}`}
+                    </button>
+                  </div>
                 </div>
 
                 {!expanded[post.id] && (commentPreviews[post.id]?.length ?? 0) > 0 && (
@@ -1285,77 +1054,6 @@ export default function GossipPage() {
       )}
 
       {/* EVENT RIDE POOLER MODAL */}
-      <EventRidePoolerModal
-        isOpen={showRidePoolerModal}
-        onClose={() => setShowRidePoolerModal(false)}
-        upcomingEvents={upcomingGruvsEvents}
-      />
-
-      {/* INSTITUTIONAL BROADCASTS & CIRCULARS MODAL */}
-      <InstitutionalBroadcastsPortal
-        isOpen={showInstitutionalModal}
-        onClose={() => setShowInstitutionalModal(false)}
-      />
-
-      {/* AUDIO GOSSIP VOICE SCRAMBLER MODAL */}
-      <AudioGossipRecorderModal
-        isOpen={showAudioGossipModal}
-        onClose={() => setShowAudioGossipModal(false)}
-      />
-
-      {/* PLATESHARE FOOD HUB MODAL */}
-      <PlateShareFoodHubModal
-        isOpen={showPlateShareModal}
-        onClose={() => setShowPlateShareModal(false)}
-      />
-
-      {/* AUDIO SPACES TOWN HALL MODAL */}
-      <AudioSpacesTownHallModal
-        isOpen={showAudioSpacesModal}
-        onClose={() => setShowAudioSpacesModal(false)}
-      />
-
-      {/* RESIDENT KARMA & REPUTATION MODAL */}
-      <ResidentKarmaModal
-        isOpen={showResidentKarmaModal}
-        onClose={() => setShowResidentKarmaModal(false)}
-      />
-
-      {/* 5-AXIS ROOMMATE SPIDER RADAR MODAL */}
-      <RoommateSpiderRadarModal
-        isOpen={showRadarModal}
-        onClose={() => setShowRadarModal(false)}
-      />
-
-      {/* PEACEKEEPER ROOMMATE CONFLICT DE-ESCALATION BOT MODAL */}
-      <PeacekeeperMediatorModal
-        isOpen={showMediatorModal}
-        onClose={() => setShowMediatorModal(false)}
-      />
-
-      {/* FLOOR SECRET CRUSH DOUBLE-BLIND MATCH MODAL */}
-      <FloorSecretCrushModal
-        isOpen={showSecretCrushModal}
-        onClose={() => setShowSecretCrushModal(false)}
-      />
-
-      {/* LOST & FOUND VISUAL PHOTO AI MATCHER MODAL */}
-      <LostAndFoundPhotoMatcherModal
-        isOpen={showLostFoundModal}
-        onClose={() => setShowLostFoundModal(false)}
-      />
-
-      {/* PAYSHAP TAP-TO-SETTLE CARDS MODAL */}
-      <PayShapTapToSettleModal
-        isOpen={showPayShapModal}
-        onClose={() => setShowPayShapModal(false)}
-      />
-
-      {/* NIGHT-WATCH SAFE-ROUTE PEDESTRIAN NAVIGATOR MODAL */}
-      <NightWatchSafeRouteModal
-        isOpen={showNightWatchModal}
-        onClose={() => setShowNightWatchModal(false)}
-      />
     </div>
   )
 }

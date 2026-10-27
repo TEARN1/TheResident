@@ -101,32 +101,26 @@ export default function ChoreSchedulerTab({
 
   return (
     <div className="space-y-10">
-      {/* XP Master Banner */}
+      {/* Your points from finished chores. (A fixed "ELITE RESIDENT" rank with
+          an 80% bar sat here for everyone, whatever their score.) */}
       <div className="glass-panel p-8 bg-gradient-to-br from-gold-primary/10 via-black/40 to-black/20 border-gold-primary/30 flex flex-col md:flex-row justify-between items-center gap-8 shadow-2xl relative overflow-hidden group/banner">
          <div className="absolute top-0 right-0 w-64 h-64 bg-gold-primary/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover/banner:bg-gold-primary/10 transition-all duration-1000" />
 
          <div className="flex items-center gap-6 relative z-10">
-            <div className="p-5 bg-gold-primary rounded-3xl shadow-[0_0_30px_rgba(212,175,55,0.3)] rotate-3 group-hover/banner:rotate-0 transition-transform duration-500">
+            <div className="p-5 bg-gold-primary rounded-3xl shadow-[0_0_30px_rgb(var(--accent)/0.3)] rotate-3 group-hover/banner:rotate-0 transition-transform duration-500">
                <Award size={40} className="text-black" />
             </div>
             <div className="space-y-1">
-               <h3 className="text-2xl font-black text-white tracking-tighter">Citizen Reputation</h3>
+               <h3 className="text-2xl font-black text-white tracking-tighter">Your chore points</h3>
                <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-gold-primary font-black text-lg">
                      <Star size={20} className="fill-gold-primary" /> {reputationScores[currentUser?.id || ''] || 0}
                   </div>
-                  <span className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] border-l border-white/10 pl-3">Total Earned XP</span>
+                  <span className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] border-l border-white/10 pl-3">From finished chores</span>
                </div>
             </div>
          </div>
 
-         <div className="text-center md:text-right relative z-10 bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-white/5 px-8">
-            <p className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-black mb-1">Status Rank</p>
-            <p className="text-2xl font-black text-white italic tracking-tighter">ELITE RESIDENT</p>
-            <div className="h-1 bg-gray-800 rounded-full mt-2 overflow-hidden w-32 ml-auto">
-               <div className="h-full bg-gold-primary w-4/5 shadow-[0_0_10px_#D4AF37]" />
-            </div>
-         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -142,8 +136,8 @@ export default function ChoreSchedulerTab({
             {myChores.filter(c => c.status === 'pending').length === 0 ? (
                <div className="glass-panel p-16 text-center text-gray-600 bg-white/2 border-dashed border-white/10 rounded-3xl">
                   <CheckCircle2 size={48} className="mx-auto mb-4 text-green-500/20" />
-                  <p className="text-sm font-black uppercase tracking-widest text-gray-500">Inventory Clear</p>
-                  <p className="text-xs mt-1 opacity-60">All personal responsibilities are up to date.</p>
+                  <p className="text-sm font-black uppercase tracking-widest text-gray-500">Nothing to do</p>
+                  <p className="text-xs mt-1 opacity-60">No chores are waiting for you.</p>
                </div>
             ) : (
                <div className="space-y-4">
@@ -160,8 +154,8 @@ export default function ChoreSchedulerTab({
             {otherChores.length === 0 && myChores.filter(c => c.status === 'completed').length === 0 ? (
                <div className="glass-panel p-16 text-center text-gray-600 bg-white/2 border-dashed border-white/10 rounded-3xl">
                   <Info size={48} className="mx-auto mb-4 opacity-10" />
-                  <p className="text-sm font-black uppercase tracking-widest text-gray-500">History Empty</p>
-                  <p className="text-xs mt-1 opacity-60">No community chore logs found for this cycle.</p>
+                  <p className="text-sm font-black uppercase tracking-widest text-gray-500">No chores yet</p>
+                  <p className="text-xs mt-1 opacity-60">Chores your household adds will show up here.</p>
                </div>
             ) : (
                <div className="space-y-4">
