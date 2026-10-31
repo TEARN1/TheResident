@@ -12,10 +12,11 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
-import { User as UserIcon, Users, AlertTriangle } from 'lucide-react'
+import { User as UserIcon, Users, AlertTriangle, Loader } from 'lucide-react'
 import { loginUser, RootState, AppDispatch } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import { cleanScriptTags, encodeHTMLEntities } from '../../../utils/security'
+import { safeNextPath } from '../../../utils/launch'
 import {
   containerStyle, overlayStyle, glassPanelStyle, headerStyle, logoStyle, taglineStyle,
   errorContainerStyle, formStyle, inputGroupStyle, labelStyle, inputStyle, selectStyle,
@@ -28,6 +29,7 @@ export default function OnboardingPage() {
   const dispatch = useDispatch<AppDispatch>()
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
 
+  const [bootstrapping, setBootstrapping] = useState(!currentUser)
   const [role, setRole] = useState<'tenant' | 'landlord' | ''>('')
   const [bio, setBio] = useState('')
   const [gender, setGender] = useState<'men' | 'women' | 'any'>('any')
@@ -41,11 +43,40 @@ export default function OnboardingPage() {
   const [petsAllowed, setPetsAllowed] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  // People who arrive through Facebook (or The Gruvs) never saw the sign-up
+  // People who arrive through Facebook or Google never saw the sign-up
   // form's Terms tick, so they agree here.
   const [termsAccepted, setTermsAccepted] = useState(false)
 
   const sanitizeInput = (text: string): string => encodeHTMLEntities(cleanScriptTags(text))
+
+  useEffect(() => {
+    if (currentUser) return
+    if (!supabase) {
+      router.push('/auth')
+      return
+    }
+    let cancelled = false
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled) return
+      if (user) {
+        const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.user_name || user.email?.split('@')[0] || 'Resident User'
+        dispatch(loginUser({
+          id: user.id,
+          name: displayName,
+          email: user.email || '',
+          role: 'visitor',
+        }))
+        setBootstrapping(false)
+      } else {
+        router.push('/auth')
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        router.push('/auth')
+      }
+    })
+    return () => { cancelled = true }
+  }, [currentUser, dispatch, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -81,14 +112,24 @@ export default function OnboardingPage() {
     }
 
     dispatch(loginUser({ ...currentUser, role }))
-    router.push('/dashboard')
+    const targetPath = safeNextPath(typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null)
+    router.push(targetPath)
   }
 
-  useEffect(() => {
-    if (!currentUser) router.push('/auth')
-  }, [currentUser, router])
-
-  if (!currentUser) return null
+  if (bootstrapping || !currentUser) {
+    return (
+      <div style={containerStyle}>
+        <div style={overlayStyle} />
+        <div
+          className="responsive-glass-panel"
+          style={{ ...glassPanelStyle, maxWidth: '420px', textAlign: 'center', padding: '2.5rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}
+        >
+          <Loader size={28} className="animate-spin text-gold-primary" />
+          <p style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 600 }}>Loading your account…</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={containerStyle}>
@@ -101,7 +142,7 @@ export default function OnboardingPage() {
           <h2 style={logoStyle}>ONE MORE STEP</h2>
           <p style={taglineStyle}>Complete your Resident profile</p>
           <p style={{ fontSize: '0.75rem', color: 'var(--foreground)', opacity: 0.6, marginTop: '0.5rem' }}>
-            You signed in with an existing account — tell us a bit about yourself so
+            You signed in with your Google or Facebook account — tell us a bit about yourself so
             The Resident works properly for you. This only takes a moment.
           </p>
         </div>
@@ -123,8 +164,8 @@ export default function OnboardingPage() {
               style={selectStyle}
             >
               <option value="" disabled>Select your role…</option>
-              <option value="tenant">Tenant</option>
-              <option value="landlord">Landlord</option>
+              <option value="tenant">Tenant (Looking for a room / roommate)</option>
+              <option value="landlord">Landlord (Renting out property / rooms)</option>
             </select>
           </div>
 

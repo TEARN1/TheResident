@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID, GUEST_USER_ID } from '../../store'
 import { supabase } from '../../utils/supabase'
-import { fetchEnabledProviders, isOAuthFailure, OAUTH_FAILURE_MESSAGES } from '../../utils/oauth'
+import { fetchEnabledProviders, isOAuthFailure, getOAuthFailureMessage } from '../../utils/oauth'
 import { performLogin } from '../../utils/authLogin'
-import { Shield, CheckCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react'
+import { Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader } from 'lucide-react'
+import { playTactileSound } from '../../utils/tactileSounds'
 import { safeNextPath } from '../../utils/launch'
 import { track } from '../../utils/track'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
@@ -103,9 +104,10 @@ export default function AuthPage() {
       // A guest tapping "Sign up to request this room" lands on Sign Up.
       setActiveTab('signup')
     }
-    // Back from Facebook without a session: say why (see /auth/callback).
+    // Back from Google/Facebook without a session: say why (see /auth/callback).
     const oauth = params.get('oauth')
-    if (isOAuthFailure(oauth)) setErrorMessage(OAUTH_FAILURE_MESSAGES[oauth])
+    const oauthProvider = params.get('provider')
+    if (isOAuthFailure(oauth)) setErrorMessage(getOAuthFailureMessage(oauth, oauthProvider))
   }, [])
 
   // Social sign-in (Google & Facebook) — enabled by default now that both
@@ -296,8 +298,29 @@ export default function AuthPage() {
     }
     setErrorMessage(null)
     setOauthLoading(provider)
-    const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined
-    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo } })
+    playTactileSound('click')
+    track('visit', { action: 'oauth_start', provider })
+
+    const nextPath = afterAuthPath()
+    const queryParts: string[] = [`provider=${provider}`]
+    if (nextPath && nextPath !== '/dashboard') {
+      queryParts.push(`next=${encodeURIComponent(nextPath)}`)
+    }
+    if (role) {
+      queryParts.push(`role=${encodeURIComponent(role)}`)
+    }
+    const queryString = `?${queryParts.join('&')}`
+    const redirectTo = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback${queryString}`
+      : undefined
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo,
+        queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined
+      }
+    })
     if (error) {
       setErrorMessage(error.message)
       setOauthLoading(null)
@@ -616,7 +639,13 @@ export default function AuthPage() {
                   <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
                   <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
                 </svg>
-                <span>{oauthLoading === 'google' ? 'Connecting…' : 'Google'}</span>
+                {oauthLoading === 'google' ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <Loader size={14} className="animate-spin" /> Connecting…
+                  </span>
+                ) : (
+                  <span>Google</span>
+                )}
               </button>
             )}
             {facebookOn && (
@@ -629,7 +658,13 @@ export default function AuthPage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                 </svg>
-                <span>{oauthLoading === 'facebook' ? 'Connecting…' : 'Facebook'}</span>
+                {oauthLoading === 'facebook' ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <Loader size={14} className="animate-spin" /> Connecting…
+                  </span>
+                ) : (
+                  <span>Facebook</span>
+                )}
               </button>
             )}
           </div>

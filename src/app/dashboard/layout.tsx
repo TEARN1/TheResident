@@ -141,16 +141,18 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               .from('res_profiles')
               .select('role, bio, created_at')
               .eq('id', user.id)
-              .single()
+              .maybeSingle()
             if (!cancelled) {
+              const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.user_name || user.email?.split('@')[0] || 'Resident User'
+              const role = (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor'
               dispatch(loginUser({
                 id: user.id,
-                name: user.user_metadata?.name || 'Resident User',
+                name: displayName,
                 email: user.email || '',
-                role: (dbProfile?.role || 'visitor') as 'tenant' | 'landlord' | 'visitor',
+                role,
                 createdAt: dbProfile?.created_at || undefined
               }))
-              if ((dbProfile?.role || 'visitor') === 'visitor' && !dbProfile?.bio) {
+              if (role === 'visitor' && !dbProfile?.bio) {
                 router.push('/auth/onboarding')
               }
               return

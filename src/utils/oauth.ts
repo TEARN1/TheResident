@@ -1,4 +1,4 @@
-// Social login (Continue with Facebook) helpers, shared by the sign-in page
+// Social login (Continue with Google / Facebook) helpers, shared by the sign-in page
 // and the /auth/callback route.
 
 export type OAuthFailure = 'cancelled' | 'no_email' | 'failed'
@@ -23,13 +23,28 @@ export const OAUTH_FAILURE_MESSAGES: Record<OAuthFailure, string> = {
   failed: "Facebook login didn't finish. Please try again, or use your email."
 }
 
+/**
+ * Provider-specific message explaining why social sign-in failed.
+ */
+export function getOAuthFailureMessage(failure: OAuthFailure, provider?: string | null): string {
+  const name = provider === 'google' ? 'Google' : provider === 'facebook' ? 'Facebook' : 'Social'
+  switch (failure) {
+    case 'cancelled':
+      return `${name} login was cancelled. You can try again, or use your email.`
+    case 'no_email':
+      return `Your ${name} account didn't share an email address, which we need for your account. Sign up with your email instead.`
+    case 'failed':
+      return `${name} login didn't finish. Please try again, or use your email.`
+  }
+}
+
 export function isOAuthFailure(value: string | null): value is OAuthFailure {
   return value === 'cancelled' || value === 'no_email' || value === 'failed'
 }
 
 /**
  * Which social logins are switched on for this Supabase project, from the
- * public /auth/v1/settings endpoint. The Facebook button is shown only when
+ * public /auth/v1/settings endpoint. The Google and Facebook buttons are shown only when
  * this says so: while the provider is off, tapping it opened a bare
  * "provider is not enabled" error page from Supabase.
  */

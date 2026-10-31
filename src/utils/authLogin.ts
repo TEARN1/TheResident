@@ -75,14 +75,15 @@ export async function performLogin({ email, password, dispatch, failedAttempts, 
     .from('res_profiles')
     .select('role, bio, created_at')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   const userRole = dbProfile?.role || fallbackRole || 'visitor'
+  const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.user_name || user.email?.split('@')[0] || 'Resident User'
 
   dispatch(resetFailedAttempts(email))
   dispatch(loginUser({
     id: user.id,
-    name: user.user_metadata?.name || 'Resident User',
+    name: displayName,
     email: user.email!,
     role: userRole as 'tenant' | 'landlord' | 'visitor',
     createdAt: dbProfile?.created_at || undefined
