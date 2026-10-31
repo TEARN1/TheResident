@@ -1084,6 +1084,58 @@ const initialNotices: NoticeEvent[] = [
     rsvps: ['roommate-demo-1'],
     vibes: [],
     echos: []
+  },
+  {
+    id: 'notice-dec-1',
+    title: 'Ke Dezemba Midrand & Tembisa Neighbourhood Street Market',
+    description: 'Festive food stalls, live acoustic soul, local craft stands, and family games along the Waterfall & Birch Acres greenbelt.',
+    type: 'event',
+    postedBy: 'Naledi M.',
+    postedById: 'landlord-demo-1',
+    timestamp: new Date().toISOString(),
+    eventDate: '2026-12-05T11:00:00+02:00',
+    rsvps: ['roommate-demo-1', 'roommate-demo-2'],
+    vibes: ['roommate-demo-1'],
+    echos: []
+  },
+  {
+    id: 'notice-dec-2',
+    title: 'Day of Reconciliation Suburb Chillas & Potjiekos Cook-Off',
+    description: 'Community potjiekos challenge, dominoes & 30 Seconds tables, and sunset amapiano sets at Ivory Park & Centurion lawns.',
+    type: 'event',
+    postedBy: 'Thabo K.',
+    postedById: 'landlord-demo-2',
+    timestamp: new Date().toISOString(),
+    eventDate: '2026-12-16T12:00:00+02:00',
+    rsvps: ['roommate-demo-1', 'roommate-demo-3'],
+    vibes: ['roommate-demo-2'],
+    echos: []
+  },
+  {
+    id: 'notice-dec-3',
+    title: 'Christmas Eve Candlelight Carols & Family Picnic',
+    description: 'Bring camping chairs and picnic baskets for live brass & choir carols under the stars with the whole complex.',
+    type: 'event',
+    postedBy: 'Naledi M.',
+    postedById: 'landlord-demo-1',
+    timestamp: new Date().toISOString(),
+    eventDate: '2026-12-24T17:30:00+02:00',
+    rsvps: ['roommate-demo-2'],
+    vibes: ['roommate-demo-1', 'roommate-demo-2'],
+    echos: []
+  },
+  {
+    id: 'notice-dec-4',
+    title: 'New Year’s Eve Safe-Street Block Watch & Crossover Countdown',
+    description: 'Coordinated gate patrol schedule, shared transport ride-share signups for December festivals, and midnight courtyard countdown.',
+    type: 'event',
+    postedBy: 'Thabo K.',
+    postedById: 'landlord-demo-2',
+    timestamp: new Date().toISOString(),
+    eventDate: '2026-12-31T20:00:00+02:00',
+    rsvps: ['roommate-demo-1', 'roommate-demo-2', 'roommate-demo-3'],
+    vibes: ['roommate-demo-1'],
+    echos: []
   }
 ]
 
@@ -2081,7 +2133,7 @@ export const fetchSupabaseData = createAsyncThunk(
     const fetchNotices = async () => {
       const { data, error } = await supabase!.from('res_notice_events').select('*').limit(200)
       if (error) return markFailed('res_notice_events', error.message)
-      if (!data) return
+      if (!data || data.length === 0) return
       dispatch(setNotices(data.map(item => ({
         id: item.id,
         title: item.title,

@@ -108,18 +108,39 @@ export default function AuthPage() {
     if (isOAuthFailure(oauth)) setErrorMessage(OAUTH_FAILURE_MESSAGES[oauth])
   }, [])
 
-  // "Continue with Facebook" only once Facebook login is switched on for
-  // the project (Supabase → Authentication → Providers). Until then the
-  // button led to a bare "provider is not enabled" error page.
-  const [facebookOn, setFacebookOn] = useState(false)
+  // Social sign-in (Google & Facebook) — enabled by default now that both
+  // providers are configured in Supabase, with live settings check fallback.
+  const [googleOn, setGoogleOn] = useState(true)
+  const [facebookOn, setFacebookOn] = useState(true)
   useEffect(() => {
+    // Handle implicit OAuth hash tokens (#access_token=...&refresh_token=...)
+    const hash = window.location.hash || ''
+    if (hash.includes('access_token=') && hash.includes('refresh_token=') && supabase) {
+      const hashParams = new URLSearchParams(hash.replace(/^#/, ''))
+      const access_token = hashParams.get('access_token')
+      const refresh_token = hashParams.get('refresh_token')
+      if (access_token && refresh_token) {
+        supabase.auth.setSession({ access_token, refresh_token }).then(async ({ data, error }) => {
+          if (!error && data?.session) {
+            try { await supabase!.rpc('ensure_res_profile') } catch {}
+            try { window.history.replaceState(null, '', window.location.pathname + window.location.search) } catch {}
+            router.push(afterAuthPath())
+          }
+        }).catch(() => {})
+      }
+    }
+
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (!url || !key) return
     let cancelled = false
-    fetchEnabledProviders(url, key).then(p => { if (!cancelled) setFacebookOn(p.facebook === true) })
+    fetchEnabledProviders(url, key).then(p => {
+      if (cancelled) return
+      if (typeof p.google === 'boolean') setGoogleOn(p.google)
+      if (typeof p.facebook === 'boolean') setFacebookOn(p.facebook)
+    })
     return () => { cancelled = true }
-  }, [])
+  }, [router])
   const [passwordStrength, setPasswordStrength] = useState<{strong: boolean; score: number; feedback: string[]} | null>(null)
 
   const handlePasswordChange = (val: string) => {
@@ -337,6 +358,15 @@ export default function AuthPage() {
         style={{ ...glassPanelStyle, maxWidth: '420px' }}
       >
         <div style={{ ...headerStyle, marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.65rem' }}>
+            <Image
+              src="/logo.png"
+              alt="The Resident"
+              width={48}
+              height={48}
+              style={{ borderRadius: '12px', objectFit: 'contain' }}
+            />
+          </div>
           <h2 style={{ ...logoStyle, fontSize: 'clamp(1.5rem, 7vw, 2.2rem)', letterSpacing: '3px' }}>THE RESIDENT</h2>
           <p style={{ ...taglineStyle, textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
             {activeTab === 'login' ? 'Welcome back' : 'Create your free account'}
@@ -565,21 +595,44 @@ export default function AuthPage() {
           </form>
         )}
 
-        {facebookOn && (<>
+        {(googleOn || facebookOn) && (<>
           <div style={socialDividerStyle}>
             <span style={socialDividerLineStyle} />
-            <span style={socialDividerTextStyle}>or</span>
+            <span style={socialDividerTextStyle}>or continue with</span>
             <span style={socialDividerLineStyle} />
           </div>
 
-          <button
-            type="button"
-            onClick={() => handleOAuth('facebook')}
-            disabled={oauthLoading !== null}
-            style={{ ...oauthBtnStyle, width: '100%' }}
-          >
-            {oauthLoading === 'facebook' ? 'Connecting…' : 'Continue with Facebook'}
-          </button>
+          <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+            {googleOn && (
+              <button
+                type="button"
+                onClick={() => handleOAuth('google')}
+                disabled={oauthLoading !== null}
+                style={{ ...oauthBtnStyle, gap: '0.55rem' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/>
+                  <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+                </svg>
+                <span>{oauthLoading === 'google' ? 'Connecting…' : 'Google'}</span>
+              </button>
+            )}
+            {facebookOn && (
+              <button
+                type="button"
+                onClick={() => handleOAuth('facebook')}
+                disabled={oauthLoading !== null}
+                style={{ ...oauthBtnStyle, gap: '0.55rem' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                <span>{oauthLoading === 'facebook' ? 'Connecting…' : 'Facebook'}</span>
+              </button>
+            )}
+          </div>
         </>)}
 
         <button type="button" onClick={handleVisitorLogin} style={guestLinkStyle}>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   AlertCircle,
   Briefcase,
+  Calendar,
   Car,
   CheckCircle2,
   ExternalLink,
@@ -22,7 +23,13 @@ import { useSelector } from 'react-redux'
 import { RootState, isGuestUser } from '../../store'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { GRUVS } from '../../utils/sisterApps'
-import { fetchUpcomingGruvsEvents, formatGruvsEventWhen, type GruvsEvent } from '../../utils/gruvsEvents'
+import {
+  DECEMBER_HIGHLIGHT_EVENTS,
+  fetchDecemberGruvsEvents,
+  fetchUpcomingGruvsEvents,
+  formatGruvsEventWhen,
+  type GruvsEvent
+} from '../../utils/gruvsEvents'
 import { LAUNCH_AREA } from '../../utils/launch'
 
 function greeting(hour: number): string {
@@ -41,14 +48,24 @@ export default function HomeDashboard() {
 
   const [hour, setHour] = useState<number | null>(null)
   const [events, setEvents] = useState<GruvsEvent[]>([])
+  const [decemberEvents, setDecemberEvents] = useState<GruvsEvent[]>(DECEMBER_HIGHLIGHT_EVENTS.slice(0, 12))
+  const [decemberArea, setDecemberArea] = useState<string>('All')
+  const [showAllDecember, setShowAllDecember] = useState(false)
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of the device clock
     setHour(new Date().getHours())
     let cancelled = false
     fetchUpcomingGruvsEvents().then(list => { if (!cancelled) setEvents(list.slice(0, 3)) }).catch(() => {})
+    fetchDecemberGruvsEvents(24).then(list => { if (!cancelled && list.length > 0) setDecemberEvents(list) }).catch(() => {})
     return () => { cancelled = true }
   }, [])
+
+  const decemberAreas = ['All', 'Midrand', 'Tembisa', 'Ivory Park', 'Centurion', 'Kempton Park', 'Soweto', 'Rosebank', 'Braamfontein', 'Pretoria']
+  const filteredDecember = decemberArea === 'All'
+    ? decemberEvents
+    : decemberEvents.filter(e => (e.city || '').toLowerCase() === decemberArea.toLowerCase())
+  const visibleDecember = showAllDecember ? filteredDecember : filteredDecember.slice(0, 6)
 
   const guest = isGuestUser(currentUser)
   const firstName = !guest && currentUser?.name ? currentUser.name.split(' ')[0] : null
@@ -208,6 +225,87 @@ export default function HomeDashboard() {
               </Link>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* December ("Ke Dezemba") Events Showcase */}
+      {decemberEvents.length > 0 && (
+        <section className="glass-panel p-4 sm:p-5 space-y-3.5 border border-gold-primary/30">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h2 className="m-0 text-sm sm:text-base font-black text-gold-primary flex items-center gap-2">
+                <Calendar size={16} className="text-gold-primary" /> December Events &amp; Ke Dezemba Lineup
+              </h2>
+              <p className="m-0 mt-0.5 text-xs text-gray-400">
+                Planning your festive season? Find verified rooms, short stays, or lift clubs near December&apos;s biggest events.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/community?tab=vibemap"
+              onClick={() => playTactileSound('tab')}
+              className="no-underline text-xs font-bold text-gold-primary hover:underline shrink-0"
+            >
+              View all on Live Map &rarr;
+            </Link>
+          </div>
+
+          {/* Suburb / Hub Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            {decemberAreas.map(area => (
+              <button
+                key={area}
+                type="button"
+                onClick={() => { setDecemberArea(area); playTactileSound('tab') }}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer border ${
+                  decemberArea === area
+                    ? 'bg-gold-primary text-black border-gold-primary'
+                    : 'bg-black/40 text-gray-300 border-white/10 hover:border-gold-primary/40'
+                }`}
+              >
+                {area}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {visibleDecember.map(ev => (
+              <Link
+                key={ev.id}
+                href={`/dashboard/housing?event=${ev.id}`}
+                onClick={() => playTactileSound('tab')}
+                className="no-underline flex flex-col justify-between gap-2 p-3.5 rounded-xl bg-black/50 border border-white/10 hover:border-gold-primary/50 transition-all"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-gold-primary/15 text-gold-primary">
+                      {ev.city || 'Gauteng'}
+                    </span>
+                    <span className="text-[11px] font-semibold text-gray-300">
+                      {formatGruvsEventWhen(ev.startsAt)}
+                    </span>
+                  </div>
+                  <span className="block text-sm font-bold text-white leading-snug">{ev.title}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
+                  <span className="inline-flex items-center gap-1 text-[11px] text-gray-400 truncate">
+                    <MapPin size={11} className="text-gold-primary shrink-0" />
+                    <span className="truncate">{ev.venue || ev.city || 'Gauteng'}</span>
+                  </span>
+                  <span className="text-[11px] font-bold text-gold-primary shrink-0">Find stay &rarr;</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {filteredDecember.length > 6 && (
+            <button
+              type="button"
+              onClick={() => setShowAllDecember(v => !v)}
+              className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-200 cursor-pointer transition-all"
+            >
+              {showAllDecember ? 'Show fewer December events' : `Show all ${filteredDecember.length} December events`}
+            </button>
+          )}
         </section>
       )}
     </div>
