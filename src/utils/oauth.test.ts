@@ -1,5 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { oauthFailureReason, isOAuthFailure, OAUTH_FAILURE_MESSAGES, getOAuthFailureMessage } from './oauth'
 
 test('a cancelled Facebook login is reported as cancelled', () => {
@@ -28,4 +30,16 @@ test('getOAuthFailureMessage provides provider-aware messaging', () => {
   assert.strictEqual(getOAuthFailureMessage('cancelled', 'facebook'), 'Facebook login was cancelled. You can try again, or use your email.')
   assert.strictEqual(getOAuthFailureMessage('no_email', 'google'), "Your Google account didn't share an email address, which we need for your account. Sign up with your email instead.")
   assert.strictEqual(getOAuthFailureMessage('failed', null), "Social login didn't finish. Please try again, or use your email.")
+})
+
+// Sign-ins finish in /auth/callback (?code=, PKCE). Taking a session from
+// tokens in the address would let anyone send a link that signs a user into
+// the sender's account.
+test('no page takes a session from tokens in the address', () => {
+  const files = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? files(join(dir, e.name)) : /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name) ? [join(dir, e.name)] : []
+    )
+  const offenders = files('src').filter((f) => /auth\.setSession\(/.test(readFileSync(f, 'utf8')))
+  assert.deepStrictEqual(offenders, [])
 })
