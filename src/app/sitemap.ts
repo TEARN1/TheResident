@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { siteUrl } from './site-url'
 import { infoLinks, INFO_PAGES_UPDATED } from './info-links'
-import { listDirectory, distinct, latest, DEFAULT_AREAS, type DirectoryEntry } from './public-services'
+import { listDirectory, distinct, latest, DEFAULT_AREAS, CAMPUSES, type DirectoryEntry } from './public-services'
 import { listPublicListings, roomImages } from './public-listings'
 
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
@@ -66,6 +66,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   })
 
+  const campusPages: MetadataRoute.Sitemap = [
+    { url: `${base}/campus`, lastModified: INFO_PAGES_UPDATED, changeFrequency: 'weekly', priority: 0.85 },
+    ...CAMPUSES.map(c => ({
+      url: `${base}/campus/${c.slug}`,
+      lastModified: INFO_PAGES_UPDATED,
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    })),
+  ]
+
   return [
     { url: `${base}/`, lastModified: latest(entries) ?? INFO_PAGES_UPDATED, changeFrequency: 'daily', priority: 1 },
     { url: `${base}/auth`, lastModified: INFO_PAGES_UPDATED, changeFrequency: 'monthly', priority: 0.5 },
@@ -80,6 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           }),
     ...categoryPages,
     ...areaPages,
+    ...campusPages,
     ...listingPages,
     ...roomPages,
   ]

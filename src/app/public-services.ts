@@ -223,3 +223,15 @@ export const DEFAULT_AREAS = [
   { slug: 'sandton', name: 'Sandton', city: 'Johannesburg' },
   { slug: 'rosebank', name: 'Rosebank', city: 'Johannesburg' },
 ] as const;
+
+
+export const CAMPUSES = [
+  { slug: 'wits-braamfontein', name: 'Wits University (Braamfontein)', areaSlug: 'braamfontein', city: 'Johannesburg', desc: 'Verified student rooms, shared flats, and communes near Wits East and West Campus in Braamfontein.' },
+  { slug: 'uj-auckland-park', name: 'University of Johannesburg (UJ Auckland Park)', areaSlug: 'braamfontein', city: 'Johannesburg', desc: 'Affordable student accommodation, single rooms, and cottages near UJ APK and APB campuses.' },
+  { slug: 'up-hatfield', name: 'University of Pretoria (UP Hatfield)', areaSlug: 'hatfield', city: 'Pretoria', desc: 'Secure communes, student housing, and private bachelor flats near UP main campus in Hatfield and Hillcrest.' },
+  { slug: 'uct-rondebosch', name: 'University of Cape Town (UCT Rondebosch)', areaSlug: 'rondebosch', city: 'Cape Town', desc: 'Student apartments, digsmates, and private rentals within walking distance of UCT and Jammie Shuttle stops.' },
+  { slug: 'stellenbosch-central', name: 'Stellenbosch University', areaSlug: 'stellenbosch', city: 'Cape Town', desc: 'Student rooms, garden cottages, and shared campus accommodation in central Stellenbosch.' },
+  { slug: 'ukzn-durban', name: 'UKZN (Howard College & Westville)', areaSlug: 'durban-central', city: 'Durban', desc: 'Student accommodation, shared residences, and flats near UKZN campuses.' },
+  { slug: 'tut-pretoria', name: 'Tshwane University of Technology (TUT)', areaSlug: 'sunnyside', city: 'Pretoria', desc: 'Budget-friendly student communes and rooms near TUT campuses in Pretoria.' },
+  { slug: 'uwc-bellville', name: 'University of the Western Cape (UWC Bellville)', areaSlug: 'bellville', city: 'Cape Town', desc: 'Student accommodation, shared flats, and verified residences near UWC and CPUT Bellville.' },
+] as const;
