@@ -203,3 +203,23 @@ export const VENDOR_KIND_LABELS: Record<string, string> = {
 export function servicePlace(s: { suburb: string | null; city: string | null }): string {
   return [s.suburb, s.city].filter(Boolean).join(', ')
 }
+
+
+export const DEFAULT_AREAS = [
+  { slug: 'soweto', name: 'Soweto', city: 'Johannesburg' },
+  { slug: 'tembisa', name: 'Tembisa', city: 'Johannesburg' },
+  { slug: 'mamelodi', name: 'Mamelodi', city: 'Pretoria' },
+  { slug: 'midrand', name: 'Midrand', city: 'Johannesburg' },
+  { slug: 'braamfontein', name: 'Braamfontein', city: 'Johannesburg' },
+  { slug: 'hatfield', name: 'Hatfield', city: 'Pretoria' },
+  { slug: 'sunnyside', name: 'Sunnyside', city: 'Pretoria' },
+  { slug: 'rondebosch', name: 'Rondebosch', city: 'Cape Town' },
+  { slug: 'stellenbosch', name: 'Stellenbosch', city: 'Cape Town' },
+  { slug: 'bellville', name: 'Bellville', city: 'Cape Town' },
+  { slug: 'durban-central', name: 'Durban Central', city: 'Durban' },
+  { slug: 'gqeberha', name: 'Gqeberha', city: 'Port Elizabeth' },
+  { slug: 'bloemfontein', name: 'Bloemfontein', city: 'Bloemfontein' },
+  { slug: 'centurion', name: 'Centurion', city: 'Pretoria' },
+  { slug: 'sandton', name: 'Sandton', city: 'Johannesburg' },
+  { slug: 'rosebank', name: 'Rosebank', city: 'Johannesburg' },
+] as const;

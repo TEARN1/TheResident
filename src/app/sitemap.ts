@@ -1,15 +1,15 @@
 import type { MetadataRoute } from 'next'
 import { siteUrl } from './site-url'
 import { infoLinks, INFO_PAGES_UPDATED } from './info-links'
-import { listDirectory, distinct, latest, type DirectoryEntry } from './public-services'
+import { listDirectory, distinct, latest, DEFAULT_AREAS, type DirectoryEntry } from './public-services'
 import { listPublicListings, roomImages } from './public-listings'
 
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
 // Only public pages belong here. Everything under /dashboard needs a login,
 // so search engines could not crawl it anyway. Everything else comes from
-// the database (only listings whose owners opted in to being shown), and a
-// category or area page is listed only while it has at least one listing.
+// the database (only listings whose owners opted in to being shown), plus
+// South African community area hubs.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl()
   const [entries, roomListings] = await Promise.all([
@@ -20,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const hub = (path: string, group: DirectoryEntry[], priority: number): MetadataRoute.Sitemap[number] => ({
     url: `${base}${path}`,
-    lastModified: latest(group),
+    lastModified: latest(group) ?? INFO_PAGES_UPDATED,
     changeFrequency: 'weekly',
     priority,
   })
@@ -39,7 +39,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  const areaPages = distinct(entries, e => e.areaSlug).map(area =>
+  const allAreaSlugs = Array.from(new Set([
+    ...distinct(entries, e => e.areaSlug),
+    ...DEFAULT_AREAS.map(a => a.slug)
+  ])).filter((s): s is string => !!s)
+
+  const areaPages = allAreaSlugs.map(area =>
     hub(`/area/${area}`, entries.filter(e => e.areaSlug === area), 0.7))
 
   const listingPages: MetadataRoute.Sitemap = entries.map(e => ({
