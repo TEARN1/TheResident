@@ -240,13 +240,24 @@ export default function HomeDashboard() {
                 Planning your festive season? Find verified rooms, short stays, or lift clubs near December&apos;s biggest events.
               </p>
             </div>
-            <Link
-              href="/dashboard/community?tab=vibemap"
-              onClick={() => playTactileSound('tab')}
-              className="no-underline text-xs font-bold text-gold-primary hover:underline shrink-0"
-            >
-              View all on Live Map &rarr;
-            </Link>
+            <div className="flex items-center gap-3 shrink-0">
+              <a
+                href="https://thegruvs.com/events/ke-dezemba"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => playTactileSound('tab')}
+                className="no-underline text-xs font-bold text-gold-primary hover:underline"
+              >
+                Ke Dezemba Hub &rarr;
+              </a>
+              <Link
+                href="/dashboard/community?tab=vibemap"
+                onClick={() => playTactileSound('tab')}
+                className="no-underline text-xs font-bold text-gold-primary hover:underline"
+              >
+                Live Map &rarr;
+              </Link>
+            </div>
           </div>
 
           {/* Suburb / Hub Filter Pills */}
