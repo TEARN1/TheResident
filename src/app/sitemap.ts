@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { siteUrl } from './site-url'
 import { infoLinks, INFO_PAGES_UPDATED } from './info-links'
 import { listDirectory, distinct, latest, type DirectoryEntry } from './public-services'
+import { listPublicListings, roomImages } from './public-listings'
 
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
@@ -11,7 +12,10 @@ export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 // category or area page is listed only while it has at least one listing.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteUrl()
-  const entries = await listDirectory()
+  const [entries, roomListings] = await Promise.all([
+    listDirectory(),
+    listPublicListings()
+  ])
   const dynamicHubs = new Set(['/services', '/shops', '/area'])
 
   const hub = (path: string, group: DirectoryEntry[], priority: number): MetadataRoute.Sitemap[number] => ({
@@ -46,6 +50,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...(e.image ? { images: [e.image] } : {}),
   }))
 
+  const roomPages: MetadataRoute.Sitemap = roomListings.map(r => {
+    const imgs = roomImages(r)
+    return {
+      url: `${base}/rooms/${r.id}`,
+      lastModified: r.created_at ?? undefined,
+      changeFrequency: 'daily',
+      priority: 0.8,
+      ...(imgs.length > 0 ? { images: imgs } : {}),
+    }
+  })
+
   return [
     { url: `${base}/`, lastModified: latest(entries) ?? INFO_PAGES_UPDATED, changeFrequency: 'daily', priority: 1 },
     { url: `${base}/auth`, lastModified: INFO_PAGES_UPDATED, changeFrequency: 'monthly', priority: 0.5 },
@@ -61,5 +76,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...categoryPages,
     ...areaPages,
     ...listingPages,
+    ...roomPages,
   ]
 }

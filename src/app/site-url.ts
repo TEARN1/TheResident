@@ -5,5 +5,5 @@ const PRODUCTION_URL = 'https://theresidentcrew.com'
 export function siteUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL
   if (explicit) return explicit.replace(/\/+$/, '')
-  return process.env.NODE_ENV === 'production' ? PRODUCTION_URL : 'http://localhost:3000'
+  return PRODUCTION_URL
 }

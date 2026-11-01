@@ -28,6 +28,23 @@ export async function getPublicListing(id: string): Promise<PublicListingRow | n
   }
 }
 
+/** Lists all public room listings for sitemap and search engine discovery. */
+export async function listPublicListings(): Promise<PublicListingRow[]> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return []
+  try {
+    const res = await fetch(`${url}/rest/v1/res_public_listings?select=${PUBLIC_LISTING_COLUMNS}&order=created_at.desc&limit=250`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      next: { revalidate: ROOM_REVALIDATE_SECONDS },
+    })
+    if (!res.ok) return []
+    return (await res.json()) as PublicListingRow[]
+  } catch {
+    return []
+  }
+}
+
 /** "R4 500/mo" style price for the page and its preview text. */
 export function roomPrice(row: Pick<PublicListingRow, 'price' | 'currency' | 'listing_type'>): string {
   const amount = new Intl.NumberFormat('en-ZA', { style: 'currency', currency: row.currency || 'ZAR', maximumFractionDigits: 0 }).format(Number(row.price) || 0)
