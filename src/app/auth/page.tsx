@@ -115,23 +115,9 @@ export default function AuthPage() {
   const [googleOn, setGoogleOn] = useState(true)
   const [facebookOn, setFacebookOn] = useState(true)
   useEffect(() => {
-    // Handle implicit OAuth hash tokens (#access_token=...&refresh_token=...)
-    const hash = window.location.hash || ''
-    if (hash.includes('access_token=') && hash.includes('refresh_token=') && supabase) {
-      const hashParams = new URLSearchParams(hash.replace(/^#/, ''))
-      const access_token = hashParams.get('access_token')
-      const refresh_token = hashParams.get('refresh_token')
-      if (access_token && refresh_token) {
-        supabase.auth.setSession({ access_token, refresh_token }).then(async ({ data, error }) => {
-          if (!error && data?.session) {
-            try { await supabase!.rpc('ensure_res_profile') } catch {}
-            try { window.history.replaceState(null, '', window.location.pathname + window.location.search) } catch {}
-            router.push(afterAuthPath())
-          }
-        }).catch(() => {})
-      }
-    }
-
+    // Sign-ins finish in /auth/callback (?code=, PKCE). Never take a session
+    // from tokens in the address: anyone could send a link that signs a user
+    // into the sender's account (src/utils/oauth.test.ts).
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (!url || !key) return
