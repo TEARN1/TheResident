@@ -70,6 +70,15 @@ export default function RootLayout({
               // would cost readability or speed: the device asks for less
               // transparency or forced colours, Data Saver is on, the browser
               // cannot blur, or the device is slow (2 GB or 2 cores or fewer).
+              // The one message in the console (production drops every
+              // other console call), for anyone told to paste something.
+              try {
+                if (location.hostname !== 'localhost') {
+                  var out = window.console;
+                  out.log('%cStop', 'font-size:28px;font-weight:700;color:#e11d48');
+                  out.log('This is a tool for developers. If someone told you to copy or paste something here, it is a scam that can give them your account. Close this window.');
+                }
+              } catch (e) {}
               try {
                 var m = function (q) { return window.matchMedia && window.matchMedia(q).matches; };
                 var n = navigator, c = n.connection || {};
@@ -103,9 +112,9 @@ export default function RootLayout({
                     reloaded = true;
                     window.location.reload();
                   });
-                  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(function(err) {
-                    console.log('SW registration failed: ', err);
-                  });
+                  // A failed registration just means no offline copy; the
+                  // public console stays empty.
+                  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(function() {});
                 });
               }
             `
