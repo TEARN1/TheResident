@@ -66,6 +66,20 @@ export default function RootLayout({
               } catch (e) {
                 document.documentElement.setAttribute('data-theme', 'minimal-green');
               }
+              // Glass is the default look. Surfaces turn solid where it
+              // would cost readability or speed: the device asks for less
+              // transparency or forced colours, Data Saver is on, the browser
+              // cannot blur, or the device is slow (2 GB or 2 cores or fewer).
+              try {
+                var m = function (q) { return window.matchMedia && window.matchMedia(q).matches; };
+                var n = navigator, c = n.connection || {};
+                var blur = window.CSS && CSS.supports && (CSS.supports('backdrop-filter', 'blur(1px)') || CSS.supports('-webkit-backdrop-filter', 'blur(1px)'));
+                var slow = (n.deviceMemory && n.deviceMemory <= 2) || (n.hardwareConcurrency && n.hardwareConcurrency <= 2);
+                var solid = !blur || slow || c.saveData || m('(prefers-reduced-transparency: reduce)') || m('(forced-colors: active)');
+                document.documentElement.setAttribute('data-glass', solid ? 'off' : 'on');
+              } catch (e) {
+                document.documentElement.setAttribute('data-glass', 'on');
+              }
             `
           }}
         />
