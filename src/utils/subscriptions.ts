@@ -1,10 +1,11 @@
 // Subscription reads/checkout — server-authoritative. res_subscriptions is
-// only ever written by the Paystack webhook edge function (service_role);
+// only ever written by the payment webhook (service_role);
 // this file never writes tier/status directly, it only reads and kicks off
-// checkout. Pay-for-priority, not pay-to-play: a free provider is always
+// PayFast checkout. Pay-for-priority, not pay-to-play: a free provider is always
 // fully listed and bookable, paying only buys speed/visibility (see the
 // product plan for the full reasoning).
 import { supabase } from './supabase'
+import type { SelfServePaymentItem } from './payfast'
 
 export type ProviderTier = 'priority' | 'premium' | null
 
@@ -47,17 +48,32 @@ export async function hasHouseholdPlus(): Promise<boolean> {
   return !!data
 }
 
-/** Starts a Paystack checkout via the edge function; returns the URL to redirect to. */
+/** Starts a PayFast checkout via the Next.js API route; returns the URL to redirect to. */
 export async function startCheckout(
-  item: 'priority' | 'premium' | 'plus' | 'verification_speedup' | 'market_boost' | 'room_boost' | 'notice_boost' | 'notice_extend_visibility',
-  targetId?: string
+  item: SelfServePaymentItem,
+  targetId?: string,
+  returnPath?: string
 ): Promise<{ url: string | null; error: string | null }> {
-  if (!supabase) return { url: null, error: 'Not connected' }
-  const { data, error } = await supabase.functions.invoke('paystack-checkout', { body: { item, targetId } })
-  if (error) return { url: null, error: error.message || 'Could not start checkout' }
-  if (data?.error === 'payments_not_configured') {
-    return { url: null, error: "Payments aren't set up yet — try again soon." }
+  try {
+    const res = await fetch('/api/payfast/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item, targetId, returnPath })
+    })
+
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      return { url: null, error: data?.error || 'Could not start PayFast checkout.' }
+    }
+
+    if (!data?.url) {
+      return { url: null, error: 'Checkout did not return a payment URL.' }
+    }
+
+    return { url: data.url as string, error: null }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Could not start checkout'
+    return { url: null, error: message }
   }
-  if (!data?.authorization_url) return { url: null, error: 'Could not start checkout' }
-  return { url: data.authorization_url as string, error: null }
 }

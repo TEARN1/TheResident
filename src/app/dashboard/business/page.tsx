@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import {
   Briefcase, ShieldCheck, Crown, Zap, TrendingUp, Home, Wrench,
-  CheckCircle2, Circle, Star, Users, Clock
+  CheckCircle2, Circle, Star, Users, Clock, AlertCircle
 } from 'lucide-react'
 import { RootState, isGuestUser } from '../../../store'
 import { getMyProviderTier, type ProviderTier } from '../../../utils/subscriptions'
@@ -65,6 +66,9 @@ export default function BusinessPage() {
   if (guest || (!isLandlord && !isProvider)) {
     return (
       <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6 pb-28">
+        <Suspense fallback={null}>
+          <PaymentBanner />
+        </Suspense>
         <div className="glass-panel p-8 sm:p-10 text-center space-y-4">
           <Briefcase size={40} className="mx-auto text-gold-primary opacity-60" />
           <h2 className="text-xl font-bold text-white">Open Your Business, Political Party, or Civic Account</h2>
@@ -118,6 +122,9 @@ export default function BusinessPage() {
 
   return (
     <div className="p-3 sm:p-6 md:p-8 max-w-4xl mx-auto space-y-6 pb-28">
+      <Suspense fallback={null}>
+        <PaymentBanner />
+      </Suspense>
       <div className="glass-panel p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-1">
           <div className="p-2 bg-gold-primary/10 rounded-lg text-gold-primary"><Briefcase size={22} /></div>
@@ -290,4 +297,57 @@ function StatCard({ icon: Icon, label, value, accent }: { icon: React.ComponentT
       <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{label}</p>
     </div>
   )
+}
+
+function PaymentBanner() {
+  const searchParams = useSearchParams()
+  const payment = searchParams.get('payment')
+  const itemKey = searchParams.get('item')
+  const [dismissed, setDismissed] = useState(false)
+
+  if (dismissed || !payment) return null
+
+  const itemLabel = itemKey && PRICING[itemKey] ? PRICING[itemKey].label : itemKey || 'purchase'
+
+  if (payment === 'success') {
+    return (
+      <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-emerald-400">
+        <div className="flex items-center gap-3">
+          <CheckCircle2 size={20} className="shrink-0 text-emerald-400" />
+          <div>
+            <p className="text-sm font-bold text-white">Payment Received via PayFast!</p>
+            <p className="text-xs text-emerald-300">Your {itemLabel} has been activated. Thank you for supporting the community!</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setDismissed(true)}
+          className="text-xs font-bold text-emerald-400 hover:text-white px-2 py-1 rounded-lg bg-emerald-500/10"
+        >
+          Dismiss
+        </button>
+      </div>
+    )
+  }
+
+  if (payment === 'cancelled') {
+    return (
+      <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-amber-400">
+        <div className="flex items-center gap-3">
+          <AlertCircle size={20} className="shrink-0 text-amber-400" />
+          <div>
+            <p className="text-sm font-bold text-white">PayFast Checkout Cancelled</p>
+            <p className="text-xs text-amber-300">No charges were made to your account. You can retry at any time.</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setDismissed(true)}
+          className="text-xs font-bold text-amber-400 hover:text-white px-2 py-1 rounded-lg bg-amber-500/10"
+        >
+          Dismiss
+        </button>
+      </div>
+    )
+  }
+
+  return null
 }

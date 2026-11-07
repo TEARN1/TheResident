@@ -1,6 +1,6 @@
-// Single source of truth for every price in the app — the Paystack edge
-// functions, UpgradeButton, and any UI copy that mentions a rand amount all
-// read from here, so a price never has to be updated in more than one place.
+// Single source of truth for every price in the app — PayFast checkout &
+// ITN webhook routes, UpgradeButton, and any UI copy that mentions a rand
+// amount all read from here, so a price never has to be updated in more than one place.
 //
 // Pricing philosophy (see the product plan): consumer prices stay low enough
 // that paying is an impulse decision, not a barrier — the free floor always
@@ -20,7 +20,7 @@ export interface PriceEntry {
 }
 
 export const PRICING: Record<string, PriceEntry> = {
-  // ── Consumer subscriptions — self-serve via Paystack ──────────────────
+  // ── Consumer subscriptions — self-serve via PayFast ──────────────────
   priority: {
     amountZarCents: 5000,
     cadence: 'monthly',
@@ -43,7 +43,7 @@ export const PRICING: Record<string, PriceEntry> = {
     reasoning: 'Deliberately BELOW Priority — this is a comfort tier, not an income tier, and should read as an impulse "nice to have" rather than compete with the provider tiers for budget.'
   },
 
-  // ── One-off purchases — self-serve via Paystack, single charge ────────
+  // ── One-off purchases — self-serve via PayFast, single charge ────────
   verification_speedup: {
     amountZarCents: 2500,
     cadence: 'one_time',
