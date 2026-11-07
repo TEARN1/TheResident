@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare
+  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare, CheckCircle2, ArrowRight, ChevronRight, Package, Sparkles
 } from 'lucide-react'
 import {
   RootState,
@@ -52,6 +52,56 @@ interface TrustGate {
 // else in existing order. A free provider is never excluded, only later
 // in the list — the free floor is bookable, paying just buys placement.
 const TIER_RANK: Record<'premium' | 'priority' | 'none', number> = { premium: 0, priority: 1, none: 2 }
+
+const VEHICLE_PRESETS = [
+  { id: 'single_cab', label: 'Single-Cab Bakkie', sub: 'Up to 750kg (beds, fridges, couches)', basePrice: 350, icon: '🛻' },
+  { id: 'double_cab', label: 'Double-Cab Bakkie', sub: '1-Ton load bed + crew seats', basePrice: 420, icon: '🛻' },
+  { id: 'truck', label: '1.5-Ton / 2-Ton Flatbed', sub: 'Full room/flat moves & cargo', basePrice: 650, icon: '🚛' },
+  { id: 'trailer', label: 'Bakkie + Trailer', sub: 'Bulky loads, rubble & clearout', basePrice: 400, icon: '🚜' }
+] as const
+
+const CARGO_PRESETS = [
+  { id: 'furniture', label: 'Furniture & Appliances', icon: '🛋️' },
+  { id: 'relocation', label: 'Room / Flat Relocation', icon: '📦' },
+  { id: 'building', label: 'Building Materials / Hardware', icon: '🧱' },
+  { id: 'garden', label: 'Garden Waste & Rubble', icon: '🌿' },
+  { id: 'general', label: 'Store Delivery / Cargo', icon: '🛍️' }
+] as const
+
+const TIMING_PRESETS = [
+  { id: 'asap', label: 'Today ASAP', sub: 'Urgent dispatch' },
+  { id: 'tomorrow_am', label: 'Tomorrow Morning', sub: '08:00 - 12:00' },
+  { id: 'tomorrow_pm', label: 'Tomorrow Afternoon', sub: '12:00 - 17:00' },
+  { id: 'weekend', label: 'This Weekend', sub: 'Saturday or Sunday' }
+] as const
+
+function parseBakkieMessage(msg: string) {
+  const parts = msg.split('|').map(s => s.trim())
+  let vehicle = 'Bakkie Dispatch'
+  let cargo = 'Cargo'
+  let route = ''
+  let timing = 'ASAP'
+  let fare = ''
+  let note = ''
+
+  for (const p of parts) {
+    if (p.includes('BAKKIE REQUEST:')) {
+      vehicle = p.replace('🛻 BAKKIE REQUEST:', '').trim()
+    } else if (p.startsWith('From:')) {
+      route = p
+    } else if (p.startsWith('When:')) {
+      timing = p.replace('When:', '').trim()
+    } else if (p.startsWith('Est. Fare:') || p.startsWith('Est:')) {
+      fare = p
+    } else if (p.startsWith('Note:')) {
+      note = p.replace('Note:', '').trim()
+    } else if (!route && !fare && !note && p.length > 0 && !p.includes('Helpers:')) {
+      cargo = p
+    }
+  }
+
+  return { vehicle, cargo, route, timing, fare, note }
+}
 
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
