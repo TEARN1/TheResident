@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#051F20</color>
+    <color name="colorPrimaryDark">#051F20</color>
+    <color name="navigationColor">#051F20</color>
+    <color name="navigationColorDark">#051F20</color>
+    <color name="backgroundColor">#051F20</color>
+    <color name="ic_launcher_background">#051F20</color>
+</resources>

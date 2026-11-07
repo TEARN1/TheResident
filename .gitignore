@@ -43,3 +43,14 @@ next-env.d.ts
 
 # Supabase CLI local state
 supabase/.temp/
+
+
+# Android signing keys & build outputs (never commit upload keys)
+*.keystore
+*.jks
+key.properties
+local.properties
+*.aab
+/android/.gradle/
+/android/build/
+/android/app/build/

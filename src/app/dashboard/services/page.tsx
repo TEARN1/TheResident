@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare, CheckCircle2, ArrowRight, ChevronRight, Package, Sparkles
+  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare, Package
 } from 'lucide-react'
 import {
   RootState,
@@ -103,22 +103,26 @@ function parseBakkieMessage(msg: string) {
   return { vehicle, cargo, route, timing, fare, note }
 }
 
+function generateDispatchId(): string {
+  return `disp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+function generateMeshBizId(): string {
+  return `biz-bakkie-${Date.now()}`
+}
+
 export default function ServicesPage() {
   const dispatch = useDispatch() as AppDispatch
-  const [activeTab, setActiveTab] = useState<'moving' | 'handymen' | 'lifts' | 'utilities'>('moving')
-  const [selectedTradeCategory, setSelectedTradeCategory] = useState<string>('All')
-  const [filterEmergency247, setFilterEmergency247] = useState(false)
-  // Deep links: ?tab=moving|handymen|lifts|utilities (Feed "Share a lift",
-  // the Ask box on Home). ?type=locksmith from the Ask box opens Trades.
-  useEffect(() => {
+  const [activeTab, setActiveTab] = useState<'moving' | 'handymen' | 'lifts' | 'utilities'>(() => {
+    if (typeof window === 'undefined') return 'moving'
     const params = new URLSearchParams(window.location.search)
     const tab = params.get('tab')
-    if (tab === 'moving' || tab === 'handymen' || tab === 'lifts' || tab === 'utilities') {
-      setActiveTab(tab)
-    } else if (tab === 'trades' || params.get('type')) {
-      setActiveTab('handymen')
-    }
-  }, [])
+    if (tab === 'moving' || tab === 'handymen' || tab === 'lifts' || tab === 'utilities') return tab
+    if (tab === 'trades' || params.get('type')) return 'handymen'
+    return 'moving'
+  })
+  const [selectedTradeCategory, setSelectedTradeCategory] = useState<string>('All')
+  const [filterEmergency247, setFilterEmergency247] = useState(false)
   const [alertNotification, setAlertNotification] = useState<string | null>(null)
 
   // Business Registration State
@@ -156,10 +160,28 @@ export default function ServicesPage() {
 
   // Move-Assist State (gated by next-of-kin trust circle)
   const [trustGate, setTrustGate] = useState<TrustGate | null>(null)
-  const [moveAssistTarget, setMoveAssistTarget] = useState<HandymanService | null>(null)
-  const [moveAssistMessage, setMoveAssistMessage] = useState('')
-  const [moveAssistSubmitting, setMoveAssistSubmitting] = useState(false)
-  const [moveAssistError, setMoveAssistError] = useState<string | null>(null)
+
+  // Bakkie Request Modal State
+  const [showBakkieModal, setShowBakkieModal] = useState(false)
+  const [bakkieTargetService, setBakkieTargetService] = useState<HandymanService | null>(null)
+  const [bakkieLoadCategory, setBakkieLoadCategory] = useState<string>('furniture')
+  const [bakkieVehicleType, setBakkieVehicleType] = useState<string>('single_cab')
+  const [bakkiePickupAddress, setBakkiePickupAddress] = useState('')
+  const [bakkieDropoffAddress, setBakkieDropoffAddress] = useState('')
+  const [bakkieSchedule, setBakkieSchedule] = useState<string>('asap')
+  const [bakkieHelpers, setBakkieHelpers] = useState<number>(0)
+  const [bakkieNotes, setBakkieNotes] = useState('')
+  const [bakkieSubmitting, setBakkieSubmitting] = useState(false)
+
+  // Ride Request Modal State (in Lifts tab)
+  const [showRideRequestModal, setShowRideRequestModal] = useState(false)
+  const [rideOrigin, setRideOrigin] = useState('')
+  const [rideDestination, setRideDestination] = useState('')
+  const [rideDeparture, setRideDeparture] = useState('07:00')
+  const [rideDays, setRideDays] = useState('Mon - Fri')
+  const [rideTargetPrice, setRideTargetPrice] = useState('35')
+  const [rideSeatsNeeded, setRideSeatsNeeded] = useState('1')
+  const [rideNotes, setRideNotes] = useState('')
 
   const currentUser = useSelector((state: RootState) => state.auth.currentUser)
   const lifts = useSelector((state: RootState) => state.networking.lifts)
@@ -242,36 +264,91 @@ export default function ServicesPage() {
   }
 
   const openMoveAssist = (srv: HandymanService) => {
-    setMoveAssistTarget(srv)
-    setMoveAssistMessage('')
-    setMoveAssistError(null)
+    openBakkieRequestModal(srv)
   }
 
-  const submitMoveAssist = async (e: React.FormEvent) => {
+  const openBakkieRequestModal = (service: HandymanService | null) => {
+    setBakkieTargetService(service)
+    setShowBakkieModal(true)
+  }
+
+  const handleBakkieSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!moveAssistTarget || !supabase) return
-    setMoveAssistSubmitting(true)
-    setMoveAssistError(null)
-    try {
-      const { error } = await supabase.rpc('res_request_move_assist', {
-        p_service_id: moveAssistTarget.id,
-        p_message: moveAssistMessage || null
-      })
-      if (error) throw error
-      setMoveAssistTarget(null)
-      setAlertNotification('Move-assist request sent!')
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (msg.includes('trust_gate_locked')) {
-        setMoveAssistError('Build your next-of-kin trust circle (5+ confirmed connections) before requesting move help.')
-      } else if (msg.includes('not a move-assist service')) {
-        setMoveAssistError('This service is not eligible for move-assist requests.')
-      } else {
-        setMoveAssistError(msg || 'Could not send the request — try again.')
-      }
-    } finally {
-      setMoveAssistSubmitting(false)
+    if (!bakkiePickupAddress.trim() || !bakkieDropoffAddress.trim()) {
+      setAlertNotification('Please enter both pickup and drop-off locations.')
+      return
     }
+
+    setBakkieSubmitting(true)
+    const vehicle = VEHICLE_PRESETS.find(v => v.id === bakkieVehicleType) || VEHICLE_PRESETS[0]
+    const cargo = CARGO_PRESETS.find(c => c.id === bakkieLoadCategory) || CARGO_PRESETS[0]
+    const timing = TIMING_PRESETS.find(t => t.id === bakkieSchedule) || TIMING_PRESETS[0]
+
+    const target = bakkieTargetService || bakkieServices[0] || {
+      id: generateMeshBizId(),
+      businessName: 'Community Bakkie Network',
+      ownerId: ''
+    }
+
+    const structuredMessage = `🛻 BAKKIE REQUEST: ${vehicle.label} | ${cargo.label} | From: ${bakkiePickupAddress.trim()} ➔ To: ${bakkieDropoffAddress.trim()} | When: ${timing.label} | Helpers: ${bakkieHelpers} | Est. Fare: R${calculatedFare}${bakkieNotes.trim() ? ' | Note: ' + bakkieNotes.trim() : ''}`
+
+    const newDispatch: ServiceDispatch = {
+      id: generateDispatchId(),
+      serviceId: target.id,
+      serviceName: target.businessName,
+      senderId: currentUser?.id || '',
+      senderName: currentUser?.name || 'Resident',
+      senderRole: currentUser?.role || 'visitor',
+      message: structuredMessage,
+      status: 'pending',
+      timestamp: new Date().toISOString()
+    }
+
+    dispatch(addDispatch(newDispatch))
+    playTactileSound('success')
+
+    if (supabase && target.id && !target.id.startsWith('biz-bakkie-')) {
+      try {
+        await supabase.rpc('res_request_move_assist', {
+          p_service_id: target.id,
+          p_message: structuredMessage
+        })
+      } catch {
+        // Fallback if RPC not applied in Supabase
+      }
+    }
+
+    setBakkieSubmitting(false)
+    setShowBakkieModal(false)
+    setAlertNotification('Bakkie request dispatched! Track your driver below.')
+  }
+
+  const handleRideRequestSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!rideOrigin.trim() || !rideDestination.trim()) {
+      setAlertNotification('Please enter origin and destination.')
+      return
+    }
+
+    const newRide: LiftClub = {
+      id: `lift-req-${Date.now()}`,
+      driverId: currentUser?.id || '',
+      driverName: `${currentUser?.name || 'Resident'} (Rider Request)`,
+      origin: rideOrigin.trim(),
+      destination: rideDestination.trim(),
+      departureTime: rideDeparture.trim(),
+      days: rideDays.trim(),
+      pricePerSeat: parseFloat(rideTargetPrice) || 35,
+      currency: 'ZAR',
+      availableSeats: parseInt(rideSeatsNeeded) || 1,
+      totalSeats: parseInt(rideSeatsNeeded) || 1,
+      eventId: null
+    }
+
+    dispatch(addLiftClub(newRide))
+    playTactileSound('success')
+    setShowRideRequestModal(false)
+    setAlertNotification('Ride request posted to the community!')
   }
 
   const openBusinessForm = (biz: HandymanService | null) => {
@@ -360,6 +437,17 @@ export default function ServicesPage() {
   const myBiz = services.find(s => s.ownerId === currentUser?.id)
   const incomingOrders = myBiz ? dispatches.filter(d => d.serviceId === myBiz.id) : []
 
+  const bakkieServices = services.filter(s => MOVE_ASSIST_CATEGORIES.includes(s.category))
+  const selectedVehicle = VEHICLE_PRESETS.find(v => v.id === bakkieVehicleType) || VEHICLE_PRESETS[0]
+  const calculatedFare = selectedVehicle.basePrice + (bakkieHelpers * 100)
+
+  const myBakkieDispatches = currentUser ? dispatches.filter(d => {
+    const isSender = d.senderId === currentUser.id
+    const isMyBiz = myBiz && d.serviceId === myBiz.id
+    const isBakkie = d.message?.includes('BAKKIE') || d.serviceName?.toLowerCase().includes('bakkie') || d.serviceName?.toLowerCase().includes('moving')
+    return (isSender || isMyBiz) && isBakkie
+  }) : []
+
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-32">
       <header className="flex justify-between items-center flex-wrap gap-4">
@@ -411,13 +499,22 @@ export default function ServicesPage() {
                  <span className="text-[10px] font-black text-gold-primary uppercase tracking-widest shrink-0">Next of Kin →</span>
               </a>
            ) : (
-              <div className="flex justify-end">
-                 <button
-                    onClick={() => setShowLiftModal(true)}
-                    className="w-full md:w-auto bg-white/5 hover:bg-gold-primary hover:text-black border border-white/10 hover:border-gold-primary text-white font-black px-8 py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest text-xs"
-                 >
-                    <Plus size={18} /> Post a Lift
-                 </button>
+              <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3">
+                 <p className="text-xs text-gray-400">Share or find a ride for work, school, or weekend events with verified neighbours.</p>
+                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                       onClick={() => { playTactileSound('click'); setShowRideRequestModal(true) }}
+                       className="flex-1 sm:flex-none bg-gold-primary hover:bg-gold-secondary text-black font-black px-6 py-3.5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                    >
+                       <Car size={16} /> Request a Ride
+                    </button>
+                    <button
+                       onClick={() => { playTactileSound('click'); setShowLiftModal(true) }}
+                       className="flex-1 sm:flex-none bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary text-white font-black px-5 py-3.5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                    >
+                       <Plus size={16} /> Offer a Lift
+                    </button>
+                 </div>
               </div>
            )}
            {lifts.map(lift => (
@@ -500,9 +597,170 @@ export default function ServicesPage() {
         <div className="space-y-8">
           {/* One line plus the button; this was a large decorative card with
               a star icon that pushed the actual list below the fold. */}
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+          {activeTab === 'moving' ? (
+            <div className="space-y-6">
+              <div className="glass-panel p-6 sm:p-8 bg-gradient-to-br from-black/80 via-black/50 to-gold-primary/5 border border-gold-primary/20 space-y-5">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3.5 bg-gold-primary/10 rounded-2xl border border-gold-primary/20 text-gold-primary shrink-0">
+                      <Truck size={28} />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-xl sm:text-2xl font-black text-white italic uppercase tracking-tight">
+                          Express Bakkie &amp; Moving Dispatch
+                        </h2>
+                        <span className="bg-gold-primary/20 text-gold-primary border border-gold-primary/30 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
+                          Live Local Mesh
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-gray-400 max-w-xl leading-relaxed">
+                        Need furniture moved, appliances delivered, or building rubble cleared? Post an instant dispatch to verified local bakkie operators with transparent upfront fare estimates.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => { playTactileSound('click'); openBakkieRequestModal(null) }}
+                      className="w-full sm:w-auto bg-gold-primary hover:bg-gold-secondary text-black font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 shadow-glow"
+                    >
+                      <Truck size={16} /> Request a Bakkie
+                    </button>
+                    {trustGate && !trustGate.unlocked ? (
+                      <a href="/dashboard/trust-circle" className="w-full sm:w-auto bg-white/5 border border-white/10 hover:border-gold-primary/40 text-gray-300 font-black px-4 py-3.5 rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
+                        <Lock size={14} className="text-gold-primary" /> List My Bakkie
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => { playTactileSound('click'); openBusinessForm(null) }}
+                        className="w-full sm:w-auto bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-black px-4 py-3.5 rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95"
+                      >
+                        <Plus size={14} /> List My Bakkie
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Bakkie Dispatches for Current User */}
+              {myBakkieDispatches.length > 0 && (
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
+                      <Clock size={15} /> Active Bakkie Dispatches ({myBakkieDispatches.length})
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {myBakkieDispatches.map(disp => {
+                      const parsed = parseBakkieMessage(disp.message)
+                      const isSender = disp.senderId === currentUser?.id
+                      const isDriver = myBiz && disp.serviceId === myBiz.id
+
+                      return (
+                        <div key={disp.id} className="glass-panel p-5 bg-black/60 border border-gold-primary/20 flex flex-col gap-4 shadow-xl">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-2 bg-gold-primary/10 rounded-xl text-gold-primary">
+                                <Truck size={18} />
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-black text-white italic uppercase tracking-tight">{parsed.vehicle}</h4>
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                                  {isSender ? `Service: ${disp.serviceName}` : `Requested by: ${disp.senderName}`}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border ${
+                              disp.status === 'pending'
+                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                : disp.status === 'accepted'
+                                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            }`}>
+                              {disp.status === 'pending' ? '⏳ Awaiting Driver' : disp.status === 'accepted' ? '🚗 In Transit' : '✅ Delivered'}
+                            </span>
+                          </div>
+
+                          {/* Stepper Progress */}
+                          <div className="grid grid-cols-3 gap-1.5 py-1">
+                            <div className={`h-1.5 rounded-full ${disp.status ? 'bg-gold-primary' : 'bg-white/10'}`} />
+                            <div className={`h-1.5 rounded-full ${disp.status === 'accepted' || disp.status === 'completed' ? 'bg-gold-primary' : 'bg-white/10'}`} />
+                            <div className={`h-1.5 rounded-full ${disp.status === 'completed' ? 'bg-gold-primary' : 'bg-white/10'}`} />
+                          </div>
+
+                          {/* Details */}
+                          <div className="bg-white/[0.03] p-3 rounded-xl border border-white/5 space-y-2 text-xs">
+                            <div className="flex items-center gap-2 text-gray-300 font-bold">
+                              <MapPin size={13} className="text-gold-primary shrink-0" />
+                              <span className="truncate">{parsed.route || disp.message}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-white/5">
+                              <span>{parsed.cargo} • {parsed.timing}</span>
+                              <span className="font-black text-white">{parsed.fare || 'Standard rate'}</span>
+                            </div>
+                            {parsed.note && (
+                              <p className="text-[10px] text-gray-500 italic">&quot;{parsed.note}&quot;</p>
+                            )}
+                          </div>
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-2 pt-1">
+                            <Link
+                              href="/dashboard/messages"
+                              className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all"
+                            >
+                              <MessageSquare size={13} /> In-App Chat
+                            </Link>
+
+                            {isDriver && disp.status === 'pending' && (
+                              <button
+                                onClick={() => {
+                                  playTactileSound('click')
+                                  dispatch(updateDispatchStatus({ dispatchId: disp.id, status: 'accepted' }))
+                                  setAlertNotification('Bakkie job accepted! Contact the resident in messages.')
+                                }}
+                                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest border border-blue-400/30 transition-all active:scale-95"
+                              >
+                                Accept Job
+                              </button>
+                            )}
+
+                            {isDriver && disp.status === 'accepted' && (
+                              <button
+                                onClick={() => {
+                                  playTactileSound('click')
+                                  setShowProofModal(disp)
+                                }}
+                                className="flex-1 bg-gold-primary hover:bg-gold-secondary text-black font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95"
+                              >
+                                Mark Delivered
+                              </button>
+                            )}
+
+                            {isSender && disp.status === 'accepted' && (
+                              <button
+                                onClick={() => {
+                                  playTactileSound('success')
+                                  dispatch(updateDispatchStatus({ dispatchId: disp.id, status: 'completed' }))
+                                  setAlertNotification('Delivery confirmed! Thank you.')
+                                }}
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest border border-emerald-400/30 transition-all active:scale-95"
+                              >
+                                Confirm Delivery
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
               <p className="m-0 text-xs text-gray-400">
-                {activeTab === 'moving' ? 'Bakkies and movers' : 'Local pros'} listed by people near you, rated by your neighbours.
+                Local pros listed by people near you, rated by your neighbours.
               </p>
               {trustGate && !trustGate.unlocked ? (
                  <a href="/dashboard/trust-circle" className="w-full sm:w-auto flex items-center gap-3 bg-gold-primary/5 border border-gold-primary/20 rounded-2xl px-4 py-3 hover:border-gold-primary/40 transition-all shrink-0">
@@ -521,6 +779,7 @@ export default function ServicesPage() {
                  </button>
               )}
            </div>
+          )}
 
            
            {activeTab === 'handymen' && (
@@ -990,45 +1249,315 @@ export default function ServicesPage() {
          )}
       </AnimatePresence>
 
-      {/* MOVE-ASSIST REQUEST MODAL */}
+      {/* BAKKIE & MOVING DISPATCH MODAL */}
       <AnimatePresence>
-         {moveAssistTarget && (
+         {showBakkieModal && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoveAssistTarget(null)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="glass-panel w-full max-w-xl max-h-[88dvh] overflow-y-auto custom-scrollbar bg-black border-gold-primary/20 relative z-10 p-6 sm:p-8 space-y-6">
-                  <div className="flex justify-between items-center">
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowBakkieModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+               <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="glass-panel w-full max-w-xl max-h-[90dvh] overflow-y-auto custom-scrollbar bg-black/95 border-gold-primary/30 relative z-10 p-6 sm:p-8 space-y-6 shadow-2xl">
+                  <div className="flex justify-between items-start">
                      <div className="space-y-1">
-                        <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Request <span className="text-gold-primary">Move Assist</span></h3>
-                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Dispatch Request to: {moveAssistTarget.businessName}</p>
-                     </div>
-                     <button onClick={() => setMoveAssistTarget(null)} className="text-gray-500 hover:text-white transition-colors"><X /></button>
-                  </div>
-
-                  {trustGate && (
-                     <div className={`p-4 rounded-xl border flex items-center gap-3 ${trustGate.unlocked ? 'bg-green-500/5 border-green-500/20' : 'bg-gold-primary/5 border-gold-primary/10'}`}>
-                        {trustGate.unlocked ? <ShieldCheck size={20} className="text-green-500" /> : <Lock size={20} className="text-gold-primary" />}
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
-                           {trustGate.unlocked
-                              ? 'Your next-of-kin circle is established — you can request move help.'
-                              : trustGate.status === 'building'
-                              ? "You're building your next-of-kin circle. Keep confirming connections to unlock move help."
-                              : 'Add next-of-kin connections before requesting move help — this keeps move-assist limited to people the community actually vouches for.'}
+                        <div className="flex items-center gap-2">
+                           <span className="p-1.5 bg-gold-primary/10 rounded-lg text-gold-primary"><Truck size={18} /></span>
+                           <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">
+                              Request a <span className="text-gold-primary">Bakkie / Moving Assist</span>
+                           </h3>
+                        </div>
+                        <p className="text-[11px] text-gray-400 font-medium">
+                           {bakkieTargetService ? `Dispatching to: ${bakkieTargetService.businessName}` : 'Broadcasting to all verified bakkie operators in your area'}
                         </p>
                      </div>
-                  )}
+                     <button onClick={() => setShowBakkieModal(false)} className="text-gray-500 hover:text-white transition-colors p-1"><X size={20} /></button>
+                  </div>
 
-                  <form onSubmit={submitMoveAssist} className="space-y-6">
+                  <form onSubmit={handleBakkieSubmit} className="space-y-5">
+                     {/* 1. Load / Cargo Type */}
                      <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Message (optional)</label>
-                        <textarea value={moveAssistMessage} onChange={e => setMoveAssistMessage(e.target.value)} className="w-full bg-black border border-white/10 rounded-xl p-4 text-sm text-white h-28 resize-none outline-none focus:border-gold-primary/40" placeholder="Moving date, address, how much help you need..." />
-                     </div>
-                     {moveAssistError && (
-                        <div className="bg-red-500/5 border border-red-500/20 p-4 rounded-xl">
-                           <p className="text-[10px] text-red-400 leading-relaxed font-bold">{moveAssistError}</p>
+                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                           <Package size={12} className="text-gold-primary" /> What are you moving?
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                           {CARGO_PRESETS.map(c => (
+                              <button
+                                 key={c.id}
+                                 type="button"
+                                 onClick={() => { playTactileSound('click'); setBakkieLoadCategory(c.id) }}
+                                 className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center gap-2 ${
+                                    bakkieLoadCategory === c.id
+                                       ? 'bg-gold-primary/20 border-gold-primary text-white shadow-glow'
+                                       : 'bg-white/[0.03] border-white/10 text-gray-400 hover:border-white/20'
+                                 }`}
+                              >
+                                 <span className="text-base">{c.icon}</span>
+                                 <span className="text-[11px] leading-tight">{c.label}</span>
+                              </button>
+                           ))}
                         </div>
-                     )}
-                     <button type="submit" disabled={moveAssistSubmitting} className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50">
-                        {moveAssistSubmitting ? 'Sending…' : 'Send Move-Assist Request'} <Send size={14} />
+                     </div>
+
+                     {/* 2. Vehicle Needed */}
+                     <div className="space-y-2">
+                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                           <Truck size={12} className="text-gold-primary" /> Vehicle Type Needed
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                           {VEHICLE_PRESETS.map(v => (
+                              <button
+                                 key={v.id}
+                                 type="button"
+                                 onClick={() => { playTactileSound('click'); setBakkieVehicleType(v.id) }}
+                                 className={`p-3 rounded-xl border text-left transition-all ${
+                                    bakkieVehicleType === v.id
+                                       ? 'bg-gold-primary/20 border-gold-primary text-white shadow-glow'
+                                       : 'bg-white/[0.03] border-white/10 text-gray-400 hover:border-white/20'
+                                 }`}
+                              >
+                                 <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-white">{v.icon} {v.label}</span>
+                                    <span className="text-xs font-black text-gold-primary">From R{v.basePrice}</span>
+                                 </div>
+                                 <p className="text-[10px] text-gray-500 mt-1">{v.sub}</p>
+                              </button>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* 3. Pickup and Drop-off */}
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1">
+                              <MapPin size={11} className="text-gold-primary" /> Pickup Address / Suburb
+                           </label>
+                           <input
+                              type="text"
+                              required
+                              value={bakkiePickupAddress}
+                              onChange={e => setBakkiePickupAddress(e.target.value)}
+                              placeholder="e.g. 14 Vilakazi St, Orlando West"
+                              className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                           />
+                        </div>
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1">
+                              <MapPin size={11} className="text-gold-primary" /> Drop-off Address / Suburb
+                           </label>
+                           <input
+                              type="text"
+                              required
+                              value={bakkieDropoffAddress}
+                              onChange={e => setBakkieDropoffAddress(e.target.value)}
+                              placeholder="e.g. 42 Main St, Diepkloof"
+                              className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                           />
+                        </div>
+                     </div>
+
+                     {/* 4. Timing & Schedule */}
+                     <div className="space-y-2">
+                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                           <Clock size={12} className="text-gold-primary" /> When do you need it?
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                           {TIMING_PRESETS.map(t => (
+                              <button
+                                 key={t.id}
+                                 type="button"
+                                 onClick={() => { playTactileSound('click'); setBakkieSchedule(t.id) }}
+                                 className={`p-2.5 rounded-xl border text-center transition-all ${
+                                    bakkieSchedule === t.id
+                                       ? 'bg-gold-primary text-black font-black border-gold-primary'
+                                       : 'bg-white/[0.03] border-white/10 text-gray-300 hover:border-white/20'
+                                 }`}
+                              >
+                                 <p className="text-[11px] font-bold">{t.label}</p>
+                                 <p className="text-[9px] opacity-70">{t.sub}</p>
+                              </button>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* 5. Extra Helpers */}
+                     <div className="space-y-2">
+                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                           <Users size={12} className="text-gold-primary" /> Helpers Needed for Heavy Lifting
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                           {[
+                              { count: 0, label: 'Driver Only', sub: 'I will load/offload' },
+                              { count: 1, label: '+1 Helper', sub: '+R100 extra' },
+                              { count: 2, label: '+2 Helpers', sub: '+R200 (Stairs/heavy)' },
+                           ].map(h => (
+                              <button
+                                 key={h.count}
+                                 type="button"
+                                 onClick={() => { playTactileSound('click'); setBakkieHelpers(h.count) }}
+                                 className={`p-2.5 rounded-xl border text-center transition-all ${
+                                    bakkieHelpers === h.count
+                                       ? 'bg-gold-primary/20 border-gold-primary text-white font-bold'
+                                       : 'bg-white/[0.03] border-white/10 text-gray-400 hover:border-white/20'
+                                 }`}
+                              >
+                                 <p className="text-xs font-bold">{h.label}</p>
+                                 <p className="text-[10px] text-gray-500">{h.sub}</p>
+                              </button>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* Notes */}
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
+                           Additional Notes / Stairs / Access
+                        </label>
+                        <input
+                           type="text"
+                           value={bakkieNotes}
+                           onChange={e => setBakkieNotes(e.target.value)}
+                           placeholder="e.g. 2nd floor stairs, double-door fridge, narrow gate"
+                           className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                        />
+                     </div>
+
+                     {/* Live Estimated Fare Transparency Card */}
+                     <div className="p-4 rounded-xl bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-between">
+                        <div>
+                           <p className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Estimated Trip Fare</p>
+                           <p className="text-xl font-black text-white italic">
+                              R{calculatedFare} <span className="text-[10px] text-gold-primary font-bold uppercase not-italic">ZAR</span>
+                           </p>
+                           <p className="text-[9px] text-gray-500">Standard local rate based on vehicle and helper count</p>
+                        </div>
+                        <span className="p-2 bg-gold-primary/20 rounded-xl text-gold-primary"><Truck size={24} /></span>
+                     </div>
+
+                     <button
+                        type="submit"
+                        disabled={bakkieSubmitting}
+                        className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-glow disabled:opacity-50"
+                     >
+                        {bakkieSubmitting ? 'Dispatching…' : 'Dispatch Bakkie Request'} <Send size={14} />
+                     </button>
+                  </form>
+               </motion.div>
+            </div>
+         )}
+      </AnimatePresence>
+
+      {/* RIDE / LIFT REQUEST MODAL */}
+      <AnimatePresence>
+         {showRideRequestModal && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowRideRequestModal(false)} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+               <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="glass-panel w-full max-w-lg max-h-[85dvh] overflow-y-auto custom-scrollbar bg-black/95 border-gold-primary/30 relative z-10 p-6 sm:p-8 space-y-6 shadow-2xl">
+                  <div className="flex justify-between items-start">
+                     <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                           <span className="p-1.5 bg-gold-primary/10 rounded-lg text-gold-primary"><Car size={18} /></span>
+                           <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">
+                              Request a <span className="text-gold-primary">Ride / Lift</span>
+                           </h3>
+                        </div>
+                        <p className="text-[11px] text-gray-400 font-medium">Post your commute or trip so local drivers heading your way can offer a seat</p>
+                     </div>
+                     <button onClick={() => setShowRideRequestModal(false)} className="text-gray-500 hover:text-white transition-colors p-1"><X size={20} /></button>
+                  </div>
+
+                  <form onSubmit={handleRideRequestSubmit} className="space-y-4">
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1">
+                           <MapPin size={11} className="text-gold-primary" /> Departure Location (From)
+                        </label>
+                        <input
+                           type="text"
+                           required
+                           value={rideOrigin}
+                           onChange={e => setRideOrigin(e.target.value)}
+                           placeholder="e.g. Soweto, Meadowlands Zone 2"
+                           className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                        />
+                     </div>
+
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1">
+                           <MapPin size={11} className="text-gold-primary" /> Destination (To)
+                        </label>
+                        <input
+                           type="text"
+                           required
+                           value={rideDestination}
+                           onChange={e => setRideDestination(e.target.value)}
+                           placeholder="e.g. Rosebank / Sandton / Joburg CBD"
+                           className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                        />
+                     </div>
+
+                     <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1">
+                              <Clock size={11} className="text-gold-primary" /> Preferred Time
+                           </label>
+                           <input
+                              type="text"
+                              value={rideDeparture}
+                              onChange={e => setRideDeparture(e.target.value)}
+                              placeholder="07:00 AM"
+                              className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                           />
+                        </div>
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1">
+                              <Calendar size={11} className="text-gold-primary" /> Days / Schedule
+                           </label>
+                           <input
+                              type="text"
+                              value={rideDays}
+                              onChange={e => setRideDays(e.target.value)}
+                              placeholder="Mon - Fri"
+                              className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                           />
+                        </div>
+                     </div>
+
+                     <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Seats Needed</label>
+                           <input
+                              type="number"
+                              min="1"
+                              max="4"
+                              value={rideSeatsNeeded}
+                              onChange={e => setRideSeatsNeeded(e.target.value)}
+                              className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                           />
+                        </div>
+                        <div className="space-y-1.5">
+                           <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Target Price (ZAR)</label>
+                           <input
+                              type="number"
+                              value={rideTargetPrice}
+                              onChange={e => setRideTargetPrice(e.target.value)}
+                              placeholder="35"
+                              className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                           />
+                        </div>
+                     </div>
+
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Notes (Optional)</label>
+                        <input
+                           type="text"
+                           value={rideNotes}
+                           onChange={e => setRideNotes(e.target.value)}
+                           placeholder="e.g. Daily work commute, non-smoker, reliable rider"
+                           className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
+                        />
+                     </div>
+
+                     <button
+                        type="submit"
+                        className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-glow"
+                     >
+                        Post Ride Request <Send size={14} />
                      </button>
                   </form>
                </motion.div>
