@@ -6,7 +6,11 @@ import {
   getPayFastConfig,
   getPayFastProcessUrl,
   getPayFastValidateUrl,
-  buildPayFastPaymentRequest
+  buildPayFastPaymentRequest,
+  PAYFAST_AWS_IPS,
+  PAYFAST_DOMAINS,
+  isPayFastWhitelistedIp,
+  normalizeIp
 } from './payfast'
 
 test('PayFast signature matches MD5 specification', () => {
@@ -85,11 +89,10 @@ test('buildPayFastPaymentRequest handles one-time boosts without recurring field
 })
 
 test('PayFast AWS migration IP whitelisting validates all 21 IPs', () => {
-  const { PAYFAST_AWS_IPS, isPayFastWhitelistedIp, normalizeIp, PAYFAST_DOMAINS } = require('./payfast')
   assert.strictEqual(PAYFAST_AWS_IPS.length, 21)
   for (let i = 232; i <= 252; i++) {
     const ip = `3.163.${i}.237`
-    assert.ok(PAYFAST_AWS_IPS.includes(ip))
+    assert.ok((PAYFAST_AWS_IPS as readonly string[]).includes(ip))
     assert.ok(isPayFastWhitelistedIp(ip))
   }
   assert.ok(isPayFastWhitelistedIp('::ffff:3.163.236.237'))
