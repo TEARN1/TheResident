@@ -20,6 +20,10 @@ export type SelfServePaymentItem =
   | 'notice_extend_visibility'
   | 'broadcast_blast_boost'
 
+export const PAYFAST_SANDBOX_MERCHANT_ID = '10000100'
+export const PAYFAST_SANDBOX_MERCHANT_KEY = '46f0cd694581a'
+export const PAYFAST_SANDBOX_PASSPHRASE = 'jt7NOE43FZPn'
+
 export const PAYFAST_FIELD_ORDER = [
   'merchant_id',
   'merchant_key',
@@ -56,22 +60,53 @@ export const PAYFAST_FIELD_ORDER = [
 
 /**
  * Reads PayFast configuration from environment variables.
- * Defaults to PayFast official sandbox credentials if not explicitly configured in production.
+ * Live mode activates ONLY when PAYFAST_SANDBOX is explicitly set to "false",
+ * and strictly rejects missing or sandbox test credentials so sandbox defaults
+ * can never leak into real customer transactions.
  */
-export function getPayFastConfig(): PayFastConfig {
-  const merchantId = process.env.PAYFAST_MERCHANT_ID || '10000100'
-  const merchantKey = process.env.PAYFAST_MERCHANT_KEY || '46f0cd694581a'
-  const passphrase = process.env.PAYFAST_PASSPHRASE || 'jt7NOE43FZPn'
-  
-  // Explicit flag or default to sandbox when using test merchant credentials
-  const sandboxEnv = process.env.PAYFAST_SANDBOX
-  const isSandbox = sandboxEnv === 'true' || merchantId === '10000100' || sandboxEnv !== 'false'
+export function getPayFastConfig(
+  env: Record<string, string | undefined> = process.env
+): PayFastConfig {
+  const sandboxEnv = env.PAYFAST_SANDBOX?.trim().toLowerCase()
+  const rawMerchantId = env.PAYFAST_MERCHANT_ID?.trim()
+  const rawMerchantKey = env.PAYFAST_MERCHANT_KEY?.trim()
+  const rawPassphrase = env.PAYFAST_PASSPHRASE?.trim()
+
+  const isSandbox = sandboxEnv !== 'false'
+
+  if (!isSandbox) {
+    if (
+      !rawMerchantId ||
+      rawMerchantId === PAYFAST_SANDBOX_MERCHANT_ID ||
+      !rawMerchantKey ||
+      rawMerchantKey === PAYFAST_SANDBOX_MERCHANT_KEY
+    ) {
+      throw new Error(
+        'PayFast live mode (PAYFAST_SANDBOX=false) requires real PAYFAST_MERCHANT_ID and PAYFAST_MERCHANT_KEY environment variables.'
+      )
+    }
+    if (rawPassphrase === PAYFAST_SANDBOX_PASSPHRASE) {
+      throw new Error(
+        'PayFast live mode (PAYFAST_SANDBOX=false) cannot use the public sandbox passphrase.'
+      )
+    }
+
+    return {
+      merchantId: rawMerchantId,
+      merchantKey: rawMerchantKey,
+      passphrase: rawPassphrase || undefined,
+      sandbox: false
+    }
+  }
 
   return {
-    merchantId: merchantId.trim(),
-    merchantKey: merchantKey.trim(),
-    passphrase: passphrase.trim(),
-    sandbox: isSandbox
+    merchantId: rawMerchantId || PAYFAST_SANDBOX_MERCHANT_ID,
+    merchantKey: rawMerchantKey || PAYFAST_SANDBOX_MERCHANT_KEY,
+    passphrase:
+      env.PAYFAST_PASSPHRASE !== undefined
+        ? rawPassphrase || undefined
+        : PAYFAST_SANDBOX_PASSPHRASE,
+    sandbox: true
   }
 }
 
@@ -113,7 +148,7 @@ export function generatePayFastSignature(
 }
 
 /**
- * Validates an incoming ITN signature against computed signature.
+ * Validates an incoming ITN signature against computed signature in constant time.
  */
 export function validatePayFastSignature(
   data: Record<string, string | undefined>,
@@ -121,8 +156,87 @@ export function validatePayFastSignature(
   passphrase?: string
 ): boolean {
   if (!receivedSignature) return false
-  const computed = generatePayFastSignature(data, passphrase)
-  return computed.toLowerCase() === receivedSignature.trim().toLowerCase()
+  const computed = generatePayFastSignature(data, passphrase).toLowerCase()
+  const candidate = receivedSignature.trim().toLowerCase()
+  if (computed.length !== candidate.length) return false
+  return crypto.timingSafeEqual(
+    Buffer.from(computed, 'utf8'),
+    Buffer.from(candidate, 'utf8')
+  )
+}
+
+export type VerifiedPayFastItn =
+  | {
+      valid: true
+      paymentStatus: string
+      userId: string
+      item: SelfServePaymentItem
+      targetId?: string
+      amountGross: number
+      paymentId: string
+      pfPaymentId?: string
+    }
+  | {
+      valid: false
+      reason: string
+    }
+
+/**
+ * Performs PayFast's payload-level security checks on an incoming ITN:
+ * 1. Merchant ID matches configured merchant account.
+ * 2. MD5 signature matches received parameters + passphrase.
+ * 3. Item is a valid self-serve item defined in PRICING.
+ * 4. Gross ZAR amount matches expected item price (to the cent) on COMPLETE payments.
+ */
+export function verifyPayFastItnPayload(
+  params: Record<string, string>,
+  config: PayFastConfig
+): VerifiedPayFastItn {
+  if (!params.merchant_id || params.merchant_id.trim() !== config.merchantId) {
+    return { valid: false, reason: 'Merchant ID mismatch' }
+  }
+
+  if (!validatePayFastSignature(params, params.signature || '', config.passphrase)) {
+    return { valid: false, reason: 'Signature mismatch' }
+  }
+
+  const rawItem = params.custom_str2 as SelfServePaymentItem | undefined
+  const pricing = rawItem ? PRICING[rawItem] : undefined
+  if (!rawItem || !pricing || pricing.billingType !== 'self_serve') {
+    return { valid: false, reason: 'Invalid or non-self-serve payment item' }
+  }
+
+  const userId = (params.custom_str1 || '').trim()
+  if (!userId) {
+    return { valid: false, reason: 'Missing user identifier (custom_str1)' }
+  }
+
+  const paymentStatus = (params.payment_status || '').trim()
+  const amountGross = Number.parseFloat(params.amount_gross || '')
+  if (!Number.isFinite(amountGross) || amountGross < 0) {
+    return { valid: false, reason: 'Invalid amount_gross' }
+  }
+
+  if (paymentStatus === 'COMPLETE') {
+    const receivedCents = Math.round(amountGross * 100)
+    if (receivedCents !== pricing.amountZarCents) {
+      return {
+        valid: false,
+        reason: `Amount mismatch: expected ${(pricing.amountZarCents / 100).toFixed(2)} ZAR, received ${amountGross.toFixed(2)} ZAR`
+      }
+    }
+  }
+
+  return {
+    valid: true,
+    paymentStatus,
+    userId,
+    item: rawItem,
+    targetId: params.custom_str3?.trim() || undefined,
+    amountGross,
+    paymentId: params.m_payment_id?.trim() || `pf_${Date.now()}`,
+    pfPaymentId: params.pf_payment_id?.trim() || undefined
+  }
 }
 
 export interface BuildPaymentInput {
@@ -137,14 +251,17 @@ export interface BuildPaymentInput {
 /**
  * Constructs a fully signed PayFast payment request with ordered parameters.
  */
-export function buildPayFastPaymentRequest(input: BuildPaymentInput): {
+export function buildPayFastPaymentRequest(
+  input: BuildPaymentInput,
+  env: Record<string, string | undefined> = process.env
+): {
   processUrl: string
   redirectUrl: string
   fields: Record<string, string>
 } {
-  const config = getPayFastConfig()
+  const config = getPayFastConfig(env)
   const pricing = PRICING[input.item]
-  if (!pricing) {
+  if (!pricing || pricing.billingType !== 'self_serve') {
     throw new Error(`Invalid pricing item: ${input.item}`)
   }
 

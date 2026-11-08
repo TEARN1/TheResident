@@ -3,25 +3,24 @@ import {
   getPayFastConfig,
   getPayFastValidateUrl,
   isPayFastWhitelistedIp,
-  validatePayFastSignature,
-  type SelfServePaymentItem
+  verifyPayFastItnPayload
 } from '../../../../utils/payfast'
-import { PRICING } from '../../../../utils/pricing'
 import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
   try {
     const config = getPayFastConfig()
 
-    // 0. Whitelist IP verification (AWS migration support)
+    // 1. Source IP whitelist check (enforced automatically in live mode)
     const clientIp = extractClientIp(request)
     const skipIpCheck = process.env.PAYFAST_SKIP_IP_CHECK === 'true'
-    const enforceIpWhitelist = process.env.PAYFAST_ENFORCE_IP_WHITELIST === 'true' || !config.sandbox
+    const enforceIpWhitelist =
+      process.env.PAYFAST_ENFORCE_IP_WHITELIST === 'true' || !config.sandbox
 
     if (enforceIpWhitelist && !skipIpCheck) {
       if (!isPayFastWhitelistedIp(clientIp)) {
         console.warn(`PayFast ITN source IP ${clientIp} not in whitelist`)
-        return new Response(`Forbidden: source IP ${clientIp} not whitelisted`, { status: 403 })
+        return new Response('Forbidden: source IP not whitelisted', { status: 403 })
       }
     }
 
@@ -32,14 +31,14 @@ export async function POST(request: Request) {
       params[key] = value
     })
 
-    // 1. Validate signature
-    const isValidSignature = validatePayFastSignature(params, params.signature || '', config.passphrase)
-    if (!isValidSignature) {
-      console.warn('PayFast ITN signature mismatch')
-      return new Response('Signature mismatch', { status: 400 })
+    // 2. Verify merchant_id, MD5 signature, valid self-serve item, and exact ZAR amount
+    const verified = verifyPayFastItnPayload(params, config)
+    if (!verified.valid) {
+      console.warn('PayFast ITN payload rejected:', verified.reason)
+      return new Response(verified.reason, { status: 400 })
     }
 
-    // 2. Server-to-server validation check against PayFast
+    // 3. Server-to-server validation check against PayFast (fail closed so PayFast retries on outage)
     try {
       const validateUrl = getPayFastValidateUrl(config.sandbox)
       const verifyRes = await fetch(validateUrl, {
@@ -47,6 +46,10 @@ export async function POST(request: Request) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: rawBody
       })
+      if (!verifyRes.ok) {
+        console.error(`PayFast validation host HTTP ${verifyRes.status}`)
+        return new Response('PayFast validation host unavailable', { status: 503 })
+      }
       const verifyText = await verifyRes.text()
       if (verifyText.trim() !== 'VALID') {
         console.warn('PayFast server returned non-VALID response:', verifyText)
@@ -54,67 +57,38 @@ export async function POST(request: Request) {
       }
     } catch (verifyErr) {
       console.error('Error contacting PayFast validation host:', verifyErr)
-      // If network glitch contacting validate endpoint, don't crash
+      return new Response('PayFast validation unreachable', { status: 503 })
     }
 
-    // 3. Process completed payment
-    const paymentStatus = params.payment_status
-    const userId = params.custom_str1
-    const item = params.custom_str2 as SelfServePaymentItem
-    const targetId = params.custom_str3
-    const amountGross = parseFloat(params.amount_gross || '0')
-    const paymentId = params.m_payment_id || `pf_${Date.now()}`
-    const pfPaymentId = params.pf_payment_id
+    // 4. Record transaction & fulfill upgrade strictly via server-only service_role key
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    if (paymentStatus === 'COMPLETE' && userId && item && PRICING[item]) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error(
+        'PayFast ITN cannot persist payment: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing'
+      )
+      return new Response('Server database credentials not configured', { status: 500 })
+    }
 
-      if (supabaseUrl && serviceRoleKey) {
-        const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
+    const adminSupabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    })
 
-        // Try executing the dedicated RPC if migration applied
-        const { error: rpcError } = await adminSupabase.rpc('res_apply_payfast_payment', {
-          p_payment_id: paymentId,
-          p_pf_payment_id: pfPaymentId || '',
-          p_user_id: userId,
-          p_item: item,
-          p_target_id: targetId || null,
-          p_status: paymentStatus,
-          p_amount: amountGross,
-          p_raw_data: params
-        })
+    const { error: rpcError } = await adminSupabase.rpc('res_apply_payfast_payment', {
+      p_payment_id: verified.paymentId,
+      p_pf_payment_id: verified.pfPaymentId || '',
+      p_user_id: verified.userId,
+      p_item: verified.item,
+      p_target_id: verified.targetId || null,
+      p_status: verified.paymentStatus,
+      p_amount: verified.amountGross,
+      p_raw_data: params
+    })
 
-        if (rpcError) {
-          // Fallback direct table updates if RPC function not created in database yet
-          if (item === 'priority' || item === 'premium') {
-            await adminSupabase.from('res_subscriptions').upsert({
-              user_id: userId,
-              product: 'provider',
-              tier: item,
-              status: 'active',
-              current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id,product' })
-          } else if (item === 'plus') {
-            await adminSupabase.from('res_subscriptions').upsert({
-              user_id: userId,
-              product: 'household',
-              status: 'active',
-              current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id,product' })
-          } else if (item === 'room_boost' && targetId) {
-            await adminSupabase.from('res_listings').update({
-              featured_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-            }).eq('id', targetId)
-          } else if (item === 'verification_speedup') {
-            await adminSupabase.from('res_profiles').update({
-              verification_status: 'reviewed'
-            }).eq('id', userId)
-          }
-        }
-      }
+    if (rpcError) {
+      console.error('res_apply_payfast_payment RPC failed:', rpcError.message)
+      return new Response('Database fulfillment failed', { status: 500 })
     }
 
     // Acknowledge receipt to PayFast with 200 OK

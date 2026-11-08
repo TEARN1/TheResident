@@ -3,10 +3,15 @@ import assert from 'node:assert'
 import {
   generatePayFastSignature,
   validatePayFastSignature,
+  verifyPayFastItnPayload,
   getPayFastConfig,
   getPayFastProcessUrl,
   getPayFastValidateUrl,
-  buildPayFastPaymentRequest
+  buildPayFastPaymentRequest,
+  PAYFAST_AWS_IPS,
+  PAYFAST_DOMAINS,
+  isPayFastWhitelistedIp,
+  normalizeIp
 } from './payfast'
 
 test('PayFast signature matches MD5 specification', () => {
@@ -39,13 +44,123 @@ test('PayFast signature validation rejects invalid signature or tampered data', 
   assert.ok(!validatePayFastSignature({ ...sample, amount: '200.00' }, sig, 'test_pass'))
 })
 
-test('PayFast environment config correctly sets URLs', () => {
-  const config = getPayFastConfig()
-  assert.ok(config.merchantId)
+test('PayFast environment config separates sandbox defaults from live credentials', () => {
+  const defaultConfig = getPayFastConfig({})
+  assert.strictEqual(defaultConfig.sandbox, true)
+  assert.strictEqual(defaultConfig.merchantId, '10000100')
+  assert.strictEqual(defaultConfig.passphrase, 'jt7NOE43FZPn')
+
+  // Live mode without real credentials must fail closed
+  assert.throws(
+    () => getPayFastConfig({ PAYFAST_SANDBOX: 'false' }),
+    /requires real PAYFAST_MERCHANT_ID and PAYFAST_MERCHANT_KEY/
+  )
+  assert.throws(
+    () =>
+      getPayFastConfig({
+        PAYFAST_SANDBOX: 'false',
+        PAYFAST_MERCHANT_ID: '10000100',
+        PAYFAST_MERCHANT_KEY: 'live_key'
+      }),
+    /requires real PAYFAST_MERCHANT_ID/
+  )
+  assert.throws(
+    () =>
+      getPayFastConfig({
+        PAYFAST_SANDBOX: 'false',
+        PAYFAST_MERCHANT_ID: '23456789',
+        PAYFAST_MERCHANT_KEY: 'live_key_abc',
+        PAYFAST_PASSPHRASE: 'jt7NOE43FZPn'
+      }),
+    /cannot use the public sandbox passphrase/
+  )
+
+  // Live mode without passphrase does NOT leak sandbox passphrase
+  const liveNoPass = getPayFastConfig({
+    PAYFAST_SANDBOX: 'false',
+    PAYFAST_MERCHANT_ID: '23456789',
+    PAYFAST_MERCHANT_KEY: 'live_key_abc'
+  })
+  assert.strictEqual(liveNoPass.sandbox, false)
+  assert.strictEqual(liveNoPass.merchantId, '23456789')
+  assert.strictEqual(liveNoPass.passphrase, undefined)
+
+  // Live mode with real passphrase
+  const liveWithPass = getPayFastConfig({
+    PAYFAST_SANDBOX: 'false',
+    PAYFAST_MERCHANT_ID: '23456789',
+    PAYFAST_MERCHANT_KEY: 'live_key_abc',
+    PAYFAST_PASSPHRASE: 'real_secret_passphrase'
+  })
+  assert.strictEqual(liveWithPass.sandbox, false)
+  assert.strictEqual(liveWithPass.passphrase, 'real_secret_passphrase')
+
   assert.strictEqual(getPayFastProcessUrl(true), 'https://sandbox.payfast.co.za/eng/process')
   assert.strictEqual(getPayFastProcessUrl(false), 'https://www.payfast.co.za/eng/process')
   assert.strictEqual(getPayFastValidateUrl(true), 'https://sandbox.payfast.co.za/eng/query/validate')
   assert.strictEqual(getPayFastValidateUrl(false), 'https://www.payfast.co.za/eng/query/validate')
+})
+
+test('verifyPayFastItnPayload enforces merchant_id, signature, self-serve item, and exact ZAR amount', () => {
+  const config = getPayFastConfig({
+    PAYFAST_SANDBOX: 'false',
+    PAYFAST_MERCHANT_ID: '23456789',
+    PAYFAST_MERCHANT_KEY: 'live_key_abc',
+    PAYFAST_PASSPHRASE: 'live_passphrase_secret'
+  })
+
+  const validBase: Record<string, string> = {
+    m_payment_id: 'res_premium_11111111_1700000000',
+    pf_payment_id: '99887766',
+    payment_status: 'COMPLETE',
+    item_name: 'Premium',
+    amount_gross: '100.00',
+    custom_str1: '11111111-2222-3333-4444-555555555555',
+    custom_str2: 'premium',
+    merchant_id: '23456789'
+  }
+  const validPayload = {
+    ...validBase,
+    signature: generatePayFastSignature(validBase, config.passphrase)
+  }
+
+  const ok = verifyPayFastItnPayload(validPayload, config)
+  assert.strictEqual(ok.valid, true)
+  if (ok.valid) {
+    assert.strictEqual(ok.item, 'premium')
+    assert.strictEqual(ok.amountGross, 100)
+    assert.strictEqual(ok.userId, '11111111-2222-3333-4444-555555555555')
+  }
+
+  // Underpayment (e.g. R5.00 signed for a R100.00 tier) must be rejected
+  const underpaidBase = { ...validBase, amount_gross: '5.00' }
+  const underpaid = verifyPayFastItnPayload(
+    { ...underpaidBase, signature: generatePayFastSignature(underpaidBase, config.passphrase) },
+    config
+  )
+  assert.strictEqual(underpaid.valid, false)
+  if (!underpaid.valid) {
+    assert.match(underpaid.reason, /Amount mismatch/)
+  }
+
+  // Wrong merchant ID must be rejected
+  const wrongMerchantBase = { ...validBase, merchant_id: '10000100' }
+  const wrongMerchant = verifyPayFastItnPayload(
+    { ...wrongMerchantBase, signature: generatePayFastSignature(wrongMerchantBase, config.passphrase) },
+    config
+  )
+  assert.strictEqual(wrongMerchant.valid, false)
+  if (!wrongMerchant.valid) {
+    assert.match(wrongMerchant.reason, /Merchant ID mismatch/)
+  }
+
+  // Non-self-serve B2B tier must be rejected
+  const b2bBase = { ...validBase, custom_str2: 'political_party_hq', amount_gross: '2499.00' }
+  const b2b = verifyPayFastItnPayload(
+    { ...b2bBase, signature: generatePayFastSignature(b2bBase, config.passphrase) },
+    config
+  )
+  assert.strictEqual(b2b.valid, false)
 })
 
 test('buildPayFastPaymentRequest constructs valid payload and sets recurring fields for monthly subscriptions', () => {
@@ -85,11 +200,10 @@ test('buildPayFastPaymentRequest handles one-time boosts without recurring field
 })
 
 test('PayFast AWS migration IP whitelisting validates all 21 IPs', () => {
-  const { PAYFAST_AWS_IPS, isPayFastWhitelistedIp, normalizeIp, PAYFAST_DOMAINS } = require('./payfast')
   assert.strictEqual(PAYFAST_AWS_IPS.length, 21)
   for (let i = 232; i <= 252; i++) {
     const ip = `3.163.${i}.237`
-    assert.ok(PAYFAST_AWS_IPS.includes(ip))
+    assert.ok((PAYFAST_AWS_IPS as readonly string[]).includes(ip))
     assert.ok(isPayFastWhitelistedIp(ip))
   }
   assert.ok(isPayFastWhitelistedIp('::ffff:3.163.236.237'))

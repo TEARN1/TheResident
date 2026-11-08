@@ -13,12 +13,11 @@
 # NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_CONTACT_EMAIL, NEXT_PUBLIC_MAPBOX_TOKEN,
 # NEXT_PUBLIC_OSRM_ROUTING_URL.
 #
-# The app reads no server-only secrets today: nothing in src/ uses
-# SUPABASE_SERVICE_ROLE_KEY, JWT_SECRET or VOUCHER_SIGNING_KEY (from
-# .env.example), so they stay off the droplet. The service-role key bypasses
-# every row-level security policy; put it only where code needs it. If server
-# code ever does, copy it here on each deploy the way Excellency does
-# (`vgruvs env theresident set KEY -`, the value on stdin).
+# Server-only secrets for PayFast checkout & ITN webhook fulfillment
+# (/api/payfast/checkout and /api/payfast/itn): SUPABASE_SERVICE_ROLE_KEY,
+# PAYFAST_MERCHANT_ID, PAYFAST_MERCHANT_KEY, PAYFAST_PASSPHRASE, and
+# PAYFAST_SANDBOX are synced to the droplet over stdin (`vgruvs env theresident
+# set KEY -`) whenever configured in GitHub Secrets/Variables.
 name: Deploy (V-Gruvs)
 
 on:
@@ -84,6 +83,31 @@ jobs:
           NEXT_PUBLIC_CONTACT_EMAIL: ${{ vars.NEXT_PUBLIC_CONTACT_EMAIL }}
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ vars.NEXT_PUBLIC_MAPBOX_TOKEN || secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
           NEXT_PUBLIC_OSRM_ROUTING_URL: ${{ vars.NEXT_PUBLIC_OSRM_ROUTING_URL }}
+      - name: Sync server-only payment & database secrets to droplet
+        env:
+          VGRUVS_SSH_KEY: ${{ secrets.VGRUVS_SSH_KEY }}
+          HOST: ${{ secrets.DROPLET_HOST }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PAYFAST_MERCHANT_ID: ${{ secrets.PAYFAST_MERCHANT_ID || vars.PAYFAST_MERCHANT_ID }}
+          PAYFAST_MERCHANT_KEY: ${{ secrets.PAYFAST_MERCHANT_KEY }}
+          PAYFAST_PASSPHRASE: ${{ secrets.PAYFAST_PASSPHRASE }}
+          PAYFAST_SANDBOX: ${{ vars.PAYFAST_SANDBOX || secrets.PAYFAST_SANDBOX }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VGRUVS_SSH_KEY" > ~/.ssh/vgruvs && chmod 600 ~/.ssh/vgruvs
+          set_env_if_present() {
+            local key="$1" val="$2"
+            if [ -n "$val" ]; then
+              printf '%s' "$val" | ssh -i ~/.ssh/vgruvs -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new \
+                "deploy@${HOST:-144.126.236.75}" sudo /usr/local/bin/vgruvs env theresident set "$key" -
+            fi
+          }
+          set_env_if_present SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+          set_env_if_present PAYFAST_MERCHANT_ID "$PAYFAST_MERCHANT_ID"
+          set_env_if_present PAYFAST_MERCHANT_KEY "$PAYFAST_MERCHANT_KEY"
+          set_env_if_present PAYFAST_PASSPHRASE "$PAYFAST_PASSPHRASE"
+          set_env_if_present PAYFAST_SANDBOX "$PAYFAST_SANDBOX"
+          rm -f ~/.ssh/vgruvs
       - name: Ship to the droplet
         env:
           VGRUVS_SSH_KEY: ${{ secrets.VGRUVS_SSH_KEY }}
