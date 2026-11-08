@@ -1,6 +1,8 @@
 import {
+  extractClientIp,
   getPayFastConfig,
   getPayFastValidateUrl,
+  isPayFastWhitelistedIp,
   validatePayFastSignature,
   type SelfServePaymentItem
 } from '../../../../utils/payfast'
@@ -9,14 +11,26 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
   try {
+    const config = getPayFastConfig()
+
+    // 0. Whitelist IP verification (AWS migration support)
+    const clientIp = extractClientIp(request)
+    const skipIpCheck = process.env.PAYFAST_SKIP_IP_CHECK === 'true'
+    const enforceIpWhitelist = process.env.PAYFAST_ENFORCE_IP_WHITELIST === 'true' || !config.sandbox
+
+    if (enforceIpWhitelist && !skipIpCheck) {
+      if (!isPayFastWhitelistedIp(clientIp)) {
+        console.warn(`PayFast ITN source IP ${clientIp} not in whitelist`)
+        return new Response(`Forbidden: source IP ${clientIp} not whitelisted`, { status: 403 })
+      }
+    }
+
     const rawBody = await request.text()
     const searchParams = new URLSearchParams(rawBody)
     const params: Record<string, string> = {}
     searchParams.forEach((value, key) => {
       params[key] = value
     })
-
-    const config = getPayFastConfig()
 
     // 1. Validate signature
     const isValidSignature = validatePayFastSignature(params, params.signature || '', config.passphrase)

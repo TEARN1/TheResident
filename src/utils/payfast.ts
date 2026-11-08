@@ -216,3 +216,117 @@ export function buildPayFastPaymentRequest(input: BuildPaymentInput): {
     fields: orderedFields
   }
 }
+
+/**
+ * Official PayFast AWS IP addresses for webhook (ITN) delivery and API whitelisting.
+ * Notice: https://support.payfast.help/portal/en/kb/articles/whitelisting-ip-addresses-2-7-2025
+ * PayFast migrated Payment API infrastructure to AWS (completed July 2025).
+ */
+export const PAYFAST_AWS_IPS = [
+  '3.163.232.237',
+  '3.163.233.237',
+  '3.163.234.237',
+  '3.163.235.237',
+  '3.163.236.237',
+  '3.163.237.237',
+  '3.163.238.237',
+  '3.163.239.237',
+  '3.163.240.237',
+  '3.163.241.237',
+  '3.163.242.237',
+  '3.163.243.237',
+  '3.163.244.237',
+  '3.163.245.237',
+  '3.163.246.237',
+  '3.163.247.237',
+  '3.163.248.237',
+  '3.163.249.237',
+  '3.163.250.237',
+  '3.163.251.237',
+  '3.163.252.237'
+] as const
+
+/** Legacy on-premises IP addresses historically used by PayFast. */
+export const PAYFAST_LEGACY_IPS = [
+  '197.97.145.144',
+  '197.97.145.145',
+  '197.97.145.146',
+  '197.97.145.147',
+  '197.97.145.148',
+  '197.97.145.149',
+  '197.97.145.150',
+  '197.97.145.151',
+  '197.97.145.152',
+  '197.97.145.153',
+  '197.97.145.154',
+  '197.97.145.155',
+  '197.97.145.156',
+  '197.97.145.157',
+  '197.97.145.158',
+  '41.74.179.194',
+  '41.74.179.195',
+  '41.74.179.196',
+  '41.74.179.197',
+  '41.74.179.198',
+  '41.74.179.199',
+  '41.74.179.200',
+  '41.74.179.201',
+  '41.74.179.202',
+  '41.74.179.203',
+  '41.74.179.204',
+  '41.74.179.205',
+  '41.74.179.206'
+] as const
+
+export const PAYFAST_WHITELISTED_IPS: readonly string[] = [
+  ...PAYFAST_AWS_IPS,
+  ...PAYFAST_LEGACY_IPS
+]
+
+export const PAYFAST_DOMAINS = [
+  'payment.payfast.io',
+  'adm.payfast.io',
+  'api.payfast.io',
+  'comms.payfast.io',
+  'devdocs.payfast.io',
+  'api.payfast.co.za',
+  'www.payfast.co.za',
+  'sandbox.payfast.co.za'
+] as const
+
+export function normalizeIp(ip: string): string {
+  if (!ip) return ''
+  let cleaned = ip.trim()
+  if (cleaned.startsWith('::ffff:')) {
+    cleaned = cleaned.slice(7)
+  }
+  if (cleaned.startsWith('[') && cleaned.includes(']:')) {
+    cleaned = cleaned.slice(1, cleaned.indexOf(']:'))
+  } else if (cleaned.includes(':') && cleaned.includes('.')) {
+    cleaned = cleaned.split(':')[0]
+  }
+  return cleaned
+}
+
+export function isPayFastWhitelistedIp(ip: string): boolean {
+  if (!ip) return false
+  const normalized = normalizeIp(ip)
+  return (PAYFAST_WHITELISTED_IPS as readonly string[]).includes(normalized)
+}
+
+export function extractClientIp(request: Request): string {
+  const headers = request.headers
+  const cfConnectingIp = headers.get('cf-connecting-ip')
+  if (cfConnectingIp) return normalizeIp(cfConnectingIp)
+
+  const xRealIp = headers.get('x-real-ip')
+  if (xRealIp) return normalizeIp(xRealIp)
+
+  const xForwardedFor = headers.get('x-forwarded-for')
+  if (xForwardedFor) {
+    const first = xForwardedFor.split(',')[0].trim()
+    if (first) return normalizeIp(first)
+  }
+
+  return 'unknown'
+}

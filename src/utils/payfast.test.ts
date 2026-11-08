@@ -83,3 +83,17 @@ test('buildPayFastPaymentRequest handles one-time boosts without recurring field
   assert.strictEqual(res.fields.frequency, undefined)
   assert.ok(res.fields.signature.length === 32)
 })
+
+test('PayFast AWS migration IP whitelisting validates all 21 IPs', () => {
+  const { PAYFAST_AWS_IPS, isPayFastWhitelistedIp, normalizeIp, PAYFAST_DOMAINS } = require('./payfast')
+  assert.strictEqual(PAYFAST_AWS_IPS.length, 21)
+  for (let i = 232; i <= 252; i++) {
+    const ip = `3.163.${i}.237`
+    assert.ok(PAYFAST_AWS_IPS.includes(ip))
+    assert.ok(isPayFastWhitelistedIp(ip))
+  }
+  assert.ok(isPayFastWhitelistedIp('::ffff:3.163.236.237'))
+  assert.strictEqual(normalizeIp('3.163.238.237:443'), '3.163.238.237')
+  assert.ok(!isPayFastWhitelistedIp('192.168.1.1'))
+  assert.ok(PAYFAST_DOMAINS.includes('payment.payfast.io'))
+})
