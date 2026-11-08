@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appName" translatable="false">The Resident Co-Living Hub</string>
+    <string name="launcherName" translatable="false">Resident</string>
+    <string name="hostName" translatable="false">theresidentcrew.com</string>
+    <string name="launchUrl" translatable="false">https://theresidentcrew.com/dashboard</string>
+    <string name="providerAuthority" translatable="false">com.TheResidentCrew.app.fileprovider</string>
+
+    <string name="shortcut_vibemap_short" translatable="false">VibeMap</string>
+    <string name="shortcut_vibemap_long" translatable="false">VibeMap Radar</string>
+    <string name="shortcut_housing_short" translatable="false">Housing</string>
+    <string name="shortcut_housing_long" translatable="false">Find Housing</string>
+    <string name="shortcut_sos_short" translatable="false">Panic SOS</string>
+    <string name="shortcut_sos_long" translatable="false">Emergency Panic SOS</string>
+    <string name="shortcut_services_short" translatable="false">Services</string>
+    <string name="shortcut_services_long" translatable="false">Local Handyman &amp; Services</string>
+
+    <string name="asset_statements" translatable="false">
+        [{
+            \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+            \"target\": {
+                \"namespace\": \"web\",
+                \"site\": \"https://theresidentcrew.com\"
+            }
+        }]
+    </string>
+</resources>

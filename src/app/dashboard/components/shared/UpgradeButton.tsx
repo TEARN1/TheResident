@@ -4,10 +4,9 @@ import React, { useState } from 'react'
 import { Loader, Sparkles } from 'lucide-react'
 import { startCheckout } from '../../../../utils/subscriptions'
 import { PRICING, formatPrice } from '../../../../utils/pricing'
+import type { SelfServePaymentItem } from '../../../../utils/payfast'
 
-type SelfServeItem = 'priority' | 'premium' | 'plus' | 'verification_speedup' | 'market_boost' | 'room_boost' | 'notice_boost' | 'notice_extend_visibility'
-
-const ACTION_VERB: Record<SelfServeItem, string> = {
+const ACTION_VERB: Record<SelfServePaymentItem, string> = {
   priority: 'Upgrade to',
   premium: 'Upgrade to',
   plus: 'Get',
@@ -15,17 +14,28 @@ const ACTION_VERB: Record<SelfServeItem, string> = {
   market_boost: 'Buy',
   room_boost: 'Buy',
   notice_boost: 'Buy',
-  notice_extend_visibility: 'Buy'
+  notice_extend_visibility: 'Buy',
+  broadcast_blast_boost: 'Boost'
 }
 
-export default function UpgradeButton({ item, targetId, className }: { item: SelfServeItem; targetId?: string; className?: string }) {
+export default function UpgradeButton({
+  item,
+  targetId,
+  className,
+  returnPath
+}: {
+  item: SelfServePaymentItem
+  targetId?: string
+  className?: string
+  returnPath?: string
+}) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleClick = async () => {
     setLoading(true)
     setError(null)
-    const { url, error: checkoutError } = await startCheckout(item, targetId)
+    const { url, error: checkoutError } = await startCheckout(item, targetId, returnPath)
     setLoading(false)
     if (checkoutError) { setError(checkoutError); return }
     if (url) window.location.href = url

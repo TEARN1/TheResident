@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="vibemap"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_vibemap_short"
+        android:shortcutLongLabel="@string/shortcut_vibemap_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.TheResidentCrew.app"
+            android:targetClass="com.TheResidentCrew.app.LauncherActivity"
+            android:data="https://theresidentcrew.com/dashboard/community?tab=vibemap" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="housing"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_housing_short"
+        android:shortcutLongLabel="@string/shortcut_housing_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.TheResidentCrew.app"
+            android:targetClass="com.TheResidentCrew.app.LauncherActivity"
+            android:data="https://theresidentcrew.com/dashboard/housing" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="panic_sos"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_sos_short"
+        android:shortcutLongLabel="@string/shortcut_sos_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.TheResidentCrew.app"
+            android:targetClass="com.TheResidentCrew.app.LauncherActivity"
+            android:data="https://theresidentcrew.com/dashboard/trust-circle" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="services"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_services_short"
+        android:shortcutLongLabel="@string/shortcut_services_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.TheResidentCrew.app"
+            android:targetClass="com.TheResidentCrew.app.LauncherActivity"
+            android:data="https://theresidentcrew.com/dashboard/services" />
+    </shortcut>
+</shortcuts>

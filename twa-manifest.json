@@ -1,0 +1,27 @@
+{
+  "packageId": "com.TheResidentCrew.app",
+  "host": "theresidentcrew.com",
+  "name": "The Resident Co-Living Hub",
+  "launcherName": "Resident",
+  "display": "standalone",
+  "themeColor": "#051F20",
+  "navigationColor": "#051F20",
+  "navigationColorDark": "#051F20",
+  "backgroundColor": "#051F20",
+  "enableNotifications": true,
+  "startUrl": "/dashboard",
+  "iconUrl": "https://theresidentcrew.com/logo.png",
+  "maskableIconUrl": "https://theresidentcrew.com/logo.png",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 2,
+  "signingKey": {
+    "path": "./android/upload-keystore.jks",
+    "alias": "upload"
+  },
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  }
+}

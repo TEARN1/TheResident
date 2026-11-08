@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.TheResidentCrew.app",
+      "sha256_cert_fingerprints": [
+        "51:54:F7:28:1B:C5:44:FE:8C:8B:4E:33:C4:48:E7:DA:24:47:F4:58:77:56:48:51:4E:60:F7:C3:38:06:EA:AF"
+      ]
+    }
+  }
+]
