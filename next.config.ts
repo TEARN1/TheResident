@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // The public site's console stays empty: production builds drop every
+  // console call. (No server code here logs; development keeps them all.)
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
   // A self-contained server.js plus only the node_modules it needs, for
   // V-Gruvs (our DigitalOcean host) and the Dockerfile. Vercel ignores it.
   output: 'standalone',
