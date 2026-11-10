@@ -4,6 +4,7 @@ import assert from 'node:assert'
 import {
   generatePayFastSignature,
   validatePayFastSignature,
+  extractClientIp,
   verifyPayFastItnPayload,
   getPayFastConfig,
   getPayFastProcessUrl,
@@ -243,4 +244,10 @@ test('PayFast AWS migration IP whitelisting validates all 21 IPs', () => {
   assert.strictEqual(normalizeIp('3.163.238.237:443'), '3.163.238.237')
   assert.ok(!isPayFastWhitelistedIp('192.168.1.1'))
   assert.ok(PAYFAST_DOMAINS.includes('payment.payfast.io'))
+})
+
+test('the sender address comes from nginx, not from a header anyone can set', () => {
+  const forged = new Request('https://x', { headers: { 'cf-connecting-ip': '3.163.236.237', 'x-real-ip': '198.51.100.42' } })
+  assert.strictEqual(extractClientIp(forged), '198.51.100.42')
+  assert.strictEqual(extractClientIp(new Request('https://x', { headers: { 'cf-connecting-ip': '3.163.236.237' } })), 'unknown')
 })

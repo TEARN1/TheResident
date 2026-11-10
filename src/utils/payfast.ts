@@ -448,11 +448,14 @@ export function isPayFastWhitelistedIp(ip: string): boolean {
   return (PAYFAST_WHITELISTED_IPS as readonly string[]).includes(normalized)
 }
 
+/**
+ * The sender's address as the droplet's nginx reports it: it overwrites
+ * X-Real-IP and X-Forwarded-For with the real address (infra/vgruvs in The
+ * Gruvs). cf-connecting-ip is not read: nginx passes it through, so anyone
+ * could set it. With Cloudflare in front, nginx's real_ip_header handles it.
+ */
 export function extractClientIp(request: Request): string {
   const headers = request.headers
-  const cfConnectingIp = headers.get('cf-connecting-ip')
-  if (cfConnectingIp) return normalizeIp(cfConnectingIp)
-
   const xRealIp = headers.get('x-real-ip')
   if (xRealIp) return normalizeIp(xRealIp)
 
