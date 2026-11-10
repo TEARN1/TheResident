@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { test } from 'node:test'
 import assert from 'node:assert'
 import {
@@ -44,6 +45,29 @@ test('PayFast signature validation rejects invalid signature or tampered data', 
   assert.ok(!validatePayFastSignature({ ...sample, amount: '200.00' }, sig, 'test_pass'))
 })
 
+test('PayFast notice signature is accepted with empty fields kept or left out, never without the passphrase', () => {
+  const notice: Record<string, string> = {
+    m_payment_id: 'RES-1',
+    payment_status: 'COMPLETE',
+    item_name: "Priority review (O'Brien)",
+    custom_str3: '',
+    amount_gross: '99.00',
+    merchant_id: '23456789'
+  }
+  const enc = (v: string) => encodeURIComponent(v).replace(/%20/g, '+')
+  const php = (v: string) => enc(v).replace(/[!'()*~]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase())
+  const sign = (keepEmpty: boolean, e: (v: string) => string, pass: string) =>
+    crypto
+      .createHash('md5')
+      .update([...Object.entries(notice).filter(([, v]) => keepEmpty || v).map(([k, v]) => `${k}=${e(v)}`), `passphrase=${e(pass)}`].join('&'))
+      .digest('hex')
+  for (const keep of [true, false]) {
+    for (const e of [enc, php]) assert.ok(validatePayFastSignature(notice, sign(keep, e, 'secret'), 'secret'))
+  }
+  assert.ok(!validatePayFastSignature(notice, sign(true, enc, 'guessed'), 'secret'))
+  assert.ok(!validatePayFastSignature({ ...notice, amount_gross: '1.00' }, sign(true, enc, 'secret'), 'secret'))
+})
+
 test('PayFast environment config separates sandbox defaults from live credentials', () => {
   // Test mode only when asked for: a live server that forgot the setting
   // refuses payments instead of accepting PayFast's test money.
@@ -76,18 +100,19 @@ test('PayFast environment config separates sandbox defaults from live credential
         PAYFAST_MERCHANT_KEY: 'live_key_abc',
         PAYFAST_PASSPHRASE: 'jt7NOE43FZPn'
       }),
-    /cannot use the public sandbox passphrase/
+    /needs its own PAYFAST_PASSPHRASE/
   )
 
-  // Live mode without passphrase does NOT leak sandbox passphrase
-  const liveNoPass = getPayFastConfig({
-    PAYFAST_SANDBOX: 'false',
-    PAYFAST_MERCHANT_ID: '23456789',
-    PAYFAST_MERCHANT_KEY: 'live_key_abc'
-  })
-  assert.strictEqual(liveNoPass.sandbox, false)
-  assert.strictEqual(liveNoPass.merchantId, '23456789')
-  assert.strictEqual(liveNoPass.passphrase, undefined)
+  // Live mode needs a passphrase of its own: without one anyone could sign a notice
+  assert.throws(
+    () =>
+      getPayFastConfig({
+        PAYFAST_SANDBOX: 'false',
+        PAYFAST_MERCHANT_ID: '23456789',
+        PAYFAST_MERCHANT_KEY: 'live_key_abc'
+      }),
+    /PAYFAST_PASSPHRASE/
+  )
 
   // Live mode with real passphrase
   const liveWithPass = getPayFastConfig({

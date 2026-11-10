@@ -86,16 +86,17 @@ export function getPayFastConfig(
         'PayFast live mode requires real PAYFAST_MERCHANT_ID and PAYFAST_MERCHANT_KEY environment variables (set PAYFAST_SANDBOX=true for test mode).'
       )
     }
-    if (rawPassphrase === PAYFAST_SANDBOX_PASSPHRASE) {
+    // Without a passphrase anyone could sign a notice.
+    if (!rawPassphrase || rawPassphrase === PAYFAST_SANDBOX_PASSPHRASE) {
       throw new Error(
-        'PayFast live mode (PAYFAST_SANDBOX=false) cannot use the public sandbox passphrase.'
+        'PayFast live mode needs its own PAYFAST_PASSPHRASE (set under Settings, Developer settings in PayFast).'
       )
     }
 
     return {
       merchantId: rawMerchantId,
       merchantKey: rawMerchantKey,
-      passphrase: rawPassphrase || undefined,
+      passphrase: rawPassphrase,
       sandbox: false
     }
   }
@@ -148,22 +149,37 @@ export function generatePayFastSignature(
   return crypto.createHash('md5').update(getString).digest('hex')
 }
 
+const jsEncode = (v: string) => encodeURIComponent(v.trim()).replace(/%20/g, '+')
+const phpEncode = (v: string) =>
+  jsEncode(v).replace(/[!'()*~]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase())
+
 /**
- * Validates an incoming ITN signature against computed signature in constant time.
+ * Validates an incoming ITN signature in constant time. The fields are taken
+ * in the order received (signature left out), then the passphrase. PayFast's
+ * own samples keep empty fields in that string and some libraries leave them
+ * out, and its JavaScript and PHP samples encode ' ( ) ! * ~ differently, so
+ * each form is accepted; every form needs the passphrase.
  */
 export function validatePayFastSignature(
   data: Record<string, string | undefined>,
   receivedSignature: string,
   passphrase?: string
 ): boolean {
-  if (!receivedSignature) return false
-  const computed = generatePayFastSignature(data, passphrase).toLowerCase()
-  const candidate = receivedSignature.trim().toLowerCase()
-  if (computed.length !== candidate.length) return false
-  return crypto.timingSafeEqual(
-    Buffer.from(computed, 'utf8'),
-    Buffer.from(candidate, 'utf8')
-  )
+  const candidate = (receivedSignature || '').trim().toLowerCase()
+  if (!/^[0-9a-f]{32}$/.test(candidate)) return false
+  const fields = Object.keys(data)
+    .filter((k) => k !== 'signature' && data[k] !== undefined)
+    .map((k) => [k, String(data[k])] as const)
+  let matched = false
+  for (const encode of [jsEncode, phpEncode]) {
+    for (const keepEmpty of [true, false]) {
+      const parts = fields.filter(([, v]) => keepEmpty || v !== '').map(([k, v]) => `${k}=${encode(v)}`)
+      if (passphrase && passphrase.trim() !== '') parts.push(`passphrase=${encode(passphrase)}`)
+      const computed = crypto.createHash('md5').update(parts.join('&')).digest('hex')
+      if (crypto.timingSafeEqual(Buffer.from(computed, 'utf8'), Buffer.from(candidate, 'utf8'))) matched = true
+    }
+  }
+  return matched
 }
 
 export type VerifiedPayFastItn =
