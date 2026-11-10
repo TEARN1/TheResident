@@ -11,6 +11,17 @@ export async function POST(request: Request) {
   try {
     const config = getPayFastConfig()
 
+    // Test money must never unlock anything on the live site. A sandbox payment
+    // is fulfilled in production only during a deliberate owner test window.
+    if (
+      config.sandbox &&
+      process.env.NODE_ENV === 'production' &&
+      process.env.PAYFAST_ALLOW_SANDBOX_ITN !== 'true'
+    ) {
+      console.warn('PayFast ITN refused: sandbox payment on the live site')
+      return new Response('Sandbox payments are not fulfilled on the live site', { status: 403 })
+    }
+
     // 1. Source IP whitelist check (enforced automatically in live mode)
     const clientIp = extractClientIp(request)
     const skipIpCheck = process.env.PAYFAST_SKIP_IP_CHECK === 'true'

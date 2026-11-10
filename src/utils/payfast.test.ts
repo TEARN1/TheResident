@@ -45,10 +45,14 @@ test('PayFast signature validation rejects invalid signature or tampered data', 
 })
 
 test('PayFast environment config separates sandbox defaults from live credentials', () => {
-  const defaultConfig = getPayFastConfig({})
-  assert.strictEqual(defaultConfig.sandbox, true)
-  assert.strictEqual(defaultConfig.merchantId, '10000100')
-  assert.strictEqual(defaultConfig.passphrase, 'jt7NOE43FZPn')
+  // Test mode only when asked for: a live server that forgot the setting
+  // refuses payments instead of accepting PayFast's test money.
+  assert.throws(() => getPayFastConfig({}), /requires real PAYFAST_MERCHANT_ID/)
+  assert.throws(() => getPayFastConfig({ PAYFAST_SANDBOX: 'yes' }), /requires real PAYFAST_MERCHANT_ID/)
+  const testConfig = getPayFastConfig({ PAYFAST_SANDBOX: 'true' })
+  assert.strictEqual(testConfig.sandbox, true)
+  assert.strictEqual(testConfig.merchantId, '10000100')
+  assert.strictEqual(testConfig.passphrase, 'jt7NOE43FZPn')
 
   // Live mode without real credentials must fail closed
   assert.throws(
@@ -164,6 +168,8 @@ test('verifyPayFastItnPayload enforces merchant_id, signature, self-serve item, 
 })
 
 test('buildPayFastPaymentRequest constructs valid payload and sets recurring fields for monthly subscriptions', () => {
+  // Builds a request in test mode, which must now be asked for explicitly.
+  process.env.PAYFAST_SANDBOX = 'true'
   const res = buildPayFastPaymentRequest({
     item: 'priority',
     userId: '11111111-2222-3333-4444-555555555555',
@@ -183,6 +189,8 @@ test('buildPayFastPaymentRequest constructs valid payload and sets recurring fie
 })
 
 test('buildPayFastPaymentRequest handles one-time boosts without recurring fields', () => {
+  // Builds a request in test mode, which must now be asked for explicitly.
+  process.env.PAYFAST_SANDBOX = 'true'
   const res = buildPayFastPaymentRequest({
     item: 'room_boost',
     targetId: 'room-123',

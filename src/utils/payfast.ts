@@ -60,9 +60,10 @@ export const PAYFAST_FIELD_ORDER = [
 
 /**
  * Reads PayFast configuration from environment variables.
- * Live mode activates ONLY when PAYFAST_SANDBOX is explicitly set to "false",
- * and strictly rejects missing or sandbox test credentials so sandbox defaults
- * can never leak into real customer transactions.
+ * Test (sandbox) mode only when PAYFAST_SANDBOX is explicitly "true". Anything
+ * else is live mode, which refuses missing or sandbox test credentials: a live
+ * server that forgot the setting must refuse payments, never accept PayFast's
+ * free test money as real.
  */
 export function getPayFastConfig(
   env: Record<string, string | undefined> = process.env
@@ -72,7 +73,7 @@ export function getPayFastConfig(
   const rawMerchantKey = env.PAYFAST_MERCHANT_KEY?.trim()
   const rawPassphrase = env.PAYFAST_PASSPHRASE?.trim()
 
-  const isSandbox = sandboxEnv !== 'false'
+  const isSandbox = sandboxEnv === 'true'
 
   if (!isSandbox) {
     if (
@@ -82,7 +83,7 @@ export function getPayFastConfig(
       rawMerchantKey === PAYFAST_SANDBOX_MERCHANT_KEY
     ) {
       throw new Error(
-        'PayFast live mode (PAYFAST_SANDBOX=false) requires real PAYFAST_MERCHANT_ID and PAYFAST_MERCHANT_KEY environment variables.'
+        'PayFast live mode requires real PAYFAST_MERCHANT_ID and PAYFAST_MERCHANT_KEY environment variables (set PAYFAST_SANDBOX=true for test mode).'
       )
     }
     if (rawPassphrase === PAYFAST_SANDBOX_PASSPHRASE) {

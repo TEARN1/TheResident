@@ -61,7 +61,11 @@ export async function POST(request: Request) {
       fields
     })
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Checkout initiation failed'
-    return NextResponse.json({ error: message }, { status: 500 })
+    // The detail (for example a missing setting) is for the server log, not the buyer.
+    console.error('PayFast checkout failed:', err instanceof Error ? err.message : err)
+    return NextResponse.json(
+      { error: 'Online payment is not available right now. Please try again later.' },
+      { status: 500 }
+    )
   }
 }

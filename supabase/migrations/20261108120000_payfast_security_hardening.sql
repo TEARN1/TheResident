@@ -158,8 +158,10 @@ begin
 
     elsif p_item = 'verification_speedup' then
       begin
+        -- Paying moves the profile up the review queue. Only a person reviewing
+        -- the documents changes verification_status.
         update public.res_profiles
-        set verification_status = 'reviewed'
+        set verification_priority_requested_at = coalesce(verification_priority_requested_at, now())
         where id = p_user_id;
       exception when others then null;
       end;
