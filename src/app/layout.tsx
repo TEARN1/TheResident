@@ -179,7 +179,7 @@ export default function RootLayout({
     // made on one never showed up on the other. This inline script runs
     // before React hydrates and sets data-theme from the one shared key
     // every page now reads/writes, avoiding a flash of the wrong theme.
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           type="application/ld+json"

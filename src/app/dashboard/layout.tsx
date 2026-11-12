@@ -547,10 +547,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] sm:w-80 max-h-96 overflow-y-auto custom-scrollbar bg-black/95 backdrop-blur-3xl border border-white/15 rounded-2xl z-50 p-4 space-y-3"
+                      className="absolute top-full right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-y-auto custom-scrollbar bg-black/95 backdrop-blur-3xl border border-white/15 rounded-2xl z-50 p-4 space-y-3 shadow-2xl"
                     >
-                      <div className="flex justify-between items-center pb-2 border-b border-white/10">
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-1.5">
+                      <div className="flex justify-between items-center pb-2 border-b border-white/10 gap-2">
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-1.5 shrink-0">
                           <Megaphone size={12} className="text-gold-primary" /> {t('alerts', lang)}
                         </span>
                         <button

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
-import { Shield, Activity, Bell, MapPin, CheckCircle2, Droplets, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction, Radio, ShieldCheck } from 'lucide-react'
+import { Shield, Activity, Bell, MapPin, CheckCircle2, Droplets, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction, Radio, ShieldCheck, Users } from 'lucide-react'
 import Link from 'next/link'
 import { outageConsensus, type StatusReport } from '../../../../utils/logic'
 import type { Alert, NeighbourhoodStatus } from '../../../../store'
@@ -314,7 +314,7 @@ export default function SafetyTab({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                <span>👨‍👩‍👧</span>
+                <Users className="w-3.5 h-3.5 text-red-400 shrink-0" />
                 <span>Family / Next of Kin</span>
               </div>
               <p className="text-[10px] text-gray-400 leading-relaxed m-0">
@@ -323,7 +323,7 @@ export default function SafetyTab({
             </div>
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                <span>🛡️</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                 <span>Verified Neighbours</span>
               </div>
               <p className="text-[10px] text-gray-400 leading-relaxed m-0">
@@ -332,7 +332,7 @@ export default function SafetyTab({
             </div>
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                <span>🚨</span>
+                <Radio className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>First Responders</span>
               </div>
               <p className="text-[10px] text-gray-400 leading-relaxed m-0">

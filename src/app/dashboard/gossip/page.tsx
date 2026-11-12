@@ -5,7 +5,8 @@ import { useSelector } from 'react-redux'
 import Image from 'next/image'
 import {
   MessageSquare, Send, ChevronDown, ChevronUp, Video, Loader, Image as ImageIcon, X, Palette, Trash2,
-  Search, EyeOff, Radio, Shield, Building2, Share2, Check
+  Search, EyeOff, Radio, Shield, Building2, Share2, Check,
+  Flame, GraduationCap, Home, PartyPopper, Users, Zap
 } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
@@ -17,13 +18,13 @@ import { playTactileSound } from '../../../utils/tactileSounds'
 
 export type GossipCategory = 'all' | 'campus' | 'landlords' | 'gruvs' | 'roommates' | 'safety'
 
-const CATEGORY_TABS: { key: GossipCategory; label: string; icon: string }[] = [
-  { key: 'all', label: 'All Buzz', icon: '🔥' },
-  { key: 'campus', label: 'Campus Tea', icon: '🏫' },
-  { key: 'landlords', label: 'Landlord Watch', icon: '🏠' },
-  { key: 'gruvs', label: 'Gruvs Events', icon: '🎉' },
-  { key: 'roommates', label: 'Roommates', icon: '💡' },
-  { key: 'safety', label: 'Safety & Power', icon: '⚡' }
+const CATEGORY_TABS: { key: GossipCategory; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: 'all', label: 'All Buzz', icon: Flame },
+  { key: 'campus', label: 'Campus Tea', icon: GraduationCap },
+  { key: 'landlords', label: 'Landlord Watch', icon: Home },
+  { key: 'gruvs', label: 'Gruvs Events', icon: PartyPopper },
+  { key: 'roommates', label: 'Roommates', icon: Users },
+  { key: 'safety', label: 'Safety & Power', icon: Zap }
 ]
 
 interface GossipPost {
@@ -542,13 +543,13 @@ export default function GossipPage() {
                 playTactileSound('tab')
                 setActiveCategory(tab.key)
               }}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider shrink-0 transition-all border ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider shrink-0 transition-all border flex items-center gap-1.5 ${
                 activeCategory === tab.key
                   ? 'bg-gold-primary text-black border-gold-primary shadow-glow'
                   : 'bg-black/50 text-gray-400 border-white/10 hover:text-white hover:bg-white/5'
               }`}
             >
-              <span className="mr-1">{tab.icon}</span>
+              <tab.icon className="w-3.5 h-3.5 shrink-0" />
               <span>{tab.label}</span>
             </button>
           ))}
@@ -670,13 +671,13 @@ export default function GossipPage() {
                     playTactileSound('tab')
                     setComposerCategory(t.key)
                   }}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border flex items-center gap-1.5 ${
                     composerCategory === t.key
                       ? 'bg-gold-primary text-black border-gold-primary shadow-glow font-black'
                       : 'bg-black/50 border-white/10 text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <span className="mr-1">{t.icon}</span>
+                  <t.icon className="w-3 h-3 shrink-0" />
                   <span>{t.label}</span>
                 </button>
               ))}

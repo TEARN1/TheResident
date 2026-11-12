@@ -7,7 +7,7 @@ import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID,
 import { supabase } from '../../utils/supabase'
 import { fetchEnabledProviders, isOAuthFailure, getOAuthFailureMessage } from '../../utils/oauth'
 import { performLogin } from '../../utils/authLogin'
-import { Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader } from 'lucide-react'
+import { Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader, Sparkles } from 'lucide-react'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { safeNextPath } from '../../utils/launch'
 import { track } from '../../utils/track'
@@ -344,6 +344,40 @@ export default function AuthPage() {
       details: 'Browsing limits applied'
     }))
 
+    const target = afterAuthPath()
+    // Auth-gated paths (messages, profile) must not bounce guest users in an infinite loop
+    const safeGuestTarget = (target.startsWith('/dashboard/messages') || target.startsWith('/dashboard/profile'))
+      ? '/dashboard'
+      : target
+    router.push(safeGuestTarget)
+  }
+
+  const handleDemoLogin = () => {
+    playTactileSound('click')
+    const demoUser = {
+      id: 'demo-tenant-1111-2222-3333-444444444444',
+      name: 'Thabo Ndlovu (Demo)',
+      email: 'thabo.demo@theresidentcrew.com',
+      role: 'tenant' as const,
+      profile: {
+        bio: 'Wits student & Braamfontein resident. Exploring local rooms and campus vibe.',
+        gender: 'men' as const,
+        childrenCount: 0,
+        employmentStatus: 'Student',
+        hasPets: false,
+        verificationDocUrl: undefined
+      }
+    }
+
+    document.cookie = `guest-mode=0; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+    dispatch(resetFailedAttempts(email))
+    dispatch(loginUser(demoUser))
+    dispatch(addLog({
+      action: 'Entered application with Demo Resident account',
+      type: 'auth_success',
+      details: 'Instant sandbox resident session'
+    }))
+
     router.push(afterAuthPath())
   }
 
@@ -656,9 +690,34 @@ export default function AuthPage() {
           </div>
         </>)}
 
-        <button type="button" onClick={handleVisitorLogin} style={guestLinkStyle}>
-          Just looking? Browse as a guest
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '1rem', width: '100%' }}>
+          <button
+            type="button"
+            onClick={handleDemoLogin}
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '12px',
+              border: '1px solid rgba(212, 175, 55, 0.4)',
+              background: 'rgba(212, 175, 55, 0.08)',
+              color: '#fbbf24',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s'
+            }}
+          >
+            <Sparkles size={14} /> Try Demo Resident Account (Instant Access)
+          </button>
+
+          <button type="button" onClick={handleVisitorLogin} style={guestLinkStyle}>
+            Just looking? Browse as a guest
+          </button>
+        </div>
 
         <p style={{ margin: '1.25rem 0 0', textAlign: 'center' }}>
           <a href="/terms" target="_blank" rel="noopener noreferrer" style={legalLinkStyle}>Terms</a>

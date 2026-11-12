@@ -65,8 +65,22 @@ export default function OrgBroadcastsPanel() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!currentUser || guest) return
     let cancelled = false
+    if (!currentUser || guest) {
+      Promise.all([
+        fetchAllUnits(),
+        fetchBroadcastFeed()
+      ]).then(([u, b]) => {
+        if (cancelled) return
+        setUnits(u)
+        setFeed(b)
+        setLoaded(true)
+      }).catch(() => {
+        if (!cancelled) setLoaded(true)
+      })
+      return () => { cancelled = true }
+    }
+
     Promise.all([
       fetchAllUnits(),
       fetchMySenderUnitIds(currentUser.id),
@@ -79,6 +93,8 @@ export default function OrgBroadcastsPanel() {
       setFollowedUnitIds(f)
       setFeed(b)
       setLoaded(true)
+    }).catch(() => {
+      if (!cancelled) setLoaded(true)
     })
     return () => { cancelled = true }
   }, [currentUser, guest])
@@ -88,7 +104,10 @@ export default function OrgBroadcastsPanel() {
   }
 
   const toggleFollow = async (unitId: string) => {
-    if (!currentUser) return
+    if (!currentUser || guest) {
+      setError('Sign in with a verified account to follow official channels and receive broadcast alerts.')
+      return
+    }
     const following = followedUnitIds.includes(unitId)
     try {
       if (following) {
@@ -105,7 +124,11 @@ export default function OrgBroadcastsPanel() {
   }
 
   const handleCreateUnit = async () => {
-    if (!currentUser || !newUnitName.trim()) return
+    if (!currentUser || guest) {
+      setError('Sign in with a verified account to register official broadcast units.')
+      return
+    }
+    if (!newUnitName.trim()) return
     setSubmitting(true)
     setError(null)
     try {
@@ -149,13 +172,20 @@ export default function OrgBroadcastsPanel() {
     }
   }
 
-  if (!currentUser || guest || !loaded) return null
+  if (!loaded) return null
 
   const canSendAnywhere = senderUnitIds.length > 0
   const postableUnits = units.filter(u => canPostAsUnit(units, senderUnitIds, u.id))
 
   return (
     <div className="glass-panel p-5 space-y-4">
+      {guest && (
+        <div className="bg-gold-primary/10 border border-gold-primary/20 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <p className="text-[11px] text-gray-300">
+            <span className="font-bold text-gold-primary">Civic Cascade:</span> Direct updates from Ward Councillors, Executive Mayors, Eskom, CPF, and local schools. Sign in with a verified account to follow and post.
+          </p>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="p-2 bg-gold-primary/10 rounded-xl">

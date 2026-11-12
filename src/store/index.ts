@@ -2543,56 +2543,59 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     // never writes it; the shared row is created by the Gruvs signup rails.
     if (loginUser.match(action)) {
       const user = action.payload
-      const uuid = toUUID(user.id)
+      const isGuest = isGuestUser(user) || user.id === GUEST_USER_ID
 
       if (supabase) {
-        // Fetch or create their res_profiles configuration
-        const { data: dbProfile } = await supabase
-          .from('res_profiles')
-          .select('*')
-          .eq('id', uuid)
-          .single()
+        if (!isGuest) {
+          const uuid = toUUID(user.id)
+          // Fetch or create their res_profiles configuration
+          const { data: dbProfile } = await supabase
+            .from('res_profiles')
+            .select('*')
+            .eq('id', uuid)
+            .single()
 
-        if (dbProfile) {
-          if (dbProfile.role === 'tenant') {
-            store.dispatch(updateProfile({
-              profile: {
-                bio: dbProfile.bio || '',
-                gender: (dbProfile.gender || 'any') as UserProfile['gender'],
-                childrenCount: dbProfile.children_count || 0,
-                employmentStatus: dbProfile.employment_status || '',
-                hasPets: !!dbProfile.has_pets,
-                verificationDocUrl: dbProfile.verification_doc_url || undefined
-              }
-            }))
-          } else if (dbProfile.role === 'landlord') {
-            store.dispatch(updatePreferences({
-              preferences: {
-                genderPreference: (dbProfile.landlord_gender_pref || 'any') as LandlordPreferences['genderPreference'],
-                childrenAllowed: !!dbProfile.landlord_children_allowed,
-                maxChildren: dbProfile.landlord_max_children || 0,
-                smokingAllowed: !!dbProfile.landlord_smoking_allowed,
-                petsAllowed: !!dbProfile.landlord_pets_allowed
-              }
-            }))
+          if (dbProfile) {
+            if (dbProfile.role === 'tenant') {
+              store.dispatch(updateProfile({
+                profile: {
+                  bio: dbProfile.bio || '',
+                  gender: (dbProfile.gender || 'any') as UserProfile['gender'],
+                  childrenCount: dbProfile.children_count || 0,
+                  employmentStatus: dbProfile.employment_status || '',
+                  hasPets: !!dbProfile.has_pets,
+                  verificationDocUrl: dbProfile.verification_doc_url || undefined
+                }
+              }))
+            } else if (dbProfile.role === 'landlord') {
+              store.dispatch(updatePreferences({
+                preferences: {
+                  genderPreference: (dbProfile.landlord_gender_pref || 'any') as LandlordPreferences['genderPreference'],
+                  childrenAllowed: !!dbProfile.landlord_children_allowed,
+                  maxChildren: dbProfile.landlord_max_children || 0,
+                  smokingAllowed: !!dbProfile.landlord_smoking_allowed,
+                  petsAllowed: !!dbProfile.landlord_pets_allowed
+                }
+              }))
+            }
+            store.dispatch(setLegalName(dbProfile.legal_name || undefined))
+          } else {
+            await supabase.from('res_profiles').insert({
+              id: uuid,
+              role: user.role,
+              bio: user.profile?.bio || null,
+              gender: user.profile?.gender || null,
+              children_count: user.profile?.childrenCount || 0,
+              employment_status: user.profile?.employmentStatus || null,
+              has_pets: !!user.profile?.hasPets,
+              verification_doc_url: user.profile?.verificationDocUrl || null,
+              landlord_gender_pref: user.preferences?.genderPreference || null,
+              landlord_children_allowed: user.preferences?.childrenAllowed !== false,
+              landlord_max_children: user.preferences?.maxChildren || 0,
+              landlord_smoking_allowed: !!user.preferences?.smokingAllowed,
+              landlord_pets_allowed: !!user.preferences?.petsAllowed
+            })
           }
-          store.dispatch(setLegalName(dbProfile.legal_name || undefined))
-        } else {
-          await supabase.from('res_profiles').insert({
-            id: uuid,
-            role: user.role,
-            bio: user.profile?.bio || null,
-            gender: user.profile?.gender || null,
-            children_count: user.profile?.childrenCount || 0,
-            employment_status: user.profile?.employmentStatus || null,
-            has_pets: !!user.profile?.hasPets,
-            verification_doc_url: user.profile?.verificationDocUrl || null,
-            landlord_gender_pref: user.preferences?.genderPreference || null,
-            landlord_children_allowed: user.preferences?.childrenAllowed !== false,
-            landlord_max_children: user.preferences?.maxChildren || 0,
-            landlord_smoking_allowed: !!user.preferences?.smokingAllowed,
-            landlord_pets_allowed: !!user.preferences?.petsAllowed
-          })
         }
 
         // Populate dashboard with all tables

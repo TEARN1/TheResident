@@ -1,7 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, CheckCircle2, Compass, Download, Home, LogIn, MapPin, Search, ShieldCheck, Smartphone, Sparkles, Wrench } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Compass, Download, Home, LogIn, MapPin, Search, ShieldCheck, Smartphone, Sparkles, Wrench, Car, PartyPopper, Activity } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import styles from './page.module.css'
@@ -166,9 +166,15 @@ export default function HomePage() {
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: '2px' }}>
-            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }}>🚦 Traffic & Detours</span>
-            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }}>🎉 Event Vibes</span>
-            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }}>🏃 Marathon Corridors</span>
+            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Car size={11} className="text-amber-400" /> Traffic & Detours
+            </span>
+            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <PartyPopper size={11} className="text-gold-primary" /> Event Vibes
+            </span>
+            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Activity size={11} className="text-emerald-400" /> Marathon Corridors
+            </span>
           </div>
         </div>
 

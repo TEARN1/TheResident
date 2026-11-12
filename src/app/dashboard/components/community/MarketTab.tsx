@@ -4,7 +4,7 @@ import React, { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin, EyeOff, Eye, ImagePlus } from 'lucide-react'
+import { ShoppingBag, Store, Users, Search, Plus, Check, AlertTriangle, ShieldAlert, X, MapPin, EyeOff, Eye, ImagePlus, Phone, Star, Clock } from 'lucide-react'
 import type { MarketItem, Vendor, GroupBuy, LostFound } from '../../../../store'
 import { supabase } from '../../../../utils/supabase'
 import UpgradeButton from '../shared/UpgradeButton'
@@ -267,11 +267,11 @@ export default function MarketTab({
                   {expandedVendor === v.id && (
                     <div className="px-4 pb-4 pt-1 space-y-2 border-t border-white/5">
                        <p className="text-sm text-gray-400 leading-relaxed">{v.description || 'No description added yet.'}</p>
-                       <div className="flex items-center gap-4 text-xs text-gray-500">
-                          {v.contactNumber && <span>📞 {v.contactNumber}</span>}
-                          <span>{v.reviewsCount > 0 ? `⭐ ${v.rating.toFixed(1)} (${v.reviewsCount} review${v.reviewsCount === 1 ? '' : 's'})` : 'No reviews yet'}</span>
-                          {v.hours && <span>🕒 {v.hours}</span>}
-                          {v.suburb && <span>📍 {v.suburb}</span>}
+                       <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                          {v.contactNumber && <span className="flex items-center gap-1.5"><Phone size={12} className="text-gray-400" /> {v.contactNumber}</span>}
+                          <span className="flex items-center gap-1.5"><Star size={12} className={v.reviewsCount > 0 ? 'text-gold-primary fill-gold-primary' : 'text-gray-600'} /> {v.reviewsCount > 0 ? `${v.rating.toFixed(1)} (${v.reviewsCount} review${v.reviewsCount === 1 ? '' : 's'})` : 'No reviews yet'}</span>
+                          {v.hours && <span className="flex items-center gap-1.5"><Clock size={12} className="text-gray-400" /> {v.hours}</span>}
+                          {v.suburb && <span className="flex items-center gap-1.5"><MapPin size={12} className="text-gray-400" /> {v.suburb}</span>}
                        </div>
                     </div>
                   )}
