@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import styles from '../info.module.css'
 import { listPublicServices, serviceSlug, servicePlace, slugify } from '../../public-services'
+import { Breadcrumbs, JsonLd } from '../directory-views'
+import { siteUrl } from '../../site-url'
 
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
@@ -10,6 +12,12 @@ export const metadata: Metadata = {
   description:
     'Plumbers, electricians, cleaners, builders, movers and more, listed by residents and rated by their neighbours on The Resident.',
   alternates: { canonical: '/services' },
+  openGraph: {
+    title: 'Local Services & Trades Near You — The Resident',
+    description:
+      'Plumbers, electricians, cleaners, builders, movers and more, listed by residents and rated by their neighbours on The Resident.',
+    url: `${siteUrl()}/services`,
+  },
 }
 
 export default async function ServicesDirectory() {
@@ -24,8 +32,34 @@ export default async function ServicesDirectory() {
   }
   const categories = [...byCategory.keys()].sort()
 
+  const base = siteUrl()
+  const servicesJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Local Services & Trades in South Africa',
+    description:
+      'Plumbers, electricians, cleaners, builders, movers and more, listed by residents and rated by neighbours.',
+    url: `${base}/services`,
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: categories.map((cat, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: cat,
+        url: `${base}/services/${slugify(cat)}`,
+      })),
+    },
+  }
+
   return (
     <>
+      <Breadcrumbs
+        trail={[
+          { name: 'Home', href: '/' },
+          { name: 'Local services', href: '/services' },
+        ]}
+      />
+      <JsonLd data={servicesJsonLd} />
       <h1>Local services</h1>
       <p className={styles.lede}>
         Trades and services listed by residents and rated by the neighbours who used them.

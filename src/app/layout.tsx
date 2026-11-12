@@ -12,19 +12,88 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: 'The Resident Crew',
-  description: 'Find a room you can trust: real rooms from real landlords, with a fair-price check on every one. Plus SOS alerts, local services and trade with your neighbours.',
-  // Link previews (WhatsApp, Facebook, X). The image is app/opengraph-image.tsx.
+  title: {
+    default: 'The Resident Crew | Rooms to Rent, Student Housing & Local Services in South Africa',
+    template: '%s | The Resident Crew',
+  },
+  description:
+    'Find verified rooms to rent, student accommodation, and trusted local services across South Africa (Braamfontein, Auckland Park, Hatfield, Soweto). Zero broker fees, fair-price checks, and neighbourhood safety alerts.',
+  keywords: [
+    'rooms to rent',
+    'student accommodation South Africa',
+    'student housing Braamfontein',
+    'Auckland Park student rooms',
+    'Hatfield student accommodation',
+    'Soweto rooms to rent',
+    'verified landlords',
+    'zero broker fees',
+    'fair price rent check',
+    'local handymen South Africa',
+    'spaza shop directory',
+    'neighbourhood safety alerts',
+    'The Resident Crew',
+    'co-living South Africa'
+  ],
+  authors: [{ name: 'The Resident Crew', url: siteUrl() }],
+  creator: 'The Resident Crew',
+  publisher: 'The Resident Crew',
+  formatDetection: {
+    email: false,
+    address: true,
+    telephone: false,
+  },
+  alternates: {
+    canonical: '/',
+    languages: {
+      'en-ZA': '/',
+      'x-default': '/',
+    },
+  },
   openGraph: {
     type: 'website',
-    siteName: 'The Resident',
-    title: 'The Resident: find a room you can trust',
-    description: 'Real rooms from real landlords, a fair-price check on every one, and neighbours who have your back.',
+    locale: 'en_ZA',
+    url: siteUrl(),
+    siteName: 'The Resident Crew',
+    title: 'The Resident Crew | Find a Room You Can Trust in South Africa',
+    description:
+      'Verified rooms from real landlords, fair-price checks on every listing, and neighbours who have your back across South African suburbs.',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'The Resident Crew — Verified Rooms & Neighbourhood Community in South Africa',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'The Resident: find a room you can trust',
-    description: 'Real rooms from real landlords, a fair-price check on every one, and neighbours who have your back.',
+    title: 'The Resident Crew | Find a Room You Can Trust in South Africa',
+    description:
+      'Verified rooms from real landlords, fair-price checks on every listing, and neighbours who have your back across South African suburbs.',
+    images: ['/opengraph-image'],
+    creator: '@TheResidentCrew',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/logo.png', sizes: '192x192', type: 'image/png' },
+      { url: '/logo.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/logo.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -42,6 +111,66 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const base = siteUrl()
+  const globalJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': `${base}/#website`,
+        url: base,
+        name: 'The Resident Crew',
+        alternateName: ['The Resident', 'Resident Crew', 'The Resident South Africa'],
+        description:
+          'Verified rooms to rent, student accommodation, and local services across South African neighbourhoods.',
+        inLanguage: 'en-ZA',
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${base}/dashboard/housing?q={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+      {
+        '@type': 'Organization',
+        '@id': `${base}/#organization`,
+        name: 'The Resident Crew',
+        url: base,
+        logo: {
+          '@type': 'ImageObject',
+          url: `${base}/logo.png`,
+          width: 512,
+          height: 512,
+        },
+        sameAs: [
+          'https://twitter.com/TheResidentCrew',
+          'https://facebook.com/TheResidentCrew',
+        ],
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'customer support',
+          url: `${base}/contact`,
+          areaServed: 'ZA',
+          availableLanguage: ['English', 'isiZulu', 'Sesotho', 'Afrikaans'],
+        },
+      },
+      {
+        '@type': 'SoftwareApplication',
+        '@id': `${base}/#app`,
+        name: 'The Resident',
+        operatingSystem: 'Android, iOS, Web',
+        applicationCategory: 'RealEstateApplication',
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'ZAR',
+        },
+      },
+    ],
+  }
+
   return (
     // No hardcoded data-theme here anymore — it used to be a permanent
     // "day" that CSS never even styled (globals.css only has 'night'/
@@ -52,6 +181,12 @@ export default function RootLayout({
     // every page now reads/writes, avoiding a flash of the wrong theme.
     <html lang="en">
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(globalJsonLd).replace(/</g, '\\u003c'),
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `

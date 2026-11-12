@@ -1,11 +1,19 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Breadcrumbs } from '../directory-views'
+import { siteUrl } from '../../site-url'
 
 export const metadata: Metadata = {
-  title: 'FAQ — The Resident',
+  title: 'FAQ — Frequently Asked Questions | The Resident',
   description:
     'Answers to common questions about The Resident: cost, who can join, safety, privacy, listing a business, and installing the app.',
   alternates: { canonical: '/faq' },
+  openGraph: {
+    title: 'FAQ — Frequently Asked Questions | The Resident',
+    description:
+      'Answers to common questions about The Resident: cost, who can join, safety, privacy, listing a business, and installing the app.',
+    url: `${siteUrl()}/faq`,
+  },
 }
 
 const faqs: { q: string; a: string }[] = [
@@ -61,6 +69,12 @@ export default function FaqPage() {
 
   return (
     <>
+      <Breadcrumbs
+        trail={[
+          { name: 'Home', href: '/' },
+          { name: 'FAQ', href: '/faq' },
+        ]}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}

@@ -79,15 +79,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${base}/`, lastModified: latest(entries) ?? INFO_PAGES_UPDATED, changeFrequency: 'daily', priority: 1 },
     { url: `${base}/auth`, lastModified: INFO_PAGES_UPDATED, changeFrequency: 'monthly', priority: 0.5 },
-    ...infoLinks.map(l =>
-      dynamicHubs.has(l.href)
-        ? { ...hub(l.href, entries, 0.8), lastModified: latest(entries) ?? INFO_PAGES_UPDATED, changeFrequency: 'daily' as const }
-        : {
-            url: `${base}${l.href}`,
-            lastModified: INFO_PAGES_UPDATED,
-            changeFrequency: 'monthly' as const,
-            priority: l.href === '/privacy' || l.href === '/terms' ? 0.3 : 0.6,
-          }),
+    ...infoLinks
+      .filter(l => l.href !== '/campus')
+      .map(l =>
+        dynamicHubs.has(l.href)
+          ? { ...hub(l.href, entries, 0.8), lastModified: latest(entries) ?? INFO_PAGES_UPDATED, changeFrequency: 'daily' as const }
+          : {
+              url: `${base}${l.href}`,
+              lastModified: INFO_PAGES_UPDATED,
+              changeFrequency: 'monthly' as const,
+              priority: l.href === '/privacy' || l.href === '/terms' ? 0.3 : 0.6,
+            }),
     ...categoryPages,
     ...areaPages,
     ...campusPages,

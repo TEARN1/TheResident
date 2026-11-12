@@ -1,7 +1,9 @@
 {
-  "name": "The Resident Co-Living Hub",
+  "id": "/",
+  "name": "The Resident Crew",
   "short_name": "Resident",
-  "description": "Informal co-living, housing trading & community vibe mapping platform for South African residents",
+  "lang": "en-ZA",
+  "description": "Verified rooms to rent, student accommodation, and local community services for South African residents",
   "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "portrait",

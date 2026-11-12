@@ -1,17 +1,48 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import styles from '../info.module.css'
+import { Breadcrumbs, JsonLd } from '../directory-views'
+import { siteUrl } from '../../site-url'
 
 export const metadata: Metadata = {
   title: 'About The Resident — Your Suburb, Connected',
   description:
     'The Resident is a community app for South African neighbourhoods: local services, spaza marketplaces, lift clubs, rooms to rent, and street safety alerts from verified neighbours.',
   alternates: { canonical: '/about' },
+  openGraph: {
+    title: 'About The Resident — Your Suburb, Connected',
+    description:
+      'The Resident is a community app for South African neighbourhoods: local services, spaza marketplaces, lift clubs, rooms to rent, and street safety alerts from verified neighbours.',
+    url: `${siteUrl()}/about`,
+  },
 }
 
 export default function AboutPage() {
+  const base = siteUrl()
+  const aboutJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    name: 'About The Resident',
+    description:
+      'The Resident connects people living on the same streets to trade, find verified accommodation, and keep neighbourhoods safe across South Africa.',
+    url: `${base}/about`,
+    mainEntity: {
+      '@type': 'Organization',
+      name: 'The Resident Crew',
+      url: base,
+      logo: `${base}/logo.png`,
+    },
+  }
+
   return (
     <>
+      <Breadcrumbs
+        trail={[
+          { name: 'Home', href: '/' },
+          { name: 'About', href: '/about' },
+        ]}
+      />
+      <JsonLd data={aboutJsonLd} />
       <h1>About The Resident</h1>
       <p className={styles.lede}>
         The Resident is a community app that connects the people who live on the same streets, so

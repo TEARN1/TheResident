@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import styles from '../info.module.css'
 import { listDirectory, areaLabel, distinct, DEFAULT_AREAS } from '../../public-services'
-import { JoinCta } from '../directory-views'
+import { Breadcrumbs, JoinCta, JsonLd } from '../directory-views'
+import { siteUrl } from '../../site-url'
 
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
@@ -10,6 +11,11 @@ export const metadata: Metadata = {
   title: 'Browse by Area — Local Services & Shops | The Resident',
   description: 'Find local services and shops suburb by suburb across South Africa, listed by the residents who run them.',
   alternates: { canonical: '/area' },
+  openGraph: {
+    title: 'Browse by Area — Local Services & Shops | The Resident',
+    description: 'Find local services and shops suburb by suburb across South Africa, listed by the residents who run them.',
+    url: `${siteUrl()}/area`,
+  },
 }
 
 export default async function AreasIndex() {
@@ -30,8 +36,33 @@ export default async function AreasIndex() {
     })
     .sort((a, b) => a.name.localeCompare(b.name))
 
+  const base = siteUrl()
+  const areaJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Browse Suburbs & Areas in South Africa',
+    description: 'Local services, student accommodation, and shops suburb by suburb across South Africa.',
+    url: `${base}/area`,
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: areas.map((a, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: a.name,
+        url: `${base}/area/${a.slug}`,
+      })),
+    },
+  }
+
   return (
     <>
+      <Breadcrumbs
+        trail={[
+          { name: 'Home', href: '/' },
+          { name: 'Areas', href: '/area' },
+        ]}
+      />
+      <JsonLd data={areaJsonLd} />
       <h1>Browse by area</h1>
       <p className={styles.lede}>Local services and shops, suburb by suburb.</p>
       <ul>

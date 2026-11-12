@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import styles from '../info.module.css'
 import { CAMPUSES } from '../../public-services'
-import { JoinCta } from '../directory-views'
+import { Breadcrumbs, JoinCta, JsonLd } from '../directory-views'
+import { siteUrl } from '../../site-url'
 
 export const revalidate = 3600
 
@@ -10,11 +11,42 @@ export const metadata: Metadata = {
   title: 'Student Accommodation near Universities in South Africa | The Resident',
   description: 'Find verified student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
   alternates: { canonical: '/campus' },
+  openGraph: {
+    title: 'Student Accommodation near Universities in South Africa | The Resident',
+    description: 'Find verified student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
+    url: `${siteUrl()}/campus`,
+  },
 }
 
 export default function CampusIndex() {
+  const base = siteUrl()
+  const campusJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Student Accommodation near Universities in South Africa',
+    description: 'Find verified student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
+    url: `${base}/campus`,
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: CAMPUSES.map((c, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: c.name,
+        url: `${base}/campus/${c.slug}`,
+        description: c.desc,
+      })),
+    },
+  }
+
   return (
     <>
+      <Breadcrumbs
+        trail={[
+          { name: 'Home', href: '/' },
+          { name: 'Student Accommodation', href: '/campus' },
+        ]}
+      />
+      <JsonLd data={campusJsonLd} />
       <h1>Student Accommodation by University</h1>
       <p className={styles.lede}>
         Verified student communes, rooms, and shared apartments near major campuses across South Africa.
