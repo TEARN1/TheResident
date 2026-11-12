@@ -723,7 +723,7 @@ export default function AuthPage() {
                 transition: 'all 0.2s'
               }}
             >
-              <Sparkles size={13} /> Demo Tenant
+              <Sparkles size={13} /> Tenant Demo Login
             </button>
             <button
               type="button"
@@ -744,7 +744,7 @@ export default function AuthPage() {
                 transition: 'all 0.2s'
               }}
             >
-              <Shield size={13} /> Demo Landlord
+              <Shield size={13} /> Landlord Demo Login
             </button>
           </div>
 

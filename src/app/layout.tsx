@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import './globals.css'
 import { siteUrl } from './site-url'
 
@@ -187,7 +188,9 @@ export default function RootLayout({
             __html: JSON.stringify(globalJsonLd).replace(/</g, '\\u003c'),
           }}
         />
-        <script
+        <Script
+          id="resident-theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               try {
@@ -201,12 +204,6 @@ export default function RootLayout({
               } catch (e) {
                 document.documentElement.setAttribute('data-theme', 'minimal-green');
               }
-              // Glass is the default look. Surfaces turn solid where it
-              // would cost readability or speed: the device asks for less
-              // transparency or forced colours, Data Saver is on, the browser
-              // cannot blur, or the device is slow (2 GB or 2 cores or fewer).
-              // The one message in the console (production drops every
-              // other console call), for anyone told to paste something.
               try {
                 if (location.hostname !== 'localhost') {
                   var out = window.console;
@@ -228,18 +225,17 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {/* The Redux store is provided by the auth and dashboard layouts, so
             the home page and info pages don't load it or Supabase. */}
         {children}
-        <script
+        <Script
+          id="resident-sw-register"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                  // When a new release's service worker takes over, reload
-                  // once so the page on screen is the new version too (only
-                  // when one was already in control, so no loop on first install).
                   var hadController = !!navigator.serviceWorker.controller;
                   var reloaded = false;
                   navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -247,8 +243,6 @@ export default function RootLayout({
                     reloaded = true;
                     window.location.reload();
                   });
-                  // A failed registration just means no offline copy; the
-                  // public console stays empty.
                   navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(function() {});
                 });
               }

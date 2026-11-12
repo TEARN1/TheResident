@@ -33,6 +33,7 @@ import PointerSpotlight from './components/shared/PointerSpotlight'
 import CallProvider from './components/messages/CallProvider'
 import PWAInstallBanner from './components/shared/PWAInstallBanner'
 import ThemeSwitcherModal from './components/shared/ThemeSwitcherModal'
+import DashboardLoading from './loading'
 import UrbanDynamicIsland from './components/navigation/UrbanDynamicIsland'
 import ActionOrb from './components/navigation/ActionOrb'
 import { DEFAULT_THEME } from '../../utils/themes'
@@ -225,9 +226,37 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (!currentUser) {
     return (
-      <div className="dashboard-loading">
-        <div className="dashboard-loading-spinner" />
-        <span>{t('loadingDashboard', lang)}</span>
+      <div className="min-h-screen min-h-dvh bg-black text-white flex overflow-hidden">
+        {/* Left Sidebar Skeleton (Desktop) */}
+        <aside className="hidden lg:flex flex-col w-64 border-r border-white/10 bg-black/40 backdrop-blur-3xl p-4 gap-6 shrink-0">
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="w-8 h-8 rounded-xl bg-white/10 animate-pulse shrink-0" />
+            <div className="h-4 w-32 bg-white/15 rounded-md animate-pulse" />
+          </div>
+          <div className="space-y-2 flex-1">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-10 rounded-xl bg-white/5 border border-white/5 animate-pulse" />
+            ))}
+          </div>
+          <div className="h-12 rounded-xl bg-white/5 border border-white/5 animate-pulse" />
+        </aside>
+
+        {/* Main Content Workspace Skeleton */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-16 border-b border-white/10 px-4 sm:px-6 flex items-center justify-between bg-black/60 backdrop-blur-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white/10 lg:hidden animate-pulse shrink-0" />
+              <div className="h-4 w-36 bg-white/15 rounded-md animate-pulse" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-28 bg-white/5 rounded-xl border border-white/10 animate-pulse hidden sm:block" />
+              <div className="h-8 w-8 rounded-xl bg-white/10 animate-pulse" />
+            </div>
+          </header>
+          <main className="flex-1 overflow-y-auto">
+            <DashboardLoading />
+          </main>
+        </div>
       </div>
     )
   }

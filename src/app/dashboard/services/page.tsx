@@ -21,7 +21,7 @@ import {
   LiftClub
 } from '../../../store'
 import { claimVoucher, joinWaitlist, cancelSeat } from '../../../store/actions'
-import { formatCurrency } from '../../../utils/logic'
+import { formatCurrency, estimateRemainingBatteryHours, loadsheddingStageToOutageHours, peakTariffCostPerHour } from '../../../utils/logic'
 import FollowButton from '../components/social/FollowButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
 import OpenInMapsButton from '../components/map/OpenInMapsButton'
@@ -144,6 +144,10 @@ export default function ServicesPage() {
 
   // Proof Modal State (Mock)
   const [showProofModal, setShowProofModal] = useState<ServiceDispatch | null>(null)
+
+  // Utilities Calculator State
+  const [calcKwh, setCalcKwh] = useState<number>(350)
+  const [calcStage, setCalcStage] = useState<number>(2)
 
   // Lift Club Creation State
   const [showLiftModal, setShowLiftModal] = useState(false)
@@ -978,6 +982,105 @@ export default function ServicesPage() {
                  </div>
               </div>
            </div>
+
+           {/* Deterministic Utility & Resilience Calculator */}
+           {(() => {
+             const block1Kwh = Math.min(calcKwh, 350)
+             const block2Kwh = Math.max(0, calcKwh - 350)
+             const block1Cost = block1Kwh * 2.25
+             const block2Cost = block2Kwh * 3.15
+             const totalCost = block1Cost + block2Cost
+             const effectiveRate = calcKwh > 0 ? totalCost / calcKwh : 0
+             const ls = loadsheddingStageToOutageHours(calcStage)
+             const backupHours = estimateRemainingBatteryHours(5, 450, 0.85)
+             const geyserCostPerHour = peakTariffCostPerHour(3.15, 2000)
+
+             return (
+               <div className="glass-panel p-6 sm:p-8 bg-black/60 border border-white/10 rounded-3xl space-y-6 shadow-2xl">
+                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                   <div>
+                     <h4 className="text-base font-black text-white uppercase italic tracking-wider flex items-center gap-2">
+                       <Zap size={18} className="text-gold-primary" /> Eskom Tariff &amp; Grid Resilience Calculator
+                     </h4>
+                     <p className="text-xs text-gray-400 mt-0.5">
+                       Incline Block Tariff (IBT) estimation &amp; load-shedding battery endurance calculations.
+                     </p>
+                   </div>
+                   <span className="text-[10px] font-mono px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 shrink-0">
+                     Standard SA Domestic Tariffs
+                   </span>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   {/* kWh Consumption Slider & IBT Breakdown */}
+                   <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-4">
+                     <div className="flex justify-between items-center text-xs">
+                       <span className="font-bold text-gray-300">Monthly Usage</span>
+                       <span className="font-mono text-gold-primary font-black text-sm">{calcKwh} kWh</span>
+                     </div>
+                     <input
+                       type="range"
+                       min={50}
+                       max={1000}
+                       step={25}
+                       value={calcKwh}
+                       onChange={(e) => setCalcKwh(Number(e.target.value))}
+                       className="w-full accent-gold-primary cursor-pointer"
+                     />
+                     <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5 text-[11px]">
+                       <div>
+                         <span className="text-[10px] text-gray-500 uppercase block font-bold">Block 1 (&le;350)</span>
+                         <span className="font-mono text-gray-200 font-bold">R{block1Cost.toFixed(2)}</span>
+                       </div>
+                       <div>
+                         <span className="text-[10px] text-gray-500 uppercase block font-bold">Block 2 (&gt;350)</span>
+                         <span className="font-mono text-gray-200 font-bold">R{block2Cost.toFixed(2)}</span>
+                       </div>
+                       <div>
+                         <span className="text-[10px] text-gray-500 uppercase block font-bold">Est. Total</span>
+                         <span className="font-mono text-gold-primary font-black">R{totalCost.toFixed(2)}</span>
+                       </div>
+                     </div>
+                     <p className="text-[10px] text-gray-500">
+                       Effective rate: R{effectiveRate.toFixed(2)}/kWh &bull; 2kW Geyser: R{geyserCostPerHour.toFixed(2)}/hr run cost.
+                     </p>
+                   </div>
+
+                   {/* Load Shedding Stage & Inverter Runtime */}
+                   <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-4">
+                     <div className="flex justify-between items-center text-xs">
+                       <span className="font-bold text-gray-300">Load-Shedding Level</span>
+                       <span className={`font-mono font-black text-sm ${calcStage >= 4 ? 'text-red-400' : 'text-amber-400'}`}>
+                         Stage {calcStage}
+                       </span>
+                     </div>
+                     <input
+                       type="range"
+                       min={0}
+                       max={8}
+                       step={1}
+                       value={calcStage}
+                       onChange={(e) => setCalcStage(Number(e.target.value))}
+                       className="w-full accent-gold-primary cursor-pointer"
+                     />
+                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5 text-[11px]">
+                       <div>
+                         <span className="text-[10px] text-gray-500 uppercase block font-bold">Power Cut Duration</span>
+                         <span className="font-mono text-red-400 font-bold">~{ls.dailyHours} hrs/day ({ls.slotsCount} slots)</span>
+                       </div>
+                       <div>
+                         <span className="text-[10px] text-gray-500 uppercase block font-bold">5kWh Battery Backup</span>
+                         <span className="font-mono text-emerald-400 font-bold">~{backupHours.toFixed(1)} hrs run-time</span>
+                       </div>
+                     </div>
+                     <p className="text-[10px] text-gray-500">
+                       Based on standard 450W household Wi-Fi, refrigeration &amp; lighting baseline load.
+                     </p>
+                   </div>
+                 </div>
+               </div>
+             )
+           })()}
 
            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {utilityTokens.filter(t => t.status === 'available').map(token => (

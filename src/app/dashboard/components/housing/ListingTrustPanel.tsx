@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { AlertTriangle, Bell, BellOff, ShieldCheck, Star } from 'lucide-react'
 import { supabase } from '../../../../utils/supabase'
-import { formatCurrency, type PriceStats, type PriceVerdict } from '../../../../utils/logic'
+import { formatCurrency, type PriceStats, type PriceVerdict, depositFairnessCheck, depositInterestAccrual } from '../../../../utils/logic'
 
 /**
  * "Before you pay" checks for one listing, built only from real data:
@@ -118,6 +118,17 @@ export default function ListingTrustPanel({ listingId, price, currency, suburb, 
       <div className="flex items-start gap-2 text-xs">
         <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
         <p className="m-0 text-gray-400">Never pay a deposit before viewing the room and meeting the landlord in person.</p>
+      </div>
+
+      {/* South Africa Statutory Protections (Rental Housing Act & CPA) */}
+      <div className="rounded-xl border border-white/10 bg-black/40 p-3 space-y-1.5 text-[11px]">
+        <div className="flex items-center justify-between font-bold text-gray-300">
+          <span className="text-[10px] uppercase tracking-wider text-gold-primary">RHA Statutory Deposit Cap</span>
+          <span className="font-mono text-white">Max {formatCurrency(price * 2, currency)}</span>
+        </div>
+        <p className="m-0 text-gray-400 text-[10px] leading-relaxed">
+          Under the Rental Housing Act 50 of 1999, residential deposits cannot exceed 2 months rent, and must earn bank interest (est. +{formatCurrency(depositInterestAccrual(price, 0.075, 12), currency)}/yr @ 7.5%) refunded upon move-out.
+        </p>
       </div>
 
       {watching !== null && watching !== undefined && (

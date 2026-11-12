@@ -82,7 +82,7 @@ export default function HomePage() {
           <Image src="/logo.png" alt="" width={32} height={32} style={{ borderRadius: '6px' }} />
           <span>THE RESIDENT</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <button
             type="button"
             onClick={() => enterApp('/dashboard/community?tab=vibemap')}

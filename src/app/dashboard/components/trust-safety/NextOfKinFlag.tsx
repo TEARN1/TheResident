@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { ShieldAlert } from 'lucide-react'
 import { getNextOfKinStatus } from '../../../../utils/trust'
 import { supabase } from '../../../../utils/supabase'
+import { GUEST_USER_ID } from '../../../../store'
 
 /**
  * Landlord/admin-facing flag only — separate from TrustBadge (stranger-
@@ -19,7 +20,7 @@ export default function NextOfKinFlag({ userId }: { userId: string }) {
 
   useEffect(() => {
     let cancelled = false
-    if (!userId || !supabase) return
+    if (!userId || userId === GUEST_USER_ID || !supabase) return
     supabase.from('res_profiles').select('created_at').eq('id', userId).maybeSingle()
       .then(({ data }) => getNextOfKinStatus(userId, data?.created_at))
       .then(status => { if (!cancelled) setOverdue(status.overdue) })
