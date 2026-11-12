@@ -192,7 +192,7 @@ export interface HandymanService {
   id: string
   ownerId: string // user who owns the business
   businessName: string
-  category: 'Plumbing' | 'Electrical' | 'Construction' | 'Cleaning' | 'Security' | 'Bakkie / Transport' | 'Moving Assistant' | 'Local Materials' | 'General Services'
+  category: 'Plumbing' | 'Electrical' | 'Construction' | 'Cleaning' | 'Security' | 'Bakkie / Transport' | 'Moving Assistant' | 'Local Materials' | 'Tech & Phone Repairs' | 'Solar & Gas' | 'Auto & Detailing' | 'Locksmith' | 'Tutoring & Academics' | 'Personal Care' | 'General Services'
   location: string
   suburb: string
   rating: number
@@ -2543,7 +2543,7 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     // never writes it; the shared row is created by the Gruvs signup rails.
     if (loginUser.match(action)) {
       const user = action.payload
-      const isGuest = isGuestUser(user) || user.id === GUEST_USER_ID
+      const isGuest = isGuestUser(user) || user.id === GUEST_USER_ID || user.id.startsWith('demo-')
 
       if (supabase) {
         if (!isGuest) {

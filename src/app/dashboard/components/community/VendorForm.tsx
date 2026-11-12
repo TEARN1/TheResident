@@ -18,12 +18,23 @@ export interface VendorFormValues {
 
 // Matches the kinds res_vendors accepts; anything else is stored as 'other'.
 const KINDS = [
-  { value: 'spaza', label: 'Spaza shop' },
-  { value: 'food', label: 'Food / takeaways' },
-  { value: 'produce', label: 'Fruit & veg' },
-  { value: 'airtime', label: 'Airtime & data' },
-  { value: 'gas', label: 'Gas' },
-  { value: 'other', label: 'Other' },
+  { value: 'spaza', label: 'Spaza Shop & Groceries' },
+  { value: 'food', label: 'Food, Kota & Shisanyama' },
+  { value: 'produce', label: 'Fruit, Veg & Fresh Produce' },
+  { value: 'gas', label: 'Gas Delivery & Refill (LPG)' },
+  { value: 'barber_hair', label: 'Barbershop & Hair Braiding' },
+  { value: 'laundry', label: 'Laundromat & Sneaker Laundry' },
+  { value: 'tech_repairs', label: 'Phone, Laptop & Tech Repairs' },
+  { value: 'textbooks', label: 'Used Textbooks & Stationery' },
+  { value: 'catering', label: 'Student Meal Prep & Catering' },
+  { value: 'print_internet', label: 'Print, Copy & Internet Cafe' },
+  { value: 'car_wash', label: 'Car Wash & Auto Detailing' },
+  { value: 'hardware', label: 'Hardware, DIY & Building Supplies' },
+  { value: 'health', label: 'Pharmacy & Health Essentials' },
+  { value: 'fitness', label: 'Fitness, Gym & Boxing' },
+  { value: 'events_sound', label: 'Sound, DJ & Event Gear' },
+  { value: 'airtime', label: 'Airtime, Data & Prepaid Power' },
+  { value: 'other', label: 'Other Local Hustle / Services' },
 ]
 
 const inputClass = 'w-full bg-black border border-white/10 rounded-lg p-3 text-sm text-white outline-none focus:border-gold-primary/40'

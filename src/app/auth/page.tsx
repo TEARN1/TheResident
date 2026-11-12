@@ -352,11 +352,23 @@ export default function AuthPage() {
     router.push(safeGuestTarget)
   }
 
-  const handleDemoLogin = () => {
+  const handleDemoLogin = (role: 'tenant' | 'landlord' = 'tenant') => {
     playTactileSound('click')
-    const demoUser = {
+    const demoUser = role === 'landlord' ? {
+      id: 'demo-landlord-5555-6666-7777-888888888888',
+      name: 'Sipho Dlamini (Demo Landlord)',
+      email: 'sipho.landlord@theresidentcrew.com',
+      role: 'landlord' as const,
+      preferences: {
+        genderPreference: 'any' as const,
+        childrenAllowed: false,
+        maxChildren: 0,
+        smokingAllowed: false,
+        petsAllowed: false
+      }
+    } : {
       id: 'demo-tenant-1111-2222-3333-444444444444',
-      name: 'Thabo Ndlovu (Demo)',
+      name: 'Thabo Ndlovu (Demo Tenant)',
       email: 'thabo.demo@theresidentcrew.com',
       role: 'tenant' as const,
       profile: {
@@ -373,7 +385,7 @@ export default function AuthPage() {
     dispatch(resetFailedAttempts(email))
     dispatch(loginUser(demoUser))
     dispatch(addLog({
-      action: 'Entered application with Demo Resident account',
+      action: `Entered application with Demo ${role === 'tenant' ? 'Resident Tenant' : 'Landlord'} account`,
       type: 'auth_success',
       details: 'Instant sandbox resident session'
     }))
@@ -691,28 +703,50 @@ export default function AuthPage() {
         </>)}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '1rem', width: '100%' }}>
-          <button
-            type="button"
-            onClick={handleDemoLogin}
-            style={{
-              width: '100%',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              border: '1px solid rgba(212, 175, 55, 0.4)',
-              background: 'rgba(212, 175, 55, 0.08)',
-              color: '#fbbf24',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'all 0.2s'
-            }}
-          >
-            <Sparkles size={14} /> Try Demo Resident Account (Instant Access)
-          </button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%' }}>
+            <button
+              type="button"
+              onClick={() => handleDemoLogin('tenant')}
+              style={{
+                padding: '9px 10px',
+                borderRadius: '12px',
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                background: 'rgba(212, 175, 55, 0.08)',
+                color: '#fbbf24',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Sparkles size={13} /> Demo Tenant
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoLogin('landlord')}
+              style={{
+                padding: '9px 10px',
+                borderRadius: '12px',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                background: 'rgba(59, 130, 246, 0.08)',
+                color: '#60a5fa',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Shield size={13} /> Demo Landlord
+            </button>
+          </div>
 
           <button type="button" onClick={handleVisitorLogin} style={guestLinkStyle}>
             Just looking? Browse as a guest

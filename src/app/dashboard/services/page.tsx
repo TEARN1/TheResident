@@ -795,7 +795,7 @@ export default function ServicesPage() {
                >
                  <AlertTriangle size={12} /> 24/7 Urgent
                </button>
-               {['All', 'Plumbing', 'Electrical', 'Cleaning', 'Security', 'Bakkie / Transport', 'General Services'].map(cat => (
+               {['All', 'Bakkie / Transport', 'Plumbing', 'Electrical', 'Cleaning', 'Security', 'Tech & Phone Repairs', 'Solar & Gas', 'Auto & Detailing', 'Locksmith', 'General Services'].map(cat => (
                  <button
                    key={cat}
                    type="button"
@@ -1060,12 +1060,18 @@ export default function ServicesPage() {
                            <div className="space-y-2">
                               <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Category</label>
                               <select value={bizCategory} onChange={e => setBizCategory(e.target.value as HandymanService['category'])} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40">
+                                 <option>Bakkie / Transport</option>
                                  <option>Plumbing</option>
                                  <option>Electrical</option>
                                  <option>Construction</option>
                                  <option>Cleaning</option>
                                  <option>Security</option>
-                                 <option>Bakkie / Transport</option>
+                                 <option>Tech & Phone Repairs</option>
+                                 <option>Solar & Gas</option>
+                                 <option>Auto & Detailing</option>
+                                 <option>Locksmith</option>
+                                 <option>Tutoring & Academics</option>
+                                 <option>Personal Care</option>
                                  <option>General Services</option>
                               </select>
                            </div>
