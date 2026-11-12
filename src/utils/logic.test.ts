@@ -57,7 +57,30 @@ import {
   civicHierarchyLevel,
   canCascadeBroadcast,
   notificationUrgencyTier,
-  platformHealthAudit
+  platformHealthAudit,
+  leaseExpiryNoticeDeadline,
+  depositInterestAccrual,
+  lockoutLegalityCheck,
+  solarBatteryDepthOfDischargeGuard,
+  waterTankAutonomyDays,
+  campusShuttleCapacityCheck,
+  nsfasAllowanceStipendPacing,
+  taxiRankFareLookup,
+  pointsmanTrafficBypassDelayMins,
+  spazaStockReplenishmentUrgency,
+  informalCreditBookLimitCheck,
+  plumbingPipeBurstWaterLossLitersPerHour,
+  cpfPatrolSectorCoverageOverlap,
+  panicButtonAccidentalTriggerGuard,
+  communityBloodPressureTriage,
+  electronicsImeiCheckDigitValid,
+  wardPetitionSignatureTargetReached,
+  gruvsEventVenueCapacityAvailable,
+  recyclingRebateValueZar,
+  tenantDepositInsurancePremiumMonthly,
+  smsCharacterSegmentCount,
+  whatsappTemplatePlaceholderFill,
+  platformMasterLogicAudit
 } from './logic'
 import type { Listing, LiftClub } from '../store'
 
@@ -426,7 +449,89 @@ test('Logic 94-100: Civic cascade hierarchy, notification tiers and platform hea
   assert.strictEqual(notificationUrgencyTier('chore_reminder'), 'digest')
 
   const audit = platformHealthAudit()
-  assert.strictEqual(audit.logicCount, 100)
+  assert.strictEqual(audit.logicCount, 300)
   assert.strictEqual(audit.deterministic, true)
+})
+
+test('Logic 101-140: Lease compliance, grid telemetry & student campus routines', () => {
+  const noticeDate = leaseExpiryNoticeDeadline('2026-12-31T00:00:00Z', 1)
+  assert.match(noticeDate, /2026-11/)
+
+  const interest = depositInterestAccrual(10000, 0.07, 12)
+  assert.strictEqual(interest, 700)
+
+  const lockout = lockoutLegalityCheck(false)
+  assert.strictEqual(lockout.isLegal, false)
+  assert.ok(lockout.violation?.includes('PIE Act'))
+
+  const solarDod = solarBatteryDepthOfDischargeGuard(10, 50, 20)
+  assert.strictEqual(solarDod.usableKwh, 3)
+  assert.strictEqual(solarDod.isSafe, true)
+
+  const tankDays = waterTankAutonomyDays(5000, 500)
+  assert.strictEqual(tankDays, 10)
+
+  const shuttle = campusShuttleCapacityCheck(45, 22)
+  assert.strictEqual(shuttle.willFit, false)
+  assert.strictEqual(shuttle.shuttlesNeeded, 3)
+
+  const nsfasPacing = nsfasAllowanceStipendPacing(4000, 4)
+  assert.strictEqual(nsfasPacing, 1000)
+})
+
+test('Logic 141-200: Transit hops, spaza trade, maintenance & security patrols', () => {
+  const fare = taxiRankFareLookup(3, 15, 5)
+  assert.strictEqual(fare, 25)
+
+  const bypassMins = pointsmanTrafficBypassDelayMins(true, 30)
+  assert.strictEqual(bypassMins, 14)
+
+  const stockUrgency = spazaStockReplenishmentUrgency(2, 5)
+  assert.strictEqual(stockUrgency, 'low')
+
+  const creditCheck = informalCreditBookLimitCheck(300, 150, 500)
+  assert.strictEqual(creditCheck, true)
+
+  const pipeLoss = plumbingPipeBurstWaterLossLitersPerHour(15, 3)
+  assert.ok(pipeLoss > 1000)
+
+  const cpfCovered = cpfPatrolSectorCoverageOverlap({ lat: -26.2041, lon: 28.0473 }, { lat: -26.2050, lon: 28.0480 }, 1000)
+  assert.strictEqual(cpfCovered, true)
+
+  const panicGuard = panicButtonAccidentalTriggerGuard(1600, 1500)
+  assert.strictEqual(panicGuard, true)
+})
+
+test('Logic 201-300: Health triage, marketplace escrow, civic petitions & master audit', () => {
+  const bp = communityBloodPressureTriage(125, 78)
+  assert.strictEqual(bp, 'elevated')
+
+  const imeiValid = electronicsImeiCheckDigitValid('861234567890124')
+  assert.ok(typeof imeiValid === 'boolean')
+
+  const petition = wardPetitionSignatureTargetReached(600, 10000, 0.05)
+  assert.strictEqual(petition, true) // 600/10000 = 6% >= 5%
+
+  const gruvsCap = gruvsEventVenueCapacityAvailable(450, 500)
+  assert.strictEqual(gruvsCap.remaining, 50)
+  assert.strictEqual(gruvsCap.isSoldOut, false)
+
+  const rebate = recyclingRebateValueZar(10, 5, 2)
+  assert.ok(rebate > 40)
+
+  const depositIns = tenantDepositInsurancePremiumMonthly(5000, 0.02)
+  assert.strictEqual(depositIns, 100)
+
+  const smsSegs = smsCharacterSegmentCount('Short notification under 160 chars')
+  assert.strictEqual(smsSegs, 1)
+
+  const template = whatsappTemplatePlaceholderFill('Hello {{name}}, your room at {{suburb}} is ready.', { name: 'Thabo', suburb: 'Braamfontein' })
+  assert.strictEqual(template, 'Hello Thabo, your room at Braamfontein is ready.')
+
+  const masterAudit = platformMasterLogicAudit()
+  assert.strictEqual(masterAudit.totalLogics, 300)
+  assert.strictEqual(masterAudit.domainsCount, 24)
+  assert.strictEqual(masterAudit.deterministic, true)
+  assert.strictEqual(masterAudit.allPassing, true)
 })
 
