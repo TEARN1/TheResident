@@ -300,7 +300,7 @@ export default function AuthPage() {
       ? `${window.location.origin}/auth/callback${queryString}`
       : undefined
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo,
@@ -310,6 +310,8 @@ export default function AuthPage() {
     if (error) {
       setErrorMessage(error.message)
       setOauthLoading(null)
+    } else if (data?.url) {
+      window.location.assign(data.url)
     }
     // On success the browser navigates away to the provider — nothing else to do.
   }

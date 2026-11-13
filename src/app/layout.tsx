@@ -188,6 +188,8 @@ export default function RootLayout({
             __html: JSON.stringify(globalJsonLd).replace(/</g, '\\u003c'),
           }}
         />
+      </head>
+      <body suppressHydrationWarning>
         <Script
           id="resident-theme-init"
           strategy="beforeInteractive"
@@ -224,8 +226,6 @@ export default function RootLayout({
             `
           }}
         />
-      </head>
-      <body suppressHydrationWarning>
         {/* The Redux store is provided by the auth and dashboard layouts, so
             the home page and info pages don't load it or Supabase. */}
         {children}
