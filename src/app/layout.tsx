@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import './globals.css'
 import { siteUrl } from './site-url'
+import { buildGlobalKnowledgeGraph } from './entity-schema'
 
 export const viewport: Viewport = {
   themeColor: '#051F20',
@@ -35,9 +36,12 @@ export const metadata: Metadata = {
     'The Resident Crew',
     'co-living South Africa'
   ],
-  authors: [{ name: 'The Resident Crew', url: siteUrl() }],
-  creator: 'The Resident Crew',
-  publisher: 'The Resident Crew',
+  authors: [
+    { name: 'Asemahle "TEARN" Nkwali', url: `${siteUrl()}/founder` },
+    { name: 'The Resident Crew', url: siteUrl() },
+  ],
+  creator: 'Asemahle "TEARN" Nkwali',
+  publisher: 'TEARN Ventures',
   formatDetection: {
     email: false,
     address: true,
@@ -113,64 +117,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   const base = siteUrl()
-  const globalJsonLd = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'WebSite',
-        '@id': `${base}/#website`,
-        url: base,
-        name: 'The Resident Crew',
-        alternateName: ['The Resident', 'Resident Crew', 'The Resident South Africa'],
-        description:
-          'Verified rooms to rent, student accommodation, and local services across South African neighbourhoods.',
-        inLanguage: 'en-ZA',
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: {
-            '@type': 'EntryPoint',
-            urlTemplate: `${base}/dashboard/housing?q={search_term_string}`,
-          },
-          'query-input': 'required name=search_term_string',
-        },
-      },
-      {
-        '@type': 'Organization',
-        '@id': `${base}/#organization`,
-        name: 'The Resident Crew',
-        url: base,
-        logo: {
-          '@type': 'ImageObject',
-          url: `${base}/logo.png`,
-          width: 512,
-          height: 512,
-        },
-        sameAs: [
-          'https://twitter.com/TheResidentCrew',
-          'https://facebook.com/TheResidentCrew',
-        ],
-        contactPoint: {
-          '@type': 'ContactPoint',
-          contactType: 'customer support',
-          url: `${base}/contact`,
-          areaServed: 'ZA',
-          availableLanguage: ['English', 'isiZulu', 'Sesotho', 'Afrikaans'],
-        },
-      },
-      {
-        '@type': 'SoftwareApplication',
-        '@id': `${base}/#app`,
-        name: 'The Resident',
-        operatingSystem: 'Android, iOS, Web',
-        applicationCategory: 'RealEstateApplication',
-        offers: {
-          '@type': 'Offer',
-          price: '0',
-          priceCurrency: 'ZAR',
-        },
-      },
-    ],
-  }
+  const globalJsonLd = buildGlobalKnowledgeGraph(base)
 
   return (
     // No hardcoded data-theme here anymore — it used to be a permanent
@@ -182,6 +129,12 @@ export default function RootLayout({
     // every page now reads/writes, avoiding a flash of the wrong theme.
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link
+          rel="search"
+          type="application/opensearchdescription+xml"
+          title="The Resident Crew"
+          href="/opensearch.xml"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

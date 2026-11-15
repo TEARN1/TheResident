@@ -157,7 +157,7 @@ export default function HomePage() {
               Live Precinct Radar Active
             </span>
             <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              The Grooves &times; The Resident <ArrowRight size={13} />
+              The Gruvs &times; The Resident <ArrowRight size={13} />
             </span>
           </div>
 
@@ -404,6 +404,65 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      <nav
+        aria-label="Explore South African suburbs, campuses and leadership"
+        style={{
+          maxWidth: '1040px',
+          width: '100%',
+          margin: '0 auto',
+          padding: '0 16px 28px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '16px',
+          position: 'relative',
+          zIndex: 5,
+        }}
+      >
+        <div style={{ padding: '16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gold-primary)' }}>
+            Popular Suburbs
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', fontSize: '0.84rem' }}>
+            <Link href="/area/braamfontein" style={{ color: '#d1d5db', textDecoration: 'none' }}>Braamfontein</Link>
+            <Link href="/area/auckland-park" style={{ color: '#d1d5db', textDecoration: 'none' }}>Auckland Park</Link>
+            <Link href="/area/soweto" style={{ color: '#d1d5db', textDecoration: 'none' }}>Soweto</Link>
+            <Link href="/area/hatfield" style={{ color: '#d1d5db', textDecoration: 'none' }}>Hatfield</Link>
+            <Link href="/area/pretoria-cbd" style={{ color: '#d1d5db', textDecoration: 'none' }}>Pretoria CBD</Link>
+            <Link href="/area/cottesloe" style={{ color: '#d1d5db', textDecoration: 'none' }}>Cottesloe</Link>
+            <Link href="/area" style={{ color: '#fbbf24', textDecoration: 'none', fontWeight: 700 }}>All Suburbs &rarr;</Link>
+          </div>
+        </div>
+
+        <div style={{ padding: '16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gold-primary)' }}>
+            Student Accommodation
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', fontSize: '0.84rem' }}>
+            <Link href="/campus/wits-braamfontein" style={{ color: '#d1d5db', textDecoration: 'none' }}>Wits University</Link>
+            <Link href="/campus/uj-auckland-park" style={{ color: '#d1d5db', textDecoration: 'none' }}>UJ Auckland Park</Link>
+            <Link href="/campus/up-hatfield" style={{ color: '#d1d5db', textDecoration: 'none' }}>UP Hatfield</Link>
+            <Link href="/campus/uct-rondebosch" style={{ color: '#d1d5db', textDecoration: 'none' }}>UCT Rondebosch</Link>
+            <Link href="/campus" style={{ color: '#fbbf24', textDecoration: 'none', fontWeight: 700 }}>All Campuses &rarr;</Link>
+          </div>
+        </div>
+
+        <div style={{ padding: '16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gold-primary)' }}>
+            Directories &amp; Leadership
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', fontSize: '0.84rem' }}>
+            <Link href="/rooms" style={{ color: '#d1d5db', textDecoration: 'none' }}>Rooms to Rent</Link>
+            <Link href="/services" style={{ color: '#d1d5db', textDecoration: 'none' }}>Local Services</Link>
+            <Link href="/shops" style={{ color: '#d1d5db', textDecoration: 'none' }}>Local Shops</Link>
+            <Link href="/taxi-ranks" style={{ color: '#d1d5db', textDecoration: 'none' }}>Taxi Ranks &amp; Fares</Link>
+            <Link href="/wards" style={{ color: '#d1d5db', textDecoration: 'none' }}>Municipal Wards</Link>
+            <Link href="/founder" style={{ color: '#d1d5db', textDecoration: 'none' }}>Founder &amp; CEO</Link>
+            <Link href="/press" style={{ color: '#d1d5db', textDecoration: 'none' }}>Press &amp; Media Kit</Link>
+            <Link href="/about" style={{ color: '#d1d5db', textDecoration: 'none' }}>About</Link>
+          </div>
+        </div>
+      </nav>
 
       <footer style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 24px', padding: '24px 16px 32px', fontSize: '0.85rem', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 'auto' }}>
         {infoLinks.map(l => (

@@ -8,13 +8,15 @@ import { infoLinks } from '../info-links'
 export default function InfoLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.shell}>
-      <nav className={styles.nav}>
-        <Link href="/" className={styles.brand}>
-          <Image src="/logo.png" alt="The Resident logo" width={28} height={28} style={{ borderRadius: '4px' }} />
-          THE RESIDENT
-        </Link>
-        <Link href="/auth" className="btn-gold">Join Your Suburb</Link>
-      </nav>
+      <header>
+        <nav className={styles.nav} aria-label="Main navigation">
+          <Link href="/" className={styles.brand}>
+            <Image src="/logo.png" alt="The Resident logo" width={28} height={28} style={{ borderRadius: '4px' }} />
+            THE RESIDENT
+          </Link>
+          <Link href="/auth" className="btn-gold">Join Your Suburb</Link>
+        </nav>
+      </header>
       <main className={styles.content}>{children}</main>
       <footer className={styles.footer}>
         <Link href="/">Home</Link>

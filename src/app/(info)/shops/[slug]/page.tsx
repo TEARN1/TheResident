@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import styles from '../../info.module.css'
 import { getPublicVendor, vendorSlug, servicePlace, VENDOR_KIND_LABELS, isListingSlug, slugify } from '../../../public-services'
 import { Breadcrumbs, CategoryView, categoryMetadata, loadCategory } from '../../directory-views'
+import { siteUrl } from '../../../site-url'
 
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
@@ -18,12 +19,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!v) return { title: 'Shop not found — The Resident', robots: { index: false } }
   const place = servicePlace(v)
   const kind = VENDOR_KIND_LABELS[v.kind] ?? 'Local shop'
+  const canonical = vendorSlug(v)
+  const base = siteUrl()
+  const title = `${v.name} — ${kind}${place ? ` in ${place}` : ''} | The Resident Crew`
+  const description =
+    v.description?.slice(0, 155) ||
+    `${v.name} is a ${kind.toLowerCase()}${place ? ` in ${place}` : ''}, listed on The Resident Crew.`
   return {
-    title: `${v.name} — ${kind}${place ? ` in ${place}` : ''} | The Resident`,
-    description:
-      v.description?.slice(0, 155) ||
-      `${v.name} is a ${kind.toLowerCase()}${place ? ` in ${place}` : ''}, listed on The Resident.`,
-    alternates: { canonical: `/shops/${vendorSlug(v)}` },
+    title,
+    description,
+    keywords: [
+      v.name,
+      `${kind}${place ? ` in ${place}` : ''}`,
+      ...(v.suburb ? [`${kind.toLowerCase()} ${v.suburb}`] : []),
+      'The Resident Crew',
+    ],
+    alternates: { canonical: `/shops/${canonical}` },
+    openGraph: {
+      type: 'website',
+      url: `${base}/shops/${canonical}`,
+      title,
+      description,
+      siteName: 'The Resident Crew',
+      locale: 'en_ZA',
+      images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/opengraph-image'],
+    },
   }
 }
 
@@ -41,12 +67,17 @@ export default async function ShopPage({ params }: Props) {
 
   const place = servicePlace(v)
   const kind = VENDOR_KIND_LABELS[v.kind] ?? 'Local shop'
+  const base = siteUrl()
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': v.kind === 'food' ? 'FoodEstablishment' : 'Store',
+    '@id': `${base}/shops/${canonical}#store`,
     name: v.name,
     description: v.description || undefined,
+    url: `${base}/shops/${canonical}`,
+    isPartOf: { '@id': `${base}/#website` },
+    publisher: { '@id': `${base}/#parent-org` },
     address: place
       ? { '@type': 'PostalAddress', addressLocality: v.suburb || v.city, addressRegion: v.city || undefined, addressCountry: 'ZA' }
       : undefined,

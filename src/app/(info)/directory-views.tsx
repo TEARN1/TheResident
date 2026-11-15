@@ -120,16 +120,40 @@ export function categoryMetadata(d: CategoryData | null): Metadata {
   const where = d.area ? ` in ${d.area}` : ''
   const n = d.entries.length
   const path = `/${d.section}/${d.categorySlug}${d.areaSlug ? `/${d.areaSlug}` : ''}`
+  const base = siteUrl()
+  const title = `${d.category}${where} — ${n} local ${n === 1 ? 'listing' : 'listings'} | The Resident Crew`
+  const description = `Find ${d.category.toLowerCase()}${where}: ${d.entries.slice(0, 3).map(e => e.name).join(', ')}${n > 3 ? ' and more' : ''}. Listed by residents on The Resident Crew.`
   return {
-    title: `${d.category}${where} — ${n} local ${n === 1 ? 'listing' : 'listings'} | The Resident`,
-    description: `Find ${d.category.toLowerCase()}${where}: ${d.entries.slice(0, 3).map(e => e.name).join(', ')}${n > 3 ? ' and more' : ''}. Listed by residents on The Resident.`,
+    title,
+    description,
+    keywords: [
+      `${d.category}${where}`,
+      ...(d.area ? [`local ${d.category.toLowerCase()} ${d.area}`] : [`${d.category.toLowerCase()} South Africa`]),
+      'The Resident Crew',
+    ],
     alternates: { canonical: path },
+    openGraph: {
+      type: 'website',
+      title,
+      description,
+      url: `${base}${path}`,
+      siteName: 'The Resident Crew',
+      locale: 'en_ZA',
+      images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: `${d.category}${where}` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/opengraph-image'],
+    },
   }
 }
 
 export function CategoryView({ d }: { d: CategoryData }) {
   const sectionHref = `/${d.section}`
   const categoryHref = `${sectionHref}/${d.categorySlug}`
+  const pagePath = `${categoryHref}${d.areaSlug ? `/${d.areaSlug}` : ''}`
   const trail = [
     { name: 'Home', href: '/' },
     { name: SECTION_LABELS[d.section], href: sectionHref },
@@ -143,8 +167,21 @@ export function CategoryView({ d }: { d: CategoryData }) {
       <JsonLd
         data={{
           '@context': 'https://schema.org',
-          '@type': 'ItemList',
-          itemListElement: d.entries.map((e, i) => ({ '@type': 'ListItem', position: i + 1, url: `${base}${e.href}`, name: e.name })),
+          '@type': 'CollectionPage',
+          '@id': `${base}${pagePath}#webpage`,
+          url: `${base}${pagePath}`,
+          name: `${d.category}${d.area ? ` in ${d.area}` : ''}`,
+          isPartOf: { '@id': `${base}/#website` },
+          publisher: { '@id': `${base}/#parent-org` },
+          mainEntity: {
+            '@type': 'ItemList',
+            itemListElement: d.entries.map((e, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              url: `${base}${e.href}`,
+              name: e.name,
+            })),
+          },
         }}
       />
       <h1>{d.category}{d.area && <> in {d.area}</>}</h1>

@@ -8,13 +8,29 @@ import { siteUrl } from '../../site-url'
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
 export const metadata: Metadata = {
-  title: 'Browse by Area — Local Services & Shops | The Resident',
-  description: 'Find local services and shops suburb by suburb across South Africa, listed by the residents who run them.',
+  title: 'Browse South African Suburbs — Rooms, Local Services & Shops | The Resident Crew',
+  description: 'Find rooms to rent, local trades, and spaza shops suburb by suburb across Johannesburg, Pretoria, Cape Town, Durban, and Gqeberha on The Resident Crew.',
+  keywords: [
+    'South Africa suburbs directory',
+    'rooms to rent Johannesburg Pretoria Cape Town',
+    'Soweto Braamfontein Hatfield local services',
+    'The Resident Crew areas',
+  ],
   alternates: { canonical: '/area' },
   openGraph: {
-    title: 'Browse by Area — Local Services & Shops | The Resident',
-    description: 'Find local services and shops suburb by suburb across South Africa, listed by the residents who run them.',
+    type: 'website',
+    title: 'Browse South African Suburbs — Rooms, Local Services & Shops | The Resident Crew',
+    description: 'Find rooms to rent, local trades, and spaza shops suburb by suburb across South Africa.',
     url: `${siteUrl()}/area`,
+    siteName: 'The Resident Crew',
+    locale: 'en_ZA',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Browse South African Suburbs — The Resident Crew' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Browse South African Suburbs — Rooms, Local Services & Shops | The Resident Crew',
+    description: 'Find rooms to rent, local trades, and spaza shops suburb by suburb across South Africa.',
+    images: ['/opengraph-image'],
   },
 }
 
@@ -40,9 +56,13 @@ export default async function AreasIndex() {
   const areaJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
+    '@id': `${base}/area#webpage`,
     name: 'Browse Suburbs & Areas in South Africa',
     description: 'Local services, student accommodation, and shops suburb by suburb across South Africa.',
     url: `${base}/area`,
+    isPartOf: { '@id': `${base}/#website` },
+    publisher: { '@id': `${base}/#parent-org` },
+    about: { '@id': `${base}/#app` },
     mainEntity: {
       '@type': 'ItemList',
       itemListElement: areas.map((a, i) => ({

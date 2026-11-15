@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from 'next/navigation'
 import styles from '../../info.module.css'
 import { getPublicService, serviceSlug, servicePlace, isListingSlug, realImage, slugify } from '../../../public-services'
 import { Breadcrumbs, CategoryView, categoryMetadata, loadCategory } from '../../directory-views'
+import { siteUrl } from '../../../site-url'
 
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
@@ -17,12 +18,38 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const s = await getPublicService(slug)
   if (!s) return { title: 'Service not found — The Resident', robots: { index: false } }
   const place = servicePlace(s)
+  const canonical = serviceSlug(s)
+  const base = siteUrl()
+  const title = `${s.business_name} — ${s.category}${place ? ` in ${place}` : ''} | The Resident Crew`
+  const description =
+    s.description?.slice(0, 155) ||
+    `${s.business_name} offers ${s.category.toLowerCase()} services${place ? ` in ${place}` : ''}. Rated by residents on The Resident Crew.`
+  const photo = realImage(s.image)
   return {
-    title: `${s.business_name} — ${s.category}${place ? ` in ${place}` : ''} | The Resident`,
-    description:
-      s.description?.slice(0, 155) ||
-      `${s.business_name} offers ${s.category.toLowerCase()} services${place ? ` in ${place}` : ''}. Rated by residents on The Resident.`,
-    alternates: { canonical: `/services/${serviceSlug(s)}` },
+    title,
+    description,
+    keywords: [
+      s.business_name,
+      `${s.category}${place ? ` in ${place}` : ''}`,
+      ...(s.suburb ? [`${s.category.toLowerCase()} ${s.suburb}`] : []),
+      'The Resident Crew',
+    ],
+    alternates: { canonical: `/services/${canonical}` },
+    openGraph: {
+      type: 'website',
+      url: `${base}/services/${canonical}`,
+      title,
+      description,
+      siteName: 'The Resident Crew',
+      locale: 'en_ZA',
+      images: photo ? [{ url: photo }] : [{ url: '/opengraph-image', width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [photo || '/opengraph-image'],
+    },
   }
 }
 
@@ -41,17 +68,21 @@ export default async function ServicePage({ params }: Props) {
 
   const place = servicePlace(s)
   const reviews = s.reviews_count ?? 0
+  const base = siteUrl()
 
   // LocalBusiness structured data. Ratings are only included once real
   // reviews exist; Google penalises ratings with nothing behind them.
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
+    '@id': `${base}/services/${canonical}#business`,
     name: s.business_name,
     description: s.description || undefined,
-    image: realImage(s.image) || undefined,
-    url: s.website_url || undefined,
+    image: realImage(s.image) || `${base}/opengraph-image`,
+    url: s.website_url || `${base}/services/${canonical}`,
     priceRange: s.price_estimate || undefined,
+    isPartOf: { '@id': `${base}/#website` },
+    publisher: { '@id': `${base}/#parent-org` },
     address: place
       ? { '@type': 'PostalAddress', addressLocality: s.suburb || s.city, addressRegion: s.city || undefined, addressCountry: 'ZA' }
       : undefined,

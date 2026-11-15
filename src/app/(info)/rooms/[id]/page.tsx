@@ -45,12 +45,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: `${siteUrl()}/rooms/${row.id}`,
-      siteName: 'The Resident',
+      siteName: 'The Resident Crew',
       type: 'website',
       locale: 'en_ZA',
-      images: image ? [{ url: image }] : undefined,
+      images: image
+        ? [{ url: image }]
+        : [{ url: '/opengraph-image', width: 1200, height: 630, alt: title }],
     },
-    twitter: { card: image ? 'summary_large_image' : 'summary', title, description, images: image ? [image] : undefined },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image || '/opengraph-image'],
+    },
   }
 }
 
@@ -82,13 +89,16 @@ export default async function RoomPage({ params }: Props) {
     { name: row.title, href: `/rooms/${row.id}` },
   ]
 
+  const base = siteUrl()
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Accommodation',
     name: row.title,
     description: row.description || `${KIND[row.listing_type || 'rent'] || 'Room'}${place ? ` in ${place}` : ''}`,
-    url: `${siteUrl()}/rooms/${row.id}`,
-    image: images.length > 0 ? images : undefined,
+    url: `${base}/rooms/${row.id}`,
+    image: images.length > 0 ? images : [`${base}/opengraph-image`],
+    isPartOf: { '@id': `${base}/#website` },
+    provider: { '@id': `${base}/#parent-org` },
     address: {
       '@type': 'PostalAddress',
       addressLocality: row.suburb || row.city || 'Johannesburg',

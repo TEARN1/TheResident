@@ -8,15 +8,32 @@ import { siteUrl } from '../../site-url'
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
 export const metadata: Metadata = {
-  title: 'Local Services & Trades Near You — The Resident',
+  title: 'Local Services & Trades Near You | The Resident Crew',
   description:
-    'Plumbers, electricians, cleaners, builders, movers and more, listed by residents and rated by their neighbours on The Resident.',
+    'Plumbers, electricians, cleaners, builders, movers and more across South Africa, listed by residents and rated by their neighbours on The Resident Crew.',
+  keywords: [
+    'local plumbers South Africa',
+    'electricians Soweto Johannesburg Pretoria',
+    'neighbour rated handymen cleaners movers',
+    'The Resident Crew local services',
+  ],
   alternates: { canonical: '/services' },
   openGraph: {
-    title: 'Local Services & Trades Near You — The Resident',
+    type: 'website',
+    title: 'Local Services & Trades Near You | The Resident Crew',
     description:
-      'Plumbers, electricians, cleaners, builders, movers and more, listed by residents and rated by their neighbours on The Resident.',
+      'Plumbers, electricians, cleaners, builders, movers and more, listed by residents and rated by neighbours.',
     url: `${siteUrl()}/services`,
+    siteName: 'The Resident Crew',
+    locale: 'en_ZA',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Local Services & Trades — The Resident Crew' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Local Services & Trades Near You | The Resident Crew',
+    description:
+      'Plumbers, electricians, cleaners, builders, movers and more, rated by neighbours on The Resident Crew.',
+    images: ['/opengraph-image'],
   },
 }
 
@@ -36,10 +53,14 @@ export default async function ServicesDirectory() {
   const servicesJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
+    '@id': `${base}/services#webpage`,
     name: 'Local Services & Trades in South Africa',
     description:
       'Plumbers, electricians, cleaners, builders, movers and more, listed by residents and rated by neighbours.',
     url: `${base}/services`,
+    isPartOf: { '@id': `${base}/#website` },
+    publisher: { '@id': `${base}/#parent-org` },
+    about: { '@id': `${base}/#app` },
     mainEntity: {
       '@type': 'ItemList',
       itemListElement: categories.map((cat, i) => ({

@@ -8,13 +8,31 @@ import { siteUrl } from '../../site-url'
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'Student Accommodation near Universities in South Africa | The Resident',
+  title: 'Student Accommodation near Universities in South Africa | The Resident Crew',
   description: 'Find verified student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
+  keywords: [
+    'student accommodation South Africa',
+    'rooms near Wits Braamfontein',
+    'UJ Auckland Park student rooms',
+    'UP Hatfield student communes',
+    'UCT Rondebosch digs and flats',
+    'The Resident Crew',
+  ],
   alternates: { canonical: '/campus' },
   openGraph: {
-    title: 'Student Accommodation near Universities in South Africa | The Resident',
+    type: 'website',
+    title: 'Student Accommodation near Universities in South Africa | The Resident Crew',
     description: 'Find verified student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
     url: `${siteUrl()}/campus`,
+    siteName: 'The Resident Crew',
+    locale: 'en_ZA',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Student Accommodation in South Africa — The Resident Crew' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Student Accommodation near Universities in South Africa | The Resident Crew',
+    description: 'Find verified student rooms, communes, and private rentals near major South African universities.',
+    images: ['/opengraph-image'],
   },
 }
 
@@ -23,9 +41,13 @@ export default function CampusIndex() {
   const campusJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
+    '@id': `${base}/campus#webpage`,
     name: 'Student Accommodation near Universities in South Africa',
     description: 'Find verified student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
     url: `${base}/campus`,
+    isPartOf: { '@id': `${base}/#website` },
+    publisher: { '@id': `${base}/#parent-org` },
+    about: { '@id': `${base}/#app` },
     mainEntity: {
       '@type': 'ItemList',
       itemListElement: CAMPUSES.map((c, i) => ({

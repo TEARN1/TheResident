@@ -59,5 +59,17 @@
       "url": "/dashboard/services",
       "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://theresidentcrew.com/manifest.json"
+    },
+    {
+      "platform": "play",
+      "id": "com.TheResidentCrew.app",
+      "url": "https://theresidentcrew.com/theresident.apk"
+    }
   ]
 }

@@ -5,15 +5,32 @@ import { Breadcrumbs, JsonLd } from '../directory-views'
 import { siteUrl } from '../../site-url'
 
 export const metadata: Metadata = {
-  title: 'How The Resident Works — Join Your Suburb in Minutes',
+  title: 'How The Resident Crew Works — Join Your Suburb in Minutes',
   description:
-    'Sign up, join your suburb and start finding trusted local services, rooms, lift clubs and marketplaces. Here is how The Resident works, step by step.',
+    'Sign up free, join your South African suburb, and start finding verified rooms, local plumbers, live safety radar, and spaza shops step by step.',
+  keywords: [
+    'how The Resident Crew works',
+    'join South African suburb network',
+    'find verified rooms no agent fees',
+    'neighbourhood safety alerts South Africa',
+  ],
   alternates: { canonical: '/how-it-works' },
   openGraph: {
-    title: 'How The Resident Works — Join Your Suburb in Minutes',
+    type: 'website',
+    title: 'How The Resident Crew Works — Join Your Suburb in Minutes',
     description:
-      'Sign up, join your suburb and start finding trusted local services, rooms, lift clubs and marketplaces. Here is how The Resident works, step by step.',
+      'Sign up free, join your suburb, and start finding verified rooms, local services, and safety alerts step by step.',
     url: `${siteUrl()}/how-it-works`,
+    siteName: 'The Resident Crew',
+    locale: 'en_ZA',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'How The Resident Crew Works' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'How The Resident Crew Works — Join Your Suburb in Minutes',
+    description:
+      'Sign up free, join your suburb, and start finding verified rooms, local services, and safety alerts.',
+    images: ['/opengraph-image'],
   },
 }
 
@@ -22,9 +39,14 @@ export default function HowItWorksPage() {
   const howToJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'HowTo',
-    name: 'How The Resident Works — Join Your Suburb in Minutes',
+    '@id': `${base}/how-it-works#howto`,
+    url: `${base}/how-it-works`,
+    name: 'How The Resident Crew Works — Join Your Suburb in Minutes',
     description:
-      'Sign up, join your suburb and start finding trusted local services, rooms, lift clubs and marketplaces. Here is how The Resident works, step by step.',
+      'Sign up, join your suburb and start finding trusted local services, rooms, lift clubs and marketplaces.',
+    isPartOf: { '@id': `${base}/#website` },
+    publisher: { '@id': `${base}/#parent-org` },
+    about: { '@id': `${base}/#app` },
     step: [
       {
         '@type': 'HowToStep',
