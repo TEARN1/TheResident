@@ -301,7 +301,7 @@ export function buildPayFastPaymentRequest(
     m_payment_id: `res_${input.item}_${input.userId.slice(0, 8)}_${Date.now()}`,
     amount: randAmount,
     item_name: pricing.label.slice(0, 100),
-    item_description: pricing.reasoning.slice(0, 255),
+    item_description: pricing.label.slice(0, 255),
     custom_str1: input.userId,
     custom_str2: input.item,
     custom_str3: input.targetId || '',
@@ -338,9 +338,23 @@ export function buildPayFastPaymentRequest(
 
   const processUrl = getPayFastProcessUrl(config.sandbox)
 
+  // PayFast's shared public demo account (10000100) rejects hardcoded signatures due to rotated
+  // sandbox salts, but accepts unsigned redirects and opens the live checkout engine immediately.
+  // Custom sandbox accounts and live production accounts always submit their signed signature.
+  const isDemoSandboxWithoutPass =
+    config.sandbox &&
+    config.merchantId === PAYFAST_SANDBOX_MERCHANT_ID &&
+    !env.PAYFAST_PASSPHRASE
+
+  const redirectFields = isDemoSandboxWithoutPass
+    ? Object.keys(orderedFields)
+        .filter(k => k !== 'signature')
+        .reduce((acc, k) => ({ ...acc, [k]: orderedFields[k] }), {} as Record<string, string>)
+    : orderedFields
+
   // Construct query string for direct redirect
-  const queryParts = Object.keys(orderedFields).map(
-    k => `${k}=${encodeURIComponent(orderedFields[k]).replace(/%20/g, '+')}`
+  const queryParts = Object.keys(redirectFields).map(
+    k => `${k}=${encodeURIComponent(redirectFields[k]).replace(/%20/g, '+')}`
   )
   const redirectUrl = `${processUrl}?${queryParts.join('&')}`
 
