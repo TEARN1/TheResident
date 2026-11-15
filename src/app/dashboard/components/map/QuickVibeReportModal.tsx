@@ -32,6 +32,8 @@ export type VibeCategory =
   | 'marathon_route'
   | 'party'
   | 'chill'
+  | 'taxi_queue_update'
+  | 'civic_protest'
 
 export default function QuickVibeReportModal({
   isOpen,
@@ -165,6 +167,30 @@ export default function QuickVibeReportModal({
       durationHours: 12,
       defaultTitle: 'Quiet Co-Working / Wi-Fi Study Hub',
       defaultTraffic: 'normal'
+    },
+    {
+      id: 'taxi_queue_update',
+      label: 'Taxi Rank Delay / Queue',
+      icon: Car,
+      color: 'text-emerald-400',
+      border: 'border-emerald-500/40 bg-emerald-500/10',
+      zoneKind: 'heavy_traffic',
+      eventType: 'general',
+      durationHours: 3,
+      defaultTitle: 'Taxi Rank Queue Backlog / Marshal Notice',
+      defaultTraffic: 'heavy'
+    },
+    {
+      id: 'civic_protest',
+      label: 'Service Delivery Protest',
+      icon: AlertTriangle,
+      color: 'text-red-400',
+      border: 'border-red-500/40 bg-red-500/10',
+      zoneKind: 'road_closed',
+      eventType: 'roadwork',
+      durationHours: 6,
+      defaultTitle: 'Service Delivery Protest / Road Barricade',
+      defaultTraffic: 'gridlock'
     }
   ]
 

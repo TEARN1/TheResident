@@ -15,6 +15,8 @@ import {
   marathonCorridorPolyline,
   calculateSmartDetour,
   zoneTimeStatus,
+  roadSegmentBufferPolygon,
+  calculateTravelDetourRoute,
 } from './futureMap'
 
 // Wednesday 8 Oct 2026, 20:00 local time.
@@ -137,3 +139,33 @@ test('zoneTimeStatus detects active, upcoming and expired horizons', () => {
   // At horizon = 12 (22:00), zone is expired
   assert.strictEqual(zoneTimeStatus(zone, 12, base), 'expired');
 });
+
+test('roadSegmentBufferPolygon creates closed quad buffer around road section', () => {
+  const start = { lat: -26.192, lon: 28.030 }
+  const end = { lat: -26.195, lon: 28.030 }
+  const buffer = roadSegmentBufferPolygon(start, end, 60)
+  assert.strictEqual(buffer.length, 5)
+  // First and last coordinates must match (closed ring)
+  assert.deepStrictEqual(buffer[0], buffer[4])
+})
+
+test('calculateTravelDetourRoute computes bypass waypoints and navigation instructions', () => {
+  const origin = { lat: -26.200, lon: 28.030 }
+  const destination = { lat: -26.180, lon: 28.030 }
+  const closedSegments = [
+    {
+      startPoint: { lat: -26.190, lon: 28.028 },
+      endPoint: { lat: -26.190, lon: 28.032 },
+      name: 'De Korte Street Closure',
+    },
+  ]
+  const result = calculateTravelDetourRoute(origin, destination, closedSegments, 'Bertha St Bypass')
+  assert.ok(result.detourWaypoints.length >= 1)
+  assert.ok(result.detourPolyline.length > 10)
+  assert.ok(result.delaySavingsMinutes >= 15)
+  assert.ok(result.stepInstructions.length >= 3)
+  assert.ok(result.googleMapsUrl.includes('waypoints='))
+  assert.ok(result.wazeUrl.includes('waze.com'))
+  assert.ok(result.appleMapsUrl.includes('maps.apple.com'))
+})
+

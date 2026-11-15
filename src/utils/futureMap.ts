@@ -257,3 +257,154 @@ export function zoneTimeStatus(
   if (targetMs < startsMs) return 'upcoming'
   return 'active'
 }
+
+export interface RoadClosureSegment {
+  id: string
+  name: string
+  startPoint: LatLon
+  endPoint: LatLon
+  reason: 'protest' | 'funeral' | 'marathon' | 'water_burst' | 'construction' | 'accident' | 'general'
+  detourHint?: string | null
+}
+
+export interface TravelDetourResult {
+  origin: LatLon
+  destination: LatLon
+  directDistanceKm: number
+  detourDistanceKm: number
+  detourWaypoints: LatLon[]
+  detourPolyline: LngLatTuple[]
+  stepInstructions: string[]
+  delaySavingsMinutes: number
+  googleMapsUrl: string
+  wazeUrl: string
+  appleMapsUrl: string
+}
+
+/**
+ * Calculates a corridor exclusion polygon around a closed road segment.
+ * Creates a buffered quad polygon with 60m buffer width.
+ */
+export function roadSegmentBufferPolygon(
+  start: LatLon,
+  end: LatLon,
+  bufferM = 60
+): LngLatTuple[] {
+  const dx = end.lon - start.lon
+  const dy = end.lat - start.lat
+  const len = Math.hypot(dx, dy) || 0.0001
+  const ux = dx / len, uy = dy / len
+  const px = -uy, py = ux // perpendicular
+
+  const bufferDegLat = bufferM / 111_320
+  const bufferDegLon = bufferM / (111_320 * Math.max(0.01, Math.cos((start.lat * Math.PI) / 180)))
+
+  const p1: LngLatTuple = [start.lon + px * bufferDegLon, start.lat + py * bufferDegLat]
+  const p2: LngLatTuple = [end.lon + px * bufferDegLon, end.lat + py * bufferDegLat]
+  const p3: LngLatTuple = [end.lon - px * bufferDegLon, end.lat - py * bufferDegLat]
+  const p4: LngLatTuple = [start.lon - px * bufferDegLon, start.lat - py * bufferDegLat]
+
+  return [p1, p2, p3, p4, p1]
+}
+
+/**
+ * Calculates travel detour rerouting avoiding closed road segments.
+ * High-performance, client-side, zero external API costs.
+ */
+export function calculateTravelDetourRoute(
+  origin: LatLon,
+  destination: LatLon,
+  closedSegments: { startPoint: LatLon; endPoint: LatLon; name?: string }[] = [],
+  detourHint?: string | null
+): TravelDetourResult {
+  const directDist = distanceKm(origin, destination)
+  const waypoints: LatLon[] = []
+  const stepInstructions: string[] = [`Depart origin at [${origin.lat.toFixed(4)}, ${origin.lon.toFixed(4)}]`]
+
+  // For each closed segment, check if it intercepts the travel vector
+  let detourOffsetSide = 1
+  for (const seg of closedSegments) {
+    const midLat = (seg.startPoint.lat + seg.endPoint.lat) / 2
+    const midLon = (seg.startPoint.lon + seg.endPoint.lon) / 2
+    const segMid: LatLon = { lat: midLat, lon: midLon }
+
+    // Distance from travel vector
+    const toSegDist = distanceKm(origin, segMid)
+    if (toSegDist < directDist * 1.2 + 0.5) {
+      // Calculate lateral bypass waypoint (350m offset)
+      const dx = destination.lon - origin.lon
+      const dy = destination.lat - origin.lat
+      const dist = Math.hypot(dx, dy) || 0.001
+      const ux = dx / dist, uy = dy / dist
+      const px = -uy * detourOffsetSide, py = ux * detourOffsetSide
+      const offsetDeg = 400 / 111_320
+
+      const bypassPt: LatLon = {
+        lat: midLat + py * offsetDeg,
+        lon: midLon + px * offsetDeg,
+      }
+      waypoints.push(bypassPt)
+      stepInstructions.push(
+        `Detour: Divert around closed section (${seg.name || 'Road Blockade'}) via lateral corridor at 400m clearance`
+      )
+      detourOffsetSide *= -1
+    }
+  }
+
+  // If no explicit collision detected but closed segments provided, take smart detour around first segment
+  if (waypoints.length === 0 && closedSegments.length > 0) {
+    const first = closedSegments[0]
+    const midLat = (first.startPoint.lat + first.endPoint.lat) / 2
+    const midLon = (first.startPoint.lon + first.endPoint.lon) / 2
+    waypoints.push({ lat: midLat + 0.0035, lon: midLon + 0.0035 })
+    stepInstructions.push(`Avoid closure on ${first.name || 'designated corridor'} via perimeter bypass`)
+  }
+
+  stepInstructions.push(`Arrive at destination: [${destination.lat.toFixed(4)}, ${destination.lon.toFixed(4)}]`)
+
+  // Construct full polyline
+  const polylineCoords: LngLatTuple[] = [[origin.lon, origin.lat]]
+  let current = origin
+  let accumulatedDist = 0
+
+  for (const wp of waypoints) {
+    const subArc = arcPoints(current, wp, 10, 0.08)
+    for (let i = 1; i < subArc.length; i++) {
+      polylineCoords.push(subArc[i])
+    }
+    accumulatedDist += distanceKm(current, wp)
+    current = wp
+  }
+
+  const finalArc = arcPoints(current, destination, 10, 0.08)
+  for (let i = 1; i < finalArc.length; i++) {
+    polylineCoords.push(finalArc[i])
+  }
+  accumulatedDist += distanceKm(current, destination)
+
+  const detourDistanceKm = Math.round(accumulatedDist * 10) / 10
+  const delaySavingsMinutes = Math.min(45, Math.round(waypoints.length * 15 + 10))
+
+  // Deep links for 1-click external offline navigation
+  const wpParam = waypoints.map(w => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`).join('|')
+  const destQuery = detourHint ? encodeURIComponent(detourHint) : `${destination.lat},${destination.lon}`
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lon}&destination=${destQuery}&waypoints=${wpParam}&travelmode=driving`
+  const wazeTarget = waypoints[0] || destination
+  const wazeUrl = `https://waze.com/ul?ll=${wazeTarget.lat},${wazeTarget.lon}&navigate=yes`
+  const appleMapsUrl = `https://maps.apple.com/?saddr=${origin.lat},${origin.lon}&daddr=${destination.lat},${destination.lon}`
+
+  return {
+    origin,
+    destination,
+    directDistanceKm: Math.round(directDist * 10) / 10,
+    detourDistanceKm,
+    detourWaypoints: waypoints,
+    detourPolyline: polylineCoords,
+    stepInstructions,
+    delaySavingsMinutes,
+    googleMapsUrl,
+    wazeUrl,
+    appleMapsUrl,
+  }
+}
+

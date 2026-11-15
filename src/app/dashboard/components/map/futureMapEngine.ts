@@ -289,6 +289,8 @@ function ensureIcons(map: MLMap) {
     ['fm-hazard-marathon', '#f97316', 'flag'],
     ['fm-hazard-party', '#ec4899', 'star'],
     ['fm-hazard-detour', '#06b6d4', 'arrow'],
+    ['fm-taxi-rank', '#10b981', 'minibus'],
+    ['fm-ward-sovereign', '#6366f1', 'crown'],
   ] as const
   for (const [name, color, glyph] of hazardIcons) {
     if (map.hasImage(name)) continue
@@ -326,6 +328,17 @@ function ensureIcons(map: MLMap) {
     } else if (glyph === 'arrow') {
       ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'
       ctx.beginPath(); ctx.moveTo(8.5, 15); ctx.lineTo(S - 8.5, 15); ctx.lineTo(S - 14, 9.5); ctx.stroke()
+    } else if (glyph === 'minibus') {
+      roundRect(ctx, 6, 8, S - 12, S - 15, 3); ctx.fill()
+      ctx.fillStyle = color
+      roundRect(ctx, 8, 10, S - 16, 5, 1); ctx.fill()
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath(); ctx.arc(9, 21, 1.8, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(S - 9, 21, 1.8, 0, Math.PI * 2); ctx.fill()
+    } else if (glyph === 'crown') {
+      ctx.beginPath()
+      ctx.moveTo(7, 21); ctx.lineTo(S - 7, 21); ctx.lineTo(S - 6, 12); ctx.lineTo(S / 2 + 4, 16); ctx.lineTo(S / 2, 8); ctx.lineTo(S / 2 - 4, 16); ctx.lineTo(6, 12); ctx.closePath()
+      ctx.fill()
     } else {
       ctx.beginPath(); ctx.arc(S / 2, S / 2, 4.5, 0, Math.PI * 2); ctx.fill()
     }
