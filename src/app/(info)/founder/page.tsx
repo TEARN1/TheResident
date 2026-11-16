@@ -135,8 +135,8 @@ export default function FounderPage() {
         <p>
           Nkwali built <Link href="/">The Resident Crew</Link> to unify those daily realities into one high-trust public
           layer: direct landlord-to-tenant communication with zero broker fees, statutory protections aligned with South
-          Africa&apos;s Rental Housing Act, 5-second grace panic beacons backed by trusted neighbours, and live precinct
-          radar engineered for low-data and offline resilience.
+          Africa&apos;s Rental Housing Act, 5-second grace panic beacons backed by trusted neighbours, and a live
+          neighbourhood map built to work on low data.
         </p>
       </section>
 

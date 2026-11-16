@@ -34,7 +34,7 @@ export async function GET() {
       '',
     ]),
     '## 3. Official Press Boilerplate (The Resident Crew)',
-    `The Resident Crew (${base}) is South Africa's free community platform uniting verified rooms to rent, student housing near major campuses, real-time neighbourhood safety alerts, live precinct radar, minibus taxi rank telemetry, and neighbour-vetted local services.`,
+    `The Resident Crew (${base}) is South Africa's free community platform uniting rooms to rent, student housing near major campuses, real-time neighbourhood safety alerts, a live neighbourhood map, minibus taxi rank routes, and neighbour-rated local services.`,
     `Press & Media Kit: ${base}/press`,
     `Brand Mark: ${base}/logo.png`,
     `Sitemap: ${base}/sitemap.xml`,

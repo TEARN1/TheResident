@@ -353,10 +353,10 @@ export default function SafetyTab({
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
                 <ShieldCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                <span>Verified Neighbours</span>
+                <span>Neighbours</span>
               </div>
               <p className="text-[10px] text-gray-400 leading-relaxed m-0">
-                Priority alert to active verified residents within 2km in {suburb || 'your area'}.
+                Alerts people on The Resident in {suburb || 'your area'}.
               </p>
             </div>
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
