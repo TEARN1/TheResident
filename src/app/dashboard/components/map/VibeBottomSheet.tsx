@@ -57,6 +57,7 @@ export default function VibeBottomSheet({ item, onClose, onDirections }: VibeBot
   // Sync counts when item changes
   React.useEffect(() => {
     if (item) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset counts when a different item is shown
       setConfirms(item.confirmCount || 0)
       setDisputes(item.disputeCount || 0)
       setVoted(null)

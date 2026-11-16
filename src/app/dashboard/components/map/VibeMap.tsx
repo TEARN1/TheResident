@@ -140,7 +140,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   const [tracingType, setTracingType] = useState<'marathon' | 'detour' | null>(null)
   const [tracedWaypoints, setTracedWaypoints] = useState<[number, number][]>([])
   const tracingTypeRef = useRef(tracingType)
-  tracingTypeRef.current = tracingType
+  useEffect(() => { tracingTypeRef.current = tracingType }, [tracingType])
   const [dismissedSpotterId, setDismissedSpotterId] = useState<string | null>(null)
 
   // Proximity Civic Spotter Check-in (within 450m of a road closure)
@@ -177,6 +177,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
    }
    const cat = mapActionToCategory[queryAction]
    if (cat) {
+     // eslint-disable-next-line react-hooks/set-state-in-effect -- open the report modal from a ?action= deep link
      setDropInitialCategory(cat)
      setShowDropVibeModal(true)
    }
@@ -198,6 +199,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  // 1. Initial Geolocation (or focus directly if coordinates passed via beacon link)
  useEffect(() => {
  if (!isNaN(queryLat) && !isNaN(queryLon)) {
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- centre on coordinates passed in the URL
  setCenter({ lat: queryLat, lon: queryLon })
  setIsGpsDefault(false)
  setActiveHub(null)
@@ -249,6 +251,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
   useEffect(() => {
     if (!center) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch for the current centre; setState happens after the await
     loadData(center.lat, center.lon, timeHorizonHours)
   }, [center, timeHorizonHours, loadData])
 

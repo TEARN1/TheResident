@@ -53,6 +53,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const stored = localStorage.getItem('residentTheme')
     if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- read the saved colour theme from this device on mount
       setDashboardThemeState(stored)
     }
   }, [])
@@ -65,6 +66,7 @@ export default function ProfilePage() {
 
   const [mutedAudio, setMutedAudio] = useState(false)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read the saved sound setting on mount
     setMutedAudio(isTactileSoundMuted())
   }, [])
   const toggleMutedAudio = () => {
@@ -149,6 +151,7 @@ export default function ProfilePage() {
   const roleCardRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('role') !== 'landlord') return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- highlight the role switch when arriving with ?role=landlord
     setLandlordHint(true)
     roleCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [])
@@ -188,6 +191,7 @@ export default function ProfilePage() {
   // from external state into local form state, not a render-loop risk.
   useEffect(() => {
     if (!currentUser) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- seed the form once the profile arrives
     setLegalNameInput(currentUser.legalName || '')
     if (currentUser.role === 'tenant' && currentUser.profile) {
       const p = currentUser.profile

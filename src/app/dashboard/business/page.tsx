@@ -56,6 +56,7 @@ export default function BusinessPage() {
   const isProvider = !!myService
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- guests have no tier to load; end the loading state
     if (guest) { setTierLoading(false); return }
     getMyProviderTier().then(t => { setTier(t); setTierLoading(false) })
     if (currentUser) getTrustInfo(currentUser.id).then(setTrust)

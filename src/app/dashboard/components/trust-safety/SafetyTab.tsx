@@ -103,6 +103,7 @@ export default function SafetyTab({
     if (panicCountdown === null) return
     if (panicCountdown <= 0) {
       onRaiseAlert?.({ kind: 'panic', title: 'Urgent: help needed', description: 'A neighbour needs help now.', severity: 'critical' })
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the countdown reaching zero sends the alert and resets
       setPanicCountdown(null)
       setConfirmPanic(false)
       return

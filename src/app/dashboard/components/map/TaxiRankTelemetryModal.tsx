@@ -48,6 +48,7 @@ export default function TaxiRankTelemetryModal({
 
   React.useEffect(() => {
     if (selectedRankId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- follow the rank the caller selects
       setActiveRankId(selectedRankId)
     }
   }, [selectedRankId])
