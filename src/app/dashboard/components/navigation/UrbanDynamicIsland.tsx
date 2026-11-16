@@ -52,7 +52,7 @@ export default function UrbanDynamicIsland({ nokStatus, onOpenSOS }: UrbanDynami
         iconColor: '#ef4444',
         badgeBg: 'rgba(239, 68, 68, 0.15)',
         badgeBorder: 'rgba(239, 68, 68, 0.4)',
-        badgeText: `${alerts.length} Civic Alert${alerts.length === 1 ? '' : 's'} Active`,
+        badgeText: `${alerts.length} alert${alerts.length === 1 ? '' : 's'}`,
         label: alerts[0].title || 'Neighbourhood incident reported',
         actionLabel: 'View Map',
         href: '/dashboard/community?tab=vibemap'
@@ -70,7 +70,7 @@ export default function UrbanDynamicIsland({ nokStatus, onOpenSOS }: UrbanDynami
         badgeBg: 'rgba(245, 158, 11, 0.15)',
         badgeBorder: 'rgba(245, 158, 11, 0.4)',
         badgeText: `${activeOutage.service.toUpperCase()} OUTAGE`,
-        label: `${activeOutage.suburb || 'Precinct'} grid status disrupted`,
+        label: `${activeOutage.service} outage reported${activeOutage.suburb ? ` in ${activeOutage.suburb}` : ''}`,
         actionLabel: 'Details',
         href: '/dashboard/community?tab=safety'
       })
@@ -92,18 +92,20 @@ export default function UrbanDynamicIsland({ nokStatus, onOpenSOS }: UrbanDynami
       })
     }
 
-    // 4. Default calm status when everything in precinct is operational
+    // 4. Nothing reported. Say exactly that: the app can't know there are no
+    //    disruptions, only that nobody has reported one (it used to claim
+    //    "PRECINCT CLEAR: zero emergency disruptions in your walking radius").
     if (items.length === 0) {
       items.push({
-        id: 'precinct-calm',
+        id: 'calm',
         kind: 'calm',
         icon: CheckCircle2,
         iconColor: '#10b981',
         badgeBg: 'rgba(16, 185, 129, 0.12)',
         badgeBorder: 'rgba(16, 185, 129, 0.3)',
-        badgeText: 'PRECINCT CLEAR',
-        label: 'Zero emergency disruptions in your walking radius',
-        actionLabel: 'Radar',
+        badgeText: 'NO ALERTS',
+        label: 'No alerts reported near you',
+        actionLabel: 'Map',
         href: '/dashboard/community?tab=vibemap'
       })
     }
@@ -136,8 +138,8 @@ export default function UrbanDynamicIsland({ nokStatus, onOpenSOS }: UrbanDynami
         type="button"
         onClick={handleIslandClick}
         className="group relative flex items-center gap-1.5 sm:gap-2.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-2xl border border-white/15 hover:border-gold-primary/40 transition-all touch-target-44 text-left max-w-[110px] xs:max-w-[160px] sm:max-w-xs md:max-w-[260px] lg:max-w-[210px] xl:max-w-sm 2xl:max-w-md overflow-hidden shrink-0"
-        title="Urban Dynamic Island: Real-time precinct telemetry"
-        aria-label="Urban Dynamic Island status"
+        title="What's reported near you"
+        aria-label="Status near you"
       >
         <AnimatePresence mode="wait">
           <motion.div

@@ -24,7 +24,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './futureMap.css'
 import type { GeoJSONSource, Map as MLMap, MapGeoJSONFeature } from 'maplibre-gl'
 import {
- LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Building2, Moon, Sun, Box, Car, Ban, Landmark
+ LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Building2, Moon, Sun, Box, Car, Ban
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState, type Listing } from '../../../../store'
@@ -35,9 +35,7 @@ import LiveLocationToggle from './LiveLocationToggle'
 import QuickVibeReportModal, { type VibeCategory } from './QuickVibeReportModal'
 import TaxiRankTelemetryModal from './TaxiRankTelemetryModal'
 import RoadClosureDetourModal from './RoadClosureDetourModal'
-import SovereignWardModal from './SovereignWardModal'
 import { SA_TAXI_RANKS } from '../../../../utils/taxiRoutes'
-import { findStatutoryWard } from '../../../../utils/civicChessboard'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import MapSearchBox from './MapSearchBox'
 import { fetchUpcomingGruvsEvents, formatGruvsEventWhen, type GruvsEvent } from '../../../../utils/gruvsEvents'
@@ -128,12 +126,10 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  // Bumped on every style load: layers were (re)installed, so re-apply visibility.
  const [styleEpoch, setStyleEpoch] = useState(0)
 
- // Sovereign Chessboard, Taxi Telemetry & Travel Detours
+ // Taxi ranks and road-closure detours
  const [showTaxiModal, setShowTaxiModal] = useState(false)
  const [selectedTaxiRankId, setSelectedTaxiRankId] = useState<string | null>(null)
  const [showRoadClosureModal, setShowRoadClosureModal] = useState(false)
- const [showSovereignModal, setShowSovereignModal] = useState(false)
- const currentWard = useMemo(() => findStatutoryWard(center?.lat ?? -26.1926, center?.lon ?? 28.0305), [center])
 
   // 4D Time Horizon & Interactive Tracing State
   const [timeHorizonHours, setTimeHorizonHours] = useState<number>(0)
@@ -1070,13 +1066,11 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  <span className="fm-live-dot" aria-hidden="true" />
  <span>{counts.events} EVENTS · {counts.rooms} ROOMS · {counts.alerts} ALERTS · {counts.taxis} TAXI RANKS</span>
  <span className="text-gray-600" aria-hidden="true">|</span>
- <span className="text-indigo-400 font-bold">WARD {currentWard.wardNumber} ({currentWard.councillor.party})</span>
- <span className="text-gray-600" aria-hidden="true">|</span>
  <span ref={coordsRef} className="text-gray-400" />
  </div>
  </div>
 
- {/* Floating Bottom Left: Drop Vibe & Sovereign Operations CTAs */}
+ {/* Floating Bottom Left: Drop Vibe and the map tools */}
  <div className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:bottom-5 left-3 sm:left-4 z-[500] flex flex-wrap items-center gap-2">
  <button
  onClick={() => {
@@ -1095,10 +1089,10 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  setShowTaxiModal(true)
  }}
  className="px-3.5 py-3 rounded-2xl bg-emerald-600/90 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider border border-emerald-400/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
- title="Minibus Taxi Telemetry, Queue Times & Fares"
+ title="Taxi ranks, routes and rough fares"
  >
  <Car size={15} />
- <span className="hidden sm:inline">Taxi Radar</span>
+ <span className="hidden sm:inline">Taxi ranks</span>
  </button>
 
  <button
@@ -1107,22 +1101,10 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  setShowRoadClosureModal(true)
  }}
  className="px-3.5 py-3 rounded-2xl bg-red-600/90 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider border border-red-400/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shadow-lg shadow-red-500/20"
- title="Mark Road Closures & Calculate Smart Detours"
+ title="Report a road closure"
  >
  <Ban size={15} />
- <span className="hidden sm:inline">Closure Detour</span>
- </button>
-
- <button
- onClick={() => {
- playTactileSound('tab')
- setShowSovereignModal(true)
- }}
- className="px-3.5 py-3 rounded-2xl bg-indigo-600/90 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider border border-indigo-400/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-500/20"
- title={`Sovereign Operating System • Ward ${currentWard.wardNumber}`}
- >
- <Landmark size={15} />
- <span className="hidden sm:inline">Ward {currentWard.wardNumber}</span>
+ <span className="hidden sm:inline">Road closed</span>
  </button>
 
  {pendingTapCoords?.label && (
@@ -1220,18 +1202,12 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
   <RoadClosureDetourModal
     isOpen={showRoadClosureModal}
     onClose={() => setShowRoadClosureModal(false)}
-    currentCoords={center}
+    currentCoords={pendingTapCoords || center}
     onClosureBroadcasted={() => {
       if (center) loadData(center.lat, center.lon)
     }}
   />
 
-  {/* Sovereign Ward OS & Politics Ledger Modal */}
-  <SovereignWardModal
-    isOpen={showSovereignModal}
-    onClose={() => setShowSovereignModal(false)}
-    currentCoords={center}
-  />
  </div>
  )
 }

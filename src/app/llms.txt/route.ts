@@ -3,7 +3,6 @@ import { siteUrl } from '../site-url'
 import { FOUNDER_PROFILE, ECOSYSTEM_PLATFORMS } from '../entity-schema'
 import { DEFAULT_AREAS, CAMPUSES } from '../public-services'
 import { SA_TAXI_RANKS } from '../../utils/taxiRoutes'
-import { STATUTORY_WARDS } from '../../utils/civicChessboard'
 
 export const revalidate = 3600
 
@@ -46,10 +45,6 @@ export async function GET() {
     '## Minibus Taxi Ranks, Routes, ZAR Fares & Hand Signals',
     `- [All South African Taxi Ranks & Hand Signals](${base}/taxi-ranks): Complete commuter directory of major SANTACO ranks, fares, and roadside hand signals`,
     ...SA_TAXI_RANKS.map(r => `- [${r.name}](${base}/taxi-ranks/${r.id}): ${r.popularName} (${r.city}), open ${r.operatingHours.opensAt}–${r.operatingHours.closesAt}`),
-    '',
-    '## Municipal Wards, Substations & Infrastructure SLAs',
-    `- [South African Municipal Wards Ledger](${base}/wards): Ward councillors, substations, water reservoirs, and statutory fault SLA timers`,
-    ...STATUTORY_WARDS.map(w => `- [Ward ${w.wardNumber} (${w.suburb})](${base}/wards/${w.wardCode.toLowerCase()}): ${w.municipality}`),
     '',
     `## Sibling Platforms (${FOUNDER_PROFILE.parentOrgName})`,
     ...ECOSYSTEM_PLATFORMS.map(p => `- [${p.name}](${p.url}): ${p.summary}`),

@@ -223,7 +223,6 @@ export function guestPolicyScore(seekerPref: 'rarely' | 'weekends' | 'frequent',
 
 /** Logic 16: Sleep schedule overlap calculation in shared bedrooms (hours of mutual sleep). */
 export function sleepScheduleOverlap(bedA: number, wakeA: number, bedB: number, wakeB: number): number {
-  const norm = (h: number) => ((h % 24) + 24) % 24
   let overlapHours = 0
   for (let hour = 0; hour < 24; hour++) {
     const asleepA = bedA > wakeA ? hour >= bedA || hour < wakeA : hour >= bedA && hour < wakeA

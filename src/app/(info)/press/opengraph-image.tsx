@@ -26,7 +26,7 @@ export default async function Image() {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse renders plain img only */}
+            { }
             <img src={logoSrc} width={64} height={64} style={{ borderRadius: 14 }} alt="" />
             <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: 4 }}>THE RESIDENT CREW</div>
           </div>

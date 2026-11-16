@@ -504,7 +504,7 @@ export default function ServicesPage() {
               </a>
            ) : (
               <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-3">
-                 <p className="text-xs text-gray-400">Share or find a ride for work, school, or weekend events with verified neighbours.</p>
+                 <p className="text-xs text-gray-400">Share or find a ride for work, school, or weekend events with neighbours.</p>
                  <div className="flex items-center gap-2 w-full sm:w-auto">
                     <button
                        onClick={() => { playTactileSound('click'); setShowRideRequestModal(true) }}

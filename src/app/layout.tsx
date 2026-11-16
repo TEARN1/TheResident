@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     'Auckland Park student rooms',
     'Hatfield student accommodation',
     'Soweto rooms to rent',
-    'verified landlords',
+    'rooms direct from landlords',
     'zero broker fees',
     'fair price rent check',
     'local handymen South Africa',

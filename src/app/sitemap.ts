@@ -5,7 +5,6 @@ import { FOUNDER_IMAGES } from './entity-schema'
 import { listDirectory, distinct, latest, DEFAULT_AREAS, CAMPUSES, type DirectoryEntry } from './public-services'
 import { listPublicListings, roomImages } from './public-listings'
 import { SA_TAXI_RANKS } from '../utils/taxiRoutes'
-import { STATUTORY_WARDS } from '../utils/civicChessboard'
 
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
@@ -93,20 +92,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pagePriority = (href: string): number => {
     if (href === '/founder') return 0.9
     if (href === '/rooms') return 0.9
-    if (href === '/press' || href === '/taxi-ranks' || href === '/wards') return 0.85
+    if (href === '/press' || href === '/taxi-ranks') return 0.85
     if (href === '/privacy' || href === '/terms') return 0.3
     return 0.6
   }
 
   const taxiRankPages: MetadataRoute.Sitemap = SA_TAXI_RANKS.map(rank => ({
     url: `${base}/taxi-ranks/${rank.id}`,
-    lastModified: INFO_PAGES_UPDATED,
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }))
-
-  const wardPages: MetadataRoute.Sitemap = STATUTORY_WARDS.map(w => ({
-    url: `${base}/wards/${w.wardCode.toLowerCase()}`,
     lastModified: INFO_PAGES_UPDATED,
     changeFrequency: 'weekly',
     priority: 0.8,
@@ -131,7 +123,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           : {
               url: `${base}${l.href}`,
               lastModified: INFO_PAGES_UPDATED,
-              changeFrequency: l.href === '/rooms' || l.href === '/taxi-ranks' || l.href === '/wards' ? ('daily' as const) : ('monthly' as const),
+              changeFrequency: l.href === '/rooms' || l.href === '/taxi-ranks' ? ('daily' as const) : ('monthly' as const),
               priority: pagePriority(l.href),
               ...(pageImages[l.href] ? { images: pageImages[l.href] } : {}),
             }),
@@ -139,7 +131,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...areaPages,
     ...campusPages,
     ...taxiRankPages,
-    ...wardPages,
     ...listingPages,
     ...roomPages,
   ]

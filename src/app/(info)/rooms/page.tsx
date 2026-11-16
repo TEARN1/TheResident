@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Verified Rooms to Rent in South Africa — Zero Broker Fees | The Resident Crew',
     description:
-      'Zero-broker rooms, student communes, and cottages directly from verified landlords across South Africa.',
+      'Zero-broker rooms, student communes, and cottages directly from landlords across South Africa.',
     images: ['/opengraph-image'],
   },
 }
@@ -123,7 +123,7 @@ export default async function RoomsDirectoryPage() {
 
       <h1>Verified rooms to rent in South Africa</h1>
       <p className={styles.lede}>
-        Zero-broker rooms, cottages, bachelor flats, and student communes listed directly by verified landlords with fair-price checks and Rental Housing Act transparency.
+        Zero-broker rooms, cottages, bachelor flats, and student communes listed directly by landlords, with a fair-price check against nearby rooms.
       </p>
 
       {listings.length === 0 ? (

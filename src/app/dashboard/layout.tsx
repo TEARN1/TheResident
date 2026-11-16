@@ -518,7 +518,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 <span className="text-white font-black uppercase tracking-wider">{pageTitle.name}</span>
               </div>
 
-              {/* Urban Dynamic Island (Live precinct ticker & SOS) */}
+              {/* Status bubble: what is reported near you */}
               <div className="ml-1 sm:ml-3">
                 <UrbanDynamicIsland nokStatus={nokStatus} />
               </div>
@@ -529,7 +529,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               {/* Global Spotlight Palette Trigger (Ctrl+K) */}
               <CommandPalette />
 
-              {/* Futuristic Planetary Telemetry Capsule */}
+              {/* Real counts: rooms listed and active alerts */}
               <div className="hidden xl:inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono text-gray-300">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="font-bold text-gray-200">ROOMS: {roomsListed}</span>

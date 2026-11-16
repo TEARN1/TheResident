@@ -257,10 +257,10 @@ function CommercialTiersCard() {
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
-            <Crown size={16} /> Political Party, Civic & Commercial Broadcast Plans
+            <Crown size={16} /> Broadcast plans for organisations
           </h2>
           <p className="text-[11px] text-gray-400 mt-0.5">
-            Open your unit for free above. Upgrade to a verified commercial, political campaign, or infrastructure tier for sponsored reach and Live Town-Hall Priority.
+            Opening an account is free. Paid plans add reach and pinned posts. Paying never makes an account verified: The Resident checks organisations separately, for free.
           </p>
         </div>
       </div>

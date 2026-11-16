@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { Shield, Activity, Bell, MapPin, CheckCircle2, Droplets, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction, Radio, ShieldCheck, Users } from 'lucide-react'
 import Link from 'next/link'

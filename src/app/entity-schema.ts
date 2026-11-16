@@ -322,7 +322,6 @@ export function buildGlobalKnowledgeGraph(base: string) {
           { '@type': 'CollectionPage', name: 'Local Services & Trades', url: `${cleanBase}/services` },
           { '@type': 'CollectionPage', name: 'Local Shops & Spaza Marketplaces', url: `${cleanBase}/shops` },
           { '@type': 'CollectionPage', name: 'South African Minibus Taxi Ranks, Fares & Hand Signals', url: `${cleanBase}/taxi-ranks` },
-          { '@type': 'CollectionPage', name: 'South African Municipal Wards & Infrastructure SLA Ledger', url: `${cleanBase}/wards` },
           { '@type': 'ProfilePage', name: 'Asemahle "TEARN" Nkwali — Founder & CEO', url: `${cleanBase}/founder` },
           { '@type': 'WebPage', name: 'Press & Media Kit', url: `${cleanBase}/press` },
         ],

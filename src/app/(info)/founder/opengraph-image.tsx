@@ -40,7 +40,7 @@ export default async function Image() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse renders plain img only */}
+            { }
             <img src={logoSrc} width={60} height={60} style={{ borderRadius: 14 }} alt="" />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: 4, color: '#d4af37' }}>TEARN VENTURES</div>
@@ -73,7 +73,7 @@ export default async function Image() {
             flexShrink: 0,
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse renders plain img only */}
+          { }
           <img src={ceoSrc} width={360} height={480} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
         </div>
       </div>

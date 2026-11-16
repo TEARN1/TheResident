@@ -12,7 +12,7 @@ const base = siteUrl()
 export const metadata: Metadata = {
   title: 'South African Minibus Taxi Ranks, Routes, Fares & Hand Signals | The Resident Crew',
   description:
-    'Live directory of major South African taxi ranks (MTN Noord, Bree Street, Baragwanath, Bloed Street, Cape Town Station Deck, Warwick Junction), ZAR fares, operating hours, and commuter hand signals.',
+    'A guide to major South African taxi ranks (MTN Noord, Bree Street, Baragwanath, Bloed Street, Cape Town Station Deck, Warwick Junction), rough ZAR fares, operating hours, and commuter hand signals.',
   keywords: [
     'South Africa taxi ranks directory',
     'MTN Noord taxi rank routes and fares',
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'South African Minibus Taxi Ranks, Routes & Hand Signals | The Resident Crew',
     description:
-      'Verified ZAR minibus taxi fares, operating hours, platform bays, and hand signals across JHB, PTA, CPT, and DUR.',
+      'Rough ZAR minibus taxi fares, operating hours, platform bays, and hand signals across JHB, PTA, CPT, and DUR.',
     images: ['/opengraph-image'],
   },
 }
@@ -55,7 +55,7 @@ const taxiFaqs = [
   },
   {
     q: 'How does The Resident Crew help front-seat commuters and daily riders?',
-    a: 'Inside The Resident Crew app, commuters can check live queue status from rank marshals, inspect road-closure detour alerts, learn exact ZAR fares, and use the built-in Front-Seat Change Calculator.',
+    a: 'Inside The Resident Crew app, commuters can see rank routes and rough fares, check road-closure reports from neighbours, and use the built-in Front-Seat Change Calculator. Fares change, so confirm at the rank.',
   },
 ]
 
@@ -130,7 +130,7 @@ export default function TaxiRanksDirectoryPage() {
 
       <h1>South African minibus taxi ranks, fares &amp; hand signals</h1>
       <p className={styles.lede}>
-        Verified rank locations, operating hours, SANTACO association corridors, platform bays, ZAR fares, and commuter hand signals across Johannesburg, Pretoria, Cape Town, and Durban.
+        Rank locations, operating hours, corridors, platform bays, rough ZAR fares, and commuter hand signals across Johannesburg, Pretoria, Cape Town, and Durban. A rough guide: fares and bays change, so confirm at the rank.
       </p>
 
       <section>
@@ -191,7 +191,7 @@ export default function TaxiRanksDirectoryPage() {
         ))}
       </section>
 
-      <JoinCta text="Need live rank queue telemetry, road-closure detours, and commuter alerts on your phone?" />
+      <JoinCta text="Want road-closure reports and alerts from people near you on your phone?" />
     </>
   )
 }
