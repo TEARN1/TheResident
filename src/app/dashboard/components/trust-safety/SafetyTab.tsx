@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { Shield, Activity, Bell, MapPin, CheckCircle2, Droplets, Zap, Wifi, Check, HeartHandshake, Search, AlertTriangle, Signal, Construction, Radio, ShieldCheck, Users } from 'lucide-react'
 import Link from 'next/link'
@@ -103,6 +103,7 @@ export default function SafetyTab({
     if (panicCountdown === null) return
     if (panicCountdown <= 0) {
       onRaiseAlert?.({ kind: 'panic', title: 'Urgent: help needed', description: 'A neighbour needs help now.', severity: 'critical' })
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the countdown reaching zero sends the alert and resets
       setPanicCountdown(null)
       setConfirmPanic(false)
       return
@@ -352,10 +353,10 @@ export default function SafetyTab({
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
                 <ShieldCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                <span>Verified Neighbours</span>
+                <span>Neighbours</span>
               </div>
               <p className="text-[10px] text-gray-400 leading-relaxed m-0">
-                Priority alert to active verified residents within 2km in {suburb || 'your area'}.
+                Alerts people on The Resident in {suburb || 'your area'}.
               </p>
             </div>
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">

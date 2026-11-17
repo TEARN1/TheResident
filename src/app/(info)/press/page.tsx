@@ -87,8 +87,8 @@ export default function PressPage() {
           South African community platform built to connect neighbours around verified accommodation, real-time safety
           alerts, and trusted local services. Designed for high-density urban suburbs and university corridors such as
           Braamfontein, Auckland Park, Soweto, Hatfield, Pretoria CBD, and Cottesloe, the platform removes predatory
-          rental middlemen by connecting tenants directly with verified landlords while providing fair-price rent checks,
-          a live precinct radar, minibus taxi route telemetry, and neighbour-rated artisans and spaza shops.
+          rental middlemen by connecting tenants directly with landlords while providing fair-price rent checks,
+          a live neighbourhood map, minibus taxi routes, and neighbour-rated artisans and spaza shops.
         </p>
       </section>
 
@@ -118,7 +118,7 @@ export default function PressPage() {
           <li><strong>Parent Studio:</strong> {FOUNDER_PROFILE.parentOrgName}</li>
           <li><strong>Founder &amp; CEO:</strong> {FOUNDER_PROFILE.fullName}</li>
           <li><strong>Primary Markets:</strong> Johannesburg (Braamfontein, Auckland Park, Soweto, Cottesloe, Midrand, Sandton), Pretoria (Hatfield, Sunnyside, Pretoria CBD, Mamelodi), Cape Town (Rondebosch, Stellenbosch, Bellville), Durban, Gqeberha, Bloemfontein</li>
-          <li><strong>Core Capabilities:</strong> Zero-broker rooms &amp; student accommodation, Rental Housing Act tools, 5-second grace panic beacon &amp; trust circles, live precinct vibe map &amp; minibus taxi rank telemetry, neighbour-vetted tradespeople &amp; local spaza shops</li>
+          <li><strong>Core Capabilities:</strong> Zero-broker rooms &amp; student accommodation, Rental Housing Act tools, 5-second grace panic beacon &amp; trust circles, live neighbourhood map &amp; minibus taxi rank routes, neighbour-rated tradespeople &amp; local spaza shops</li>
           <li><strong>Availability:</strong> Web, Progressive Web App (PWA), Android APK, and iOS Web App — free for residents</li>
           <li><strong>Sibling Platforms:</strong> {ECOSYSTEM_PLATFORMS.filter(p => p.key !== 'resident').map(p => `${p.name} (${p.url.replace('https://', '')})`).join(' · ')}</li>
         </ul>

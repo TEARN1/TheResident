@@ -9,12 +9,12 @@ import { FOUNDER_IMAGES, FOUNDER_PROFILE } from '../../entity-schema'
 export const metadata: Metadata = {
   title: 'About The Resident — Your Suburb, Connected',
   description:
-    'The Resident is a community app for South African neighbourhoods: local services, spaza marketplaces, lift clubs, rooms to rent, and street safety alerts from verified neighbours.',
+    'The Resident is a community app for South African neighbourhoods: local services, spaza marketplaces, lift clubs, rooms to rent, and street safety alerts from your neighbours.',
   alternates: { canonical: '/about' },
   openGraph: {
     title: 'About The Resident — Your Suburb, Connected',
     description:
-      'The Resident is a community app for South African neighbourhoods: local services, spaza marketplaces, lift clubs, rooms to rent, and street safety alerts from verified neighbours.',
+      'The Resident is a community app for South African neighbourhoods: local services, spaza marketplaces, lift clubs, rooms to rent, and street safety alerts from your neighbours.',
     url: `${siteUrl()}/about`,
   },
 }

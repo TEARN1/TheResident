@@ -20,7 +20,7 @@ const POPULAR_AREAS = [
 
 const TRUST_PILLARS = [
   'Zero Broker Fees',
-  'Verified Landlords',
+  'Tenant Reviews',
   'Neighbourhood Safety'
 ]
 
@@ -33,12 +33,12 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: 'Neighbours who have your back',
-    text: 'Real-time safety alerts, verified crime reports and help from verified people on your street.'
+    text: 'Safety alerts from your street, a shared notice board and help from your neighbours.'
   },
   {
     icon: Wrench,
     title: 'Local services and trade',
-    text: 'Find a reliable plumber, electrician, bakkie or spaza nearby, vetted and rated by neighbours.'
+    text: 'Find a plumber, electrician, bakkie or spaza nearby, rated by your neighbours.'
   }
 ]
 
@@ -154,7 +154,7 @@ export default function HomePage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#34d399' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-              Live Precinct Radar Active
+              Live neighbourhood map
             </span>
             <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               The Gruvs &times; The Resident <ArrowRight size={13} />
@@ -162,7 +162,7 @@ export default function HomePage() {
           </div>
 
           <p style={{ margin: 0, fontSize: '0.85rem', color: '#e5e7eb', lineHeight: 1.45, fontWeight: 500 }}>
-            Unified live radar: street closures, weekend vibes, funerals, marathon routes, volunteer pointsmen, and grid telemetry.
+            Street closures, weekend events, funerals, marathon routes and pointsmen, as reported by people near you.
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: '2px' }}>
@@ -456,7 +456,6 @@ export default function HomePage() {
             <Link href="/services" style={{ color: '#d1d5db', textDecoration: 'none' }}>Local Services</Link>
             <Link href="/shops" style={{ color: '#d1d5db', textDecoration: 'none' }}>Local Shops</Link>
             <Link href="/taxi-ranks" style={{ color: '#d1d5db', textDecoration: 'none' }}>Taxi Ranks &amp; Fares</Link>
-            <Link href="/wards" style={{ color: '#d1d5db', textDecoration: 'none' }}>Municipal Wards</Link>
             <Link href="/founder" style={{ color: '#d1d5db', textDecoration: 'none' }}>Founder &amp; CEO</Link>
             <Link href="/press" style={{ color: '#d1d5db', textDecoration: 'none' }}>Press &amp; Media Kit</Link>
             <Link href="/about" style={{ color: '#d1d5db', textDecoration: 'none' }}>About</Link>

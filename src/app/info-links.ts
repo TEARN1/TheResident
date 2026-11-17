@@ -7,7 +7,6 @@ export const infoLinks = [
   { href: '/campus', label: 'Student accommodation' },
   { href: '/area', label: 'Areas' },
   { href: '/taxi-ranks', label: 'Taxi ranks & fares' },
-  { href: '/wards', label: 'Municipal wards' },
   { href: '/about', label: 'About' },
   { href: '/founder', label: 'Founder & CEO' },
   { href: '/press', label: 'Press & Media' },

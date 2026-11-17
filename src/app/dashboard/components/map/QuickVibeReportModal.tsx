@@ -47,6 +47,7 @@ export default function QuickVibeReportModal({
 }: QuickVibeReportModalProps) {
   const [category, setCategory] = useState<VibeCategory>(initialCategory || 'funeral_closure')
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- follow the category the caller opens the modal with
     if (initialCategory) setCategory(initialCategory)
   }, [initialCategory])
   const [title, setTitle] = useState('')

@@ -3,7 +3,6 @@ import { siteUrl } from '../site-url'
 import { FOUNDER_PROFILE, ECOSYSTEM_PLATFORMS, FOUNDER_IMAGES } from '../entity-schema'
 import { DEFAULT_AREAS, CAMPUSES } from '../public-services'
 import { SA_TAXI_RANKS, getTaxiHandSignalGuide } from '../../utils/taxiRoutes'
-import { STATUTORY_WARDS, HEAVY_MUNICIPAL_DEPARTMENTS } from '../../utils/civicChessboard'
 
 export const revalidate = 3600
 
@@ -35,7 +34,7 @@ export async function GET() {
       '',
     ]),
     '## 3. Official Press Boilerplate (The Resident Crew)',
-    `The Resident Crew (${base}) is South Africa's free community platform uniting verified rooms to rent, student housing near major campuses, real-time neighbourhood safety alerts, live precinct radar, minibus taxi rank telemetry, and neighbour-vetted local services.`,
+    `The Resident Crew (${base}) is South Africa's free community platform uniting rooms to rent, student housing near major campuses, real-time neighbourhood safety alerts, a live neighbourhood map, minibus taxi rank routes, and neighbour-rated local services.`,
     `Press & Media Kit: ${base}/press`,
     `Brand Mark: ${base}/logo.png`,
     `Sitemap: ${base}/sitemap.xml`,
@@ -55,15 +54,6 @@ export async function GET() {
     ]),
     'Hand Signals Reference:',
     ...getTaxiHandSignalGuide().map(s => `- ${s.signalName} (${s.region}): ${s.meaning}`),
-    '',
-    '## 7. Statutory Municipal Wards, Substations, Reservoirs & SLA Ledger',
-    ...STATUTORY_WARDS.map(
-      w => `- Ward ${w.wardNumber} (${w.suburb}) [${base}/wards/${w.wardCode.toLowerCase()}]: ${w.municipality}, Substations: ${w.substations.join(', ')}, Reservoirs: ${w.reservoirs.join(', ')}`,
-    ),
-    'Department SLA Targets:',
-    ...Object.values(HEAVY_MUNICIPAL_DEPARTMENTS).map(
-      d => `- ${d.agency} (${d.name}): Critical ${d.slaHoursCritical}h / Standard ${d.slaHoursStandard}h (${d.statutoryAct})`,
-    ),
     '',
   ].join('\n')
 

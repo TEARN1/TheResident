@@ -50,11 +50,11 @@ export const ECOSYSTEM_PLATFORMS: readonly EcosystemPlatform[] = [
     url: 'https://theresidentcrew.com',
     category: 'PropTech, Neighbourhood Safety & Local Commerce',
     summary:
-      "South Africa's free community platform for verified rooms to rent, student housing, real-time neighbourhood safety alerts, live precinct radar, and neighbour-vetted local services.",
+      "South Africa's free community platform for rooms to rent, student housing, real-time neighbourhood safety alerts, a live neighbourhood map, and neighbour-rated local services.",
     highlights: [
       'Direct zero-broker room and student accommodation discovery with fair-price checks',
       '5-second grace panic beacon, trust circles, and ward-level Community Police Forum integration',
-      'Live precinct vibe map with minibus taxi rank telemetry and road closure detours',
+      'Live neighbourhood map with minibus taxi rank routes and road closure reports',
       'Neighbour-rated artisans, plumbers, electricians, bakkie transport, and local spaza shops',
     ],
   },
@@ -96,7 +96,7 @@ export const FOUNDER_IMAGES: readonly FounderImageAsset[] = [
   {
     path: '/founder/asemahle-nkwali-field-operations-johannesburg.jpg',
     title: 'Asemahle "TEARN" Nkwali — Community Safety & Field Operations in Johannesburg',
-    alt: 'Asemahle TEARN Nkwali leading field operations and precinct verification for The Resident Crew in Johannesburg, South Africa',
+    alt: 'Asemahle TEARN Nkwali leading field operations for The Resident Crew in Johannesburg, South Africa',
     caption: 'Asemahle "TEARN" Nkwali on-site during field verification and community safety operations in Johannesburg.',
     width: 766,
     height: 1024,
@@ -274,12 +274,12 @@ export function buildGlobalKnowledgeGraph(base: string) {
         inLanguage: ['en-ZA', 'zu-ZA', 'st-ZA', 'af-ZA'],
         countriesSupported: 'ZA',
         description:
-          "South Africa's free community platform for verified rooms to rent, student housing, real-time neighbourhood safety alerts, live precinct radar, and neighbour-vetted local services.",
+          "South Africa's free community platform for rooms to rent, student housing, real-time neighbourhood safety alerts, a live neighbourhood map, and neighbour-rated local services.",
         featureList: [
-          'Zero-broker verified rooms to rent and student accommodation',
+          'Zero-broker rooms to rent and student accommodation',
           'Statutory Rental Housing Act deposit calculator and lease tools',
           '5-second grace panic beacon, next-of-kin trust circles, and ward safety alerts',
-          'Live precinct radar, minibus taxi rank telemetry, and road closure detours',
+          'Live neighbourhood map, minibus taxi rank routes, and road closure reports',
           'Neighbour-vetted local artisans, handymen, bakkie transport, and spaza shops',
         ],
         creator: {
@@ -304,7 +304,7 @@ export function buildGlobalKnowledgeGraph(base: string) {
         name: 'The Resident Crew',
         alternateName: ['The Resident', 'Resident Crew', 'The Resident South Africa'],
         description:
-          'Verified rooms to rent, student accommodation, real-time neighbourhood safety alerts, live precinct radar, and local services across South African neighbourhoods.',
+          'Rooms to rent, student accommodation, real-time neighbourhood safety alerts, a live neighbourhood map, and local services across South African neighbourhoods.',
         inLanguage: 'en-ZA',
         creator: {
           '@id': `${cleanBase}/#founder`,
@@ -322,7 +322,6 @@ export function buildGlobalKnowledgeGraph(base: string) {
           { '@type': 'CollectionPage', name: 'Local Services & Trades', url: `${cleanBase}/services` },
           { '@type': 'CollectionPage', name: 'Local Shops & Spaza Marketplaces', url: `${cleanBase}/shops` },
           { '@type': 'CollectionPage', name: 'South African Minibus Taxi Ranks, Fares & Hand Signals', url: `${cleanBase}/taxi-ranks` },
-          { '@type': 'CollectionPage', name: 'South African Municipal Wards & Infrastructure SLA Ledger', url: `${cleanBase}/wards` },
           { '@type': 'ProfilePage', name: 'Asemahle "TEARN" Nkwali — Founder & CEO', url: `${cleanBase}/founder` },
           { '@type': 'WebPage', name: 'Press & Media Kit', url: `${cleanBase}/press` },
         ],

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { AlertTriangle, Bell, BellOff, ShieldCheck, Star } from 'lucide-react'
 import { supabase } from '../../../../utils/supabase'
-import { formatCurrency, type PriceStats, type PriceVerdict, depositFairnessCheck, depositInterestAccrual } from '../../../../utils/logic'
+import { formatCurrency, type PriceStats, type PriceVerdict, depositInterestAccrual } from '../../../../utils/logic'
 
 /**
  * "Before you pay" checks for one listing, built only from real data:

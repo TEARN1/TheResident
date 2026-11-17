@@ -68,7 +68,7 @@ export default async function TaxiRankDetailPage({ params }: Props) {
     },
     {
       q: `How much are taxi fares from ${rank.name}?`,
-      a: `Verified route fares currently range from ${Math.min(...rank.routes.map(r => r.fareZAR))} ZAR to ${Math.max(...rank.routes.map(r => r.fareZAR))} ZAR across ${rank.routes.length} primary corridors including ${rank.routes.map(r => `${r.destination} (R${r.fareZAR})`).join(', ')}.`,
+      a: `Rough route fares range from ${Math.min(...rank.routes.map(r => r.fareZAR))} ZAR to ${Math.max(...rank.routes.map(r => r.fareZAR))} ZAR across ${rank.routes.length} primary corridors including ${rank.routes.map(r => `${r.destination} (R${r.fareZAR})`).join(', ')}.`,
     },
     {
       q: `Which taxi association operates at ${rank.name}?`,

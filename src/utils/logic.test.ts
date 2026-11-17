@@ -23,7 +23,6 @@ import {
   bearingDegrees,
   isWithinRadius,
   centroid,
-  clusterPoints,
   estimateWalkingMinutes,
   studyHabitsCompatibility,
   cleaningCadenceFit,

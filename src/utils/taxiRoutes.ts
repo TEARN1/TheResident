@@ -12,7 +12,6 @@ export interface LatLon {
   lon: number
 }
 
-export type QueueCongestionLevel = 'cleared' | 'fast' | 'moderate' | 'congested'
 
 export interface TaxiRoute {
   id: string
@@ -27,13 +26,6 @@ export interface TaxiRoute {
     name: string
     description: string
     gesture: string
-  }
-  liveQueue: {
-    status: QueueCongestionLevel
-    estimatedWaitMins: number
-    activeTaxisInRank: number
-    marshalNotes: string
-    lastUpdated: string
   }
   waypointStops: string[]
 }
@@ -92,13 +84,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           description: 'Closed fist with thumb extended pointing outwards or rightward tap',
           gesture: '✊',
         },
-        liveQueue: {
-          status: 'fast',
-          estimatedWaitMins: 5,
-          activeTaxisInRank: 14,
-          marshalNotes: 'Loading continuously. No backlog.',
-          lastUpdated: '10 mins ago',
-        },
         waypointStops: ['Parktown', 'Fordsburg', 'Crown Mines', 'Southgate', 'Baragwanath'],
       },
       {
@@ -114,13 +99,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           name: 'Sandton',
           description: 'Two fingers pointing upwards in a tight V or index finger pointing forward with upward tilt',
           gesture: '✌️',
-        },
-        liveQueue: {
-          status: 'moderate',
-          estimatedWaitMins: 12,
-          activeTaxisInRank: 6,
-          marshalNotes: 'Traffic build-up on Oxford Rd; arrivals slowed slightly.',
-          lastUpdated: '5 mins ago',
         },
         waypointStops: ['Killarney', 'Rosebank', 'Illovo', 'Sandton Central'],
       },
@@ -138,13 +116,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           description: 'Four outstretched fingers pointing upward',
           gesture: '🖐️',
         },
-        liveQueue: {
-          status: 'fast',
-          estimatedWaitMins: 8,
-          activeTaxisInRank: 8,
-          marshalNotes: 'Full fleet deployed for afternoon peak.',
-          lastUpdated: '15 mins ago',
-        },
         waypointStops: ['Rosebank', 'Sandton', 'Bryanston', 'Fourways'],
       },
       {
@@ -161,13 +132,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           description: 'Flat open palm waved side to side in horizontal motion',
           gesture: '👋',
         },
-        liveQueue: {
-          status: 'fast',
-          estimatedWaitMins: 4,
-          activeTaxisInRank: 18,
-          marshalNotes: 'Very fast queue. Taxis departing every 3 mins.',
-          lastUpdated: '3 mins ago',
-        },
         waypointStops: ['Hillbrow', 'Berea', 'Orange Grove', 'Bramley', 'Pan Africa Rank'],
       },
       {
@@ -183,13 +147,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           name: 'Local / Short Left',
           description: 'Index finger pointing straight down towards the ground',
           gesture: '👇',
-        },
-        liveQueue: {
-          status: 'cleared',
-          estimatedWaitMins: 2,
-          activeTaxisInRank: 9,
-          marshalNotes: 'Immediate seating available.',
-          lastUpdated: '1 min ago',
         },
         waypointStops: ['Queen Elizabeth Bridge', 'De Korte St', 'Jorissen St', 'Wits Braamfontein Gate'],
       },
@@ -227,13 +184,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           description: 'Thumb pointing over shoulder with slight fist rotation',
           gesture: '👍',
         },
-        liveQueue: {
-          status: 'fast',
-          estimatedWaitMins: 6,
-          activeTaxisInRank: 12,
-          marshalNotes: 'R41 roadworks bypassed via Maraisburg.',
-          lastUpdated: '8 mins ago',
-        },
         waypointStops: ['Mayfair', 'Langlaagte', 'Riverlea', 'Meadowlands Zone 2', 'Dobsonville Mall'],
       },
       {
@@ -249,13 +199,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           name: 'Randburg',
           description: 'Index finger pointing forward horizontally, drawing a slight arc',
           gesture: '👉',
-        },
-        liveQueue: {
-          status: 'fast',
-          estimatedWaitMins: 5,
-          activeTaxisInRank: 7,
-          marshalNotes: 'Smooth departure flow.',
-          lastUpdated: '12 mins ago',
         },
         waypointStops: ['Empire Rd', 'Parktown West', 'Rosebank', 'Craighall Park', 'Randburg Square'],
       },
@@ -292,13 +235,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           name: 'Joburg CBD / Town',
           description: 'Index finger pointing straight up towards the sky',
           gesture: '☝️',
-        },
-        liveQueue: {
-          status: 'fast',
-          estimatedWaitMins: 5,
-          activeTaxisInRank: 20,
-          marshalNotes: 'Both lanes loading at maximum cadence.',
-          lastUpdated: '4 mins ago',
         },
         waypointStops: ['Diepkloof Ext', 'Booysens Reserve', 'Selby', 'Bree Street', 'Noord'],
       },
@@ -338,13 +274,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           description: 'Peace sign tilted at 45 degrees towards the shoulder',
           gesture: '✌️',
         },
-        liveQueue: {
-          status: 'cleared',
-          estimatedWaitMins: 3,
-          activeTaxisInRank: 11,
-          marshalNotes: 'Student queue flowing smoothly.',
-          lastUpdated: '14 mins ago',
-        },
         waypointStops: ['Arcadia', 'Loftus Versfeld', 'Burnett St', 'Hatfield Plaza'],
       },
       {
@@ -360,13 +289,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           name: 'Mamelodi',
           description: 'Three fingers pointing right with open wrist',
           gesture: '🤟',
-        },
-        liveQueue: {
-          status: 'fast',
-          estimatedWaitMins: 7,
-          activeTaxisInRank: 16,
-          marshalNotes: 'High fleet turnover.',
-          lastUpdated: '6 mins ago',
         },
         waypointStops: ['Silverton', 'Eersterust Offramp', 'Tsabaya Ave', 'Denlyn Mall'],
       },
@@ -406,13 +328,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           description: 'Open hand pointing forward, tapping downward twice',
           gesture: '🫱',
         },
-        liveQueue: {
-          status: 'fast',
-          estimatedWaitMins: 8,
-          activeTaxisInRank: 22,
-          marshalNotes: 'Buses also running; taxi ranks clear.',
-          lastUpdated: '10 mins ago',
-        },
         waypointStops: ['Woodstock', 'Mowbray', 'Athlone', 'Nyanga Junction', 'Site C'],
       },
       {
@@ -428,13 +343,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           name: 'Camps Bay',
           description: 'Flat hand waving up and over like an ocean wave',
           gesture: '🌊',
-        },
-        liveQueue: {
-          status: 'cleared',
-          estimatedWaitMins: 2,
-          activeTaxisInRank: 8,
-          marshalNotes: 'Sunny weather; beach-goers moving steadily.',
-          lastUpdated: '7 mins ago',
         },
         waypointStops: ['Buitengracht St', 'Kloof Nek', 'Camps Bay Strip'],
       },
@@ -473,13 +381,6 @@ export const SA_TAXI_RANKS: TaxiRank[] = [
           name: 'Umlazi',
           description: 'Two fingers hooked downward like a letter U',
           gesture: '🤘',
-        },
-        liveQueue: {
-          status: 'fast',
-          estimatedWaitMins: 5,
-          activeTaxisInRank: 19,
-          marshalNotes: 'Regular departures. No delays on M4.',
-          lastUpdated: '9 mins ago',
         },
         waypointStops: ['Congella', 'Montclair', 'Mobeni', 'Umlazi Station', 'Mega City'],
       },
