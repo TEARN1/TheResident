@@ -13,6 +13,7 @@ import { safeNextPath } from '../../utils/launch'
 import { track } from '../../utils/track'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 import Image from 'next/image'
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../../utils/supabaseConfig'
 
 // Cross-app SSO mark for The Gruvs — their real logo (public/gruvs-logo.png),
 // not a placeholder monogram.
@@ -118,8 +119,8 @@ export default function AuthPage() {
     // Sign-ins finish in /auth/callback (?code=, PKCE). Never take a session
     // from tokens in the address: anyone could send a link that signs a user
     // into the sender's account (src/utils/oauth.test.ts).
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const url = SUPABASE_URL
+    const key = SUPABASE_ANON_KEY
     if (!url || !key) return
     let cancelled = false
     fetchEnabledProviders(url, key).then(p => {

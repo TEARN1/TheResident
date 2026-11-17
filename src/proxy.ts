@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { scanInput } from './utils/security'
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './utils/supabaseConfig'
 
 // Opportunistic per-instance throttle — NOT a rate limit you can rely on.
 //
@@ -24,8 +25,8 @@ const instanceThrottleMap = new Map<string, { count: number; resetTime: number }
 const INSTANCE_THROTTLE_MAX = 300 // per instance, per minute — best effort only
 const WINDOW_MS = 60 * 1000
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = SUPABASE_URL || ''
+const supabaseAnonKey = SUPABASE_ANON_KEY || ''
 
 export async function proxy(request: NextRequest) {
   const ip = (request as NextRequest & { ip?: string }).ip || request.headers.get('x-forwarded-for') || 'local-ip'
