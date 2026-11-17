@@ -6,6 +6,7 @@ import {
   verifyPayFastItnPayload
 } from '../../../../utils/payfast'
 import { createClient } from '@supabase/supabase-js'
+import { SUPABASE_URL } from '../../../../utils/supabaseConfig'
 
 export async function POST(request: Request) {
   try {
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
     }
 
     // 4. Record transaction & fulfill upgrade strictly via server-only service_role key
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseUrl = SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !serviceRoleKey) {

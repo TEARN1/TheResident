@@ -4,6 +4,7 @@
 // Plain PostgREST fetches with the anon key, so no session or cookies are
 // involved and the pages can be cached.
 
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../utils/supabaseConfig'
 export interface PublicService {
   id: string
   business_name: string
@@ -37,8 +38,8 @@ export const REVALIDATE_SECONDS = 3600
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 async function query<T>(view: string, params: string): Promise<T[]> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const url = SUPABASE_URL
+  const key = SUPABASE_ANON_KEY
   if (!url || !key) return []
   try {
     const res = await fetch(`${url}/rest/v1/${view}?${params}`, {

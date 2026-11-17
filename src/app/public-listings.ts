@@ -4,6 +4,7 @@
 // public-services.ts, so the page needs no session.
 
 import { PUBLIC_LISTING_COLUMNS, type PublicListingRow } from '../utils/publicListings'
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../utils/supabaseConfig'
 
 // Rooms fill up, so re-read more often than the directory pages do.
 export const ROOM_REVALIDATE_SECONDS = 300
@@ -12,8 +13,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export async function getPublicListing(id: string): Promise<PublicListingRow | null> {
   if (!UUID_RE.test(id)) return null
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const url = SUPABASE_URL
+  const key = SUPABASE_ANON_KEY
   if (!url || !key) return null
   try {
     const res = await fetch(`${url}/rest/v1/res_public_listings?select=${PUBLIC_LISTING_COLUMNS}&id=eq.${id}`, {
@@ -30,8 +31,8 @@ export async function getPublicListing(id: string): Promise<PublicListingRow | n
 
 /** Lists all public room listings for sitemap and search engine discovery. */
 export async function listPublicListings(): Promise<PublicListingRow[]> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const url = SUPABASE_URL
+  const key = SUPABASE_ANON_KEY
   if (!url || !key) return []
   try {
     const res = await fetch(`${url}/rest/v1/res_public_listings?select=${PUBLIC_LISTING_COLUMNS}&order=created_at.desc&limit=250`, {
