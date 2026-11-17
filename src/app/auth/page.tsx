@@ -287,18 +287,16 @@ export default function AuthPage() {
     playTactileSound('click')
     track('visit', { action: 'oauth_start', provider })
 
+    // Provider, page to return to and chosen role ride in a short-lived
+    // cookie, so the return address is exactly /auth/callback. Supabase only
+    // redirects back to addresses on its allow-list; extra ?query details on
+    // that address can fail the match and strand people on the wrong site.
     const nextPath = afterAuthPath()
-    const queryParts: string[] = [`provider=${provider}`]
-    if (nextPath && nextPath !== '/dashboard') {
-      queryParts.push(`next=${encodeURIComponent(nextPath)}`)
-    }
-    if (role) {
-      queryParts.push(`role=${encodeURIComponent(role)}`)
-    }
-    const queryString = `?${queryParts.join('&')}`
-    const redirectTo = typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/callback${queryString}`
-      : undefined
+    const ctx = new URLSearchParams({ provider })
+    if (nextPath && nextPath !== '/dashboard') ctx.set('next', nextPath)
+    if (role) ctx.set('role', role)
+    document.cookie = `res_oauth_ctx=${encodeURIComponent(ctx.toString())}; path=/; max-age=600; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`
+    const redirectTo = `${window.location.origin}/auth/callback`
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,

@@ -4,7 +4,16 @@ import { cookies } from 'next/headers'
 import { oauthFailureReason } from '../../../utils/oauth'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams: urlParams, origin } = new URL(request.url)
+  // The sign-in page leaves provider/next/role in a short-lived cookie (see
+  // handleOAuth) so the return address stays exactly /auth/callback. Query
+  // values, if present, still win.
+  const ctxCookie = (await cookies()).get('res_oauth_ctx')?.value
+  const ctx = new URLSearchParams(ctxCookie ? decodeURIComponent(ctxCookie) : '')
+  const searchParams = new URLSearchParams(urlParams)
+  for (const key of ['provider', 'next', 'role']) {
+    if (!searchParams.has(key) && ctx.has(key)) searchParams.set(key, ctx.get(key)!)
+  }
   const code = searchParams.get('code')
   const provider = searchParams.get('provider') || ''
 
