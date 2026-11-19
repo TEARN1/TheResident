@@ -85,6 +85,17 @@ export default async function ShopsDirectory() {
         Spaza shops and neighbourhood vendors, listed by the people who run them.
       </p>
 
+      <section aria-labelledby="shop-categories-heading">
+        <h2 id="shop-categories-heading">Browse by Shop Category</h2>
+        <ul>
+          {Object.entries(VENDOR_KIND_LABELS).map(([kind, label]) => (
+            <li key={kind}>
+              <Link href={`/shops/${kind}`}>{label}</Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {vendors.length === 0 ? (
         <div className={styles.cta}>
           <p>No public listings yet.</p>

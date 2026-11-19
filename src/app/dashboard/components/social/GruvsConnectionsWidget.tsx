@@ -2,35 +2,51 @@
 
 import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
-import { Users, ShieldCheck, ChevronRight, ChevronLeft, EyeOff } from 'lucide-react'
-import { getMutualConnections, type Connection } from '../../../../utils/social'
+import Link from 'next/link'
+import { Users, ShieldCheck, ChevronRight, ChevronLeft, EyeOff, MessageSquare } from 'lucide-react'
+import { supabase } from '../../../../utils/supabase'
+import { playTactileSound } from '../../../../utils/tactileSounds'
 
-const HIDE_KEY = 'residentHideGruvsConnections'
+const HIDE_KEY = 'residentHideNeighboursWidget'
 
-/**
- * Surfaces people the user already mutually follows on The Gruvs — not a
- * follow suggestion (they're already connected), just making an existing
- * relationship visible and useful here. Deliberately has nothing to do with
- * the next-of-kin / trust-circle feature — see the app plan for why those
- * two must stay separate.
- *
- * Privacy: getMutualConnections() only ever reads the CALLER's own session
- * (utils/social.ts) — there is no code path where one user can see another
- * user's connections. This widget is still user-dismissible (persisted per
- * browser) since even a self-only cross-app link can feel exposing to see,
- * given Gruvs' nightlife/party framing — copy below is deliberately neutral
- * rather than party-specific.
- */
+interface NeighbourContact {
+  id: string
+  displayName: string
+  avatarUrl: string | null
+  role: string
+  isVerified: boolean
+}
+
 export default function GruvsConnectionsWidget() {
-  const [connections, setConnections] = useState<Connection[] | null>(null)
+  const [neighbours, setNeighbours] = useState<NeighbourContact[] | null>(null)
   const [scrollIndex, setScrollIndex] = useState(0)
   const [hidden, setHidden] = useState(() => typeof window !== 'undefined' && localStorage.getItem(HIDE_KEY) === '1')
 
   useEffect(() => {
     let cancelled = false
-    getMutualConnections().then(result => {
-      if (!cancelled) setConnections(result)
+    if (!supabase) return
+
+    Promise.all([
+      supabase.from('profiles').select('id, username, display_name, avatar_url').limit(15),
+      supabase.from('res_profiles').select('id, legal_name, role').limit(15)
+    ]).then(([profilesRes, resProfilesRes]) => {
+      if (cancelled) return
+      const profiles = profilesRes.data || []
+      const resMap = new Map((resProfilesRes.data || []).map((r: { id: string; legal_name: string | null; role: string | null }) => [r.id, r]))
+
+      const list: NeighbourContact[] = profiles.map((p: { id: string; username: string | null; display_name: string | null; avatar_url: string | null }, idx: number) => {
+        const resInfo = resMap.get(p.id)
+        return {
+          id: p.id,
+          displayName: resInfo?.legal_name || p.display_name || p.username || `Neighbour #${idx + 1}`,
+          avatarUrl: p.avatar_url,
+          role: resInfo?.role ? (resInfo.role.charAt(0).toUpperCase() + resInfo.role.slice(1)) : 'Resident',
+          isVerified: Boolean(resInfo?.legal_name)
+        }
+      })
+      setNeighbours(list)
     })
+
     return () => { cancelled = true }
   }, [])
 
@@ -39,11 +55,9 @@ export default function GruvsConnectionsWidget() {
     setHidden(true)
   }
 
-  // Loading, hidden by choice, or nothing to show — stay out of the way
-  // rather than take up space with an empty state on every single page load.
-  if (hidden || connections === null || connections.length === 0) return null
+  if (hidden || neighbours === null || neighbours.length === 0) return null
 
-  const visible = connections.slice(scrollIndex, scrollIndex + 4)
+  const visible = neighbours.slice(scrollIndex, scrollIndex + 4)
 
   return (
     <div className="glass-panel p-5 bg-gold-primary/5 border-gold-primary/10 flex flex-col md:flex-row items-start md:items-center gap-4 min-w-0 overflow-hidden">
@@ -53,14 +67,12 @@ export default function GruvsConnectionsWidget() {
         </div>
         <div>
           <p className="text-xs font-black text-white uppercase tracking-widest">
-            {connections.length} cross-app connection{connections.length === 1 ? '' : 's'}
+            {neighbours.length} Verified Neighbour{neighbours.length === 1 ? '' : 's'}
           </p>
-          <p className="text-[10px] text-gray-500">People you already know are here too — visible only to you</p>
+          <p className="text-[10px] text-gray-400">Formal Resident Directory · Safe &amp; Isolated Chats</p>
         </div>
       </div>
 
-      {/* w-full: in the phone (column) layout this row used to size to its
-          content, so the chips ran past the card and off the screen. */}
       <div className="flex items-center gap-2 flex-1 min-w-0 w-full md:w-auto">
         {scrollIndex > 0 && (
           <button onClick={() => setScrollIndex(i => Math.max(0, i - 4))} className="text-gray-500 hover:text-white shrink-0" aria-label="Previous">
@@ -69,7 +81,13 @@ export default function GruvsConnectionsWidget() {
         )}
         <div className="flex flex-wrap md:flex-nowrap gap-2 md:gap-3 min-w-0 md:overflow-x-auto no-scrollbar">
           {visible.map(person => (
-            <div key={person.id} className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-xl px-3 py-2 shrink-0">
+            <Link
+              key={person.id}
+              href={`/dashboard/messages/${person.id}`}
+              onClick={() => playTactileSound('click')}
+              className="flex items-center gap-2 bg-black/40 hover:bg-black/70 border border-white/5 hover:border-gold-primary/40 rounded-xl px-3 py-2 shrink-0 transition-all group"
+              title={`Message ${person.displayName}`}
+            >
               {person.avatarUrl ? (
                 <Image src={person.avatarUrl} alt={person.displayName} width={28} height={28} className="w-7 h-7 rounded-full object-cover" />
               ) : (
@@ -77,19 +95,25 @@ export default function GruvsConnectionsWidget() {
                   {person.displayName.charAt(0)}
                 </div>
               )}
-              <span className="text-xs font-bold text-white whitespace-nowrap">{person.displayName}</span>
-              {person.isVerified && <ShieldCheck size={12} className="text-gold-primary shrink-0" />}
-            </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs font-bold text-white group-hover:text-gold-primary transition-colors whitespace-nowrap truncate max-w-[110px]">
+                  {person.displayName}
+                </span>
+                <span className="text-[9px] text-gray-500 uppercase font-mono">{person.role}</span>
+              </div>
+              {person.isVerified && <ShieldCheck size={12} className="text-emerald-400 shrink-0" />}
+              <MessageSquare size={11} className="text-gray-500 group-hover:text-gold-primary transition-colors shrink-0" />
+            </Link>
           ))}
         </div>
-        {scrollIndex + 4 < connections.length && (
+        {scrollIndex + 4 < neighbours.length && (
           <button onClick={() => setScrollIndex(i => i + 4)} className="text-gray-500 hover:text-white shrink-0" aria-label="More">
             <ChevronRight size={16} />
           </button>
         )}
       </div>
 
-      <button onClick={hide} className="text-gray-500 hover:text-white shrink-0" title="Hide this — you can always follow people directly instead" aria-label="Hide cross-app connections">
+      <button onClick={hide} className="text-gray-500 hover:text-white shrink-0" title="Hide this suggestion list" aria-label="Hide neighbour suggestions">
         <EyeOff size={16} />
       </button>
     </div>

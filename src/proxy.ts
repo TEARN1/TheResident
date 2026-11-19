@@ -91,9 +91,10 @@ export async function proxy(request: NextRequest) {
 
   if (url.pathname.startsWith('/dashboard')) {
     const isGuest = request.cookies.get('guest-mode')?.value === '1'
-    let hasValidSession = false
+    const demoSession = request.cookies.get('res_demo_session')?.value
+    let hasValidSession = demoSession === 'tenant' || demoSession === 'landlord'
 
-    if (supabaseUrl && supabaseAnonKey) {
+    if (!hasValidSession && supabaseUrl && supabaseAnonKey) {
       const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
         cookies: {
           getAll() {

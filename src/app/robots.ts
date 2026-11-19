@@ -34,7 +34,7 @@ export default function robots(): MetadataRoute.Robots {
       })),
       {
         userAgent: 'Googlebot-Image',
-        allow: ['/logo.png', '/opengraph-image', '/favicon.ico', '/founder/'],
+        allow: ['/', '/logo.png', '/opengraph-image', '/favicon.ico', '/founder/', '/screenshots/', '/flyer/'],
         disallow: ['/api/'],
       },
     ],

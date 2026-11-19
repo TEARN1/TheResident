@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare, Package
+  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare, Package, Navigation
 } from 'lucide-react'
 import {
   RootState,
@@ -83,12 +83,17 @@ function parseBakkieMessage(msg: string) {
   let timing = 'ASAP'
   let fare = ''
   let note = ''
+  let pickup = ''
+  let dropoff = ''
 
   for (const p of parts) {
     if (p.includes('BAKKIE REQUEST:')) {
       vehicle = p.replace('🛻 BAKKIE REQUEST:', '').trim()
     } else if (p.startsWith('From:')) {
       route = p
+      const [fromPart, toPart] = p.split('➔').map(s => s.trim())
+      if (fromPart) pickup = fromPart.replace(/^From:\s*/, '').trim()
+      if (toPart) dropoff = toPart.replace(/^To:\s*/, '').trim()
     } else if (p.startsWith('When:')) {
       timing = p.replace('When:', '').trim()
     } else if (p.startsWith('Est. Fare:') || p.startsWith('Est:')) {
@@ -100,7 +105,7 @@ function parseBakkieMessage(msg: string) {
     }
   }
 
-  return { vehicle, cargo, route, timing, fare, note }
+  return { vehicle, cargo, route, timing, fare, note, pickup, dropoff }
 }
 
 function generateDispatchId(): string {
@@ -694,9 +699,26 @@ export default function ServicesPage() {
 
                           {/* Details */}
                           <div className="bg-white/[0.03] p-3 rounded-xl border border-white/5 space-y-2 text-xs">
-                            <div className="flex items-center gap-2 text-gray-300 font-bold">
-                              <MapPin size={13} className="text-gold-primary shrink-0" />
-                              <span className="truncate">{parsed.route || disp.message}</span>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-gray-300 font-bold">
+                              <div className="flex items-center gap-2 truncate">
+                                <MapPin size={13} className="text-gold-primary shrink-0" />
+                                <span className="truncate">{parsed.route || disp.message}</span>
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0">
+                                {parsed.dropoff && (
+                                  <a
+                                    href={directionsUrlForAddress(parsed.dropoff, parsed.pickup || undefined)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[10px] font-black text-gold-primary uppercase tracking-widest hover:underline"
+                                  >
+                                    <Navigation size={11} /> Route GPS
+                                  </a>
+                                )}
+                                {(parsed.dropoff || parsed.pickup) && (
+                                  <OpenInMapsButton address={parsed.dropoff || parsed.pickup} />
+                                )}
+                              </div>
                             </div>
                             <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-white/5">
                               <span>{parsed.cargo} • {parsed.timing}</span>

@@ -42,24 +42,26 @@ export default function StartNewChatModal({
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch when modal opens
     setLoading(true)
-    supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url')
-      .neq('id', currentUserId || '')
-      .limit(30)
-      .then(({ data, error }) => {
-        setLoading(false)
-        if (error || !data) return
-        // Only what the profile really says. Role, suburb and a "verified"
-        // tick used to be invented from each person's position in the list.
-        const contacts: ResidentContact[] = data.map((p: { id: string; username: string | null; display_name: string | null; avatar_url: string | null }, idx: number) => ({
+    Promise.all([
+      supabase.from('profiles').select('id, username, display_name, avatar_url').neq('id', currentUserId || '').limit(30),
+      supabase.from('res_profiles').select('id, legal_name, role').neq('id', currentUserId || '').limit(30)
+    ]).then(([profilesRes, resProfilesRes]) => {
+      setLoading(false)
+      const data = profilesRes.data || []
+      const resMap = new Map((resProfilesRes.data || []).map((r: { id: string; legal_name: string | null; role: string | null }) => [r.id, r]))
+      const contacts: ResidentContact[] = data.map((p: { id: string; username: string | null; display_name: string | null; avatar_url: string | null }, idx: number) => {
+        const resInfo = resMap.get(p.id)
+        return {
           id: p.id,
-          name: p.display_name || p.username || `Resident #${idx + 1}`,
+          name: resInfo?.legal_name || p.display_name || p.username || `Resident #${idx + 1}`,
           username: p.username || undefined,
-          avatarUrl: p.avatar_url
-        }))
-        setResidents(contacts)
+          role: resInfo?.role ? (resInfo.role.charAt(0).toUpperCase() + resInfo.role.slice(1)) : 'Resident',
+          avatarUrl: p.avatar_url,
+          verified: Boolean(resInfo?.legal_name)
+        }
       })
+      setResidents(contacts)
+    })
   }, [isOpen, currentUserId])
 
   // Escape key close handling

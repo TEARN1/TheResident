@@ -1,9 +1,10 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { ShieldCheck, Search, UserPlus, Check, Users, Info, Loader } from 'lucide-react'
+import { ShieldCheck, Search, UserPlus, Check, Users, Info, Loader, ExternalLink } from 'lucide-react'
 import { RootState } from '../../../store'
 import { supabase } from '../../../utils/supabase'
 import BlockUserButton from '../components/trust-safety/BlockUserButton'
@@ -314,6 +315,61 @@ export default function TrustCirclePage() {
                 </div>
               )
             })}
+          </div>
+        )}
+      </div>
+
+      {/* Generational Trust & Verified Lineage Section */}
+      <div className="glass-panel p-6 space-y-4 border-gold-primary/20 bg-gradient-to-br from-gold-primary/[0.02] to-black">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2 m-0">
+              <ShieldCheck size={16} className="text-gold-primary" /> Generational Trust &amp; Family Lineage
+            </h3>
+            <p className="text-xs text-gray-400 mt-1 m-0">
+              Verified family lineage provides generational vouching for first-time student and young adult renters, eliminating ghost-account risk for receiving landlords.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/profile"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary text-xs font-bold transition-all shrink-0 self-start sm:self-auto no-underline"
+          >
+            Manage Lineage <ExternalLink size={12} />
+          </Link>
+        </div>
+
+        {(!currentUser?.dependents || currentUser.dependents.length === 0) ? (
+          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center space-y-1">
+            <p className="text-xs text-gray-400 m-0">No family dependents registered under your verified profile yet.</p>
+            <p className="text-[11px] text-gray-500 m-0">Landlords and parents can register their children in Profile to provide a formal pedigree when renting across South Africa.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {currentUser.dependents.map(dep => (
+              <div key={dep.id} className="p-3.5 bg-black/40 border border-white/10 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gold-primary/10 border border-gold-primary/20 flex items-center justify-center text-gold-primary text-xs font-black shrink-0 overflow-hidden">
+                    {dep.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={dep.photoUrl} alt={dep.fullName} className="w-full h-full object-cover" />
+                    ) : (
+                      dep.fullName.charAt(0)
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm text-white font-bold">{dep.fullName}</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-gold-primary/15 text-gold-primary uppercase font-black">
+                        {dep.relationship}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-emerald-400 font-bold m-0 flex items-center gap-1">
+                      <ShieldCheck size={11} /> Verified Lineage · {dep.parentLegalName}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

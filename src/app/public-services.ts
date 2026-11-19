@@ -206,6 +206,17 @@ export function servicePlace(s: { suburb: string | null; city: string | null }):
 }
 
 
+export const DEFAULT_SERVICE_CATEGORIES: Record<string, string> = {
+  plumbing: 'Plumbing & Geysers',
+  electrical: 'Electrical & Backup Power',
+  'bakkie-transport': 'Bakkie & Moving Transport',
+  carpentry: 'Carpentry, Doors & Welding',
+  'appliance-repair': 'Fridge, Stove & Appliance Repair',
+  cleaning: 'Home & Move-Out Cleaning',
+  painting: 'Painting, Waterproofing & Tiling',
+  'wifi-dstv': 'Wi-Fi, Fibre & DSTV Installation',
+}
+
 export const DEFAULT_AREAS = [
   { slug: 'soweto', name: 'Soweto', city: 'Johannesburg' },
   { slug: 'tembisa', name: 'Tembisa', city: 'Johannesburg' },

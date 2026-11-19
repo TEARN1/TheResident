@@ -49,6 +49,20 @@ export const GUEST_USER_ID = '00000000-0000-4000-8000-000000000001'
 export const isGuestUser = (user: { id: string; role: string } | null | undefined): boolean =>
   !user || user.id === GUEST_USER_ID || user.role === 'visitor'
 
+export interface FamilyDependent {
+  id: string
+  parentId: string
+  parentLegalName: string
+  fullName: string
+  relationship: 'child' | 'son' | 'daughter' | 'ward' | 'dependent'
+  photoUrl?: string
+  dateOfBirth?: string
+  idOrStudentNumber?: string
+  notes?: string
+  verifiedByParentAt: string
+  status: 'verified_lineage' | 'independent_renter'
+}
+
 export interface User {
   id: string
   name: string
@@ -70,6 +84,11 @@ export interface User {
    * the Gruvs display name (`name`) when unset.
    */
   legalName?: string
+  /**
+   * Family lineage & verified dependents registered under this landlord/parent.
+   * Serves as parental guarantee and origin tracking for young tenants.
+   */
+  dependents?: FamilyDependent[]
 }
 
 export interface Listing {
@@ -737,6 +756,24 @@ const authSlice = createSlice({
     updateUserRole: (state, action: PayloadAction<'tenant' | 'landlord'>) => {
       if (state.currentUser) {
         state.currentUser.role = action.payload
+      }
+    },
+    addFamilyDependent: (state, action: PayloadAction<FamilyDependent>) => {
+      if (state.currentUser) {
+        const list = state.currentUser.dependents || []
+        state.currentUser.dependents = [...list, action.payload]
+      }
+    },
+    removeFamilyDependent: (state, action: PayloadAction<string>) => {
+      if (state.currentUser && state.currentUser.dependents) {
+        state.currentUser.dependents = state.currentUser.dependents.filter(d => d.id !== action.payload)
+      }
+    },
+    updateFamilyDependent: (state, action: PayloadAction<FamilyDependent>) => {
+      if (state.currentUser && state.currentUser.dependents) {
+        state.currentUser.dependents = state.currentUser.dependents.map(d =>
+          d.id === action.payload.id ? action.payload : d
+        )
       }
     }
   }
@@ -1743,7 +1780,10 @@ export const {
   updateProfile,
   updatePreferences,
   updateUserRole,
-  setLegalName
+  setLegalName,
+  addFamilyDependent,
+  removeFamilyDependent,
+  updateFamilyDependent
 } = authSlice.actions
 
 export const { setListings, addListing, deleteListing, updateListingVerification } = listingsSlice.actions

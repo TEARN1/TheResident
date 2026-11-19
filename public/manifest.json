@@ -30,6 +30,36 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshots/app-home-hero.png",
+      "sizes": "1024x640",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "The Resident Crew landing experience — verified South African rooms, live safety alerts, and local services"
+    },
+    {
+      "src": "/screenshots/app-live-precinct-map.png",
+      "sizes": "873x822",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Live 3D precinct radar and neighbourhood safety map across Braamfontein, Maboneng, and South African metros"
+    },
+    {
+      "src": "/screenshots/app-housing-rooms.png",
+      "sizes": "873x822",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Verified rooms to rent, roommate matching, and Rental Housing Act calculator tools"
+    },
+    {
+      "src": "/screenshots/app-local-services.png",
+      "sizes": "873x822",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Community services marketplace featuring express bakkie moving dispatch and local trades"
+    }
+  ],
   "shortcuts": [
     {
       "name": "VibeMap Radar",

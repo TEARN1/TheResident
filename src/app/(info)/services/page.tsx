@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import styles from '../info.module.css'
-import { listPublicServices, serviceSlug, servicePlace, slugify } from '../../public-services'
+import { listPublicServices, serviceSlug, servicePlace, slugify, DEFAULT_SERVICE_CATEGORIES } from '../../public-services'
 import { Breadcrumbs, JsonLd } from '../directory-views'
 import { siteUrl } from '../../site-url'
 
@@ -85,6 +85,17 @@ export default async function ServicesDirectory() {
       <p className={styles.lede}>
         Trades and services listed by residents and rated by the neighbours who used them.
       </p>
+
+      <section aria-labelledby="service-categories-heading">
+        <h2 id="service-categories-heading">Browse by Service Category</h2>
+        <ul>
+          {Object.entries(DEFAULT_SERVICE_CATEGORIES).map(([slug, label]) => (
+            <li key={slug}>
+              <Link href={`/services/${slug}`}>{label}</Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {services.length === 0 ? (
         <div className={styles.cta}>

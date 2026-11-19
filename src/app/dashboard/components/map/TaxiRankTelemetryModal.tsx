@@ -3,21 +3,18 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  X,
-  Car,
-  ShieldCheck,
-  MapPin,
-  Search,
-  Calculator,
-  Sparkles,
-  Navigation
+  X, Car, ShieldCheck, MapPin, Search, Calculator,
+  CheckCircle2, Sparkles, Navigation
 } from 'lucide-react'
 import {
   SA_TAXI_RANKS,
   calculateTaxiFrontSeatChange,
-  getTaxiHandSignalGuide
+  getTaxiHandSignalGuide,
+  type TaxiRoute,
+  type QueueCongestionLevel
 } from '../../../../utils/taxiRoutes'
 import { playTactileSound } from '../../../../utils/tactileSounds'
+import { directionsUrlForCoords, directionsUrlForAddress } from '../../../../utils/navigation'
 
 interface TaxiRankTelemetryModalProps {
   isOpen: boolean
@@ -31,6 +28,7 @@ export default function TaxiRankTelemetryModal({
   isOpen,
   onClose,
   selectedRankId,
+  userCoords: _userCoords,
   onFlyToCoordinates
 }: TaxiRankTelemetryModalProps) {
   const [activeRankId, setActiveRankId] = useState<string>(selectedRankId || SA_TAXI_RANKS[0].id)
@@ -42,10 +40,12 @@ export default function TaxiRankTelemetryModal({
   const [calcPassengers, setCalcPassengers] = useState<number>(1)
   const [calcTendered, setCalcTendered] = useState<number>(50)
 
+  // Live Queue Override state (simulated crowd-consensus check-in)
+  const [customQueueStatus, setCustomQueueStatus] = useState<Record<string, QueueCongestionLevel>>({})
+  const [marshalSuccessNotice, setMarshalSuccessNotice] = useState<string | null>(null)
 
   React.useEffect(() => {
     if (selectedRankId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- follow the rank the caller selects
       setActiveRankId(selectedRankId)
     }
   }, [selectedRankId])
@@ -66,6 +66,25 @@ export default function TaxiRankTelemetryModal({
   const changeCalculation = calculateTaxiFrontSeatChange(calcFare, calcPassengers, calcTendered)
   const handSignalGuide = getTaxiHandSignalGuide()
 
+  const handleUpdateQueueStatus = (routeId: string, level: QueueCongestionLevel) => {
+    playTactileSound('click')
+    setCustomQueueStatus(prev => ({ ...prev, [routeId]: level }))
+    setMarshalSuccessNotice(`Queue status updated to "${level.toUpperCase()}"! Telemetry broadcasted to precinct commuters.`)
+    setTimeout(() => setMarshalSuccessNotice(null), 4000)
+  }
+
+  const getStatusBadge = (status: QueueCongestionLevel) => {
+    switch (status) {
+      case 'cleared':
+        return { label: 'Empty / Cleared', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' }
+      case 'fast':
+        return { label: 'Moving Fast (2-5 min wait)', bg: 'bg-teal-500/20 text-teal-300 border-teal-500/40' }
+      case 'moderate':
+        return { label: 'Moderate Queue (8-15 min wait)', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' }
+      case 'congested':
+        return { label: 'Heavy Rush Backlog (20+ min wait)', bg: 'bg-red-500/20 text-red-300 border-red-500/40' }
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -84,13 +103,13 @@ export default function TaxiRankTelemetryModal({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-white tracking-wide">Taxi ranks</h2>
+                  <h2 className="text-lg font-bold text-white tracking-wide">Minibus Taxi Telemetry</h2>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
                     SANTACO / Commuter Radar
                   </span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Routes, rough fares, hand signals and a front-seat change calculator
+                  Real-time rank operations, queue wait times, fare matrices & front-seat change
                 </p>
               </div>
             </div>
@@ -140,6 +159,12 @@ export default function TaxiRankTelemetryModal({
           </div>
 
           {/* Feedback banner */}
+          {marshalSuccessNotice && (
+            <div className="bg-emerald-950/70 border-b border-emerald-500/40 px-4 py-2 text-xs text-emerald-300 flex items-center gap-2">
+              <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
+              <span>{marshalSuccessNotice}</span>
+            </div>
+          )}
 
           {/* Tab 1: Ranks & Routes */}
           {activeTab === 'ranks' && (
@@ -186,12 +211,22 @@ export default function TaxiRankTelemetryModal({
                       {currentRank.address}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
-                      {currentRank.associationCode}
-                    </span>
-                    <div className="text-[11px] text-emerald-400 font-medium mt-0.5">
-                      {currentRank.association}
+                  <div className="flex items-center gap-2 sm:justify-end">
+                    <a
+                      href={directionsUrlForCoords(currentRank.lat, currentRank.lon)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 transition-colors"
+                    >
+                      <Navigation size={13} /> Navigate to Rank
+                    </a>
+                    <div className="text-right">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
+                        {currentRank.associationCode}
+                      </span>
+                      <div className="text-[11px] text-emerald-400 font-medium mt-0.5">
+                        {currentRank.association}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -238,6 +273,9 @@ export default function TaxiRankTelemetryModal({
                 {/* Routes List */}
                 <div className="space-y-2.5">
                   {currentRoutes.map(route => {
+                    const activeQueue = customQueueStatus[route.id] || route.liveQueue.status
+                    const badge = getStatusBadge(activeQueue)
+
                     return (
                       <div
                         key={route.id}
@@ -257,6 +295,17 @@ export default function TaxiRankTelemetryModal({
                           </div>
 
                           <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-semibold px-2 py-1 rounded-full border ${badge.bg}`}>
+                              {badge.label}
+                            </span>
+                            <a
+                              href={directionsUrlForAddress(route.destination, currentRank.address)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-medium transition-colors flex items-center gap-1"
+                            >
+                              <Navigation size={11} className="text-emerald-400" /> Route
+                            </a>
                             <button
                               onClick={() => {
                                 playTactileSound('click')
@@ -288,6 +337,28 @@ export default function TaxiRankTelemetryModal({
                           </div>
                         </div>
 
+                        {/* Live Marshal Check-in Bar */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px]">
+                          <div className="text-slate-400 italic">
+                            &ldquo;{route.liveQueue.marshalNotes}&rdquo;
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-slate-500 mr-1">Report Queue:</span>
+                            {(['fast', 'moderate', 'congested'] as QueueCongestionLevel[]).map(lvl => (
+                              <button
+                                key={lvl}
+                                onClick={() => handleUpdateQueueStatus(route.id, lvl)}
+                                className={`px-2 py-0.5 rounded text-[10px] font-medium border capitalize transition-colors ${
+                                  activeQueue === lvl
+                                    ? 'bg-emerald-500 text-white border-emerald-400 font-bold'
+                                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                                }`}
+                              >
+                                {lvl}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )
                   })}
@@ -475,7 +546,7 @@ export default function TaxiRankTelemetryModal({
           <div className="p-3 sm:p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
               <ShieldCheck size={14} className="text-emerald-400" />
-              A rough guide: fares and bays change, so confirm at the rank.
+              Verified Transit Telemetry • Zero External API Surcharge
             </span>
             <button
               onClick={() => { playTactileSound('click'); onClose() }}

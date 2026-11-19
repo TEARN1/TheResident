@@ -101,15 +101,16 @@ export default function SafetyTab({
 
   useEffect(() => {
     if (panicCountdown === null) return
-    if (panicCountdown <= 0) {
-      onRaiseAlert?.({ kind: 'panic', title: 'Urgent: help needed', description: 'A neighbour needs help now.', severity: 'critical' })
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- the countdown reaching zero sends the alert and resets
-      setPanicCountdown(null)
-      setConfirmPanic(false)
-      return
-    }
     const timer = setTimeout(() => {
-      setPanicCountdown(prev => (prev !== null ? prev - 1 : null))
+      setPanicCountdown(prev => {
+        if (prev === null) return null
+        if (prev <= 1) {
+          onRaiseAlert?.({ kind: 'panic', title: 'Urgent: help needed', description: 'A neighbour needs help now.', severity: 'critical' })
+          setConfirmPanic(false)
+          return null
+        }
+        return prev - 1
+      })
     }, 1000)
     return () => clearTimeout(timer)
   }, [panicCountdown, onRaiseAlert])
@@ -353,10 +354,10 @@ export default function SafetyTab({
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-white">
                 <ShieldCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                <span>Neighbours</span>
+                <span>Verified Neighbours</span>
               </div>
               <p className="text-[10px] text-gray-400 leading-relaxed m-0">
-                Alerts people on The Resident in {suburb || 'your area'}.
+                Priority alert to active verified residents within 2km in {suburb || 'your area'}.
               </p>
             </div>
             <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">

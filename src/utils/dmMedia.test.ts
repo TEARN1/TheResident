@@ -2,7 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert'
 import {
   formatDuration, voiceNoteBody, voiceNoteDuration, voiceNotePath, pickRecorderMime, uploadTypeFor,
-  locationBody, parseLegacyBeacon, isLegacyVoiceNote, tileFor, callSummaryBody, photoBody
+  locationBody, parseLegacyBeacon, isLegacyVoiceNote, tileFor, callSummaryBody, photoBody,
+  toResidentType, fromResidentType, isResidentMessage
 } from './dmMedia'
 
 test('durations format as m:ss', () => {
@@ -60,4 +61,18 @@ test('call summaries read naturally', () => {
 test('photo body formats label with optional caption', () => {
   assert.strictEqual(photoBody(), '📷 Photo attachment')
   assert.strictEqual(photoBody('Lease agreement'), '📷 Photo: Lease agreement')
+})
+
+test('resident message types prefix and parse correctly for cross-app isolation', () => {
+  assert.strictEqual(toResidentType('text'), 'res_text')
+  assert.strictEqual(toResidentType('res_voice'), 'res_voice')
+  assert.strictEqual(fromResidentType('res_image'), 'image')
+  assert.strictEqual(fromResidentType('text'), 'text')
+  assert.strictEqual(fromResidentType(null), 'text')
+
+  assert.ok(isResidentMessage({ message_type: 'res_text' }))
+  assert.ok(isResidentMessage({ message_type: 'res_voice' }))
+  assert.ok(isResidentMessage({ body: '🎙️ Voice note (0:07)' }))
+  assert.ok(!isResidentMessage({ message_type: 'vibe', body: 'Hey party at the club' }))
+  assert.ok(!isResidentMessage({ message_type: null, body: 'Casual text message' }))
 })

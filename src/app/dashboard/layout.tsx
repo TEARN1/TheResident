@@ -133,6 +133,35 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     if (currentUser) return
     let cancelled = false
     const bootstrapSession = async () => {
+      // Check for demo session cookie first
+      const demoCookieMatch = typeof document !== 'undefined' ? document.cookie.match(/(?:^|;\s*)res_demo_session=([^;]+)/) : null
+      const demoRole = demoCookieMatch ? decodeURIComponent(demoCookieMatch[1]) : null
+      if (demoRole === 'tenant' || demoRole === 'landlord') {
+        const demoUser = demoRole === 'landlord' ? {
+          id: 'demo-landlord-5555-6666-7777-888888888888',
+          name: 'Sipho Dlamini (Demo Landlord)',
+          email: 'sipho.landlord@theresidentcrew.com',
+          role: 'landlord' as const,
+          legalName: 'Sipho Dlamini'
+        } : {
+          id: 'demo-tenant-1111-2222-3333-444444444444',
+          name: 'Thabo Ndlovu (Demo Tenant)',
+          email: 'thabo.demo@theresidentcrew.com',
+          role: 'tenant' as const,
+          legalName: 'Thabo Ndlovu',
+          profile: {
+            bio: 'Wits student & Braamfontein resident. Exploring local rooms and campus vibe.',
+            gender: 'men' as const,
+            childrenCount: 0,
+            employmentStatus: 'Student',
+            hasPets: false,
+            verificationDocUrl: undefined
+          }
+        }
+        dispatch(loginUser(demoUser))
+        return
+      }
+
       try {
         if (supabase) {
           const { data: { user } } = await supabase.auth.getUser()
@@ -496,7 +525,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className="dashboard-main-content pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] md:pl-20 lg:pl-64 min-h-screen min-h-dvh flex flex-col transition-all overflow-x-hidden">
           <header className="sticky top-0 z-40 h-16 bg-black/60 backdrop-blur-2xl border-b border-white/15 px-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))] sm:px-4 md:px-6 flex items-center justify-between transition-all">
             {/* Left Header Title / Mobile Logo */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
               <Link
                 href="/dashboard"
                 onClick={() => playTactileSound('tab')}
@@ -512,24 +541,24 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               </Link>
 
               {/* Tablet and Desktop breadcrumb title */}
-              <div className="hidden md:flex items-center gap-2 text-xs">
+              <div className="hidden md:flex items-center gap-2 text-xs shrink-0">
                 <span className="text-gray-400 font-bold uppercase tracking-wider">Dashboard</span>
                 <span className="text-white/20">/</span>
                 <span className="text-white font-black uppercase tracking-wider">{pageTitle.name}</span>
               </div>
 
-              {/* Status bubble: what is reported near you */}
-              <div className="ml-1 sm:ml-3">
+              {/* Urban Dynamic Island (Live precinct ticker & SOS) */}
+              <div className="ml-1 sm:ml-3 min-w-0">
                 <UrbanDynamicIsland nokStatus={nokStatus} />
               </div>
             </div>
 
             {/* Right Header Action Items */}
-            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
               {/* Global Spotlight Palette Trigger (Ctrl+K) */}
               <CommandPalette />
 
-              {/* Real counts: rooms listed and active alerts */}
+              {/* Futuristic Planetary Telemetry Capsule */}
               <div className="hidden xl:inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-[10px] font-mono text-gray-300">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="font-bold text-gray-200">ROOMS: {roomsListed}</span>

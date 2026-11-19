@@ -7,13 +7,12 @@ import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID,
 import { supabase } from '../../utils/supabase'
 import { fetchEnabledProviders, isOAuthFailure, getOAuthFailureMessage } from '../../utils/oauth'
 import { performLogin } from '../../utils/authLogin'
-import { Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader } from 'lucide-react'
+import { Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader, Sparkles } from 'lucide-react'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { safeNextPath } from '../../utils/launch'
 import { track } from '../../utils/track'
 import { cleanScriptTags, scanInput, checkPasswordStrength, encodeHTMLEntities } from '../../utils/security'
 import Image from 'next/image'
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../../utils/supabaseConfig'
 
 // Cross-app SSO mark for The Gruvs — their real logo (public/gruvs-logo.png),
 // not a placeholder monogram.
@@ -119,8 +118,8 @@ export default function AuthPage() {
     // Sign-ins finish in /auth/callback (?code=, PKCE). Never take a session
     // from tokens in the address: anyone could send a link that signs a user
     // into the sender's account (src/utils/oauth.test.ts).
-    const url = SUPABASE_URL
-    const key = SUPABASE_ANON_KEY
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     if (!url || !key) return
     let cancelled = false
     fetchEnabledProviders(url, key).then(p => {
@@ -288,16 +287,18 @@ export default function AuthPage() {
     playTactileSound('click')
     track('visit', { action: 'oauth_start', provider })
 
-    // Provider, page to return to and chosen role ride in a short-lived
-    // cookie, so the return address is exactly /auth/callback. Supabase only
-    // redirects back to addresses on its allow-list; extra ?query details on
-    // that address can fail the match and strand people on the wrong site.
     const nextPath = afterAuthPath()
-    const ctx = new URLSearchParams({ provider })
-    if (nextPath && nextPath !== '/dashboard') ctx.set('next', nextPath)
-    if (role) ctx.set('role', role)
-    document.cookie = `res_oauth_ctx=${encodeURIComponent(ctx.toString())}; path=/; max-age=600; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`
-    const redirectTo = `${window.location.origin}/auth/callback`
+    const queryParts: string[] = [`provider=${provider}`]
+    if (nextPath && nextPath !== '/dashboard') {
+      queryParts.push(`next=${encodeURIComponent(nextPath)}`)
+    }
+    if (role) {
+      queryParts.push(`role=${encodeURIComponent(role)}`)
+    }
+    const queryString = `?${queryParts.join('&')}`
+    const redirectTo = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback${queryString}`
+      : undefined
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -351,6 +352,53 @@ export default function AuthPage() {
       ? '/dashboard'
       : target
     router.push(safeGuestTarget)
+  }
+
+  const handleDemoLogin = (role: 'tenant' | 'landlord' = 'tenant') => {
+    playTactileSound('click')
+    const demoUser = role === 'landlord' ? {
+      id: 'demo-landlord-5555-6666-7777-888888888888',
+      name: 'Sipho Dlamini (Demo Landlord)',
+      email: 'sipho.landlord@theresidentcrew.com',
+      role: 'landlord' as const,
+      preferences: {
+        genderPreference: 'any' as const,
+        childrenAllowed: false,
+        maxChildren: 0,
+        smokingAllowed: false,
+        petsAllowed: false
+      }
+    } : {
+      id: 'demo-tenant-1111-2222-3333-444444444444',
+      name: 'Thabo Ndlovu (Demo Tenant)',
+      email: 'thabo.demo@theresidentcrew.com',
+      role: 'tenant' as const,
+      profile: {
+        bio: 'Wits student & Braamfontein resident. Exploring local rooms and campus vibe.',
+        gender: 'men' as const,
+        childrenCount: 0,
+        employmentStatus: 'Student',
+        hasPets: false,
+        verificationDocUrl: undefined
+      }
+    }
+
+    document.cookie = `res_demo_session=${role}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+    document.cookie = `guest-mode=0; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+    dispatch(resetFailedAttempts(email))
+    dispatch(loginUser(demoUser))
+    dispatch(addLog({
+      action: `Entered application with Demo ${role === 'tenant' ? 'Resident Tenant' : 'Landlord'} account`,
+      type: 'auth_success',
+      details: 'Instant sandbox resident session'
+    }))
+
+    const target = afterAuthPath()
+    if (typeof window !== 'undefined') {
+      window.location.href = target
+    } else {
+      router.push(target)
+    }
   }
 
   return (
@@ -663,6 +711,52 @@ export default function AuthPage() {
         </>)}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '1rem', width: '100%' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%' }}>
+            <button
+              type="button"
+              id="demo-tenant-btn"
+              onClick={() => handleDemoLogin('tenant')}
+              style={{
+                padding: '9px 10px',
+                borderRadius: '12px',
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                background: 'rgba(212, 175, 55, 0.08)',
+                color: '#fbbf24',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Sparkles size={13} /> Tenant Demo Login
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoLogin('landlord')}
+              style={{
+                padding: '9px 10px',
+                borderRadius: '12px',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                background: 'rgba(59, 130, 246, 0.08)',
+                color: '#60a5fa',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Shield size={13} /> Landlord Demo Login
+            </button>
+          </div>
+
           <button type="button" onClick={handleVisitorLogin} style={guestLinkStyle}>
             Just looking? Browse as a guest
           </button>

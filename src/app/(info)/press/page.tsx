@@ -177,6 +177,138 @@ export default function PressPage() {
         </div>
       </section>
 
+      <section aria-labelledby="screenshots-heading">
+        <h2 id="screenshots-heading">App Screenshots &amp; Ecosystem Cross-Promo Ad Creatives</h2>
+        <p>
+          High-resolution product screenshots and ready-to-run 1200×630 campaign banners for editorial coverage and
+          sibling platform promotions across <strong>The Gruvs</strong> and <strong>Excellency Academy</strong>:
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginTop: '1rem' }}>
+          {[
+            {
+              src: '/flyer/the-resident-crew-official-flyer.png',
+              width: 1200,
+              height: 1680,
+              title: 'Official Print & Digital Flyer: Obsidian Gold Brand Edition (A4)',
+              alt: 'Official high-resolution marketing flyer for The Resident Crew with logo, verified rooms, Rental Housing Act deposit tools, and 5-second panic SOS',
+              download: 'the-resident-crew-official-flyer.png',
+            },
+            {
+              src: '/flyer/the-resident-crew-flyer-campus-cyber.png',
+              width: 1200,
+              height: 1680,
+              title: 'Simulation Flyer: Campus Cyber Edition (Student Rooms & Communes)',
+              alt: 'Student and campus verified room flyer featuring uncapped fiber WiFi, lockable rooms, and late-night campus walk SOS',
+              download: 'the-resident-crew-flyer-campus-cyber.png',
+            },
+            {
+              src: '/flyer/the-resident-crew-flyer-executive-glass.png',
+              width: 1200,
+              height: 1680,
+              title: 'Simulation Flyer: Executive Glass Edition (Urban Professionals)',
+              alt: 'Daylight liquid glass executive flyer featuring statutory Rental Housing Act deposit escrow and walk-to-office hubs',
+              download: 'the-resident-crew-flyer-executive-glass.png',
+            },
+            {
+              src: '/flyer/the-resident-crew-flyer-precinct-emerald.png',
+              width: 1200,
+              height: 1680,
+              title: 'Simulation Flyer: Precinct Radar Edition (Transit & Townships)',
+              alt: 'Emerald mint transit flyer featuring minibus taxi rank directories, loadshedding blackout radar, and street panic SOS',
+              download: 'the-resident-crew-flyer-precinct-emerald.png',
+            },
+            {
+              src: '/flyer/the-resident-crew-flyer-midnight-trust.png',
+              width: 1200,
+              height: 1680,
+              title: 'Simulation Flyer: Midnight Trust Edition (Landlords & Owners)',
+              alt: 'Midnight lavender property owner flyer featuring 0% listing fees, Next-of-Kin tenant vetting, and Section 5 leases',
+              download: 'the-resident-crew-flyer-midnight-trust.png',
+            },
+            {
+              src: '/screenshots/ad-the-gruvs-1200x630.png',
+              width: 1200,
+              height: 630,
+              title: 'Ad Banner: The Resident Crew × The Gruvs (1200×630)',
+              alt: 'The Resident Crew cross-promo ad banner for The Gruvs showcasing the live 3D precinct map and minibus taxi fares',
+              download: 'the-resident-crew-ad-the-gruvs-1200x630.png',
+            },
+            {
+              src: '/screenshots/ad-excellency-academy-1200x630.png',
+              width: 1200,
+              height: 630,
+              title: 'Ad Banner: The Resident Crew × Excellency Academy (1200×630)',
+              alt: 'The Resident Crew cross-promo ad banner for Excellency Academy showcasing verified student rooms and moving bakkies',
+              download: 'the-resident-crew-ad-excellency-academy-1200x630.png',
+            },
+            {
+              src: '/screenshots/app-home-hero.png',
+              width: 1024,
+              height: 640,
+              title: 'App Screenshot: Landing Experience',
+              alt: 'The Resident Crew landing screen showing South African rooms, neighbourhood safety alerts, and local services',
+              download: 'the-resident-crew-home-hero.png',
+            },
+            {
+              src: '/screenshots/app-live-precinct-map.png',
+              width: 873,
+              height: 822,
+              title: 'App Screenshot: Live 3D Precinct Radar (Braamfontein)',
+              alt: 'Live 3D precinct radar map of Braamfontein displaying nightlife, rooms, and traffic layers',
+              download: 'the-resident-crew-live-precinct-map.png',
+            },
+            {
+              src: '/screenshots/app-housing-rooms.png',
+              width: 873,
+              height: 822,
+              title: 'App Screenshot: Verified Rooms & Rental Tools',
+              alt: 'The Resident Crew housing hub showing rooms, roommates, Rental Housing Act tools, and suburb search filters',
+              download: 'the-resident-crew-housing-rooms.png',
+            },
+            {
+              src: '/screenshots/app-local-services.png',
+              width: 873,
+              height: 822,
+              title: 'App Screenshot: Express Bakkie & Moving Dispatch',
+              alt: 'The Resident Crew community services view featuring express moving bakkies and local trades',
+              download: 'the-resident-crew-local-services.png',
+            },
+            {
+              src: '/screenshots/app-taxi-ranks.png',
+              width: 873,
+              height: 822,
+              title: 'App Screenshot: Minibus Taxi Ranks, ZAR Fares & Hand Signals',
+              alt: 'South African minibus taxi rank directory showing MTN Noord bays, ZAR fares, and commuter hand signals',
+              download: 'the-resident-crew-taxi-ranks.png',
+            },
+            {
+              src: '/screenshots/app-founder-ceo.png',
+              width: 873,
+              height: 822,
+              title: 'App Screenshot: Founder & CEO Profile',
+              alt: 'The Resident Crew Founder and CEO profile page for Asemahle TEARN Nkwali and TEARN Ventures',
+              download: 'the-resident-crew-founder-profile.png',
+            },
+          ].map(asset => (
+            <figure key={asset.src} style={{ margin: 0, padding: '14px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--card-bg)' }}>
+              <Image
+                src={asset.src}
+                alt={asset.alt}
+                width={asset.width}
+                height={asset.height}
+                unoptimized
+                style={{ width: '100%', height: 'auto', borderRadius: '8px', display: 'block' }}
+              />
+              <figcaption style={{ fontSize: '0.85rem', marginTop: '10px' }}>
+                <strong>{asset.title}</strong><br />
+                <a href={asset.src} download={asset.download}>Download PNG ({asset.width}×{asset.height})</a>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+
       <section aria-labelledby="press-contact-heading" className={styles.cta}>
         <h2 id="press-contact-heading" style={{ marginTop: 0 }}>Media &amp; Press Enquiries</h2>
         <p>

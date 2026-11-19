@@ -15,8 +15,9 @@ export const infoLinks = [
   { href: '/contact', label: 'Contact' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
+  { href: '/sitemap', label: 'Sitemap' },
 ] as const
 
 // When the info page text last changed. Bump it when you edit those pages,
 // so the sitemap tells Google to re-read them.
-export const INFO_PAGES_UPDATED = '2026-11-15'
+export const INFO_PAGES_UPDATED = '2026-11-16'

@@ -270,7 +270,13 @@ export function buildGlobalKnowledgeGraph(base: string) {
         url: cleanBase,
         applicationCategory: 'LifestyleApplication',
         operatingSystem: 'Web, Android, iOS',
-        screenshot: `${cleanBase}/opengraph-image`,
+        screenshot: [
+          `${cleanBase}/screenshots/app-home-hero.png`,
+          `${cleanBase}/screenshots/app-live-precinct-map.png`,
+          `${cleanBase}/screenshots/app-housing-rooms.png`,
+          `${cleanBase}/screenshots/app-local-services.png`,
+          `${cleanBase}/opengraph-image`,
+        ],
         inLanguage: ['en-ZA', 'zu-ZA', 'st-ZA', 'af-ZA'],
         countriesSupported: 'ZA',
         description:

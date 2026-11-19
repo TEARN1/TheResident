@@ -1,6 +1,20 @@
 import test from 'node:test'
 import assert from 'node:assert'
-import { store, loginUser, logoutUser, addListing, deleteListing, addRequest, updateRequestStatus, addToken, buyToken, addDispatch, updateDispatchStatus } from './index'
+import {
+  store,
+  loginUser,
+  logoutUser,
+  addListing,
+  deleteListing,
+  addRequest,
+  updateRequestStatus,
+  addToken,
+  buyToken,
+  addDispatch,
+  updateDispatchStatus,
+  addFamilyDependent,
+  removeFamilyDependent
+} from './index'
 
 test('Redux Store - Authentication Slice', () => {
   // Initial state should not have a current user
@@ -143,4 +157,43 @@ test('Redux Store - Service Dispatches & Handyman Orders Slice', () => {
   store.dispatch(updateDispatchStatus({ dispatchId: 'd8c7b6a5-9e8d-7c6b-5a4b-3c2d1e0f9a8b', status: 'accepted' }))
   state = store.getState()
   assert.strictEqual(state.networking.dispatches[0].status, 'accepted')
+})
+
+test('Redux Store - Family Lineage & Verified Dependents Slice', () => {
+  const landlordUser = {
+    id: 'a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d',
+    name: 'Mrs. Thandiwe Nkosi',
+    legalName: 'Thandiwe Nkosi',
+    email: 'thandiwe@landlords.co.za',
+    role: 'landlord' as const
+  }
+
+  store.dispatch(loginUser(landlordUser))
+  let state = store.getState()
+  assert.strictEqual(state.auth.currentUser?.role, 'landlord')
+
+  const childProfile = {
+    id: 'child-101',
+    parentId: landlordUser.id,
+    parentLegalName: 'Thandiwe Nkosi',
+    fullName: 'Lethabo Nkosi',
+    relationship: 'son' as const,
+    photoUrl: 'https://cdn.example.com/lethabo.jpg',
+    dateOfBirth: '2006-04-12',
+    idOrStudentNumber: '0604120000080',
+    notes: 'First year UJ student',
+    verifiedByParentAt: '2026-11-19T00:00:00Z',
+    status: 'verified_lineage' as const
+  }
+
+  store.dispatch(addFamilyDependent(childProfile))
+  state = store.getState()
+  assert.strictEqual(state.auth.currentUser?.dependents?.length, 1)
+  assert.strictEqual(state.auth.currentUser?.dependents?.[0].fullName, 'Lethabo Nkosi')
+  assert.strictEqual(state.auth.currentUser?.dependents?.[0].relationship, 'son')
+
+  // Remove dependent
+  store.dispatch(removeFamilyDependent('child-101'))
+  state = store.getState()
+  assert.strictEqual(state.auth.currentUser?.dependents?.length, 0)
 })

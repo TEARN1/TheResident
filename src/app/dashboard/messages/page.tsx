@@ -14,7 +14,7 @@ import { playTactileSound } from '../../../utils/tactileSounds'
 import EmptyState from '../components/shared/EmptyState'
 import StartNewChatModal from '../components/messages/StartNewChatModal'
 import { useCall, type CallType } from '../components/messages/CallProvider'
-import { voiceNoteDuration } from '../../../utils/dmMedia'
+import { voiceNoteDuration, isResidentMessage } from '../../../utils/dmMedia'
 
 interface DbMessage {
   id: string
@@ -76,7 +76,7 @@ export default function MessagesPage() {
       setLoading(false)
       return
     }
-    const rows = (data || []) as DbMessage[]
+    const rows = ((data || []) as DbMessage[]).filter(isResidentMessage)
     const byOther = new Map<string, DbMessage>()
     for (const m of rows) {
       const otherId = m.sender_id === myId ? m.recipient_id : m.sender_id
@@ -91,8 +91,17 @@ export default function MessagesPage() {
         .from('profiles')
         .select('id, username, display_name, avatar_url')
         .in('id', otherIds)
+      const { data: resProfiles } = await supabase
+        .from('res_profiles')
+        .select('id, legal_name, role')
+        .in('id', otherIds)
       const map: Record<string, ProfileHit> = {}
       for (const p of people || []) map[String(p.id)] = p as ProfileHit
+      for (const rp of resProfiles || []) {
+        if (rp.legal_name && map[String(rp.id)]) {
+          map[String(rp.id)].display_name = rp.legal_name
+        }
+      }
       setProfileMap(prev => ({ ...prev, ...map }))
     }
     setLoading(false)
