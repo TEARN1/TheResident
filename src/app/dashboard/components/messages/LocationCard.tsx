@@ -1,9 +1,10 @@
 'use client'
 
 import React from 'react'
-import { MapPin, Navigation, ExternalLink } from 'lucide-react'
-import { mapsUrl, tileFor } from '../../../../utils/dmMedia'
-import { directionsUrlForCoords } from '../../../../utils/navigation'
+import Link from 'next/link'
+import { MapPin, Navigation } from 'lucide-react'
+import { tileFor } from '../../../../utils/dmMedia'
+import { vibeMapUrlForCoords } from '../../../../utils/navigation'
 
 /**
  * A shared location: a small map drawn from nine map tiles with the pin in
@@ -44,13 +45,11 @@ export default function LocationCard({ lat, lon, isMe }: Props) {
         <MapPin size={13} className={isMe ? 'text-black' : 'text-gold-primary'} />
         <span>Shared location</span>
       </div>
-      <a
-        href={mapsUrl(lat, lon)}
-        target="_blank"
-        rel="noopener noreferrer"
+      <Link
+        href={vibeMapUrlForCoords(lat, lon)}
         className="block relative overflow-hidden rounded-xl border border-black/10 bg-gray-200"
         style={{ width: W, height: H, maxWidth: '100%' }}
-        aria-label="Open this location in maps"
+        aria-label="Show this location on the Vibe Map"
       >
         {tiles.map(tile => (
           // eslint-disable-next-line @next/next/no-img-element
@@ -58,14 +57,11 @@ export default function LocationCard({ lat, lon, isMe }: Props) {
         ))}
         <MapPin size={30} className="absolute text-red-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.4)]" style={{ left: W / 2 - 15, top: H / 2 - 30 }} fill="currentColor" stroke="white" />
         <span className="absolute bottom-0 right-0 bg-white/80 text-[8px] text-gray-700 px-1">© OpenStreetMap © CARTO</span>
-      </a>
+      </Link>
       <div className="flex gap-2">
-        <a href={mapsUrl(lat, lon)} target="_blank" rel="noopener noreferrer" className={`no-underline flex-1 inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl ${btn}`}>
-          <ExternalLink size={11} /> Open in maps
-        </a>
-        <a href={directionsUrlForCoords(lat, lon)} target="_blank" rel="noopener noreferrer" className={`no-underline flex-1 inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl ${btn}`}>
-          <Navigation size={11} /> Directions
-        </a>
+        <Link href={vibeMapUrlForCoords(lat, lon)} className={`no-underline flex-1 inline-flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl ${btn}`}>
+          <Navigation size={11} /> Show on the Vibe Map
+        </Link>
       </div>
     </div>
   )

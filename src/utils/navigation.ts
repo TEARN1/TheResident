@@ -1,25 +1,21 @@
-// "Outside the box" answer to not having our own turn-by-turn nav stack:
-// deep-link into whatever mapping app is already installed on the user's
-// phone. Google's universal directions link (`/maps/dir/?api=1&...`) opens
-// the native Google Maps app on iOS/Android when one is installed and falls
-// back to maps.google.com in a browser otherwise — zero maintenance, zero
-// API cost, and it's the app most residents already have muscle memory for.
+// Every "show me / take me there" in the app opens OUR Vibe Map, never an
+// outside app: the shared reports (closures, traffic, safety alerts), saved
+// pins and live jobs only exist on our map. VibeMap reads ?lat=&lon= (centre
+// on a point) and ?place= (look an address up and drop a pin there).
 
-/** Destination as free text (an address/suburb string) — works with data we already store. */
-export function directionsUrlForAddress(destination: string, origin?: string): string {
-  const params = new URLSearchParams({ api: '1', destination })
-  if (origin) params.set('origin', origin)
-  return `https://www.google.com/maps/dir/?${params.toString()}`
+const BASE = '/dashboard/community?tab=vibemap'
+
+/** The Vibe Map centred on a point. */
+export function vibeMapUrlForCoords(lat: number, lon: number): string {
+  return `${BASE}&lat=${lat.toFixed(6)}&lon=${lon.toFixed(6)}`
 }
 
-/** Destination as coordinates — more precise once a record carries lat/lon. */
-export function directionsUrlForCoords(lat: number, lon: number, origin?: string): string {
-  const params = new URLSearchParams({ api: '1', destination: `${lat},${lon}` })
-  if (origin) params.set('origin', origin)
-  return `https://www.google.com/maps/dir/?${params.toString()}`
+/** The Vibe Map at an address (looked up on the map). */
+export function vibeMapUrlForPlace(address: string): string {
+  return `${BASE}&place=${encodeURIComponent(address.trim())}`
 }
 
-/** A Waze deep link as a second option — some residents have Waze, not Google Maps, as their daily driver. */
-export function wazeUrlForAddress(destination: string): string {
-  return `https://waze.com/ul?q=${encodeURIComponent(destination)}&navigate=yes`
+/** A live job (bakkie, truck, tow truck) on the Vibe Map. */
+export function liveJobUrl(jobId: string): string {
+  return `/dashboard/services/job/${encodeURIComponent(jobId)}`
 }

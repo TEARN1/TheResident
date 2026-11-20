@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare, Package, Navigation, ExternalLink
+  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare, Package, Navigation
 } from 'lucide-react'
 import {
   RootState,
@@ -20,7 +20,7 @@ import {
   ServiceDispatch,
   LiftClub
 } from '../../../store'
-import { claimVoucher, joinWaitlist, cancelSeat } from '../../../store/actions'
+import { claimVoucher, joinWaitlist, cancelSeat, completeDispatch } from '../../../store/actions'
 import { formatCurrency, estimateRemainingBatteryHours, loadsheddingStageToOutageHours, peakTariffCostPerHour } from '../../../utils/logic'
 import FollowButton from '../components/social/FollowButton'
 import TrustBadge from '../components/trust-safety/TrustBadge'
@@ -28,8 +28,11 @@ import OpenInMapsButton from '../components/map/OpenInMapsButton'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import { realImage } from '../../public-services'
 import EmptyState from '../components/shared/EmptyState'
-import { directionsUrlForAddress, wazeUrlForAddress } from '../../../utils/navigation'
-import { reverseGeocode } from '../../../utils/geocode'
+import { liveJobUrl, vibeMapUrlForPlace } from '../../../utils/navigation'
+import { reverseGeocode, searchPlaces } from '../../../utils/geocode'
+import { toUUID } from '../../../store/dbMappers'
+import { useRouter } from 'next/navigation'
+import type { LatLon } from '../../../utils/liveJob'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents } from '../../../utils/gruvsEvents'
@@ -198,6 +201,9 @@ export default function ServicesPage() {
   const [bakkieVehicleType, setBakkieVehicleType] = useState<string>('single_cab')
   const [bakkiePickupAddress, setBakkiePickupAddress] = useState('')
   const [bakkieDropoffAddress, setBakkieDropoffAddress] = useState('')
+  // Map points for the live job; the GPS button sets the pick-up exactly, typed addresses are looked up on submit.
+  const [pickupPoint, setPickupPoint] = useState<LatLon | null>(null)
+  const router = useRouter()
   const [bakkieSchedule, setBakkieSchedule] = useState<string>('asap')
   const [bakkieHelpers, setBakkieHelpers] = useState<number>(0)
   const [bakkieNotes, setBakkieNotes] = useState('')
@@ -316,6 +322,7 @@ export default function ServicesPage() {
       async (pos) => {
         const lat = pos.coords.latitude
         const lon = pos.coords.longitude
+        setPickupPoint({ lat, lon })
         try {
           const rev = await reverseGeocode(lat, lon)
           if (rev) {
@@ -327,7 +334,7 @@ export default function ServicesPage() {
           setBakkiePickupAddress(`${lat.toFixed(5)}, ${lon.toFixed(5)}`)
         } finally {
           setDetectingGps(false)
-          setAlertNotification('📍 Exact GPS location detected!')
+          setAlertNotification(`📍 Pick-up pinned on the map (within about ${Math.round(pos.coords.accuracy)} m).`)
         }
       },
       () => {
@@ -368,8 +375,24 @@ export default function ServicesPage() {
 
     const structuredMessage = `${prefix}: ${vehicle.label} | ${cargo.label}${extraDetails} | From: ${bakkiePickupAddress.trim()} ➔ To: ${bakkieDropoffAddress.trim()} | When: ${timing.label} | Helpers: ${bakkieHelpers} | Est. Fare: R${calculatedFare}${bakkieNotes.trim() ? ' | Note: ' + bakkieNotes.trim() : ''}`
 
+    // Pins for the Vibe Map: the GPS pick-up if taken, otherwise look the typed addresses up.
+    const lookUp = async (address: string): Promise<LatLon | null> => {
+      try {
+        const [top] = await searchPlaces(address)
+        return top ? { lat: top.lat, lon: top.lon } : null
+      } catch {
+        return null
+      }
+    }
+    const pickup = pickupPoint ?? await lookUp(bakkiePickupAddress.trim())
+    const dropoff = await lookUp(bakkieDropoffAddress.trim())
+
     const newDispatch: ServiceDispatch = {
       id: generateDispatchId(),
+      pickupLat: pickup?.lat,
+      pickupLon: pickup?.lon,
+      dropoffLat: dropoff?.lat,
+      dropoffLon: dropoff?.lon,
       serviceId: target.id,
       serviceName: target.businessName,
       senderId: currentUser?.id || '',
@@ -383,20 +406,15 @@ export default function ServicesPage() {
     dispatch(addDispatch(newDispatch))
     playTactileSound('success')
 
-    if (supabase && target.id && !target.id.startsWith('biz-bakkie-')) {
-      try {
-        await supabase.rpc('res_request_move_assist', {
-          p_service_id: target.id,
-          p_message: structuredMessage
-        })
-      } catch {
-        // Fallback if RPC not applied in Supabase
-      }
-    }
-
     setBakkieSubmitting(false)
     setShowBakkieModal(false)
-    setAlertNotification('Bakkie request dispatched! Track your driver below.')
+    setPickupPoint(null)
+    if (!target.id.startsWith('biz-bakkie-')) {
+      // The request is a live job on the Vibe Map: open it to follow the driver.
+      router.push(liveJobUrl(toUUID(newDispatch.id)))
+    } else {
+      setAlertNotification('Request saved. No transport provider is listed yet, so nobody has been sent it.')
+    }
   }
 
   const handleRideRequestSubmit = (e: React.FormEvent) => {
@@ -632,14 +650,12 @@ export default function ServicesPage() {
                       <div className="flex items-center gap-2 text-gray-300 font-bold bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 shadow-inner">
                          <MapPin size={16} className="text-gold-primary" /> {lift.destination}
                       </div>
-                      <a
-                        href={directionsUrlForAddress(lift.destination, lift.origin)}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link
+                        href={vibeMapUrlForPlace(lift.destination)}
                         className="inline-flex items-center gap-1.5 text-[10px] font-black text-gold-primary uppercase tracking-widest hover:underline"
                       >
-                        Preview route
-                      </a>
+                        Show on the Vibe Map
+                      </Link>
                    </div>
                    <div className="flex flex-wrap gap-3 pt-2">
                       <span className="text-[9px] font-black uppercase tracking-widest bg-black/40 px-3 py-1.5 rounded-lg text-gray-400 border border-white/5 flex items-center gap-2"><Clock size={12} className="text-gold-primary" /> {lift.departureTime}</span>
@@ -781,42 +797,12 @@ export default function ServicesPage() {
                                 <span className="truncate">{parsed.route || disp.message}</span>
                               </div>
                               <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                                {parsed.pickup && (
-                                  <a
-                                    href={directionsUrlForAddress(parsed.pickup)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-[10px] font-black text-amber-400 uppercase tracking-widest hover:underline"
-                                    title="Navigate straight to pickup / breakdown spot"
-                                  >
-                                    <Navigation size={11} /> Pickup GPS
-                                  </a>
-                                )}
-                                {parsed.dropoff && (
-                                  <a
-                                    href={directionsUrlForAddress(parsed.dropoff, parsed.pickup || undefined)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-[10px] font-black text-gold-primary uppercase tracking-widest hover:underline"
-                                    title="Full route navigation from pickup to destination"
-                                  >
-                                    <Navigation size={11} /> Route GPS
-                                  </a>
-                                )}
-                                {(parsed.pickup || parsed.dropoff) && (
-                                  <a
-                                    href={wazeUrlForAddress(parsed.pickup || parsed.dropoff)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-[10px] font-black text-cyan-400 uppercase tracking-widest hover:underline"
-                                    title="Open in Waze for real-time traffic and hazard detours"
-                                  >
-                                    <ExternalLink size={11} /> Waze
-                                  </a>
-                                )}
-                                {(parsed.dropoff || parsed.pickup) && (
-                                  <OpenInMapsButton address={parsed.dropoff || parsed.pickup} />
-                                )}
+                                <Link
+                                  href={liveJobUrl(toUUID(disp.id))}
+                                  className="inline-flex items-center gap-1 text-[10px] font-black text-gold-primary uppercase tracking-widest hover:underline"
+                                >
+                                  <Navigation size={11} /> {isDriver ? 'Open job on the map' : 'Follow on the map'}
+                                </Link>
                               </div>
                             </div>
                             {parsed.towCondition && (
@@ -867,18 +853,6 @@ export default function ServicesPage() {
                               </button>
                             )}
 
-                            {isSender && disp.status === 'accepted' && (
-                              <button
-                                onClick={() => {
-                                  playTactileSound('success')
-                                  dispatch(updateDispatchStatus({ dispatchId: disp.id, status: 'completed' }))
-                                  setAlertNotification('Delivery confirmed! Thank you.')
-                                }}
-                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest border border-emerald-400/30 transition-all active:scale-95"
-                              >
-                                Confirm Delivery
-                              </button>
-                            )}
                           </div>
                         </div>
                       )
@@ -1616,7 +1590,7 @@ export default function ServicesPage() {
                               type="text"
                               required
                               value={bakkiePickupAddress}
-                              onChange={e => setBakkiePickupAddress(e.target.value)}
+                              onChange={e => { setBakkiePickupAddress(e.target.value); setPickupPoint(null) }}
                               placeholder={bakkieVehicleType === 'tow_truck' ? "e.g. M1 South past Oxford Rd offramp" : "e.g. 14 Vilakazi St, Orlando West"}
                               className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
                            />
@@ -1864,7 +1838,7 @@ export default function ServicesPage() {
                   </div>
                   <div className="pt-4 flex flex-col gap-3">
                      <button
-                       onClick={() => { dispatch(updateDispatchStatus({ dispatchId: showProofModal.id, status: 'completed' })); setShowProofModal(null); setAlertNotification('Order marked as Completed!') }}
+                       onClick={() => { dispatch(completeDispatch({ dispatchId: showProofModal.id, proofUrl: '' })); setShowProofModal(null); setAlertNotification('Job marked as delivered. Location sharing has stopped.') }}
                        className="w-full bg-gold-primary text-black font-black py-4 rounded-2xl uppercase tracking-widest text-xs active:scale-95 transition-all"
                      >
                         Confirm & Complete

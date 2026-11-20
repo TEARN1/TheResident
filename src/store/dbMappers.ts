@@ -211,6 +211,10 @@ export const dispatchToRow = (disp: ServiceDispatch): DbRow => ({
   message: disp.message,
   status: disp.status,
   proof_file_url: disp.proofFileUrl || null,
+  pickup_lat: disp.pickupLat ?? null,
+  pickup_lon: disp.pickupLon ?? null,
+  dropoff_lat: disp.dropoffLat ?? null,
+  dropoff_lon: disp.dropoffLon ?? null,
   created_at: toISO(disp.timestamp)
 })
 
@@ -472,7 +476,7 @@ export const SCHEMA_COLUMNS: Record<string, string[]> = {
   res_room_requests: ['id', 'tenant_id', 'listing_id', 'landlord_id', 'status', 'message', 'created_at'],
   res_lift_clubs: ['id', 'driver_id', 'origin', 'destination', 'origin_lat', 'origin_lon', 'dest_lat', 'dest_lon', 'departure_time', 'days', 'price_per_seat', 'currency', 'available_seats', 'total_seats', 'event_id', 'purpose', 'carries_parcels', 'created_at', 'updated_at'],
   res_handyman_services: ['id', 'owner_id', 'business_name', 'category', 'location', 'suburb', 'city', 'lat', 'lon', 'rating', 'contact_number', 'website_url', 'price_estimate', 'description', 'image', 'reviews_count', 'show_publicly', 'created_at', 'updated_at'],
-  res_service_dispatches: ['id', 'service_id', 'sender_id', 'message', 'status', 'proof_file_url', 'created_at'],
+  res_service_dispatches: ['id', 'service_id', 'sender_id', 'message', 'status', 'proof_file_url', 'created_at', 'pickup_lat', 'pickup_lon', 'dropoff_lat', 'dropoff_lon', 'job_stage', 'stage_at'],
   res_utility_tokens: ['id', 'landlord_id', 'meter_label', 'price', 'currency', 'status', 'claimed_by', 'claimed_at', 'created_at'],
   res_tool_library: ['id', 'owner_id', 'title', 'description', 'price_per_day', 'currency', 'deposit', 'location', 'suburb', 'status', 'rented_by', 'rented_until', 'created_at', 'updated_at'],
   res_chore_schedule: ['id', 'listing_id', 'roommate_id', 'task_name', 'day_of_week', 'status', 'completed_at', 'created_at'],

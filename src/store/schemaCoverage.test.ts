@@ -49,9 +49,15 @@ function tablesQueriedInCode(): Map<string, string[]> {
 
 function tablesDefinedInSchema(): Set<string> {
   const defined = new Set<string>()
-  for (const entry of readdirSync(REPO_ROOT)) {
-    if (extname(entry) !== '.sql') continue
-    const sql = readFileSync(join(REPO_ROOT, entry), 'utf8')
+  // Root schema files and the versioned migrations both count.
+  const MIGRATIONS = join(REPO_ROOT, 'supabase', 'migrations')
+  const files = [
+    ...readdirSync(REPO_ROOT).map((e) => join(REPO_ROOT, e)),
+    ...readdirSync(MIGRATIONS).map((e) => join(MIGRATIONS, e))
+  ]
+  for (const file of files) {
+    if (extname(file) !== '.sql') continue
+    const sql = readFileSync(file, 'utf8')
     // A view (e.g. res_public_listings, the guest-safe slice of res_listings)
     // is as versioned as a table: its definition, and so its exposure, lives here.
     for (const match of sql.matchAll(/create\s+(?:or\s+replace\s+)?(?:table|view)\s+(?:if\s+not\s+exists\s+)?public\.([a-z0-9_]+)/gi)) {

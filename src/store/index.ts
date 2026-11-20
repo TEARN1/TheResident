@@ -237,6 +237,13 @@ export interface ServiceDispatch {
   timestamp: string
   proofFileName?: string
   proofFileUrl?: string
+  /** Map points for the live job on the Vibe Map. */
+  pickupLat?: number
+  pickupLon?: number
+  dropoffLat?: number
+  dropoffLon?: number
+  /** requested → accepted → on_the_way → arrived → loaded → delivered (or cancelled). */
+  jobStage?: string
 }
 
 export interface UtilityToken {
@@ -2084,7 +2091,12 @@ export const fetchSupabaseData = createAsyncThunk(
         status: (item.status || 'pending') as ServiceDispatch['status'],
         timestamp: item.created_at || new Date().toISOString(),
         proofFileName: undefined,
-        proofFileUrl: item.proof_file_url || undefined
+        proofFileUrl: item.proof_file_url || undefined,
+        pickupLat: item.pickup_lat ?? undefined,
+        pickupLon: item.pickup_lon ?? undefined,
+        dropoffLat: item.dropoff_lat ?? undefined,
+        dropoffLon: item.dropoff_lon ?? undefined,
+        jobStage: item.job_stage || undefined
       }))))
     }
 
@@ -2746,7 +2758,16 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     if (updateDispatchStatus.match(action)) {
       const { dispatchId, status } = action.payload
       syncLabel = 'the callout status'
-      await dbUpdate('res_service_dispatches', { status }, 'id', toUUID(dispatchId))
+      // Drivers cannot write the row directly; stages move through these functions.
+      if (!supabase) {
+        // Offline/simulation: the local state already changed.
+      } else if (status === 'accepted') {
+        const { error } = await supabase.rpc('res_set_job_stage', { p_dispatch: toUUID(dispatchId), p_stage: 'accepted' })
+        if (error) throw error
+      } else if (status === 'completed') {
+        const { error } = await supabase.rpc('res_complete_dispatch', { p_dispatch: toUUID(dispatchId), p_proof_url: '' })
+        if (error) throw error
+      }
     }
 
     // 8. Sync Prepaid Utility Vouchers (schema stores no voucher codes)
