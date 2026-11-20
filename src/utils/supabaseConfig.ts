@@ -6,7 +6,17 @@
 // The env variables still win when set (e.g. to point at another project).
 // SUPABASE_OFFLINE=1 turns the defaults off: the unit tests run the store
 // with no database on purpose (see the "test" script in package.json).
-const offline = process.env.SUPABASE_OFFLINE === '1'
+// Automatically detected if running under test / fuzzer runner cross-platform.
+const offline =
+  process.env.SUPABASE_OFFLINE === '1' ||
+  (typeof process !== 'undefined' &&
+    Array.isArray(process.argv) &&
+    process.argv.some(
+      arg =>
+        arg.includes('.test.') ||
+        arg.includes('attack-fuzzer') ||
+        arg.includes('scale-test')
+    ))
 
 export const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || (offline ? '' : 'https://feevvddvrjmfbhffccbf.supabase.co')

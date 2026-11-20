@@ -3,15 +3,19 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  X, Car, ShieldCheck, MapPin, Search, Calculator,
-  CheckCircle2, Sparkles, Navigation
+  X,
+  Car,
+  ShieldCheck,
+  MapPin,
+  Search,
+  Calculator,
+  Sparkles,
+  Navigation
 } from 'lucide-react'
 import {
   SA_TAXI_RANKS,
   calculateTaxiFrontSeatChange,
-  getTaxiHandSignalGuide,
-  type TaxiRoute,
-  type QueueCongestionLevel
+  getTaxiHandSignalGuide
 } from '../../../../utils/taxiRoutes'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import { directionsUrlForCoords, directionsUrlForAddress } from '../../../../utils/navigation'
@@ -28,7 +32,6 @@ export default function TaxiRankTelemetryModal({
   isOpen,
   onClose,
   selectedRankId,
-  userCoords: _userCoords,
   onFlyToCoordinates
 }: TaxiRankTelemetryModalProps) {
   const [activeRankId, setActiveRankId] = useState<string>(selectedRankId || SA_TAXI_RANKS[0].id)
@@ -39,10 +42,6 @@ export default function TaxiRankTelemetryModal({
   const [calcFare, setCalcFare] = useState<number>(22)
   const [calcPassengers, setCalcPassengers] = useState<number>(1)
   const [calcTendered, setCalcTendered] = useState<number>(50)
-
-  // Live Queue Override state (simulated crowd-consensus check-in)
-  const [customQueueStatus, setCustomQueueStatus] = useState<Record<string, QueueCongestionLevel>>({})
-  const [marshalSuccessNotice, setMarshalSuccessNotice] = useState<string | null>(null)
 
   React.useEffect(() => {
     if (selectedRankId) {
@@ -66,26 +65,6 @@ export default function TaxiRankTelemetryModal({
   const changeCalculation = calculateTaxiFrontSeatChange(calcFare, calcPassengers, calcTendered)
   const handSignalGuide = getTaxiHandSignalGuide()
 
-  const handleUpdateQueueStatus = (routeId: string, level: QueueCongestionLevel) => {
-    playTactileSound('click')
-    setCustomQueueStatus(prev => ({ ...prev, [routeId]: level }))
-    setMarshalSuccessNotice(`Queue status updated to "${level.toUpperCase()}"! Telemetry broadcasted to precinct commuters.`)
-    setTimeout(() => setMarshalSuccessNotice(null), 4000)
-  }
-
-  const getStatusBadge = (status: QueueCongestionLevel) => {
-    switch (status) {
-      case 'cleared':
-        return { label: 'Empty / Cleared', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' }
-      case 'fast':
-        return { label: 'Moving Fast (2-5 min wait)', bg: 'bg-teal-500/20 text-teal-300 border-teal-500/40' }
-      case 'moderate':
-        return { label: 'Moderate Queue (8-15 min wait)', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' }
-      case 'congested':
-        return { label: 'Heavy Rush Backlog (20+ min wait)', bg: 'bg-red-500/20 text-red-300 border-red-500/40' }
-    }
-  }
-
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md">
@@ -103,13 +82,13 @@ export default function TaxiRankTelemetryModal({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-white tracking-wide">Minibus Taxi Telemetry</h2>
+                  <h2 className="text-lg font-bold text-white tracking-wide">Taxi ranks</h2>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
                     SANTACO / Commuter Radar
                   </span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Real-time rank operations, queue wait times, fare matrices & front-seat change
+                  Routes, rough fares, hand signals and a front-seat change calculator
                 </p>
               </div>
             </div>
@@ -158,14 +137,6 @@ export default function TaxiRankTelemetryModal({
             </button>
           </div>
 
-          {/* Feedback banner */}
-          {marshalSuccessNotice && (
-            <div className="bg-emerald-950/70 border-b border-emerald-500/40 px-4 py-2 text-xs text-emerald-300 flex items-center gap-2">
-              <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
-              <span>{marshalSuccessNotice}</span>
-            </div>
-          )}
-
           {/* Tab 1: Ranks & Routes */}
           {activeTab === 'ranks' && (
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
@@ -211,14 +182,14 @@ export default function TaxiRankTelemetryModal({
                       {currentRank.address}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 sm:justify-end">
+                  <div className="flex items-center gap-2.5 sm:justify-end">
                     <a
                       href={directionsUrlForCoords(currentRank.lat, currentRank.lon)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 transition-colors"
                     >
-                      <Navigation size={13} /> Navigate to Rank
+                      <Navigation size={13} /> GPS Directions
                     </a>
                     <div className="text-right">
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
@@ -273,9 +244,6 @@ export default function TaxiRankTelemetryModal({
                 {/* Routes List */}
                 <div className="space-y-2.5">
                   {currentRoutes.map(route => {
-                    const activeQueue = customQueueStatus[route.id] || route.liveQueue.status
-                    const badge = getStatusBadge(activeQueue)
-
                     return (
                       <div
                         key={route.id}
@@ -295,9 +263,6 @@ export default function TaxiRankTelemetryModal({
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-semibold px-2 py-1 rounded-full border ${badge.bg}`}>
-                              {badge.label}
-                            </span>
                             <a
                               href={directionsUrlForAddress(route.destination, currentRank.address)}
                               target="_blank"
@@ -337,28 +302,17 @@ export default function TaxiRankTelemetryModal({
                           </div>
                         </div>
 
-                        {/* Live Marshal Check-in Bar */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px]">
-                          <div className="text-slate-400 italic">
-                            &ldquo;{route.liveQueue.marshalNotes}&rdquo;
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] text-slate-500 mr-1">Report Queue:</span>
-                            {(['fast', 'moderate', 'congested'] as QueueCongestionLevel[]).map(lvl => (
-                              <button
-                                key={lvl}
-                                onClick={() => handleUpdateQueueStatus(route.id, lvl)}
-                                className={`px-2 py-0.5 rounded text-[10px] font-medium border capitalize transition-colors ${
-                                  activeQueue === lvl
-                                    ? 'bg-emerald-500 text-white border-emerald-400 font-bold'
-                                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-                                }`}
-                              >
-                                {lvl}
-                              </button>
+                        {/* Waypoints */}
+                        {route.waypointStops.length > 0 && (
+                          <div className="text-[11px] text-slate-400 pt-1 flex flex-wrap gap-1 items-center">
+                            <span className="text-slate-500">Stops:</span>
+                            {route.waypointStops.map((stop, sIdx) => (
+                              <span key={sIdx} className="bg-slate-900/60 border border-slate-800 px-2 py-0.5 rounded text-[10px] text-slate-300">
+                                {stop}
+                              </span>
                             ))}
                           </div>
-                        </div>
+                        )}
                       </div>
                     )
                   })}
@@ -367,107 +321,59 @@ export default function TaxiRankTelemetryModal({
             </div>
           )}
 
-          {/* Tab 2: Front-Seat Change Calculator */}
+          {/* Tab 2: Change Calculator */}
           {activeTab === 'calculator' && (
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
-              <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/80 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Calculator size={18} className="text-emerald-400" />
-                  <h3 className="font-bold text-white text-sm">
-                    Passenger in the Front: Change Dispenser
-                  </h3>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Sitting in the front seat? Use this algorithmic cash register to collect fares from the back rows, calculate change due, and hand the exact coins back with zero confusion.
+              <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/80">
+                <h3 className="font-bold text-white text-sm">Front-Seat Taxi Change Dispenser</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Sitting in the front row? Calculate total fares and exact change breakdown for each note tendered.
                 </p>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-xs text-slate-400 font-medium block mb-1">
-                      Fare per Person (ZAR)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2 text-xs font-mono text-slate-400">R</span>
-                      <input
-                        type="number"
-                        min="5"
-                        max="100"
-                        value={calcFare}
-                        onChange={e => setCalcFare(Number(e.target.value) || 0)}
-                        className="w-full pl-7 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-slate-400 font-medium block mb-1">
-                      Passengers Paid For
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="15"
-                      value={calcPassengers}
-                      onChange={e => setCalcPassengers(Number(e.target.value) || 1)}
-                      className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-slate-400 font-medium block mb-1">
-                      Amount Tendered (ZAR)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2 text-xs font-mono text-slate-400">R</span>
-                      <input
-                        type="number"
-                        min="5"
-                        max="500"
-                        step="5"
-                        value={calcTendered}
-                        onChange={e => setCalcTendered(Number(e.target.value) || 0)}
-                        className="w-full pl-7 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-300 font-medium">Fare per Person (ZAR)</label>
+                  <input
+                    type="number"
+                    value={calcFare}
+                    onChange={e => setCalcFare(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white font-mono"
+                  />
                 </div>
-
-                {/* Quick Tendered Notes shortcuts */}
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wide">Quick Note:</span>
-                  {[20, 50, 100, 200].map(amt => (
-                    <button
-                      key={amt}
-                      onClick={() => { playTactileSound('click'); setCalcTendered(amt) }}
-                      className={`px-2.5 py-1 rounded text-xs font-mono font-semibold transition-colors ${
-                        calcTendered === amt
-                          ? 'bg-emerald-500 text-slate-950'
-                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                      }`}
-                    >
-                      R{amt}
-                    </button>
-                  ))}
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-300 font-medium">Passengers Paying</label>
+                  <input
+                    type="number"
+                    value={calcPassengers}
+                    onChange={e => setCalcPassengers(Number(e.target.value) || 1)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-300 font-medium">Amount Tendered (ZAR)</label>
+                  <input
+                    type="number"
+                    value={calcTendered}
+                    onChange={e => setCalcTendered(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white font-mono"
+                  />
                 </div>
               </div>
 
-              {/* Result Summary Box */}
+              {/* Calculation Output Card */}
               <div className={`p-4 rounded-xl border ${
                 changeCalculation.isShortPayment
-                  ? 'bg-red-950/40 border-red-500/50 text-red-200'
-                  : changeCalculation.changeDueZAR === 0
-                  ? 'bg-teal-950/40 border-teal-500/50 text-teal-200'
-                  : 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200'
+                  ? 'bg-red-950/40 border-red-500/40 text-red-200'
+                  : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
               }`}>
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase tracking-wider">
-                    {changeCalculation.isShortPayment ? 'Shortfall Notice' : 'Change Calculation'}
-                  </div>
-                  <div className="text-xl font-bold font-mono">
-                    {changeCalculation.isShortPayment
-                      ? `-R${changeCalculation.shortfallZAR.toFixed(2)}`
-                      : `R${changeCalculation.changeDueZAR.toFixed(2)}`}
-                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wider">
+                    Total Due: R{changeCalculation.totalFareDueZAR.toFixed(2)}
+                  </span>
+                  <span className="text-sm font-bold font-mono">
+                    {changeCalculation.isShortPayment ? '⚠️ Short Payment' : `Change Due: R${changeCalculation.changeDueZAR.toFixed(2)}`}
+                  </span>
                 </div>
                 <div className="text-xs mt-1 font-medium">{changeCalculation.summaryText}</div>
 
@@ -546,7 +452,7 @@ export default function TaxiRankTelemetryModal({
           <div className="p-3 sm:p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
               <ShieldCheck size={14} className="text-emerald-400" />
-              Verified Transit Telemetry • Zero External API Surcharge
+              A rough guide: fares and bays change, so confirm at the rank.
             </span>
             <button
               onClick={() => { playTactileSound('click'); onClose() }}

@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import {
-  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare, Package, Navigation
+  Car, Briefcase, Zap, MapPin, AlertTriangle, Clock, Calendar, Users, Star, Plus, ShieldCheck, Copy, X, Send, Check, Info, Truck, Lock, Link2, Image as ImageIcon, Calculator, MessageSquare, Package, Navigation, ExternalLink
 } from 'lucide-react'
 import {
   RootState,
@@ -28,7 +28,8 @@ import OpenInMapsButton from '../components/map/OpenInMapsButton'
 import UpgradeButton from '../components/shared/UpgradeButton'
 import { realImage } from '../../public-services'
 import EmptyState from '../components/shared/EmptyState'
-import { directionsUrlForAddress } from '../../../utils/navigation'
+import { directionsUrlForAddress, wazeUrlForAddress } from '../../../utils/navigation'
+import { reverseGeocode } from '../../../utils/geocode'
 import { getPublicProviderTiersBulk, type ProviderTier } from '../../../utils/subscriptions'
 import { supabase } from '../../../utils/supabase'
 import { fetchUpcomingGruvsEvents } from '../../../utils/gruvsEvents'
@@ -36,7 +37,12 @@ import Link from 'next/link'
 import { playTactileSound } from '../../../utils/tactileSounds'
 
 // Categories where the server-side res_request_move_assist RPC accepts a dispatch.
-const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = ['Bakkie / Transport', 'Moving Assistant']
+const MOVE_ASSIST_CATEGORIES: HandymanService['category'][] = [
+  'Bakkie / Transport',
+  'Moving Assistant',
+  'Tow Truck & Recovery',
+  'Truck & Heavy Freight'
+]
 
 interface UpcomingEvent {
   id: string
@@ -54,18 +60,30 @@ interface TrustGate {
 const TIER_RANK: Record<'premium' | 'priority' | 'none', number> = { premium: 0, priority: 1, none: 2 }
 
 const VEHICLE_PRESETS = [
-  { id: 'single_cab', label: 'Single-Cab Bakkie', sub: 'Up to 750kg (beds, fridges, couches)', basePrice: 350, icon: '🛻' },
-  { id: 'double_cab', label: 'Double-Cab Bakkie', sub: '1-Ton load bed + crew seats', basePrice: 420, icon: '🛻' },
-  { id: 'truck', label: '1.5-Ton / 2-Ton Flatbed', sub: 'Full room/flat moves & cargo', basePrice: 650, icon: '🚛' },
-  { id: 'trailer', label: 'Bakkie + Trailer', sub: 'Bulky loads, rubble & clearout', basePrice: 400, icon: '🚜' }
+  { id: 'single_cab', label: 'Single-Cab Bakkie', sub: 'Up to 750kg (furniture, beds, appliances)', basePrice: 350, icon: '🛻', category: 'bakkie' },
+  { id: 'double_cab', label: 'Double-Cab Bakkie', sub: '1-Ton load bed + 4 passenger seats', basePrice: 420, icon: '🛻', category: 'bakkie' },
+  { id: 'trailer', label: 'Bakkie + Heavy Trailer', sub: 'Bulky loads, rubble & clearout', basePrice: 400, icon: '🚜', category: 'bakkie' },
+  { id: 'tow_truck', label: 'Tow Truck / Rollback Recovery', sub: 'Breakdown towing, accident recovery & winching', basePrice: 750, icon: '🏗️', category: 'towing' },
+  { id: 'truck_light', label: '1.5-Ton / 2-Ton Flatbed', sub: 'Mini-truck, full room/flat moves', basePrice: 650, icon: '🚛', category: 'truck' },
+  { id: 'truck_medium', label: '4-Ton Enclosed / Dropside Truck', sub: 'Household moves, commercial pallets & store cargo', basePrice: 950, icon: '🚚', category: 'truck' },
+  { id: 'truck_heavy', label: '8-Ton Heavy Commercial Truck', sub: 'Industrial machinery, bulk materials & containers', basePrice: 1450, icon: '🚛', category: 'truck' },
 ] as const
 
 const CARGO_PRESETS = [
+  { id: 'towing', label: 'Vehicle Breakdown / Towing', icon: '🚗' },
   { id: 'furniture', label: 'Furniture & Appliances', icon: '🛋️' },
-  { id: 'relocation', label: 'Room / Flat Relocation', icon: '📦' },
-  { id: 'building', label: 'Building Materials / Hardware', icon: '🧱' },
-  { id: 'garden', label: 'Garden Waste & Rubble', icon: '🌿' },
-  { id: 'general', label: 'Store Delivery / Cargo', icon: '🛍️' }
+  { id: 'relocation', label: 'Room / House Relocation', icon: '📦' },
+  { id: 'freight', label: 'Commercial Freight / Pallets', icon: '🏭' },
+  { id: 'building', label: 'Building Materials / Rubble', icon: '🧱' },
+  { id: 'garden', label: 'Garden Waste & Clearout', icon: '🌿' },
+  { id: 'general', label: 'Store Delivery / Retail Cargo', icon: '🛍️' }
+] as const
+
+const TOW_CONDITIONS = [
+  { id: 'rolling', label: 'Rolling Neutral', sub: 'Wheels & steering free to roll' },
+  { id: 'locked', label: 'Locked Wheels / Handbrake', sub: 'Requires rollback skates or winch' },
+  { id: 'accident', label: 'Accident / Suspension Broken', sub: 'Needs hydraulic tilt-tray rollback' },
+  { id: 'keys_missing', label: 'Keys Missing / Steering Locked', sub: 'Dollies or specialized rigging' }
 ] as const
 
 const TIMING_PRESETS = [
@@ -77,7 +95,7 @@ const TIMING_PRESETS = [
 
 function parseBakkieMessage(msg: string) {
   const parts = msg.split('|').map(s => s.trim())
-  let vehicle = 'Bakkie Dispatch'
+  let vehicle = 'Transport Dispatch'
   let cargo = 'Cargo'
   let route = ''
   let timing = 'ASAP'
@@ -85,10 +103,11 @@ function parseBakkieMessage(msg: string) {
   let note = ''
   let pickup = ''
   let dropoff = ''
+  let towCondition = ''
 
   for (const p of parts) {
-    if (p.includes('BAKKIE REQUEST:')) {
-      vehicle = p.replace('🛻 BAKKIE REQUEST:', '').trim()
+    if (p.includes('REQUEST:') || p.includes('DISPATCH:')) {
+      vehicle = p.replace(/^.*(?:REQUEST|DISPATCH):\s*/, '').trim()
     } else if (p.startsWith('From:')) {
       route = p
       const [fromPart, toPart] = p.split('➔').map(s => s.trim())
@@ -98,6 +117,8 @@ function parseBakkieMessage(msg: string) {
       timing = p.replace('When:', '').trim()
     } else if (p.startsWith('Est. Fare:') || p.startsWith('Est:')) {
       fare = p
+    } else if (p.startsWith('Condition:') || p.startsWith('Tow Condition:')) {
+      towCondition = p.replace(/^(?:Condition|Tow Condition):\s*/, '').trim()
     } else if (p.startsWith('Note:')) {
       note = p.replace('Note:', '').trim()
     } else if (!route && !fare && !note && p.length > 0 && !p.includes('Helpers:')) {
@@ -105,7 +126,7 @@ function parseBakkieMessage(msg: string) {
     }
   }
 
-  return { vehicle, cargo, route, timing, fare, note, pickup, dropoff }
+  return { vehicle, cargo, route, timing, fare, note, pickup, dropoff, towCondition }
 }
 
 function generateDispatchId(): string {
@@ -181,6 +202,9 @@ export default function ServicesPage() {
   const [bakkieHelpers, setBakkieHelpers] = useState<number>(0)
   const [bakkieNotes, setBakkieNotes] = useState('')
   const [bakkieSubmitting, setBakkieSubmitting] = useState(false)
+  const [towCondition, setTowCondition] = useState<string>('rolling')
+  const [towVehicleMake, setTowVehicleMake] = useState<string>('')
+  const [detectingGps, setDetectingGps] = useState(false)
 
   // Ride Request Modal State (in Lifts tab)
   const [showRideRequestModal, setShowRideRequestModal] = useState(false)
@@ -281,6 +305,39 @@ export default function ServicesPage() {
     setShowBakkieModal(true)
   }
 
+  const handleUseGps = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setAlertNotification('Geolocation not supported on this browser.')
+      return
+    }
+    setDetectingGps(true)
+    playTactileSound('click')
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude
+        const lon = pos.coords.longitude
+        try {
+          const rev = await reverseGeocode(lat, lon)
+          if (rev) {
+            setBakkiePickupAddress(rev)
+          } else {
+            setBakkiePickupAddress(`${lat.toFixed(5)}, ${lon.toFixed(5)}`)
+          }
+        } catch {
+          setBakkiePickupAddress(`${lat.toFixed(5)}, ${lon.toFixed(5)}`)
+        } finally {
+          setDetectingGps(false)
+          setAlertNotification('📍 Exact GPS location detected!')
+        }
+      },
+      () => {
+        setDetectingGps(false)
+        setAlertNotification('Could not acquire GPS. Please enter address manually.')
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
   const handleBakkieSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!bakkiePickupAddress.trim() || !bakkieDropoffAddress.trim()) {
@@ -295,11 +352,21 @@ export default function ServicesPage() {
 
     const target = bakkieTargetService || bakkieServices[0] || {
       id: generateMeshBizId(),
-      businessName: 'Community Bakkie Network',
+      businessName: 'Community Transport Network',
       ownerId: ''
     }
 
-    const structuredMessage = `🛻 BAKKIE REQUEST: ${vehicle.label} | ${cargo.label} | From: ${bakkiePickupAddress.trim()} ➔ To: ${bakkieDropoffAddress.trim()} | When: ${timing.label} | Helpers: ${bakkieHelpers} | Est. Fare: R${calculatedFare}${bakkieNotes.trim() ? ' | Note: ' + bakkieNotes.trim() : ''}`
+    const isTow = bakkieVehicleType === 'tow_truck' || bakkieLoadCategory === 'towing'
+    const isTruck = bakkieVehicleType.startsWith('truck_')
+    const prefix = isTow ? '🏗️ TOW TRUCK REQUEST' : isTruck ? '🚛 TRUCK DISPATCH' : '🛻 BAKKIE REQUEST'
+
+    let extraDetails = ''
+    if (isTow) {
+      const cond = TOW_CONDITIONS.find(c => c.id === towCondition)?.label || 'Rolling'
+      extraDetails = ` | Condition: ${cond}${towVehicleMake.trim() ? ' (' + towVehicleMake.trim() + ')' : ''}`
+    }
+
+    const structuredMessage = `${prefix}: ${vehicle.label} | ${cargo.label}${extraDetails} | From: ${bakkiePickupAddress.trim()} ➔ To: ${bakkieDropoffAddress.trim()} | When: ${timing.label} | Helpers: ${bakkieHelpers} | Est. Fare: R${calculatedFare}${bakkieNotes.trim() ? ' | Note: ' + bakkieNotes.trim() : ''}`
 
     const newDispatch: ServiceDispatch = {
       id: generateDispatchId(),
@@ -453,8 +520,17 @@ export default function ServicesPage() {
   const myBakkieDispatches = currentUser ? dispatches.filter(d => {
     const isSender = d.senderId === currentUser.id
     const isMyBiz = myBiz && d.serviceId === myBiz.id
-    const isBakkie = d.message?.includes('BAKKIE') || d.serviceName?.toLowerCase().includes('bakkie') || d.serviceName?.toLowerCase().includes('moving')
-    return (isSender || isMyBiz) && isBakkie
+    const msg = (d.message || '').toUpperCase()
+    const sName = (d.serviceName || '').toLowerCase()
+    const isTransport =
+      msg.includes('BAKKIE') ||
+      msg.includes('TOW') ||
+      msg.includes('TRUCK') ||
+      sName.includes('bakkie') ||
+      sName.includes('moving') ||
+      sName.includes('tow') ||
+      sName.includes('truck')
+    return (isSender || isMyBiz) && isTransport
   }) : []
 
   return (
@@ -467,7 +543,7 @@ export default function ServicesPage() {
 
         <div className="flex bg-black/60 p-1.5 rounded-2xl border border-white/10 shadow-glass backdrop-blur-2xl w-full md:w-auto overflow-x-auto no-scrollbar gap-1">
           {[
-            { id: 'moving', label: 'Moving & Bakkies', icon: Truck },
+            { id: 'moving', label: 'Bakkies, Trucks & Towing', icon: Truck },
             { id: 'handymen', label: 'Trades & Plumbing', icon: Briefcase },
             { id: 'lifts', label: 'Lifts', icon: Car },
             { id: 'utilities', label: 'Utilities', icon: Zap },
@@ -617,14 +693,14 @@ export default function ServicesPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h2 className="text-xl sm:text-2xl font-black text-white italic uppercase tracking-tight">
-                          Express Bakkie &amp; Moving Dispatch
+                          Express Bakkie, Truck &amp; Towing Dispatch
                         </h2>
                         <span className="bg-gold-primary/20 text-gold-primary border border-gold-primary/30 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">
-                          Live Local Mesh
+                          Live Local Fleet
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm text-gray-400 max-w-xl leading-relaxed">
-                        Need furniture moved, appliances delivered, or building rubble cleared? Post an instant dispatch to verified local bakkie operators with transparent upfront fare estimates.
+                        Need furniture moved, appliances delivered, commercial pallet freight hauled, or emergency roadside breakdown towing? Post an instant dispatch to verified local bakkie, truck, and rollback operators with transparent upfront fare benchmarks.
                       </p>
                     </div>
                   </div>
@@ -633,18 +709,18 @@ export default function ServicesPage() {
                       onClick={() => { playTactileSound('click'); openBakkieRequestModal(null) }}
                       className="w-full sm:w-auto bg-gold-primary hover:bg-gold-secondary text-black font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 shadow-glow"
                     >
-                      <Truck size={16} /> Request a Bakkie
+                      <Truck size={16} /> Request Transport / Tow
                     </button>
                     {trustGate && !trustGate.unlocked ? (
                       <a href="/dashboard/trust-circle" className="w-full sm:w-auto bg-white/5 border border-white/10 hover:border-gold-primary/40 text-gray-300 font-black px-4 py-3.5 rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
-                        <Lock size={14} className="text-gold-primary" /> List My Bakkie
+                        <Lock size={14} className="text-gold-primary" /> List My Bakkie or Truck
                       </a>
                     ) : (
                       <button
                         onClick={() => { playTactileSound('click'); openBusinessForm(null) }}
                         className="w-full sm:w-auto bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-black px-4 py-3.5 rounded-xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95"
                       >
-                        <Plus size={14} /> List My Bakkie
+                        <Plus size={14} /> List My Bakkie or Truck
                       </button>
                     )}
                   </div>
@@ -704,15 +780,38 @@ export default function ServicesPage() {
                                 <MapPin size={13} className="text-gold-primary shrink-0" />
                                 <span className="truncate">{parsed.route || disp.message}</span>
                               </div>
-                              <div className="flex items-center gap-3 shrink-0">
+                              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                                {parsed.pickup && (
+                                  <a
+                                    href={directionsUrlForAddress(parsed.pickup)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[10px] font-black text-amber-400 uppercase tracking-widest hover:underline"
+                                    title="Navigate straight to pickup / breakdown spot"
+                                  >
+                                    <Navigation size={11} /> Pickup GPS
+                                  </a>
+                                )}
                                 {parsed.dropoff && (
                                   <a
                                     href={directionsUrlForAddress(parsed.dropoff, parsed.pickup || undefined)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 text-[10px] font-black text-gold-primary uppercase tracking-widest hover:underline"
+                                    title="Full route navigation from pickup to destination"
                                   >
                                     <Navigation size={11} /> Route GPS
+                                  </a>
+                                )}
+                                {(parsed.pickup || parsed.dropoff) && (
+                                  <a
+                                    href={wazeUrlForAddress(parsed.pickup || parsed.dropoff)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[10px] font-black text-cyan-400 uppercase tracking-widest hover:underline"
+                                    title="Open in Waze for real-time traffic and hazard detours"
+                                  >
+                                    <ExternalLink size={11} /> Waze
                                   </a>
                                 )}
                                 {(parsed.dropoff || parsed.pickup) && (
@@ -720,6 +819,11 @@ export default function ServicesPage() {
                                 )}
                               </div>
                             </div>
+                            {parsed.towCondition && (
+                              <div className="text-[10px] text-amber-300 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded inline-block">
+                                ⚠️ Tow Status: {parsed.towCondition}
+                              </div>
+                            )}
                             <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-white/5">
                               <span>{parsed.cargo} • {parsed.timing}</span>
                               <span className="font-black text-white">{parsed.fare || 'Standard rate'}</span>
@@ -841,7 +945,7 @@ export default function ServicesPage() {
            {visibleServices.length === 0 ? (
              <div className="glass-panel">
                {activeTab === 'moving' ? (
-                 <EmptyState icon={Truck} title="No bakkies or movers listed yet" subtitle="Have a bakkie? List it and get booked by your neighbours." />
+                 <EmptyState icon={Truck} title="No bakkies, trucks or tow operators listed yet" subtitle="Own a bakkie, truck or rollback? List it and receive local dispatch requests." />
                ) : (
                  <EmptyState icon={Briefcase} title="No local pros listed yet" subtitle="Be the first to advertise your skills to the neighbourhood." />
                )}
@@ -1186,6 +1290,8 @@ export default function ServicesPage() {
                               <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest">Category</label>
                               <select value={bizCategory} onChange={e => setBizCategory(e.target.value as HandymanService['category'])} className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-gold-primary/40">
                                  <option>Bakkie / Transport</option>
+                                  <option>Tow Truck & Recovery</option>
+                                  <option>Truck & Heavy Freight</option>
                                  <option>Plumbing</option>
                                  <option>Electrical</option>
                                  <option>Construction</option>
@@ -1257,6 +1363,8 @@ export default function ServicesPage() {
                            {[
                               { label: 'Diagnostic Callout', text: `Hi ${selectedBiz.businessName}, requesting a diagnostic inspection and price estimate in ${selectedBiz.suburb || 'my area'}.` },
                               { label: 'Bakkie / Moving Job', text: `Hi ${selectedBiz.businessName}, need assistance with moving furniture / household items with a bakkie in ${selectedBiz.suburb || 'my area'}.` },
+                               { label: 'Tow Truck / Breakdown', text: `Hi ${selectedBiz.businessName}, emergency roadside towing / rollback recovery needed for a stranded vehicle in ${selectedBiz.suburb || 'my area'}.` },
+                               { label: 'Truck / Freight Cargo', text: `Hi ${selectedBiz.businessName}, need commercial truck freight / pallet transport in ${selectedBiz.suburb || 'my area'}.` },
                               { label: 'Urgent Repair', text: `Hi ${selectedBiz.businessName}, emergency repair needed for geyser / electricity / plumbing fault at residence.` }
                            ].map(q => (
                               <button
@@ -1282,6 +1390,8 @@ export default function ServicesPage() {
                               {[
                                  { label: 'Single-Cab Bakkie', icon: '🛻' },
                                  { label: 'Double-Cab Bakkie', icon: '🛻' },
+                                  { label: 'Tow Truck / Rollback', icon: '🏗️' },
+                                  { label: '4-Ton / 8-Ton Truck', icon: '🚛' },
                                  { label: '1-Ton Enclosed Van', icon: '🚐' },
                                  { label: 'Helpers Only', icon: '💪' }
                               ].map(v => (
@@ -1391,11 +1501,11 @@ export default function ServicesPage() {
                         <div className="flex items-center gap-2">
                            <span className="p-1.5 bg-gold-primary/10 rounded-lg text-gold-primary"><Truck size={18} /></span>
                            <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">
-                              Request a <span className="text-gold-primary">Bakkie / Moving Assist</span>
+                              Request <span className="text-gold-primary">Transport, Truck or Tow</span>
                            </h3>
                         </div>
                         <p className="text-[11px] text-gray-400 font-medium">
-                           {bakkieTargetService ? `Dispatching to: ${bakkieTargetService.businessName}` : 'Broadcasting to all verified bakkie operators in your area'}
+                           {bakkieTargetService ? `Dispatching to: ${bakkieTargetService.businessName}` : 'Broadcasting to verified bakkie, truck & towing operators in your area'}
                         </p>
                      </div>
                      <button onClick={() => setShowBakkieModal(false)} className="text-gray-500 hover:text-white transition-colors p-1"><X size={20} /></button>
@@ -1453,31 +1563,74 @@ export default function ServicesPage() {
                         </div>
                      </div>
 
-                     {/* 3. Pickup and Drop-off */}
+                     {/* 3. Tow Details (if towing selected) */}
+                     {(bakkieVehicleType === 'tow_truck' || bakkieLoadCategory === 'towing') && (
+                        <div className="space-y-2.5 p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+                           <label className="text-[10px] text-amber-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                              <AlertTriangle size={12} className="text-amber-400" /> Vehicle Condition &amp; Recovery Type
+                           </label>
+                           <div className="grid grid-cols-2 gap-2">
+                              {TOW_CONDITIONS.map(c => (
+                                 <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => { playTactileSound('click'); setTowCondition(c.id) }}
+                                    className={`p-2 rounded-lg border text-left transition-all ${
+                                       towCondition === c.id
+                                          ? 'bg-amber-500/20 border-amber-500 text-white'
+                                          : 'bg-white/[0.02] border-white/10 text-gray-400 hover:border-white/20'
+                                    }`}
+                                 >
+                                    <div className="text-[11px] font-bold text-white">{c.label}</div>
+                                    <div className="text-[9px] text-gray-400">{c.sub}</div>
+                                 </button>
+                              ))}
+                           </div>
+                           <input
+                              type="text"
+                              value={towVehicleMake}
+                              onChange={e => setTowVehicleMake(e.target.value)}
+                              placeholder="Vehicle Make & Model (e.g. Silver Toyota Hilux, 2019)"
+                              className="w-full bg-black/60 border border-white/10 focus:border-amber-500 rounded-xl px-3.5 py-2 text-xs text-white outline-none mt-1"
+                           />
+                        </div>
+                     )}
+
+                     {/* 4. Pickup and Drop-off */}
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1.5">
-                           <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1">
-                              <MapPin size={11} className="text-gold-primary" /> Pickup Address / Suburb
-                           </label>
+                           <div className="flex items-center justify-between">
+                              <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1">
+                                 <MapPin size={11} className="text-gold-primary" /> {bakkieVehicleType === 'tow_truck' ? 'Breakdown / Pickup' : 'Pickup Address / Suburb'}
+                              </label>
+                              <button
+                                 type="button"
+                                 onClick={handleUseGps}
+                                 disabled={detectingGps}
+                                 className="text-[9px] font-bold text-gold-primary hover:text-white transition-colors flex items-center gap-1 uppercase tracking-wider"
+                              >
+                                 <Navigation size={10} /> {detectingGps ? 'Locating…' : '📍 Use GPS'}
+                              </button>
+                           </div>
                            <input
                               type="text"
                               required
                               value={bakkiePickupAddress}
                               onChange={e => setBakkiePickupAddress(e.target.value)}
-                              placeholder="e.g. 14 Vilakazi St, Orlando West"
+                              placeholder={bakkieVehicleType === 'tow_truck' ? "e.g. M1 South past Oxford Rd offramp" : "e.g. 14 Vilakazi St, Orlando West"}
                               className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
                            />
                         </div>
                         <div className="space-y-1.5">
                            <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1">
-                              <MapPin size={11} className="text-gold-primary" /> Drop-off Address / Suburb
+                              <MapPin size={11} className="text-gold-primary" /> {bakkieVehicleType === 'tow_truck' ? 'Drop-off (Mechanic / Home)' : 'Drop-off Address / Suburb'}
                            </label>
                            <input
                               type="text"
                               required
                               value={bakkieDropoffAddress}
                               onChange={e => setBakkieDropoffAddress(e.target.value)}
-                              placeholder="e.g. 42 Main St, Diepkloof"
+                              placeholder={bakkieVehicleType === 'tow_truck' ? "e.g. Rapid Auto Repairs, Selby" : "e.g. 42 Main St, Diepkloof"}
                               className="w-full bg-black/60 border border-white/10 focus:border-gold-primary rounded-xl px-3.5 py-2.5 text-xs text-white outline-none"
                            />
                         </div>
@@ -1566,7 +1719,7 @@ export default function ServicesPage() {
                         disabled={bakkieSubmitting}
                         className="w-full bg-gold-primary hover:bg-gold-secondary text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-glow disabled:opacity-50"
                      >
-                        {bakkieSubmitting ? 'Dispatching…' : 'Dispatch Bakkie Request'} <Send size={14} />
+                        {bakkieSubmitting ? 'Dispatching…' : bakkieVehicleType === 'tow_truck' ? 'Dispatch Tow Truck' : bakkieVehicleType.startsWith('truck') ? 'Dispatch Cargo Truck' : 'Dispatch Bakkie Request'} <Send size={14} />
                      </button>
                   </form>
                </motion.div>

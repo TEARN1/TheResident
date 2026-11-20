@@ -210,6 +210,8 @@ export const DEFAULT_SERVICE_CATEGORIES: Record<string, string> = {
   plumbing: 'Plumbing & Geysers',
   electrical: 'Electrical & Backup Power',
   'bakkie-transport': 'Bakkie & Moving Transport',
+  'tow-truck-recovery': 'Tow Truck & Roadside Recovery',
+  'truck-freight': 'Trucks & Heavy Freight',
   carpentry: 'Carpentry, Doors & Welding',
   'appliance-repair': 'Fridge, Stove & Appliance Repair',
   cleaning: 'Home & Move-Out Cleaning',

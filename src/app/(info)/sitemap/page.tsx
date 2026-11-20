@@ -14,7 +14,6 @@ import {
 } from '../../public-services'
 import { listPublicListings } from '../../public-listings'
 import { SA_TAXI_RANKS } from '../../../utils/taxiRoutes'
-import { STATUTORY_WARDS } from '../../../utils/civicChessboard'
 
 export const revalidate = 3600
 
@@ -23,7 +22,7 @@ export function generateMetadata(): Metadata {
   return {
     title: 'Complete Sitemap & Directory Index | The Resident Crew',
     description:
-      'Browse every public page, South African suburb, campus housing hub, minibus taxi rank, municipal ward, service category, shop category, and XML sitemap on The Resident Crew.',
+      'Browse every public page, South African suburb, campus housing hub, minibus taxi rank, service category, shop category, and XML sitemap on The Resident Crew.',
     alternates: { canonical: '/sitemap' },
     openGraph: {
       type: 'website',
@@ -160,21 +159,6 @@ export default async function HtmlSitemapPage() {
           {SA_TAXI_RANKS.map(rank => (
             <li key={rank.id}>
               <Link href={`/taxi-ranks/${rank.id}`}>{rank.name}</Link> — {rank.city}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section aria-labelledby="wards-heading">
-        <h2 id="wards-heading">Municipal Wards &amp; SLA Infrastructure ({STATUTORY_WARDS.length})</h2>
-        <ul>
-          <li><Link href="/wards">All Municipal Wards</Link></li>
-          {STATUTORY_WARDS.map(w => (
-            <li key={w.wardCode}>
-              <Link href={`/wards/${w.wardCode.toLowerCase()}`}>
-                Ward {w.wardNumber} — {w.suburb}
-              </Link>{' '}
-              ({w.municipality})
             </li>
           ))}
         </ul>
