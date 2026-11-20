@@ -18,7 +18,8 @@ import {
   getTaxiHandSignalGuide
 } from '../../../../utils/taxiRoutes'
 import { playTactileSound } from '../../../../utils/tactileSounds'
-import { directionsUrlForCoords, directionsUrlForAddress } from '../../../../utils/navigation'
+import Link from 'next/link'
+import { vibeMapUrlForCoords, vibeMapUrlForPlace } from '../../../../utils/navigation'
 
 interface TaxiRankTelemetryModalProps {
   isOpen: boolean
@@ -45,6 +46,7 @@ export default function TaxiRankTelemetryModal({
 
   React.useEffect(() => {
     if (selectedRankId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- follow the rank tapped on the map
       setActiveRankId(selectedRankId)
     }
   }, [selectedRankId])
@@ -183,14 +185,12 @@ export default function TaxiRankTelemetryModal({
                     </p>
                   </div>
                   <div className="flex items-center gap-2.5 sm:justify-end">
-                    <a
-                      href={directionsUrlForCoords(currentRank.lat, currentRank.lon)}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      href={vibeMapUrlForCoords(currentRank.lat, currentRank.lon)}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 transition-colors"
                     >
-                      <Navigation size={13} /> GPS Directions
-                    </a>
+                      <Navigation size={13} /> Show on the Vibe Map
+                    </Link>
                     <div className="text-right">
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300">
                         {currentRank.associationCode}
@@ -263,14 +263,12 @@ export default function TaxiRankTelemetryModal({
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <a
-                              href={directionsUrlForAddress(route.destination, currentRank.address)}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <Link
+                              href={vibeMapUrlForPlace(route.destination)}
                               className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] font-medium transition-colors flex items-center gap-1"
                             >
-                              <Navigation size={11} className="text-emerald-400" /> Route
-                            </a>
+                              <Navigation size={11} className="text-emerald-400" /> Destination
+                            </Link>
                             <button
                               onClick={() => {
                                 playTactileSound('click')
