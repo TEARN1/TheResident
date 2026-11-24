@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+# The workflow token can only read the code (supply-chain review, Nov 2026).
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: TypeCheck, Unit Tests, Fuzzing & Scale Benchmark
