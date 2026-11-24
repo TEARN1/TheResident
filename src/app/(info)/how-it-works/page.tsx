@@ -1,17 +1,96 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import styles from '../info.module.css'
+import { Breadcrumbs, JsonLd } from '../directory-views'
+import { siteUrl } from '../../site-url'
 
 export const metadata: Metadata = {
-  title: 'How The Resident Works — Join Your Suburb in Minutes',
+  title: 'How The Resident Crew Works — Join Your Suburb in Minutes',
   description:
-    'Sign up, join your suburb and start finding trusted local services, rooms, lift clubs and marketplaces. Here is how The Resident works, step by step.',
+    'Sign up free, join your South African suburb, and start finding verified rooms, local plumbers, live safety radar, and spaza shops step by step.',
+  keywords: [
+    'how The Resident Crew works',
+    'join South African suburb network',
+    'find verified rooms no agent fees',
+    'neighbourhood safety alerts South Africa',
+  ],
   alternates: { canonical: '/how-it-works' },
+  openGraph: {
+    type: 'website',
+    title: 'How The Resident Crew Works — Join Your Suburb in Minutes',
+    description:
+      'Sign up free, join your suburb, and start finding verified rooms, local services, and safety alerts step by step.',
+    url: `${siteUrl()}/how-it-works`,
+    siteName: 'The Resident Crew',
+    locale: 'en_ZA',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'How The Resident Crew Works' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'How The Resident Crew Works — Join Your Suburb in Minutes',
+    description:
+      'Sign up free, join your suburb, and start finding verified rooms, local services, and safety alerts.',
+    images: ['/opengraph-image'],
+  },
 }
 
 export default function HowItWorksPage() {
+  const base = siteUrl()
+  const howToJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    '@id': `${base}/how-it-works#howto`,
+    url: `${base}/how-it-works`,
+    name: 'How The Resident Crew Works — Join Your Suburb in Minutes',
+    description:
+      'Sign up, join your suburb and start finding trusted local services, rooms, lift clubs and marketplaces.',
+    isPartOf: { '@id': `${base}/#website` },
+    publisher: { '@id': `${base}/#parent-org` },
+    about: { '@id': `${base}/#app` },
+    step: [
+      {
+        '@type': 'HowToStep',
+        position: 1,
+        name: 'Create an account',
+        text: 'Sign up with your email address or Facebook in seconds.',
+        url: `${base}/auth`,
+      },
+      {
+        '@type': 'HowToStep',
+        position: 2,
+        name: 'Join your suburb',
+        text: 'Tell us where you live and whether you are a tenant, landlord or visitor, so you see what is happening near you.',
+      },
+      {
+        '@type': 'HowToStep',
+        position: 3,
+        name: 'Explore your neighbourhood',
+        text: 'Browse local services, the marketplace, housing and community notices.',
+      },
+      {
+        '@type': 'HowToStep',
+        position: 4,
+        name: 'Connect and trade',
+        text: 'Message neighbours directly, hire a service, join a lift club or post something of your own.',
+      },
+      {
+        '@type': 'HowToStep',
+        position: 5,
+        name: 'Rate and be rated',
+        text: 'After you deal with someone, leave a rating. Good ratings build your reputation in the community.',
+      },
+    ],
+  }
+
   return (
     <>
+      <Breadcrumbs
+        trail={[
+          { name: 'Home', href: '/' },
+          { name: 'How it works', href: '/how-it-works' },
+        ]}
+      />
+      <JsonLd data={howToJsonLd} />
       <h1>How The Resident works</h1>
       <p className={styles.lede}>Getting started takes a few minutes.</p>
 

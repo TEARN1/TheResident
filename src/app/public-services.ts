@@ -4,6 +4,7 @@
 // Plain PostgREST fetches with the anon key, so no session or cookies are
 // involved and the pages can be cached.
 
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../utils/supabaseConfig'
 export interface PublicService {
   id: string
   business_name: string
@@ -37,8 +38,8 @@ export const REVALIDATE_SECONDS = 3600
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 async function query<T>(view: string, params: string): Promise<T[]> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const url = SUPABASE_URL
+  const key = SUPABASE_ANON_KEY
   if (!url || !key) return []
   try {
     const res = await fetch(`${url}/rest/v1/${view}?${params}`, {
@@ -205,13 +206,29 @@ export function servicePlace(s: { suburb: string | null; city: string | null }):
 }
 
 
+export const DEFAULT_SERVICE_CATEGORIES: Record<string, string> = {
+  plumbing: 'Plumbing & Geysers',
+  electrical: 'Electrical & Backup Power',
+  'bakkie-transport': 'Bakkie & Moving Transport',
+  'tow-truck-recovery': 'Tow Truck & Roadside Recovery',
+  'truck-freight': 'Trucks & Heavy Freight',
+  carpentry: 'Carpentry, Doors & Welding',
+  'appliance-repair': 'Fridge, Stove & Appliance Repair',
+  cleaning: 'Home & Move-Out Cleaning',
+  painting: 'Painting, Waterproofing & Tiling',
+  'wifi-dstv': 'Wi-Fi, Fibre & DSTV Installation',
+}
+
 export const DEFAULT_AREAS = [
   { slug: 'soweto', name: 'Soweto', city: 'Johannesburg' },
   { slug: 'tembisa', name: 'Tembisa', city: 'Johannesburg' },
   { slug: 'mamelodi', name: 'Mamelodi', city: 'Pretoria' },
   { slug: 'midrand', name: 'Midrand', city: 'Johannesburg' },
   { slug: 'braamfontein', name: 'Braamfontein', city: 'Johannesburg' },
+  { slug: 'auckland-park', name: 'Auckland Park', city: 'Johannesburg' },
+  { slug: 'cottesloe', name: 'Cottesloe', city: 'Johannesburg' },
   { slug: 'hatfield', name: 'Hatfield', city: 'Pretoria' },
+  { slug: 'pretoria-cbd', name: 'Pretoria CBD', city: 'Pretoria' },
   { slug: 'sunnyside', name: 'Sunnyside', city: 'Pretoria' },
   { slug: 'rondebosch', name: 'Rondebosch', city: 'Cape Town' },
   { slug: 'stellenbosch', name: 'Stellenbosch', city: 'Cape Town' },

@@ -98,6 +98,7 @@ export default function CommunityPage() {
   useEffect(() => {
     const tab = tabFromParams(searchParams)
     if (!tab) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync the open tab from the URL when it changes
     setSubTab(tab)
     setMapFullscreen(tab === 'vibemap')
   }, [searchParams])
@@ -206,6 +207,7 @@ export default function CommunityPage() {
 
   useEffect(() => {
     if (!currentUser || isGuestUser(currentUser) || !supabase || myCommunityIds.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale admin communities when there is nothing to load
       setAdminCommunities([])
       return
     }

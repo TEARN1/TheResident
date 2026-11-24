@@ -1,7 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, CheckCircle2, Compass, Download, Home, LogIn, MapPin, Search, ShieldCheck, Smartphone, Sparkles, Wrench } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Compass, Download, Home, LogIn, MapPin, Search, ShieldCheck, Smartphone, Sparkles, Wrench, Car, PartyPopper, Activity } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import styles from './page.module.css'
@@ -20,7 +20,7 @@ const POPULAR_AREAS = [
 
 const TRUST_PILLARS = [
   'Zero Broker Fees',
-  'Verified Landlords',
+  'Tenant Reviews',
   'Neighbourhood Safety'
 ]
 
@@ -33,12 +33,12 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: 'Neighbours who have your back',
-    text: 'Real-time safety alerts, verified crime reports and help from verified people on your street.'
+    text: 'Safety alerts from your street, a shared notice board and help from your neighbours.'
   },
   {
     icon: Wrench,
     title: 'Local services and trade',
-    text: 'Find a reliable plumber, electrician, bakkie or spaza nearby, vetted and rated by neighbours.'
+    text: 'Find a plumber, electrician, bakkie or spaza nearby, rated by your neighbours.'
   }
 ]
 
@@ -82,7 +82,7 @@ export default function HomePage() {
           <Image src="/logo.png" alt="" width={32} height={32} style={{ borderRadius: '6px' }} />
           <span>THE RESIDENT</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <button
             type="button"
             onClick={() => enterApp('/dashboard/community?tab=vibemap')}
@@ -154,21 +154,27 @@ export default function HomePage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#34d399' }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-              Live Precinct Radar Active
+              Live neighbourhood map
             </span>
             <span style={{ fontSize: '0.75rem', color: '#fbbf24', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              The Grooves &times; The Resident <ArrowRight size={13} />
+              The Gruvs &times; The Resident <ArrowRight size={13} />
             </span>
           </div>
 
           <p style={{ margin: 0, fontSize: '0.85rem', color: '#e5e7eb', lineHeight: 1.45, fontWeight: 500 }}>
-            Unified live radar: street closures, weekend vibes, funerals, marathon routes, volunteer pointsmen, and grid telemetry.
+            Street closures, weekend events, funerals, marathon routes and pointsmen, as reported by people near you.
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: '2px' }}>
-            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }}>🚦 Traffic & Detours</span>
-            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }}>🎉 Event Vibes</span>
-            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }}>🏃 Marathon Corridors</span>
+            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Car size={11} className="text-amber-400" /> Traffic & Detours
+            </span>
+            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <PartyPopper size={11} className="text-gold-primary" /> Event Vibes
+            </span>
+            <span style={{ fontSize: '0.7rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', color: '#d1d5db', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Activity size={11} className="text-emerald-400" /> Marathon Corridors
+            </span>
           </div>
         </div>
 
@@ -398,6 +404,64 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      <nav
+        aria-label="Explore South African suburbs, campuses and leadership"
+        style={{
+          maxWidth: '1040px',
+          width: '100%',
+          margin: '0 auto',
+          padding: '0 16px 28px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '16px',
+          position: 'relative',
+          zIndex: 5,
+        }}
+      >
+        <div style={{ padding: '16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gold-primary)' }}>
+            Popular Suburbs
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', fontSize: '0.84rem' }}>
+            <Link href="/area/braamfontein" style={{ color: '#d1d5db', textDecoration: 'none' }}>Braamfontein</Link>
+            <Link href="/area/auckland-park" style={{ color: '#d1d5db', textDecoration: 'none' }}>Auckland Park</Link>
+            <Link href="/area/soweto" style={{ color: '#d1d5db', textDecoration: 'none' }}>Soweto</Link>
+            <Link href="/area/hatfield" style={{ color: '#d1d5db', textDecoration: 'none' }}>Hatfield</Link>
+            <Link href="/area/pretoria-cbd" style={{ color: '#d1d5db', textDecoration: 'none' }}>Pretoria CBD</Link>
+            <Link href="/area/cottesloe" style={{ color: '#d1d5db', textDecoration: 'none' }}>Cottesloe</Link>
+            <Link href="/area" style={{ color: '#fbbf24', textDecoration: 'none', fontWeight: 700 }}>All Suburbs &rarr;</Link>
+          </div>
+        </div>
+
+        <div style={{ padding: '16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gold-primary)' }}>
+            Student Accommodation
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', fontSize: '0.84rem' }}>
+            <Link href="/campus/wits-braamfontein" style={{ color: '#d1d5db', textDecoration: 'none' }}>Wits University</Link>
+            <Link href="/campus/uj-auckland-park" style={{ color: '#d1d5db', textDecoration: 'none' }}>UJ Auckland Park</Link>
+            <Link href="/campus/up-hatfield" style={{ color: '#d1d5db', textDecoration: 'none' }}>UP Hatfield</Link>
+            <Link href="/campus/uct-rondebosch" style={{ color: '#d1d5db', textDecoration: 'none' }}>UCT Rondebosch</Link>
+            <Link href="/campus" style={{ color: '#fbbf24', textDecoration: 'none', fontWeight: 700 }}>All Campuses &rarr;</Link>
+          </div>
+        </div>
+
+        <div style={{ padding: '16px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gold-primary)' }}>
+            Directories &amp; Leadership
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', fontSize: '0.84rem' }}>
+            <Link href="/rooms" style={{ color: '#d1d5db', textDecoration: 'none' }}>Rooms to Rent</Link>
+            <Link href="/services" style={{ color: '#d1d5db', textDecoration: 'none' }}>Local Services</Link>
+            <Link href="/shops" style={{ color: '#d1d5db', textDecoration: 'none' }}>Local Shops</Link>
+            <Link href="/taxi-ranks" style={{ color: '#d1d5db', textDecoration: 'none' }}>Taxi Ranks &amp; Fares</Link>
+            <Link href="/founder" style={{ color: '#d1d5db', textDecoration: 'none' }}>Founder &amp; CEO</Link>
+            <Link href="/press" style={{ color: '#d1d5db', textDecoration: 'none' }}>Press &amp; Media Kit</Link>
+            <Link href="/about" style={{ color: '#d1d5db', textDecoration: 'none' }}>About</Link>
+          </div>
+        </div>
+      </nav>
 
       <footer style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 24px', padding: '24px 16px 32px', fontSize: '0.85rem', borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 'auto' }}>
         {infoLinks.map(l => (

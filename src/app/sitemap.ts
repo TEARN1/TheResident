@@ -1,8 +1,10 @@
 import type { MetadataRoute } from 'next'
 import { siteUrl } from './site-url'
 import { infoLinks, INFO_PAGES_UPDATED } from './info-links'
+import { FOUNDER_IMAGES } from './entity-schema'
 import { listDirectory, distinct, latest, DEFAULT_AREAS, CAMPUSES, type DirectoryEntry } from './public-services'
 import { listPublicListings, roomImages } from './public-listings'
+import { SA_TAXI_RANKS } from '../utils/taxiRoutes'
 
 export const revalidate = 3600 // must be a literal; matches REVALIDATE_SECONDS
 
@@ -76,21 +78,59 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ]
 
+  const pageImages: Record<string, string[]> = {
+    '/founder': [...FOUNDER_IMAGES.map(img => `${base}${img.path}`), `${base}/founder/opengraph-image`],
+    '/press': [
+      `${base}/press/opengraph-image`,
+      `${base}/logo.png`,
+      `${base}/opengraph-image`,
+      `${base}${FOUNDER_IMAGES[0].path}`,
+    ],
+    '/about': [`${base}/logo.png`],
+  }
+
+  const pagePriority = (href: string): number => {
+    if (href === '/founder') return 0.9
+    if (href === '/rooms') return 0.9
+    if (href === '/press' || href === '/taxi-ranks') return 0.85
+    if (href === '/privacy' || href === '/terms') return 0.3
+    return 0.6
+  }
+
+  const taxiRankPages: MetadataRoute.Sitemap = SA_TAXI_RANKS.map(rank => ({
+    url: `${base}/taxi-ranks/${rank.id}`,
+    lastModified: INFO_PAGES_UPDATED,
+    changeFrequency: 'weekly',
+    priority: 0.8,
+  }))
+
   return [
-    { url: `${base}/`, lastModified: latest(entries) ?? INFO_PAGES_UPDATED, changeFrequency: 'daily', priority: 1 },
+    {
+      url: `${base}/`,
+      lastModified: latest(entries) ?? INFO_PAGES_UPDATED,
+      changeFrequency: 'daily',
+      priority: 1,
+      images: [`${base}/logo.png`, `${base}/opengraph-image`],
+    },
     { url: `${base}/auth`, lastModified: INFO_PAGES_UPDATED, changeFrequency: 'monthly', priority: 0.5 },
-    ...infoLinks.map(l =>
-      dynamicHubs.has(l.href)
-        ? { ...hub(l.href, entries, 0.8), lastModified: latest(entries) ?? INFO_PAGES_UPDATED, changeFrequency: 'daily' as const }
-        : {
-            url: `${base}${l.href}`,
-            lastModified: INFO_PAGES_UPDATED,
-            changeFrequency: 'monthly' as const,
-            priority: l.href === '/privacy' || l.href === '/terms' ? 0.3 : 0.6,
-          }),
+    { url: `${base}/llms.txt`, lastModified: INFO_PAGES_UPDATED, changeFrequency: 'weekly', priority: 0.7 },
+    { url: `${base}/llms-full.txt`, lastModified: INFO_PAGES_UPDATED, changeFrequency: 'weekly', priority: 0.7 },
+    ...infoLinks
+      .filter(l => l.href !== '/campus')
+      .map(l =>
+        dynamicHubs.has(l.href)
+          ? { ...hub(l.href, entries, 0.8), lastModified: latest(entries) ?? INFO_PAGES_UPDATED, changeFrequency: 'daily' as const }
+          : {
+              url: `${base}${l.href}`,
+              lastModified: INFO_PAGES_UPDATED,
+              changeFrequency: l.href === '/rooms' || l.href === '/taxi-ranks' ? ('daily' as const) : ('monthly' as const),
+              priority: pagePriority(l.href),
+              ...(pageImages[l.href] ? { images: pageImages[l.href] } : {}),
+            }),
     ...categoryPages,
     ...areaPages,
     ...campusPages,
+    ...taxiRankPages,
     ...listingPages,
     ...roomPages,
   ]

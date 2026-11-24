@@ -3,9 +3,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import styles from '../../info.module.css'
 import { getPublicListing, roomImages, roomPrice } from '../../../public-listings'
+import { slugify } from '../../../public-services'
 import { listingShareText, whatsappShareUrl } from '../../../../utils/publicListings'
 import { siteUrl } from '../../../site-url'
 import TrackRoomView from './TrackRoomView'
+import { Breadcrumbs, JsonLd } from '../../directory-views'
 
 export const revalidate = 300 // must be a literal; matches ROOM_REVALIDATE_SECONDS
 
@@ -15,8 +17,7 @@ const KIND: Record<string, string> = { rent: 'Room to rent', sale: 'Place for sa
 
 // The page a room shared on WhatsApp opens: readable without an account,
 // with an Open Graph preview (photo, price, suburb) so the chat shows what
-// the link is before anyone taps it. Rooms come and go, so it is kept out of
-// search results; a filled or hidden room simply stops resolving.
+// the link is before anyone taps it.
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
   const row = await getPublicListing(id)
@@ -30,17 +31,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${title} | The Resident`,
     description,
-    robots: { index: false, follow: true },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-image-preview': 'large',
+      },
+    },
     alternates: { canonical: `/rooms/${row.id}` },
     openGraph: {
       title,
       description,
       url: `${siteUrl()}/rooms/${row.id}`,
-      siteName: 'The Resident',
+      siteName: 'The Resident Crew',
       type: 'website',
-      images: image ? [{ url: image }] : undefined,
+      locale: 'en_ZA',
+      images: image
+        ? [{ url: image }]
+        : [{ url: '/opengraph-image', width: 1200, height: 630, alt: title }],
     },
-    twitter: { card: image ? 'summary_large_image' : 'summary', title, description, images: image ? [image] : undefined },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image || '/opengraph-image'],
+    },
   }
 }
 
@@ -65,9 +82,47 @@ export default async function RoomPage({ params }: Props) {
     row.landlord_lives_here && 'Landlord lives on the property',
   ].filter(Boolean) as string[]
 
+  const trail = [
+    { name: 'Home', href: '/' },
+    { name: 'Student Accommodation & Rooms', href: '/campus' },
+    ...(row.suburb ? [{ name: row.suburb, href: `/area/${slugify(row.suburb)}` }] : []),
+    { name: row.title, href: `/rooms/${row.id}` },
+  ]
+
+  const base = siteUrl()
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Accommodation',
+    name: row.title,
+    description: row.description || `${KIND[row.listing_type || 'rent'] || 'Room'}${place ? ` in ${place}` : ''}`,
+    url: `${base}/rooms/${row.id}`,
+    image: images.length > 0 ? images : [`${base}/opengraph-image`],
+    isPartOf: { '@id': `${base}/#website` },
+    provider: { '@id': `${base}/#parent-org` },
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: row.suburb || row.city || 'Johannesburg',
+      addressRegion: row.city || undefined,
+      addressCountry: 'ZA',
+    },
+    offers: {
+      '@type': 'Offer',
+      price: Number(row.price) || 0,
+      priceCurrency: row.currency || 'ZAR',
+      availability: 'https://schema.org/InStock',
+    },
+    amenityFeature: features.map(f => ({
+      '@type': 'LocationFeatureSpecification',
+      name: f,
+      value: true,
+    })),
+  }
+
   return (
     <>
       <TrackRoomView type={row.listing_type || 'rent'} />
+      <Breadcrumbs trail={trail} />
+      <JsonLd data={jsonLd} />
       <p className={styles.updated}>{KIND[row.listing_type || 'rent'] || 'Room'}{place && <> · {place}</>}</p>
       <h1>{row.title}</h1>
       <p className={styles.lede}><strong>{roomPrice(row)}</strong></p>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="The Resident Crew Live Precinct Radar and Neighbourhood Safety Platform in Johannesburg">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#051F20" />
+      <stop offset="50%" stop-color="#0b2824" />
+      <stop offset="100%" stop-color="#191406" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#bg3)" />
+  <circle cx="880" cy="400" r="240" fill="none" stroke="#00f2ff" stroke-opacity="0.25" stroke-width="2" />
+  <circle cx="880" cy="400" r="160" fill="none" stroke="#d4af37" stroke-opacity="0.35" stroke-width="2" />
+  <circle cx="880" cy="400" r="80" fill="#d4af37" fill-opacity="0.18" stroke="#d4af37" stroke-width="2" />
+  <circle cx="880" cy="400" r="14" fill="#00f2ff" />
+  <text x="90" y="190" fill="#d4af37" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="22" font-weight="700" letter-spacing="5">PRODUCT SHOWCASE · SOUTH AFRICA</text>
+  <text x="90" y="275" fill="#ffffff" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="60" font-weight="800">The Resident Crew</text>
+  <text x="90" y="340" fill="#e2e8f0" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="28" font-weight="500">Live Precinct Radar &amp; Verified Housing</text>
+  <text x="90" y="430" fill="#cbd5e1" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="24">• Zero-Broker Rooms &amp; Student Accommodation</text>
+  <text x="90" y="480" fill="#cbd5e1" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="24">• 5-Second Panic Beacon &amp; Trust Circles</text>
+  <text x="90" y="530" fill="#cbd5e1" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="24">• Neighbour-Vetted Artisans &amp; Spaza Shops</text>
+  <text x="90" y="650" fill="#94a3b8" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="22">Founded by Asemahle &quot;TEARN&quot; Nkwali · TEARN Ventures</text>
+</svg>

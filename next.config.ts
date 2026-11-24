@@ -45,6 +45,18 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  async redirects() {
+    return [
+      { source: '/areas', destination: '/area', permanent: true },
+      { source: '/areas/:area', destination: '/area/:area', permanent: true },
+      { source: '/local-services', destination: '/services', permanent: true },
+      { source: '/student-accommodation', destination: '/campus', permanent: true },
+      { source: '/leadership', destination: '/founder', permanent: true },
+      { source: '/rooms-to-rent', destination: '/rooms', permanent: true },
+      { source: '/taxis', destination: '/taxi-ranks', permanent: true },
+      { source: '/municipal-wards', destination: '/wards', permanent: true },
+    ]
+  },
   async headers() {
     return [
       {

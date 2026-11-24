@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, FileText, Download, ShieldCheck, Printer } from 'lucide-react'
 import { playTactileSound } from '../../../../utils/tactileSounds'
+import { depositFairnessCheck } from '../../../../utils/logic'
 
 interface SALeaseAgreementModalProps {
   isOpen: boolean
@@ -331,8 +332,17 @@ Generated via The Resident Global Civic Platform (TEARN Ecosystem)
                     type="number"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(Number(e.target.value))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-primary/50"
+                    className={`w-full bg-white/5 border rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-gold-primary/50 ${
+                      selectedJur.code === 'SA' && !depositFairnessCheck(depositAmount, monthlyRent).isLegal
+                        ? 'border-amber-400/80'
+                        : 'border-white/10'
+                    }`}
                   />
+                  {selectedJur.code === 'SA' && !depositFairnessCheck(depositAmount, monthlyRent).isLegal && (
+                    <p className="text-[10px] text-amber-400 font-bold leading-tight">
+                      ⚠️ Exceeds Rental Housing Act guideline ({currency} {(monthlyRent * 2).toLocaleString()})
+                    </p>
+                  )}
                 </div>
               </div>
 

@@ -133,12 +133,13 @@ export default function CommandPalette() {
       <button
         type="button"
         onClick={() => { setOpen(true); playTactileSound('pop') }}
-        className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all text-xs font-semibold"
+        className="hidden lg:flex items-center gap-1.5 xl:gap-2 px-2.5 xl:px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all text-xs font-semibold shrink-0"
         title="Open Command Palette (Ctrl+K)"
       >
-        <Search size={13} className="text-gold-primary" />
-        <span>Search or jump to...</span>
-        <kbd className="px-1.5 py-0.5 text-[9px] bg-black/60 rounded border border-white/15 text-gray-400 font-mono font-bold">
+        <Search size={13} className="text-gold-primary shrink-0" />
+        <span className="hidden xl:inline">Search or jump to...</span>
+        <span className="hidden lg:inline xl:hidden">Search...</span>
+        <kbd className="px-1.5 py-0.5 text-[9px] bg-black/60 rounded border border-white/15 text-gray-400 font-mono font-bold shrink-0">
           Ctrl K
         </kbd>
       </button>

@@ -1,17 +1,52 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
 import styles from '../info.module.css'
+import { Breadcrumbs, JsonLd } from '../directory-views'
+import { siteUrl } from '../../site-url'
+import { FOUNDER_IMAGES, FOUNDER_PROFILE } from '../../entity-schema'
 
 export const metadata: Metadata = {
   title: 'About The Resident — Your Suburb, Connected',
   description:
-    'The Resident is a community app for South African neighbourhoods: local services, spaza marketplaces, lift clubs, rooms to rent, and street safety alerts from verified neighbours.',
+    'The Resident is a community app for South African neighbourhoods: local services, spaza marketplaces, lift clubs, rooms to rent, and street safety alerts from your neighbours.',
   alternates: { canonical: '/about' },
+  openGraph: {
+    title: 'About The Resident — Your Suburb, Connected',
+    description:
+      'The Resident is a community app for South African neighbourhoods: local services, spaza marketplaces, lift clubs, rooms to rent, and street safety alerts from your neighbours.',
+    url: `${siteUrl()}/about`,
+  },
 }
 
 export default function AboutPage() {
+  const base = siteUrl()
+  const aboutJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    '@id': `${base}/about#webpage`,
+    name: 'About The Resident',
+    description:
+      'The Resident connects people living on the same streets to trade, find verified accommodation, and keep neighbourhoods safe across South Africa.',
+    url: `${base}/about`,
+    isPartOf: { '@id': `${base}/#website` },
+    about: { '@id': `${base}/#parent-org` },
+    mainEntity: { '@id': `${base}/#parent-org` },
+    speakable: {
+      '@type': 'SpeakableSpecification',
+      cssSelector: ['h1', 'h2', 'p'],
+    },
+  }
+
   return (
     <>
+      <Breadcrumbs
+        trail={[
+          { name: 'Home', href: '/' },
+          { name: 'About', href: '/about' },
+        ]}
+      />
+      <JsonLd data={aboutJsonLd} />
       <h1>About The Resident</h1>
       <p className={styles.lede}>
         The Resident is a community app that connects the people who live on the same streets, so
@@ -43,6 +78,33 @@ export default function AboutPage() {
         makes it easier to choose who to hire, buy from or share a home with, and harder for
         anyone to take advantage of the community.
       </p>
+
+      <h2>Leadership &amp; Ecosystem</h2>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center', margin: '12px 0 20px' }}>
+        <Image
+          src={FOUNDER_IMAGES[0].path}
+          alt={FOUNDER_IMAGES[0].alt}
+          width={FOUNDER_IMAGES[0].width}
+          height={FOUNDER_IMAGES[0].height}
+          style={{
+            width: '120px',
+            height: '160px',
+            objectFit: 'cover',
+            borderRadius: '12px',
+            border: '2px solid var(--gold-primary)',
+            flexShrink: 0,
+          }}
+        />
+        <p style={{ flex: '1 1 280px', margin: 0 }}>
+          The Resident Crew was founded by <strong>{FOUNDER_PROFILE.fullName}</strong> as part
+          of the <strong>{FOUNDER_PROFILE.parentOrgName}</strong> ecosystem alongside live event discovery platform{' '}
+          <a href="https://thegruvs.com" target="_blank" rel="noopener noreferrer">The Gruvs</a>{' '}
+          and practical workplace spreadsheet training platform{' '}
+          <a href="https://excellencyacs.com" target="_blank" rel="noopener noreferrer">Excellency Academy</a>.
+          Read more about our <Link href="/founder">Founder &amp; CEO</Link> or visit our{' '}
+          <Link href="/press">Press &amp; Media Kit</Link>.
+        </p>
+      </div>
 
       <div className={styles.cta}>
         <p><strong>Ready to meet your neighbours?</strong></p>

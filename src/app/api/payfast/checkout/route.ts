@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { buildPayFastPaymentRequest, type SelfServePaymentItem } from '../../../../utils/payfast'
 import { PRICING } from '../../../../utils/pricing'
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../../../../utils/supabaseConfig'
 
 export async function POST(request: Request) {
   try {
@@ -16,8 +17,8 @@ export async function POST(request: Request) {
     }
 
     const cookieStore = await cookies()
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabaseUrl = SUPABASE_URL
+    const supabaseAnonKey = SUPABASE_ANON_KEY
 
     let userId: string | null = null
     let userEmail: string | undefined = undefined

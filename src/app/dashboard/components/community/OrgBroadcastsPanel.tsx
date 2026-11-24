@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Megaphone, Send, Plus, X, Bell, BellOff, Building2 } from 'lucide-react'
+import { BadgeCheck, Megaphone, Send, Plus, X, Bell, BellOff, Building2 } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState, AppDispatch, isGuestUser, addLog, addNotification } from '../../../../store'
 import {
@@ -65,8 +65,22 @@ export default function OrgBroadcastsPanel() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!currentUser || guest) return
     let cancelled = false
+    if (!currentUser || guest) {
+      Promise.all([
+        fetchAllUnits(),
+        fetchBroadcastFeed()
+      ]).then(([u, b]) => {
+        if (cancelled) return
+        setUnits(u)
+        setFeed(b)
+        setLoaded(true)
+      }).catch(() => {
+        if (!cancelled) setLoaded(true)
+      })
+      return () => { cancelled = true }
+    }
+
     Promise.all([
       fetchAllUnits(),
       fetchMySenderUnitIds(currentUser.id),
@@ -79,6 +93,8 @@ export default function OrgBroadcastsPanel() {
       setFollowedUnitIds(f)
       setFeed(b)
       setLoaded(true)
+    }).catch(() => {
+      if (!cancelled) setLoaded(true)
     })
     return () => { cancelled = true }
   }, [currentUser, guest])
@@ -88,7 +104,10 @@ export default function OrgBroadcastsPanel() {
   }
 
   const toggleFollow = async (unitId: string) => {
-    if (!currentUser) return
+    if (!currentUser || guest) {
+      setError('Sign in with a verified account to follow official channels and receive broadcast alerts.')
+      return
+    }
     const following = followedUnitIds.includes(unitId)
     try {
       if (following) {
@@ -105,7 +124,11 @@ export default function OrgBroadcastsPanel() {
   }
 
   const handleCreateUnit = async () => {
-    if (!currentUser || !newUnitName.trim()) return
+    if (!currentUser || guest) {
+      setError('Sign in with a verified account to register official broadcast units.')
+      return
+    }
+    if (!newUnitName.trim()) return
     setSubmitting(true)
     setError(null)
     try {
@@ -149,13 +172,20 @@ export default function OrgBroadcastsPanel() {
     }
   }
 
-  if (!currentUser || guest || !loaded) return null
+  if (!loaded) return null
 
   const canSendAnywhere = senderUnitIds.length > 0
   const postableUnits = units.filter(u => canPostAsUnit(units, senderUnitIds, u.id))
 
   return (
     <div className="glass-panel p-5 space-y-4">
+      {guest && (
+        <div className="bg-gold-primary/10 border border-gold-primary/20 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <p className="text-[11px] text-gray-300">
+            Updates from organisations near you: schools, estates, businesses and community groups. Sign in to follow and post.
+          </p>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="p-2 bg-gold-primary/10 rounded-xl">
@@ -163,7 +193,7 @@ export default function OrgBroadcastsPanel() {
           </div>
           <div>
             <p className="text-xs font-black text-white uppercase tracking-widest">Civic, Political, Org & Business Broadcasts</p>
-            <p className="text-[10px] text-gray-500">Government, Political Parties, Utilities, Estates, Schools & Businesses — opt-in cascade</p>
+            <p className="text-[10px] text-gray-500">Schools, estates, businesses and offices. Follow only the ones you want.</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -184,7 +214,7 @@ export default function OrgBroadcastsPanel() {
 
       {showCreateUnit && (
         <div className="bg-black/40 border border-white/5 rounded-xl p-4 space-y-3">
-          <p className="text-[10px] text-gray-500">Open an official broadcast unit — a Political Party, Ward Branch, Business, Estate/HOA, Utility, School, or Government Office. Creating one makes you its verified sender.</p>
+          <p className="text-[10px] text-gray-500">Open a broadcast account for your school, estate, business, community group or office. It shows as &ldquo;Not verified&rdquo; until The Resident confirms it&apos;s really your organisation.</p>
           <input
             value={newUnitName}
             onChange={e => setNewUnitName(e.target.value)}
@@ -242,6 +272,7 @@ export default function OrgBroadcastsPanel() {
                 }`}
               >
                 {following ? <Bell size={10} /> : <BellOff size={10} />} {u.name}
+                {u.verified && <BadgeCheck size={11} className="text-emerald-400" aria-label="Verified" />}
               </button>
             )
           })}
@@ -257,7 +288,13 @@ export default function OrgBroadcastsPanel() {
             return (
               <div key={b.id} className="bg-black/30 border border-white/5 rounded-xl p-3">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-gold-primary">{unit ? unit.name : 'Unknown unit'}</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-gold-primary flex items-center gap-1">
+                    {unit ? unit.name : 'Unknown unit'}
+                    {/* Anyone can open an account, so say which ones The Resident has checked. */}
+                    {unit?.verified
+                      ? <BadgeCheck size={11} className="text-emerald-400" aria-label="Verified" />
+                      : <span className="normal-case tracking-normal font-semibold text-gray-500">· Not verified</span>}
+                  </span>
                   <span className="text-[9px] text-gray-600">{new Date(b.createdAt).toLocaleDateString()}</span>
                 </div>
                 <p className="text-sm font-bold text-white">{b.title}</p>

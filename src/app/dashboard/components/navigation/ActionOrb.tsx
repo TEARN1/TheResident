@@ -49,7 +49,7 @@ export default function ActionOrb({ onOpenReportModal }: ActionOrbProps) {
   const actions: ActionOrbItem[] = [
     {
       id: 'vibe-drop',
-      title: 'Drop Live Vibe Pulse',
+      title: 'Report What\'s Happening',
       description: 'Report crowd busyness, vibe, or street status',
       icon: MapPin,
       color: '#00f2ff',
@@ -117,8 +117,8 @@ export default function ActionOrb({ onOpenReportModal }: ActionOrbProps) {
     },
     {
       id: 'emergency-trade',
-      title: 'Emergency Trade Callout',
-      description: 'Find verified local plumber, electrician, locksmith',
+      title: 'Find a Plumber or Electrician',
+      description: 'Local plumbers, electricians and locksmiths, rated by neighbours',
       icon: Wrench,
       color: '#3b82f6',
       action: () => router.push('/dashboard/services?tab=trades')
@@ -139,7 +139,7 @@ export default function ActionOrb({ onOpenReportModal }: ActionOrbProps) {
       <button
         type="button"
         onClick={toggleOpen}
-        aria-label="Universal Quick Actions Orb"
+        aria-label="Quick actions"
         aria-expanded={isOpen}
         className="relative -translate-y-4 w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-black border-2 border-gold-primary flex items-center justify-center text-gold-primary hover:bg-gold-primary/10 transition-transform active:scale-95 touch-target-48 group shrink-0"
       >
@@ -258,8 +258,8 @@ export default function ActionOrb({ onOpenReportModal }: ActionOrbProps) {
               </div>
 
               <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-gray-500">
-                <span>Truth Protocol Verified</span>
-                <span>Zero Broker Fees</span>
+                <span>Reports come from people near you</span>
+                <span>No broker fees</span>
               </div>
             </motion.div>
           </div>

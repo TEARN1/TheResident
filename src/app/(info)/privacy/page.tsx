@@ -1,11 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import styles from '../info.module.css'
+import { Breadcrumbs } from '../directory-views'
+import { siteUrl } from '../../site-url'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — The Resident',
-  description: 'How The Resident collects, uses and protects your personal information.',
+  title: 'Privacy Policy — POPIA Compliance | The Resident',
+  description: 'How The Resident collects, uses and protects your personal information in line with POPIA.',
   alternates: { canonical: '/privacy' },
+  openGraph: {
+    title: 'Privacy Policy — POPIA Compliance | The Resident',
+    description: 'How The Resident collects, uses and protects your personal information in line with POPIA.',
+    url: `${siteUrl()}/privacy`,
+  },
 }
 
 // DRAFT: a starting point written from what the app does. Have it reviewed
@@ -13,6 +20,12 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <>
+      <Breadcrumbs
+        trail={[
+          { name: 'Home', href: '/' },
+          { name: 'Privacy policy', href: '/privacy' },
+        ]}
+      />
       <h1>Privacy policy</h1>
       <p className={styles.updated}>Last updated: 27 September 2026</p>
 

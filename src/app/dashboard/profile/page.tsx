@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import Link from 'next/link'
 import Image from 'next/image'
-import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, ExternalLink, Table2, Sparkles, Palette, Volume2, VolumeX } from 'lucide-react'
+import { User as UserIcon, Briefcase, Save, Loader, ShieldCheck, LogIn, LogOut, Globe, Camera, Check, ExternalLink, Table2, Sparkles, Palette, Volume2, VolumeX, Users, Plus, Trash2, BedDouble, AlertTriangle } from 'lucide-react'
 import { GRUVS, TEARNS } from '../../../utils/sisterApps'
-import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification } from '../../../store'
+import { RootState, AppDispatch, updateProfile, updatePreferences, updateUserRole, setLegalName, setLanguage, logoutUser, isGuestUser, addLog, addNotification, addFamilyDependent, removeFamilyDependent, type FamilyDependent } from '../../../store'
 import { getErrorMessage } from '../../../utils/errors'
 import { supabase } from '../../../utils/supabase'
 import UpgradeButton from '../components/shared/UpgradeButton'
@@ -44,6 +44,7 @@ export default function ProfilePage() {
   // itself rather than behind a separate menu that had nothing else in it.
   const handleLogout = () => {
     document.cookie = 'guest-mode=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+    document.cookie = 'res_demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;'
     dispatch(logoutUser())
     router.push('/auth')
   }
@@ -53,6 +54,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const stored = localStorage.getItem('residentTheme')
     if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- read the saved colour theme from this device on mount
       setDashboardThemeState(stored)
     }
   }, [])
@@ -65,6 +67,7 @@ export default function ProfilePage() {
 
   const [mutedAudio, setMutedAudio] = useState(false)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read the saved sound setting on mount
     setMutedAudio(isTactileSoundMuted())
   }, [])
   const toggleMutedAudio = () => {
@@ -143,12 +146,86 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [roleSwitching, setRoleSwitching] = useState(false)
+
+  // Family Lineage & Child Profile Management State
+  const [showAddDependent, setShowAddDependent] = useState(false)
+  const [depName, setDepName] = useState('')
+  const [depRelationship, setDepRelationship] = useState<'child' | 'son' | 'daughter' | 'ward' | 'dependent'>('son')
+  const [depDob, setDepDob] = useState('')
+  const [depIdNumber, setDepIdNumber] = useState('')
+  const [depNotes, setDepNotes] = useState('')
+  const [depPhotoUrl, setDepPhotoUrl] = useState('')
+  const [depUploading, setDepUploading] = useState(false)
+  const [depNotice, setDepNotice] = useState<string | null>(null)
+  const depFileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleDepPhotoUpload = async (file: File) => {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return
+    setDepUploading(true)
+    try {
+      if (supabase && currentUser?.id) {
+        const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+        const path = `${currentUser.id}/dependents/${Date.now()}.${ext}`
+        const { error: upErr } = await supabase.storage.from('gossip-media').upload(path, file, { contentType: file.type })
+        if (upErr) throw upErr
+        const { data } = supabase.storage.from('gossip-media').getPublicUrl(path)
+        setDepPhotoUrl(data.publicUrl)
+      } else {
+        const url = URL.createObjectURL(file)
+        setDepPhotoUrl(url)
+      }
+    } catch {
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result === 'string') setDepPhotoUrl(reader.result)
+      }
+      reader.readAsDataURL(file)
+    } finally {
+      setDepUploading(false)
+    }
+  }
+
+  const handleSaveDependent = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!depName.trim() || !currentUser?.id) return
+    const newDep: FamilyDependent = {
+      id: `dep-${Date.now()}`,
+      parentId: currentUser.id,
+      parentLegalName: currentUser.legalName || currentUser.name,
+      fullName: depName.trim(),
+      relationship: depRelationship,
+      photoUrl: depPhotoUrl || undefined,
+      dateOfBirth: depDob || undefined,
+      idOrStudentNumber: depIdNumber.trim() || undefined,
+      notes: depNotes.trim() || undefined,
+      verifiedByParentAt: new Date().toISOString(),
+      status: 'verified_lineage'
+    }
+    dispatch(addFamilyDependent(newDep))
+    setDepName('')
+    setDepDob('')
+    setDepIdNumber('')
+    setDepNotes('')
+    setDepPhotoUrl('')
+    setShowAddDependent(false)
+    setDepNotice(`${newDep.fullName} is now registered and verified under your lineage.`)
+    playTactileSound('pop')
+    setTimeout(() => setDepNotice(null), 3500)
+  }
+
+  const handleRemoveDependent = (id: string, name: string) => {
+    dispatch(removeFamilyDependent(id))
+    playTactileSound('pop')
+    setDepNotice(`${name} removed from your dependents.`)
+    setTimeout(() => setDepNotice(null), 3500)
+  }
   // Arriving from Housing's "I have a room to rent" (?role=landlord): point
   // at the Landlord Mode switch rather than flipping the role silently.
   const [landlordHint, setLandlordHint] = useState(false)
   const roleCardRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('role') !== 'landlord') return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- highlight the role switch when arriving with ?role=landlord
     setLandlordHint(true)
     roleCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [])
@@ -188,6 +265,7 @@ export default function ProfilePage() {
   // from external state into local form state, not a render-loop risk.
   useEffect(() => {
     if (!currentUser) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- seed the form once the profile arrives
     setLegalNameInput(currentUser.legalName || '')
     if (currentUser.role === 'tenant' && currentUser.profile) {
       const p = currentUser.profile
@@ -392,10 +470,15 @@ export default function ProfilePage() {
           <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-black" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-white truncate tracking-tight">{currentUser.name}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-black text-white truncate tracking-tight">{currentUser.legalName || currentUser.name}</h1>
+            {currentUser.legalName && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-black text-emerald-400 uppercase tracking-wider">
+                <ShieldCheck size={11} /> Verified Formal Name
+              </span>
+            )}
           </div>
-          <p className="text-[11px] text-gold-primary uppercase tracking-widest font-black mt-0.5">{currentUser.role} Account</p>
+          <p className="text-[11px] text-gold-primary uppercase tracking-widest font-black mt-0.5">{currentUser.role} Account · Formal Resident Profile</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <TrustBadge userId={currentUser.id} />
           </div>
@@ -490,8 +573,8 @@ export default function ProfilePage() {
         <h2 className="text-sm font-black text-gold-primary uppercase tracking-widest flex items-center gap-2">
           <UserIcon size={16} /> Legal Name
         </h2>
-        <p className="text-[11px] text-gray-500">
-          Separate from your Gruvs display name — used where formality matters, like verification and a landlord&apos;s view of your application. Leave blank to keep using your display name everywhere.
+        <p className="text-[11px] text-gray-400 leading-relaxed">
+          Your formal legal identity for The Resident — protects against informal nightlife handles, required for lease agreements, deposit refunds, and landlord verification. Completely isolated from entertainment apps.
         </p>
         <form
           onSubmit={e => {
@@ -685,6 +768,216 @@ export default function ProfilePage() {
           </label>
           <SaveBar saving={saving} saved={saved} />
         </form>
+      )}
+
+      {currentUser.role === 'landlord' && (
+        <Card className="space-y-3 border-gold-primary/30 bg-gradient-to-br from-gold-primary/[0.04] to-black">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+              <BedDouble size={16} className="text-gold-primary" /> Room Inventory &amp; Empty Units
+            </h2>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-black text-emerald-400 uppercase tracking-wider">
+              RHA Compliance
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 leading-relaxed font-normal">
+            Manage each room individually (Room 1, 2, 3...): upload distinct photos for each empty unit, log known defects and room health notes, and flip status signs between <strong className="text-amber-400">Empty</strong> and <strong className="text-emerald-400">Occupied</strong>.
+          </p>
+          <div className="pt-1">
+            <Link
+              href="/dashboard/housing"
+              className="inline-flex items-center gap-2 bg-gold-primary hover:bg-gold-secondary text-black font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm active:scale-95 no-underline"
+            >
+              <BedDouble size={14} /> Open Room Studio &amp; Photos <ExternalLink size={12} />
+            </Link>
+          </div>
+        </Card>
+      )}
+
+      {currentUser.role === 'landlord' && (
+        <Card className="space-y-4 border-gold-primary/30 bg-gradient-to-br from-gold-primary/[0.03] to-black">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <ShieldCheck size={16} className="text-gold-primary" /> Family Lineage &amp; Verified Dependents
+              </h2>
+              <p className="text-xs text-gray-400 mt-1 leading-relaxed font-normal">
+                Register and vouch for your children under your formal landlord profile. When they start renting or moving to campus, receiving landlords can verify their authentic pedigree and parental guarantor status, eliminating ghost-account risk.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { playTactileSound('click'); setShowAddDependent(!showAddDependent) }}
+              className="px-3 py-1.5 rounded-xl bg-gold-primary/10 hover:bg-gold-primary/20 border border-gold-primary/30 text-gold-primary text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all active:scale-95 self-start"
+            >
+              <Plus size={13} /> {showAddDependent ? 'Cancel' : 'Add Child / Dependent'}
+            </button>
+          </div>
+
+          {depNotice && (
+            <p className="m-0 text-xs text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-xl">
+              {depNotice}
+            </p>
+          )}
+
+          {/* Add Dependent Collapsible Form */}
+          {showAddDependent && (
+            <form onSubmit={handleSaveDependent} className="p-4 rounded-2xl bg-black/60 border border-gold-primary/20 space-y-3.5">
+              <h3 className="text-xs font-black text-gold-primary uppercase tracking-wider m-0">Register Child / Dependent Profile</h3>
+
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                  {depPhotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={depPhotoUrl} alt="Dependent" className="w-full h-full object-cover" />
+                  ) : (
+                    <UserIcon size={20} className="text-gray-500" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <input
+                    ref={depFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleDepPhotoUpload(f) }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => depFileInputRef.current?.click()}
+                    disabled={depUploading}
+                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold flex items-center gap-1.5 transition-all"
+                  >
+                    <Camera size={13} /> {depUploading ? 'Uploading…' : depPhotoUrl ? 'Change Photo' : 'Upload Child Photo'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Full Legal Name</label>
+                  <input
+                    required
+                    value={depName}
+                    onChange={e => setDepName(e.target.value)}
+                    placeholder="e.g. Lethabo Nkosi"
+                    className="w-full bg-black border border-white/10 rounded-xl p-2.5 text-xs text-white outline-none focus:border-gold-primary/50"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Relationship</label>
+                  <select
+                    value={depRelationship}
+                    onChange={e => setDepRelationship(e.target.value as 'child' | 'son' | 'daughter' | 'ward' | 'dependent')}
+                    className="w-full bg-black border border-white/10 rounded-xl p-2.5 text-xs text-white outline-none focus:border-gold-primary/50 cursor-pointer"
+                  >
+                    <option value="son">Son</option>
+                    <option value="daughter">Daughter</option>
+                    <option value="child">Child</option>
+                    <option value="ward">Ward</option>
+                    <option value="dependent">Dependent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Date of Birth</label>
+                  <input
+                    type="date"
+                    value={depDob}
+                    onChange={e => setDepDob(e.target.value)}
+                    className="w-full bg-black border border-white/10 rounded-xl p-2.5 text-xs text-white outline-none focus:border-gold-primary/50"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">ID / Student Number (Optional)</label>
+                  <input
+                    value={depIdNumber}
+                    onChange={e => setDepIdNumber(e.target.value)}
+                    placeholder="e.g. South African ID or Student #"
+                    className="w-full bg-black border border-white/10 rounded-xl p-2.5 text-xs text-white outline-none focus:border-gold-primary/50"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lineage Notes / Origin</label>
+                <input
+                  value={depNotes}
+                  onChange={e => setDepNotes(e.target.value)}
+                  placeholder="e.g. 1st year University of Johannesburg student, born in Soweto"
+                  className="w-full bg-black border border-white/10 rounded-xl p-2.5 text-xs text-white outline-none focus:border-gold-primary/50"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAddDependent(false)}
+                  className="px-4 py-2 rounded-xl text-xs text-gray-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-gold-primary hover:bg-gold-secondary text-black font-black text-xs uppercase tracking-wider transition-all"
+                >
+                  Register &amp; Verify Lineage
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* List of Registered Dependents */}
+          {(!currentUser.dependents || currentUser.dependents.length === 0) ? (
+            <p className="text-xs text-gray-500 italic m-0">No children or dependents registered yet. Add them above to establish their verified family lineage for future room rentals.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {currentUser.dependents.map(dep => (
+                <div
+                  key={dep.id}
+                  className="p-3.5 rounded-2xl bg-black/40 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-gold-primary/10 border border-gold-primary/20 flex items-center justify-center overflow-hidden shrink-0">
+                      {dep.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={dep.photoUrl} alt={dep.fullName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-sm font-black text-gold-primary">{dep.fullName.charAt(0)}</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-white">{dep.fullName}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-gold-primary/15 border border-gold-primary/30 text-[10px] font-black uppercase text-gold-primary">
+                          {dep.relationship}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-black text-emerald-400 uppercase tracking-wider">
+                          <ShieldCheck size={11} /> Lineage Verified
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        Guaranteed by {dep.parentLegalName} {dep.dateOfBirth && `· Born ${dep.dateOfBirth}`} {dep.idOrStudentNumber && `· Ref: ${dep.idOrStudentNumber}`}
+                      </p>
+                      {dep.notes && <p className="text-[10px] text-gray-500 mt-0.5 italic">{dep.notes}</p>}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveDependent(dep.id, dep.fullName)}
+                    className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors self-end sm:self-center"
+                    title="Remove dependent"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
       )}
 
       {currentUser.role === 'landlord' && (

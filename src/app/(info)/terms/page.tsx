@@ -1,17 +1,30 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import styles from '../info.module.css'
+import { Breadcrumbs } from '../directory-views'
+import { siteUrl } from '../../site-url'
 
 export const metadata: Metadata = {
   title: 'Terms of Use — The Resident',
-  description: 'The rules for using The Resident community app.',
+  description: 'The rules for using The Resident community app across South African suburbs.',
   alternates: { canonical: '/terms' },
+  openGraph: {
+    title: 'Terms of Use — The Resident',
+    description: 'The rules for using The Resident community app across South African suburbs.',
+    url: `${siteUrl()}/terms`,
+  },
 }
 
 // DRAFT: a starting point, not legal advice. Have it reviewed before relying on it.
 export default function TermsPage() {
   return (
     <>
+      <Breadcrumbs
+        trail={[
+          { name: 'Home', href: '/' },
+          { name: 'Terms of use', href: '/terms' },
+        ]}
+      />
       <h1>Terms of use</h1>
       <p className={styles.updated}>Last updated: 27 September 2026</p>
 

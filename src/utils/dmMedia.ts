@@ -96,3 +96,23 @@ export function callSummaryBody(type: 'audio' | 'video', missed: boolean): strin
 export function photoBody(caption?: string): string {
   return caption?.trim() ? '📷 Photo: ' + caption.trim() : '📷 Photo attachment'
 }
+
+export const RESIDENT_MSG_PREFIX = 'res_'
+
+export function toResidentType(type: string): string {
+  return type.startsWith(RESIDENT_MSG_PREFIX) ? type : `${RESIDENT_MSG_PREFIX}${type}`
+}
+
+export function fromResidentType(type: string | null | undefined): string {
+  if (!type) return 'text'
+  return type.startsWith(RESIDENT_MSG_PREFIX) ? type.slice(RESIDENT_MSG_PREFIX.length) : type
+}
+
+export function isResidentMessage(m: { message_type?: string | null; body?: string }): boolean {
+  if (m.message_type && m.message_type.startsWith(RESIDENT_MSG_PREFIX)) return true
+  // Allow legacy resident messages (quotes, stickers, voice notes, beacons)
+  if (m.body && (m.body.startsWith('🎙️') || m.body.startsWith('📍') || m.body.startsWith('📞') || m.body.startsWith('📷') || m.body.startsWith('[quote:'))) {
+    return true
+  }
+  return false
+}

@@ -29,6 +29,8 @@ export interface OrgUnit {
     | 'business'
     | 'branch'
   ownerUserId: string | null
+  /** Set only by a platform admin after checking the unit is really that organisation. */
+  verified?: boolean
 }
 
 export interface OrgBroadcast {
@@ -103,7 +105,8 @@ function mapUnitRow(row: Record<string, unknown>): OrgUnit {
     parentId: (row.parent_id as string | null) ?? null,
     name: row.name as string,
     tier: row.tier as OrgUnit['tier'],
-    ownerUserId: (row.owner_user_id as string | null) ?? null
+    ownerUserId: (row.owner_user_id as string | null) ?? null,
+    verified: row.verified === true
   }
 }
 

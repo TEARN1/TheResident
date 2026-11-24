@@ -1,7 +1,9 @@
 {
-  "name": "The Resident Co-Living Hub",
+  "id": "/",
+  "name": "The Resident Crew",
   "short_name": "Resident",
-  "description": "Informal co-living, housing trading & community vibe mapping platform for South African residents",
+  "lang": "en-ZA",
+  "description": "Verified rooms to rent, student accommodation, and local community services for South African residents",
   "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "portrait",
@@ -26,6 +28,36 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/app-home-hero.png",
+      "sizes": "1024x640",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "The Resident Crew landing experience — verified South African rooms, live safety alerts, and local services"
+    },
+    {
+      "src": "/screenshots/app-live-precinct-map.png",
+      "sizes": "873x822",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Live 3D precinct radar and neighbourhood safety map across Braamfontein, Maboneng, and South African metros"
+    },
+    {
+      "src": "/screenshots/app-housing-rooms.png",
+      "sizes": "873x822",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Verified rooms to rent, roommate matching, and Rental Housing Act calculator tools"
+    },
+    {
+      "src": "/screenshots/app-local-services.png",
+      "sizes": "873x822",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Community services marketplace featuring express bakkie moving dispatch and local trades"
     }
   ],
   "shortcuts": [
@@ -56,6 +88,18 @@
       "description": "Book verified township & suburban handymen",
       "url": "/dashboard/services",
       "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://theresidentcrew.com/manifest.json"
+    },
+    {
+      "platform": "play",
+      "id": "com.TheResidentCrew.app",
+      "url": "https://theresidentcrew.com/theresident.apk"
     }
   ]
 }

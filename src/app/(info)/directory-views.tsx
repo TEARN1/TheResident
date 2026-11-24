@@ -4,6 +4,7 @@ import styles from './info.module.css'
 import { siteUrl } from '../site-url'
 import {
   listDirectory, areaLabel, distinct, SECTION_LABELS,
+  DEFAULT_AREAS, DEFAULT_SERVICE_CATEGORIES, VENDOR_KIND_LABELS,
   type DirectoryEntry, type Section,
 } from '../public-services'
 
@@ -96,9 +97,14 @@ export interface CategoryData {
 
 export async function loadCategory(section: Section, categorySlug: string, areaSlug?: string): Promise<CategoryData | null> {
   const all = (await listDirectory()).filter(e => e.section === section && e.categorySlug === categorySlug)
-  if (all.length === 0) return null
+  const fallbackCategory =
+    section === 'services' ? DEFAULT_SERVICE_CATEGORIES[categorySlug] : VENDOR_KIND_LABELS[categorySlug]
+  const category = all[0]?.category ?? fallbackCategory
+  if (!category) return null
   const entries = areaSlug ? all.filter(e => e.areaSlug === areaSlug) : all
-  if (entries.length === 0) return null
+  const defaultArea = areaSlug ? DEFAULT_AREAS.find(a => a.slug === areaSlug)?.name : undefined
+  const area = areaSlug ? areaLabel(all, areaSlug) ?? defaultArea : undefined
+  if (areaSlug && entries.length === 0 && !area) return null
   const areas = distinct(all, e => e.areaSlug).map(slug => ({
     slug,
     name: areaLabel(all, slug) ?? slug,
@@ -107,9 +113,9 @@ export async function loadCategory(section: Section, categorySlug: string, areaS
   return {
     section,
     categorySlug,
-    category: all[0].category,
+    category,
     areaSlug,
-    area: areaSlug ? areaLabel(all, areaSlug) ?? undefined : undefined,
+    area,
     entries: [...entries].sort((a, b) => a.name.localeCompare(b.name)),
     areas,
   }
@@ -120,16 +126,46 @@ export function categoryMetadata(d: CategoryData | null): Metadata {
   const where = d.area ? ` in ${d.area}` : ''
   const n = d.entries.length
   const path = `/${d.section}/${d.categorySlug}${d.areaSlug ? `/${d.areaSlug}` : ''}`
+  const base = siteUrl()
+  const title =
+    n > 0
+      ? `${d.category}${where} — ${n} local ${n === 1 ? 'listing' : 'listings'} | The Resident Crew`
+      : `${d.category}${where} — Verified Local Directory | The Resident Crew`
+  const description =
+    n > 0
+      ? `Find ${d.category.toLowerCase()}${where}: ${d.entries.slice(0, 3).map(e => e.name).join(', ')}${n > 3 ? ' and more' : ''}. Listed by residents on The Resident Crew.`
+      : `Find neighbour-vetted ${d.category.toLowerCase()}${where} across South Africa on The Resident Crew.`
   return {
-    title: `${d.category}${where} — ${n} local ${n === 1 ? 'listing' : 'listings'} | The Resident`,
-    description: `Find ${d.category.toLowerCase()}${where}: ${d.entries.slice(0, 3).map(e => e.name).join(', ')}${n > 3 ? ' and more' : ''}. Listed by residents on The Resident.`,
+    title,
+    description,
+    keywords: [
+      `${d.category}${where}`,
+      ...(d.area ? [`local ${d.category.toLowerCase()} ${d.area}`] : [`${d.category.toLowerCase()} South Africa`]),
+      'The Resident Crew',
+    ],
     alternates: { canonical: path },
+    openGraph: {
+      type: 'website',
+      title,
+      description,
+      url: `${base}${path}`,
+      siteName: 'The Resident Crew',
+      locale: 'en_ZA',
+      images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: `${d.category}${where}` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['/opengraph-image'],
+    },
   }
 }
 
 export function CategoryView({ d }: { d: CategoryData }) {
   const sectionHref = `/${d.section}`
   const categoryHref = `${sectionHref}/${d.categorySlug}`
+  const pagePath = `${categoryHref}${d.areaSlug ? `/${d.areaSlug}` : ''}`
   const trail = [
     { name: 'Home', href: '/' },
     { name: SECTION_LABELS[d.section], href: sectionHref },
@@ -143,25 +179,56 @@ export function CategoryView({ d }: { d: CategoryData }) {
       <JsonLd
         data={{
           '@context': 'https://schema.org',
-          '@type': 'ItemList',
-          itemListElement: d.entries.map((e, i) => ({ '@type': 'ListItem', position: i + 1, url: `${base}${e.href}`, name: e.name })),
+          '@type': 'CollectionPage',
+          '@id': `${base}${pagePath}#webpage`,
+          url: `${base}${pagePath}`,
+          name: `${d.category}${d.area ? ` in ${d.area}` : ''}`,
+          isPartOf: { '@id': `${base}/#website` },
+          publisher: { '@id': `${base}/#parent-org` },
+          mainEntity: {
+            '@type': 'ItemList',
+            itemListElement: d.entries.map((e, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              url: `${base}${e.href}`,
+              name: e.name,
+            })),
+          },
         }}
       />
       <h1>{d.category}{d.area && <> in {d.area}</>}</h1>
       <p className={styles.lede}>
-        {d.entries.length} {d.entries.length === 1 ? 'listing' : 'listings'} from residents
-        {d.area ? <> in {d.area}</> : ' across all areas'}.
+        {d.entries.length > 0 ? (
+          <>
+            {d.entries.length} {d.entries.length === 1 ? 'listing' : 'listings'} from residents
+            {d.area ? <> in {d.area}</> : ' across all areas'}.
+          </>
+        ) : (
+          <>
+            Verified {d.category.toLowerCase()} directory{d.area ? <> in {d.area}</> : ' across South Africa'}.
+          </>
+        )}
       </p>
 
-      <EntryList entries={d.entries} />
+      {d.entries.length > 0 ? (
+        <EntryList entries={d.entries} />
+      ) : (
+        <p style={{ color: 'rgba(255,255,255,0.78)' }}>
+          Be the first local provider listed under {d.category}{d.area ? ` in ${d.area}` : ''} — verified neighbours can publish a public profile in seconds.
+        </p>
+      )}
 
-      {!d.areaSlug && d.areas.length > 1 && (
+      {!d.areaSlug && (
         <>
           <h2>{d.category} by area</h2>
           <ul>
-            {d.areas.map(a => (
-              <li key={a.slug}><Link href={`${categoryHref}/${a.slug}`}>{d.category} in {a.name}</Link> ({a.count})</li>
-            ))}
+            {d.areas.length > 1
+              ? d.areas.map(a => (
+                  <li key={a.slug}><Link href={`${categoryHref}/${a.slug}`}>{d.category} in {a.name}</Link> ({a.count})</li>
+                ))
+              : DEFAULT_AREAS.map(a => (
+                  <li key={a.slug}><Link href={`${categoryHref}/${a.slug}`}>{d.category} in {a.name}</Link> ({a.city})</li>
+                ))}
           </ul>
         </>
       )}

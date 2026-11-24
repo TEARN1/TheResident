@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>The Resident Crew</ShortName>
+  <Description>Search verified rooms to rent, student accommodation, local services, and safety updates across South Africa.</Description>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Image width="192" height="192" type="image/png">https://theresidentcrew.com/logo.png</Image>
+  <Url type="text/html" method="get" template="https://theresidentcrew.com/dashboard/housing?q={searchTerms}" />
+</OpenSearchDescription>

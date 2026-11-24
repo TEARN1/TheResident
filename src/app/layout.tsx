@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import './globals.css'
 import { siteUrl } from './site-url'
+import { buildGlobalKnowledgeGraph } from './entity-schema'
 
 export const viewport: Viewport = {
   themeColor: '#051F20',
@@ -12,19 +14,91 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: 'The Resident Crew',
-  description: 'Find a room you can trust: real rooms from real landlords, with a fair-price check on every one. Plus SOS alerts, local services and trade with your neighbours.',
-  // Link previews (WhatsApp, Facebook, X). The image is app/opengraph-image.tsx.
+  title: {
+    default: 'The Resident Crew | Rooms to Rent, Student Housing & Local Services in South Africa',
+    template: '%s | The Resident Crew',
+  },
+  description:
+    'Find verified rooms to rent, student accommodation, and trusted local services across South Africa (Braamfontein, Auckland Park, Hatfield, Soweto). Zero broker fees, fair-price checks, and neighbourhood safety alerts.',
+  keywords: [
+    'rooms to rent',
+    'student accommodation South Africa',
+    'student housing Braamfontein',
+    'Auckland Park student rooms',
+    'Hatfield student accommodation',
+    'Soweto rooms to rent',
+    'rooms direct from landlords',
+    'zero broker fees',
+    'fair price rent check',
+    'local handymen South Africa',
+    'spaza shop directory',
+    'neighbourhood safety alerts',
+    'The Resident Crew',
+    'co-living South Africa'
+  ],
+  authors: [
+    { name: 'Asemahle "TEARN" Nkwali', url: `${siteUrl()}/founder` },
+    { name: 'The Resident Crew', url: siteUrl() },
+  ],
+  creator: 'Asemahle "TEARN" Nkwali',
+  publisher: 'TEARN Ventures',
+  formatDetection: {
+    email: false,
+    address: true,
+    telephone: false,
+  },
+  alternates: {
+    canonical: '/',
+    languages: {
+      'en-ZA': '/',
+      'x-default': '/',
+    },
+  },
   openGraph: {
     type: 'website',
-    siteName: 'The Resident',
-    title: 'The Resident: find a room you can trust',
-    description: 'Real rooms from real landlords, a fair-price check on every one, and neighbours who have your back.',
+    locale: 'en_ZA',
+    url: siteUrl(),
+    siteName: 'The Resident Crew',
+    title: 'The Resident Crew | Find a Room You Can Trust in South Africa',
+    description:
+      'Verified rooms from real landlords, fair-price checks on every listing, and neighbours who have your back across South African suburbs.',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'The Resident Crew — Verified Rooms & Neighbourhood Community in South Africa',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'The Resident: find a room you can trust',
-    description: 'Real rooms from real landlords, a fair-price check on every one, and neighbours who have your back.',
+    title: 'The Resident Crew | Find a Room You Can Trust in South Africa',
+    description:
+      'Verified rooms from real landlords, fair-price checks on every listing, and neighbours who have your back across South African suburbs.',
+    images: ['/opengraph-image'],
+    creator: '@TheResidentCrew',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/logo.png', sizes: '192x192', type: 'image/png' },
+      { url: '/logo.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/logo.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -42,6 +116,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const base = siteUrl()
+  const globalJsonLd = buildGlobalKnowledgeGraph(base)
+
   return (
     // No hardcoded data-theme here anymore — it used to be a permanent
     // "day" that CSS never even styled (globals.css only has 'night'/
@@ -50,9 +127,25 @@ export default function RootLayout({
     // made on one never showed up on the other. This inline script runs
     // before React hydrates and sets data-theme from the one shared key
     // every page now reads/writes, avoiding a flash of the wrong theme.
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <link
+          rel="search"
+          type="application/opensearchdescription+xml"
+          title="The Resident Crew"
+          href="/opensearch.xml"
+        />
         <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(globalJsonLd).replace(/</g, '\\u003c'),
+          }}
+        />
+      </head>
+      <body suppressHydrationWarning>
+        <Script
+          id="resident-theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               try {
@@ -66,12 +159,6 @@ export default function RootLayout({
               } catch (e) {
                 document.documentElement.setAttribute('data-theme', 'minimal-green');
               }
-              // Glass is the default look. Surfaces turn solid where it
-              // would cost readability or speed: the device asks for less
-              // transparency or forced colours, Data Saver is on, the browser
-              // cannot blur, or the device is slow (2 GB or 2 cores or fewer).
-              // The one message in the console (production drops every
-              // other console call), for anyone told to paste something.
               try {
                 if (location.hostname !== 'localhost') {
                   var out = window.console;
@@ -92,19 +179,16 @@ export default function RootLayout({
             `
           }}
         />
-      </head>
-      <body>
         {/* The Redux store is provided by the auth and dashboard layouts, so
             the home page and info pages don't load it or Supabase. */}
         {children}
-        <script
+        <Script
+          id="resident-sw-register"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                  // When a new release's service worker takes over, reload
-                  // once so the page on screen is the new version too (only
-                  // when one was already in control, so no loop on first install).
                   var hadController = !!navigator.serviceWorker.controller;
                   var reloaded = false;
                   navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -112,8 +196,6 @@ export default function RootLayout({
                     reloaded = true;
                     window.location.reload();
                   });
-                  // A failed registration just means no offline copy; the
-                  // public console stays empty.
                   navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(function() {});
                 });
               }

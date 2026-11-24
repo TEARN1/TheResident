@@ -102,6 +102,7 @@ export default function HousingPage() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('res_bookmarks')
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- read saved bookmarks from this device once on mount
       if (stored) setBookmarkedIds(JSON.parse(stored))
     } catch {}
   }, [])
@@ -235,6 +236,7 @@ export default function HousingPage() {
     if (listing) pendingListingId.current = listing
     if (event && /^[0-9a-zA-Z-]{1,64}$/.test(event)) {
       hasSteeredTab.current = true
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- apply ?event= deep link filters on arrival
       setActiveTab('rooms')
       setFilterListingType('guesthouse')
       setFilterEventId(event)
@@ -261,6 +263,7 @@ export default function HousingPage() {
   useEffect(() => {
     if (hasSteeredTab.current || !currentUser) return
     hasSteeredTab.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- landlords land on their properties the first time
     if (currentUser.role === 'landlord') setActiveTab('properties')
   }, [currentUser])
 
@@ -268,8 +271,9 @@ export default function HousingPage() {
     if (!supabase || !currentUser?.id || currentUser.role !== 'landlord') return
     const { data } = await supabase.from('res_properties').select('*').eq('landlord_id', currentUser.id)
     if (data) setMyProperties(data as ResProperty[])
-  }, [currentUser?.id, currentUser?.role])
+  }, [currentUser])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; setState happens after the await
   useEffect(() => { loadMyProperties() }, [loadMyProperties])
 
   // Guest houses link to a real Gruvs event (res_listings.event_id) rather
@@ -309,12 +313,16 @@ export default function HousingPage() {
     false
   ))
 
+  // Expiry checks need the current time; reading the clock in render is
+  // deliberate here (a boost or season that ends shows as ended next render).
+  // eslint-disable-next-line react-hooks/purity -- see above
+  const renderNow = Date.now()
   // A boosted listing sorts first while its purchase is still active.
-  const isFeatured = (l: Listing) => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > Date.now()
+  const isFeatured = (l: Listing) => !!l.featuredUntil && new Date(l.featuredUntil).getTime() > renderNow
   // Past its visible_until (guesthouse listings default to end-of-October,
   // see GUESTHOUSE_SEASON_END) — hidden from browse/search the same way an
   // expired notice hides itself, without deleting the row.
-  const isVisible = (l: Listing) => !l.visibleUntil || new Date(l.visibleUntil).getTime() > Date.now()
+  const isVisible = (l: Listing) => !l.visibleUntil || new Date(l.visibleUntil).getTime() > renderNow
   const filteredListings = [...filteredListingsRaw]
     .filter(isVisible)
     .filter(l => !filterQuickPostOnly || l.quickPost)

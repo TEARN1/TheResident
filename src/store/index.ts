@@ -49,6 +49,20 @@ export const GUEST_USER_ID = '00000000-0000-4000-8000-000000000001'
 export const isGuestUser = (user: { id: string; role: string } | null | undefined): boolean =>
   !user || user.id === GUEST_USER_ID || user.role === 'visitor'
 
+export interface FamilyDependent {
+  id: string
+  parentId: string
+  parentLegalName: string
+  fullName: string
+  relationship: 'child' | 'son' | 'daughter' | 'ward' | 'dependent'
+  photoUrl?: string
+  dateOfBirth?: string
+  idOrStudentNumber?: string
+  notes?: string
+  verifiedByParentAt: string
+  status: 'verified_lineage' | 'independent_renter'
+}
+
 export interface User {
   id: string
   name: string
@@ -70,6 +84,11 @@ export interface User {
    * the Gruvs display name (`name`) when unset.
    */
   legalName?: string
+  /**
+   * Family lineage & verified dependents registered under this landlord/parent.
+   * Serves as parental guarantee and origin tracking for young tenants.
+   */
+  dependents?: FamilyDependent[]
 }
 
 export interface Listing {
@@ -192,7 +211,7 @@ export interface HandymanService {
   id: string
   ownerId: string // user who owns the business
   businessName: string
-  category: 'Plumbing' | 'Electrical' | 'Construction' | 'Cleaning' | 'Security' | 'Bakkie / Transport' | 'Moving Assistant' | 'Local Materials' | 'General Services'
+  category: 'Plumbing' | 'Electrical' | 'Construction' | 'Cleaning' | 'Security' | 'Bakkie / Transport' | 'Moving Assistant' | 'Tow Truck & Recovery' | 'Truck & Heavy Freight' | 'Local Materials' | 'Tech & Phone Repairs' | 'Solar & Gas' | 'Auto & Detailing' | 'Locksmith' | 'Tutoring & Academics' | 'Personal Care' | 'General Services'
   location: string
   suburb: string
   rating: number
@@ -737,6 +756,24 @@ const authSlice = createSlice({
     updateUserRole: (state, action: PayloadAction<'tenant' | 'landlord'>) => {
       if (state.currentUser) {
         state.currentUser.role = action.payload
+      }
+    },
+    addFamilyDependent: (state, action: PayloadAction<FamilyDependent>) => {
+      if (state.currentUser) {
+        const list = state.currentUser.dependents || []
+        state.currentUser.dependents = [...list, action.payload]
+      }
+    },
+    removeFamilyDependent: (state, action: PayloadAction<string>) => {
+      if (state.currentUser && state.currentUser.dependents) {
+        state.currentUser.dependents = state.currentUser.dependents.filter(d => d.id !== action.payload)
+      }
+    },
+    updateFamilyDependent: (state, action: PayloadAction<FamilyDependent>) => {
+      if (state.currentUser && state.currentUser.dependents) {
+        state.currentUser.dependents = state.currentUser.dependents.map(d =>
+          d.id === action.payload.id ? action.payload : d
+        )
       }
     }
   }
@@ -1743,7 +1780,10 @@ export const {
   updateProfile,
   updatePreferences,
   updateUserRole,
-  setLegalName
+  setLegalName,
+  addFamilyDependent,
+  removeFamilyDependent,
+  updateFamilyDependent
 } = authSlice.actions
 
 export const { setListings, addListing, deleteListing, updateListingVerification } = listingsSlice.actions
@@ -2543,56 +2583,59 @@ export const syncActionToSupabase = async (store: SyncStore, action: any, option
     // never writes it; the shared row is created by the Gruvs signup rails.
     if (loginUser.match(action)) {
       const user = action.payload
-      const uuid = toUUID(user.id)
+      const isGuest = isGuestUser(user) || user.id === GUEST_USER_ID || user.id.startsWith('demo-')
 
       if (supabase) {
-        // Fetch or create their res_profiles configuration
-        const { data: dbProfile } = await supabase
-          .from('res_profiles')
-          .select('*')
-          .eq('id', uuid)
-          .single()
+        if (!isGuest) {
+          const uuid = toUUID(user.id)
+          // Fetch or create their res_profiles configuration
+          const { data: dbProfile } = await supabase
+            .from('res_profiles')
+            .select('*')
+            .eq('id', uuid)
+            .single()
 
-        if (dbProfile) {
-          if (dbProfile.role === 'tenant') {
-            store.dispatch(updateProfile({
-              profile: {
-                bio: dbProfile.bio || '',
-                gender: (dbProfile.gender || 'any') as UserProfile['gender'],
-                childrenCount: dbProfile.children_count || 0,
-                employmentStatus: dbProfile.employment_status || '',
-                hasPets: !!dbProfile.has_pets,
-                verificationDocUrl: dbProfile.verification_doc_url || undefined
-              }
-            }))
-          } else if (dbProfile.role === 'landlord') {
-            store.dispatch(updatePreferences({
-              preferences: {
-                genderPreference: (dbProfile.landlord_gender_pref || 'any') as LandlordPreferences['genderPreference'],
-                childrenAllowed: !!dbProfile.landlord_children_allowed,
-                maxChildren: dbProfile.landlord_max_children || 0,
-                smokingAllowed: !!dbProfile.landlord_smoking_allowed,
-                petsAllowed: !!dbProfile.landlord_pets_allowed
-              }
-            }))
+          if (dbProfile) {
+            if (dbProfile.role === 'tenant') {
+              store.dispatch(updateProfile({
+                profile: {
+                  bio: dbProfile.bio || '',
+                  gender: (dbProfile.gender || 'any') as UserProfile['gender'],
+                  childrenCount: dbProfile.children_count || 0,
+                  employmentStatus: dbProfile.employment_status || '',
+                  hasPets: !!dbProfile.has_pets,
+                  verificationDocUrl: dbProfile.verification_doc_url || undefined
+                }
+              }))
+            } else if (dbProfile.role === 'landlord') {
+              store.dispatch(updatePreferences({
+                preferences: {
+                  genderPreference: (dbProfile.landlord_gender_pref || 'any') as LandlordPreferences['genderPreference'],
+                  childrenAllowed: !!dbProfile.landlord_children_allowed,
+                  maxChildren: dbProfile.landlord_max_children || 0,
+                  smokingAllowed: !!dbProfile.landlord_smoking_allowed,
+                  petsAllowed: !!dbProfile.landlord_pets_allowed
+                }
+              }))
+            }
+            store.dispatch(setLegalName(dbProfile.legal_name || undefined))
+          } else {
+            await supabase.from('res_profiles').insert({
+              id: uuid,
+              role: user.role,
+              bio: user.profile?.bio || null,
+              gender: user.profile?.gender || null,
+              children_count: user.profile?.childrenCount || 0,
+              employment_status: user.profile?.employmentStatus || null,
+              has_pets: !!user.profile?.hasPets,
+              verification_doc_url: user.profile?.verificationDocUrl || null,
+              landlord_gender_pref: user.preferences?.genderPreference || null,
+              landlord_children_allowed: user.preferences?.childrenAllowed !== false,
+              landlord_max_children: user.preferences?.maxChildren || 0,
+              landlord_smoking_allowed: !!user.preferences?.smokingAllowed,
+              landlord_pets_allowed: !!user.preferences?.petsAllowed
+            })
           }
-          store.dispatch(setLegalName(dbProfile.legal_name || undefined))
-        } else {
-          await supabase.from('res_profiles').insert({
-            id: uuid,
-            role: user.role,
-            bio: user.profile?.bio || null,
-            gender: user.profile?.gender || null,
-            children_count: user.profile?.childrenCount || 0,
-            employment_status: user.profile?.employmentStatus || null,
-            has_pets: !!user.profile?.hasPets,
-            verification_doc_url: user.profile?.verificationDocUrl || null,
-            landlord_gender_pref: user.preferences?.genderPreference || null,
-            landlord_children_allowed: user.preferences?.childrenAllowed !== false,
-            landlord_max_children: user.preferences?.maxChildren || 0,
-            landlord_smoking_allowed: !!user.preferences?.smokingAllowed,
-            landlord_pets_allowed: !!user.preferences?.petsAllowed
-          })
         }
 
         // Populate dashboard with all tables

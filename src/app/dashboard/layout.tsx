@@ -33,6 +33,7 @@ import PointerSpotlight from './components/shared/PointerSpotlight'
 import CallProvider from './components/messages/CallProvider'
 import PWAInstallBanner from './components/shared/PWAInstallBanner'
 import ThemeSwitcherModal from './components/shared/ThemeSwitcherModal'
+import DashboardLoading from './loading'
 import UrbanDynamicIsland from './components/navigation/UrbanDynamicIsland'
 import ActionOrb from './components/navigation/ActionOrb'
 import { DEFAULT_THEME } from '../../utils/themes'
@@ -132,6 +133,35 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     if (currentUser) return
     let cancelled = false
     const bootstrapSession = async () => {
+      // Check for demo session cookie first
+      const demoCookieMatch = typeof document !== 'undefined' ? document.cookie.match(/(?:^|;\s*)res_demo_session=([^;]+)/) : null
+      const demoRole = demoCookieMatch ? decodeURIComponent(demoCookieMatch[1]) : null
+      if (demoRole === 'tenant' || demoRole === 'landlord') {
+        const demoUser = demoRole === 'landlord' ? {
+          id: 'demo-landlord-5555-6666-7777-888888888888',
+          name: 'Sipho Dlamini (Demo Landlord)',
+          email: 'sipho.landlord@theresidentcrew.com',
+          role: 'landlord' as const,
+          legalName: 'Sipho Dlamini'
+        } : {
+          id: 'demo-tenant-1111-2222-3333-444444444444',
+          name: 'Thabo Ndlovu (Demo Tenant)',
+          email: 'thabo.demo@theresidentcrew.com',
+          role: 'tenant' as const,
+          legalName: 'Thabo Ndlovu',
+          profile: {
+            bio: 'Wits student & Braamfontein resident. Exploring local rooms and campus vibe.',
+            gender: 'men' as const,
+            childrenCount: 0,
+            employmentStatus: 'Student',
+            hasPets: false,
+            verificationDocUrl: undefined
+          }
+        }
+        dispatch(loginUser(demoUser))
+        return
+      }
+
       try {
         if (supabase) {
           const { data: { user } } = await supabase.auth.getUser()
@@ -225,9 +255,37 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (!currentUser) {
     return (
-      <div className="dashboard-loading">
-        <div className="dashboard-loading-spinner" />
-        <span>{t('loadingDashboard', lang)}</span>
+      <div className="min-h-screen min-h-dvh bg-black text-white flex overflow-hidden">
+        {/* Left Sidebar Skeleton (Desktop) */}
+        <aside className="hidden lg:flex flex-col w-64 border-r border-white/10 bg-black/40 backdrop-blur-3xl p-4 gap-6 shrink-0">
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="w-8 h-8 rounded-xl bg-white/10 animate-pulse shrink-0" />
+            <div className="h-4 w-32 bg-white/15 rounded-md animate-pulse" />
+          </div>
+          <div className="space-y-2 flex-1">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-10 rounded-xl bg-white/5 border border-white/5 animate-pulse" />
+            ))}
+          </div>
+          <div className="h-12 rounded-xl bg-white/5 border border-white/5 animate-pulse" />
+        </aside>
+
+        {/* Main Content Workspace Skeleton */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-16 border-b border-white/10 px-4 sm:px-6 flex items-center justify-between bg-black/60 backdrop-blur-2xl">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white/10 lg:hidden animate-pulse shrink-0" />
+              <div className="h-4 w-36 bg-white/15 rounded-md animate-pulse" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-28 bg-white/5 rounded-xl border border-white/10 animate-pulse hidden sm:block" />
+              <div className="h-8 w-8 rounded-xl bg-white/10 animate-pulse" />
+            </div>
+          </header>
+          <main className="flex-1 overflow-y-auto">
+            <DashboardLoading />
+          </main>
+        </div>
       </div>
     )
   }
@@ -467,7 +525,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className="dashboard-main-content pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] md:pl-20 lg:pl-64 min-h-screen min-h-dvh flex flex-col transition-all overflow-x-hidden">
           <header className="sticky top-0 z-40 h-16 bg-black/60 backdrop-blur-2xl border-b border-white/15 px-[max(0.75rem,env(safe-area-inset-left,0px))] pr-[max(0.75rem,env(safe-area-inset-right,0px))] sm:px-4 md:px-6 flex items-center justify-between transition-all">
             {/* Left Header Title / Mobile Logo */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
               <Link
                 href="/dashboard"
                 onClick={() => playTactileSound('tab')}
@@ -483,20 +541,20 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               </Link>
 
               {/* Tablet and Desktop breadcrumb title */}
-              <div className="hidden md:flex items-center gap-2 text-xs">
+              <div className="hidden md:flex items-center gap-2 text-xs shrink-0">
                 <span className="text-gray-400 font-bold uppercase tracking-wider">Dashboard</span>
                 <span className="text-white/20">/</span>
                 <span className="text-white font-black uppercase tracking-wider">{pageTitle.name}</span>
               </div>
 
               {/* Urban Dynamic Island (Live precinct ticker & SOS) */}
-              <div className="ml-1 sm:ml-3">
+              <div className="ml-1 sm:ml-3 min-w-0">
                 <UrbanDynamicIsland nokStatus={nokStatus} />
               </div>
             </div>
 
             {/* Right Header Action Items */}
-            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
               {/* Global Spotlight Palette Trigger (Ctrl+K) */}
               <CommandPalette />
 
@@ -547,10 +605,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] sm:w-80 max-h-96 overflow-y-auto custom-scrollbar bg-black/95 backdrop-blur-3xl border border-white/15 rounded-2xl z-50 p-4 space-y-3"
+                      className="absolute top-full right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-y-auto custom-scrollbar bg-black/95 backdrop-blur-3xl border border-white/15 rounded-2xl z-50 p-4 space-y-3 shadow-2xl"
                     >
-                      <div className="flex justify-between items-center pb-2 border-b border-white/10">
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-1.5">
+                      <div className="flex justify-between items-center pb-2 border-b border-white/10 gap-2">
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-1.5 shrink-0">
                           <Megaphone size={12} className="text-gold-primary" /> {t('alerts', lang)}
                         </span>
                         <button

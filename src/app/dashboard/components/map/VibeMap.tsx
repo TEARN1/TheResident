@@ -24,7 +24,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './futureMap.css'
 import type { GeoJSONSource, Map as MLMap, MapGeoJSONFeature } from 'maplibre-gl'
 import {
- LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Building2, Moon, Sun, Box, Car
+ LocateFixed, ShieldAlert, MapPin, Sparkles, Satellite, Flame, Home, Building2, Moon, Sun, Box, Car, Ban
 } from 'lucide-react'
 import { useSelector } from 'react-redux'
 import { RootState, type Listing } from '../../../../store'
@@ -33,6 +33,9 @@ import { distanceMetres } from '../../../../utils/logic'
 import { reverseGeocode, searchPlaces } from '../../../../utils/geocode'
 import LiveLocationToggle from './LiveLocationToggle'
 import QuickVibeReportModal, { type VibeCategory } from './QuickVibeReportModal'
+import TaxiRankTelemetryModal from './TaxiRankTelemetryModal'
+import RoadClosureDetourModal from './RoadClosureDetourModal'
+import { SA_TAXI_RANKS } from '../../../../utils/taxiRoutes'
 import { playTactileSound } from '../../../../utils/tactileSounds'
 import MapSearchBox from './MapSearchBox'
 import { fetchUpcomingGruvsEvents, formatGruvsEventWhen, type GruvsEvent } from '../../../../utils/gruvsEvents'
@@ -123,12 +126,17 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  // Bumped on every style load: layers were (re)installed, so re-apply visibility.
  const [styleEpoch, setStyleEpoch] = useState(0)
 
+ // Taxi ranks and road-closure detours
+ const [showTaxiModal, setShowTaxiModal] = useState(false)
+ const [selectedTaxiRankId, setSelectedTaxiRankId] = useState<string | null>(null)
+ const [showRoadClosureModal, setShowRoadClosureModal] = useState(false)
+
   // 4D Time Horizon & Interactive Tracing State
   const [timeHorizonHours, setTimeHorizonHours] = useState<number>(0)
   const [tracingType, setTracingType] = useState<'marathon' | 'detour' | null>(null)
   const [tracedWaypoints, setTracedWaypoints] = useState<[number, number][]>([])
   const tracingTypeRef = useRef(tracingType)
-  tracingTypeRef.current = tracingType
+  useEffect(() => { tracingTypeRef.current = tracingType }, [tracingType])
   const [dismissedSpotterId, setDismissedSpotterId] = useState<string | null>(null)
 
   // Proximity Civic Spotter Check-in (within 450m of a road closure)
@@ -165,6 +173,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
    }
    const cat = mapActionToCategory[queryAction]
    if (cat) {
+     // eslint-disable-next-line react-hooks/set-state-in-effect -- open the report modal from a ?action= deep link
      setDropInitialCategory(cat)
      setShowDropVibeModal(true)
    }
@@ -186,6 +195,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  // 1. Initial Geolocation (or focus directly if coordinates passed via beacon link)
  useEffect(() => {
  if (!isNaN(queryLat) && !isNaN(queryLon)) {
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- centre on coordinates passed in the URL
  setCenter({ lat: queryLat, lon: queryLon })
  setIsGpsDefault(false)
  setActiveHub(null)
@@ -237,6 +247,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
 
   useEffect(() => {
     if (!center) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch for the current centre; setState happens after the await
     loadData(center.lat, center.lon, timeHorizonHours)
   }, [center, timeHorizonHours, loadData])
 
@@ -422,6 +433,15 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  const { safetyFC, trafficFC } = useMemo(() => {
  const safetyPoints: { lat: number; lon: number; props: Record<string, unknown> }[] = []
  const trafficLines: { type: 'Feature'; geometry: { type: 'LineString'; coordinates: [number, number][] }; properties: Record<string, unknown> }[] = []
+
+ // Minibus Taxi Telemetry Hubs (SANTACO / Regional ranks)
+ for (const rank of SA_TAXI_RANKS) {
+   safetyPoints.push({
+     lat: rank.lat,
+     lon: rank.lon,
+     props: { id: rank.id, color: '#10b981', icon: 'fm-taxi-rank' }
+   })
+ }
 
  for (const z of sharedZones) {
  const parsed = parseZoneDetails(z)
@@ -676,6 +696,12 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  return
  }
  case 'fm-safety-icon': {
+ if (id.startsWith('rank-')) {
+   playTactileSound('tab')
+   setSelectedTaxiRankId(id)
+   setShowTaxiModal(true)
+   return
+ }
  const zone = sharedZones.find(z => z.id === id)
  if (zone) selectZone(zone)
  return
@@ -766,6 +792,7 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  events: hotspots.length,
  rooms: housingFC.features.length,
  alerts: sharedZones.length,
+ taxis: SA_TAXI_RANKS.length,
  }
 
  const themeButton = (theme: MapTheme, label: string, Icon: typeof Moon) => (
@@ -1037,14 +1064,14 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  <div className="hidden md:block absolute left-4 bottom-[76px] z-[500] pointer-events-none">
  <div className="fm-glass fm-telemetry flex items-center gap-2.5 px-3 py-2 rounded-xl bg-black/65 border border-white/10 text-gray-200">
  <span className="fm-live-dot" aria-hidden="true" />
- <span>{counts.events} EVENTS · {counts.rooms} ROOMS · {counts.alerts} ALERTS</span>
+ <span>{counts.events} EVENTS · {counts.rooms} ROOMS · {counts.alerts} ALERTS · {counts.taxis} TAXI RANKS</span>
  <span className="text-gray-600" aria-hidden="true">|</span>
  <span ref={coordsRef} className="text-gray-400" />
  </div>
  </div>
 
- {/* Floating Bottom Left: Drop Vibe CTA */}
- <div className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:bottom-5 left-3 sm:left-4 z-[500] flex items-center gap-2">
+ {/* Floating Bottom Left: Drop Vibe and the map tools */}
+ <div className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:bottom-5 left-3 sm:left-4 z-[500] flex flex-wrap items-center gap-2">
  <button
  onClick={() => {
  playTactileSound('pop')
@@ -1054,6 +1081,30 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
  >
  <Sparkles size={16} />
  <span>+ Drop Vibe</span>
+ </button>
+
+ <button
+ onClick={() => {
+ playTactileSound('tab')
+ setShowTaxiModal(true)
+ }}
+ className="px-3.5 py-3 rounded-2xl bg-emerald-600/90 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider border border-emerald-400/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+ title="Taxi ranks, routes and rough fares"
+ >
+ <Car size={15} />
+ <span className="hidden sm:inline">Taxi ranks</span>
+ </button>
+
+ <button
+ onClick={() => {
+ playTactileSound('tab')
+ setShowRoadClosureModal(true)
+ }}
+ className="px-3.5 py-3 rounded-2xl bg-red-600/90 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider border border-red-400/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shadow-lg shadow-red-500/20"
+ title="Report a road closure"
+ >
+ <Ban size={15} />
+ <span className="hidden sm:inline">Road closed</span>
  </button>
 
  {pendingTapCoords?.label && (
@@ -1137,6 +1188,26 @@ export default function VibeMap({ fullscreen = false }: { fullscreen?: boolean }
     }}
     onClearWaypoints={() => setTracedWaypoints([])}
   />
+
+  {/* Minibus Taxi Telemetry Modal */}
+  <TaxiRankTelemetryModal
+    isOpen={showTaxiModal}
+    onClose={() => setShowTaxiModal(false)}
+    selectedRankId={selectedTaxiRankId}
+    userCoords={center}
+    onFlyToCoordinates={(lat, lon) => flyTo({ lat, lon }, 16)}
+  />
+
+  {/* Road Closure & Smart Travel Detour Modal */}
+  <RoadClosureDetourModal
+    isOpen={showRoadClosureModal}
+    onClose={() => setShowRoadClosureModal(false)}
+    currentCoords={pendingTapCoords || center}
+    onClosureBroadcasted={() => {
+      if (center) loadData(center.lat, center.lon)
+    }}
+  />
+
  </div>
  )
 }

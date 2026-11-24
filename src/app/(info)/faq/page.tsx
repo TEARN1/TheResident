@@ -1,57 +1,105 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Breadcrumbs, JsonLd } from '../directory-views'
+import { siteUrl } from '../../site-url'
 
 export const metadata: Metadata = {
-  title: 'FAQ — The Resident',
+  title: 'FAQ — Frequently Asked Questions | The Resident Crew',
   description:
-    'Answers to common questions about The Resident: cost, who can join, safety, privacy, listing a business, and installing the app.',
+    'Answers about The Resident Crew: zero broker fees, Rental Housing Act deposit checks, 5-second panic beacon, covered suburbs, and Founder Asemahle "TEARN" Nkwali.',
+  keywords: [
+    'The Resident Crew FAQ',
+    'zero broker rental rooms South Africa',
+    'Rental Housing Act deposit check',
+    'neighbourhood safety panic beacon South Africa',
+    'Asemahle TEARN Nkwali TEARN Ventures',
+  ],
   alternates: { canonical: '/faq' },
+  openGraph: {
+    type: 'website',
+    title: 'FAQ — Frequently Asked Questions | The Resident Crew',
+    description:
+      'Answers about zero-broker rooms, neighbourhood safety alerts, Rental Housing Act checks, and installing The Resident Crew.',
+    url: `${siteUrl()}/faq`,
+    siteName: 'The Resident Crew',
+    locale: 'en_ZA',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'The Resident Crew FAQ' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FAQ — Frequently Asked Questions | The Resident Crew',
+    description:
+      'Answers about zero-broker rooms, neighbourhood safety alerts, and local services on The Resident Crew.',
+    images: ['/opengraph-image'],
+  },
 }
 
 const faqs: { q: string; a: string }[] = [
   {
-    q: 'What is The Resident?',
-    a: 'A community app for neighbourhoods. Residents use it to find local services, buy and sell, find rooms, share lifts and tools, and send safety alerts.',
+    q: 'What is The Resident Crew?',
+    a: 'South Africa’s free community operating system for neighbourhoods. Residents use it to find verified rooms to rent, hire neighbour-rated local services, ride smarter with live precinct radar, and send real-time safety alerts.',
   },
   {
-    q: 'Who can join?',
-    a: 'Anyone who lives in, rents in, owns property in or regularly visits a suburb. You choose whether you are a tenant, landlord or visitor when you sign up.',
+    q: 'Are there broker or agent commission fees on rooms?',
+    a: 'No. Tenants, students, and landlords connect directly on The Resident Crew with zero broker commissions or middleman markups.',
   },
   {
-    q: 'How do I sign up?',
-    a: 'Go to the sign-up page and register with your email address or Facebook, then choose your suburb.',
+    q: 'How does the Rental Housing Act deposit check work?',
+    a: 'Before signing a lease, residents can review key protections under South Africa’s Rental Housing Act — including interest-bearing deposit rules, mandatory incoming and outgoing joint inspections, and lawful notice periods.',
   },
   {
-    q: 'Can I list my business or services?',
-    a: 'Yes. Once you have an account, you can add your services so neighbours can find and contact you.',
+    q: 'How do safety alerts and the 5-second panic beacon work?',
+    a: 'Holding the panic control triggers a rapid alert to your trust circle and nearby verified suburb members on the live radar. Community alerts complement — and never replace — official emergency numbers like 10111 or 112.',
   },
   {
-    q: 'How do ratings work?',
-    a: 'After you deal with a neighbour, you can rate them. Ratings add up to a reputation that others can see before they hire, buy from or share a home with someone.',
+    q: 'Which suburbs and universities does The Resident Crew cover?',
+    a: 'The Resident Crew covers major residential suburbs and university corridors across Johannesburg, Pretoria, Cape Town, Durban, Gqeberha, and Bloemfontein — including Soweto, Braamfontein, Auckland Park, Hatfield, Rondebosch, Stellenbosch, and Sunnyside.',
+  },
+  {
+    q: 'Who founded The Resident Crew?',
+    a: 'The Resident Crew was founded by South African software entrepreneur Asemahle "TEARN" Nkwali, Founder & CEO of TEARN Ventures, which also operates The Gruvs (thegruvs.com) and Excellency Academy (excellencyacs.com).',
+  },
+  {
+    q: 'Who can join and how do I sign up?',
+    a: 'Anyone who lives in, rents in, owns property in, or commutes through a South African suburb can sign up free with email or social login on the auth page.',
+  },
+  {
+    q: 'Can I list my business, trade, or spaza shop?',
+    a: 'Yes. Service providers and local shops can publish public directory pages that appear directly in Google Search and local suburb guides.',
+  },
+  {
+    q: 'How do community ratings and trust work?',
+    a: 'After hiring a tradesperson, buying locally, or inspecting a room, residents rate their experience so reliable neighbours and landlords stand out.',
   },
   {
     q: 'Is my personal information public?',
-    a: 'No. Messages, safety alerts, your trust circle and your personal profile are only visible to signed-in members, according to each feature’s settings. See our privacy policy for details.',
+    a: 'No. Private messages, trust circles, and personal contact details remain protected; only listings you explicitly mark public appear on web search pages.',
   },
   {
-    q: 'How do safety alerts work?',
-    a: 'You can send an alert to your community when you need help. Neighbours who have joined your suburb are notified. Alerts do not replace emergency services — in an emergency, call 10111 or 112.',
+    q: 'Can I install The Resident Crew on Android or iPhone?',
+    a: 'Yes. The Resident Crew runs in any browser and can be installed directly as a fast Progressive Web App (PWA) from the home screen on Android or iOS.',
   },
   {
-    q: 'Can I use it on my phone?',
-    a: 'Yes. It works in any mobile browser, and you can install it on Android or add it to your iPhone home screen from our home page.',
-  },
-  {
-    q: 'How do I report a problem or a person?',
-    a: 'Use the contact page to get in touch with us.',
+    q: 'How do I report a listing or safety concern?',
+    a: 'Flag the listing inside the app or reach our team directly through the contact page.',
   },
 ]
 
 export default function FaqPage() {
-  // FAQPage structured data lets Google show these answers directly in results.
+  const base = siteUrl()
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
+    '@id': `${base}/faq#webpage`,
+    url: `${base}/faq`,
+    name: 'Frequently Asked Questions — The Resident Crew',
+    isPartOf: { '@id': `${base}/#website` },
+    publisher: { '@id': `${base}/#parent-org` },
+    about: { '@id': `${base}/#app` },
+    speakable: {
+      '@type': 'SpeakableSpecification',
+      cssSelector: ['h1', 'h3'],
+    },
     mainEntity: faqs.map(f => ({
       '@type': 'Question',
       name: f.q,
@@ -61,10 +109,13 @@ export default function FaqPage() {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      <Breadcrumbs
+        trail={[
+          { name: 'Home', href: '/' },
+          { name: 'FAQ', href: '/faq' },
+        ]}
       />
+      <JsonLd data={jsonLd} />
       <h1>Frequently asked questions</h1>
       {faqs.map(f => (
         <section key={f.q}>
@@ -73,7 +124,8 @@ export default function FaqPage() {
         </section>
       ))}
       <p style={{ marginTop: '2rem' }}>
-        Still stuck? <Link href="/contact">Contact us</Link>.
+        Want to learn more about our leadership and ecosystem? Visit the <Link href="/founder">Founder profile</Link>,{' '}
+        <Link href="/press">Press kit</Link>, or <Link href="/contact">Contact us</Link>.
       </p>
     </>
   )

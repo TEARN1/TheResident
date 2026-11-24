@@ -7,7 +7,7 @@ import { loginUser, resetFailedAttempts, addLog, RootState, AppDispatch, toUUID,
 import { supabase } from '../../utils/supabase'
 import { fetchEnabledProviders, isOAuthFailure, getOAuthFailureMessage } from '../../utils/oauth'
 import { performLogin } from '../../utils/authLogin'
-import { Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader } from 'lucide-react'
+import { Shield, CheckCircle, AlertTriangle, Eye, EyeOff, Loader, Sparkles } from 'lucide-react'
 import { playTactileSound } from '../../utils/tactileSounds'
 import { safeNextPath } from '../../utils/launch'
 import { track } from '../../utils/track'
@@ -300,7 +300,7 @@ export default function AuthPage() {
       ? `${window.location.origin}/auth/callback${queryString}`
       : undefined
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo,
@@ -310,6 +310,8 @@ export default function AuthPage() {
     if (error) {
       setErrorMessage(error.message)
       setOauthLoading(null)
+    } else if (data?.url) {
+      window.location.assign(data.url)
     }
     // On success the browser navigates away to the provider — nothing else to do.
   }
@@ -344,7 +346,59 @@ export default function AuthPage() {
       details: 'Browsing limits applied'
     }))
 
-    router.push(afterAuthPath())
+    const target = afterAuthPath()
+    // Auth-gated paths (messages, profile) must not bounce guest users in an infinite loop
+    const safeGuestTarget = (target.startsWith('/dashboard/messages') || target.startsWith('/dashboard/profile'))
+      ? '/dashboard'
+      : target
+    router.push(safeGuestTarget)
+  }
+
+  const handleDemoLogin = (role: 'tenant' | 'landlord' = 'tenant') => {
+    playTactileSound('click')
+    const demoUser = role === 'landlord' ? {
+      id: 'demo-landlord-5555-6666-7777-888888888888',
+      name: 'Sipho Dlamini (Demo Landlord)',
+      email: 'sipho.landlord@theresidentcrew.com',
+      role: 'landlord' as const,
+      preferences: {
+        genderPreference: 'any' as const,
+        childrenAllowed: false,
+        maxChildren: 0,
+        smokingAllowed: false,
+        petsAllowed: false
+      }
+    } : {
+      id: 'demo-tenant-1111-2222-3333-444444444444',
+      name: 'Thabo Ndlovu (Demo Tenant)',
+      email: 'thabo.demo@theresidentcrew.com',
+      role: 'tenant' as const,
+      profile: {
+        bio: 'Wits student & Braamfontein resident. Exploring local rooms and campus vibe.',
+        gender: 'men' as const,
+        childrenCount: 0,
+        employmentStatus: 'Student',
+        hasPets: false,
+        verificationDocUrl: undefined
+      }
+    }
+
+    document.cookie = `res_demo_session=${role}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+    document.cookie = `guest-mode=0; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+    dispatch(resetFailedAttempts(email))
+    dispatch(loginUser(demoUser))
+    dispatch(addLog({
+      action: `Entered application with Demo ${role === 'tenant' ? 'Resident Tenant' : 'Landlord'} account`,
+      type: 'auth_success',
+      details: 'Instant sandbox resident session'
+    }))
+
+    const target = afterAuthPath()
+    if (typeof window !== 'undefined') {
+      window.location.href = target
+    } else {
+      router.push(target)
+    }
   }
 
   return (
@@ -656,9 +710,57 @@ export default function AuthPage() {
           </div>
         </>)}
 
-        <button type="button" onClick={handleVisitorLogin} style={guestLinkStyle}>
-          Just looking? Browse as a guest
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '1rem', width: '100%' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', width: '100%' }}>
+            <button
+              type="button"
+              id="demo-tenant-btn"
+              onClick={() => handleDemoLogin('tenant')}
+              style={{
+                padding: '9px 10px',
+                borderRadius: '12px',
+                border: '1px solid rgba(212, 175, 55, 0.4)',
+                background: 'rgba(212, 175, 55, 0.08)',
+                color: '#fbbf24',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Sparkles size={13} /> Tenant Demo Login
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoLogin('landlord')}
+              style={{
+                padding: '9px 10px',
+                borderRadius: '12px',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                background: 'rgba(59, 130, 246, 0.08)',
+                color: '#60a5fa',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Shield size={13} /> Landlord Demo Login
+            </button>
+          </div>
+
+          <button type="button" onClick={handleVisitorLogin} style={guestLinkStyle}>
+            Just looking? Browse as a guest
+          </button>
+        </div>
 
         <p style={{ margin: '1.25rem 0 0', textAlign: 'center' }}>
           <a href="/terms" target="_blank" rel="noopener noreferrer" style={legalLinkStyle}>Terms</a>

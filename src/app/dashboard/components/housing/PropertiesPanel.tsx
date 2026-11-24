@@ -78,6 +78,7 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
     setOccupancyByProperty(map)
   }, [properties])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; setState happens after the await
   useEffect(() => { loadOccupancy() }, [loadOccupancy])
 
   const handleSelectPlace = (result: GeocodeResult) => {
