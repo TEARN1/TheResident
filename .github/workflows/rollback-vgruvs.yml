@@ -22,6 +22,10 @@ concurrency:
   group: deploy-vgruvs
   cancel-in-progress: false
 
+# The workflow token can only read the code (supply-chain review, Nov 2026).
+permissions:
+  contents: read
+
 jobs:
   rollback:
     runs-on: ubuntu-latest
