@@ -16,6 +16,7 @@ import { playTactileSound, isTactileSoundMuted, setTactileSoundMuted } from '../
 import { goldButtonClass } from '../../../components/ui/GoldButton'
 import Card from '../../../components/ui/Card'
 import { APP_THEMES, DEFAULT_THEME } from '../../../utils/themes'
+import { openablePrivateDoc, uploadPrivateDoc } from '../../../utils/privateDocs'
 
 const LANGUAGES: { code: 'en' | 'zu' | 'xh' | 'af'; label: string }[] = [
   { code: 'en', label: 'English' },
@@ -97,6 +98,14 @@ export default function ProfilePage() {
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // What the <img> shows: a link that expires, for a private reference.
+  const [photoSrc, setPhotoSrc] = useState<string | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const resolve = supabase && photoUrl ? openablePrivateDoc(supabase, photoUrl) : Promise.resolve(null)
+    resolve.then((u) => { if (!cancelled) setPhotoSrc(u) }, () => { if (!cancelled) setPhotoSrc(null) })
+    return () => { cancelled = true }
+  }, [photoUrl])
 
   useEffect(() => {
     if (!currentUser || guest || !supabase) return
@@ -115,13 +124,12 @@ export default function ProfilePage() {
     try {
       // Path convention per CONTRACT.md §4: uploads must start with
       // `${user.id}/` — RLS on the bucket enforces it.
-      const path = `${currentUser.id}/res/verification_${Date.now()}_${file.name}`
-      const { error: uploadError } = await supabase.storage.from('gossip-media').upload(path, file)
-      if (uploadError) throw uploadError
-      const { data: urlData } = supabase.storage.from('gossip-media').getPublicUrl(path)
-      const { error: updateError } = await supabase.from('res_profiles').update({ verification_doc_url: urlData.publicUrl }).eq('id', currentUser.id)
+      // Private bucket (res-verification): a verification photo must never
+      // sit at a public link. The column stores a reference, not a URL.
+      const ref = await uploadPrivateDoc(supabase, currentUser.id, 'selfie', file)
+      const { error: updateError } = await supabase.from('res_profiles').update({ verification_doc_url: ref }).eq('id', currentUser.id)
       if (updateError) throw updateError
-      setPhotoUrl(urlData.publicUrl)
+      setPhotoUrl(ref)
     } catch (err) {
       setPhotoError(err instanceof Error ? err.message : 'Upload failed — try again.')
     } finally {
@@ -542,7 +550,7 @@ export default function ProfilePage() {
           <div className="w-16 h-16 rounded-2xl bg-black border border-white/10 overflow-hidden shrink-0 flex items-center justify-center">
             {photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoUrl} alt="Your uploaded photo" className="w-full h-full object-cover" />
+              <img src={photoSrc || ''} alt="Your uploaded photo" className="w-full h-full object-cover" />
             ) : (
               <UserIcon size={24} className="text-gray-600" />
             )}

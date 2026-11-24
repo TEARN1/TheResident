@@ -14,6 +14,7 @@ import RoomManager from './RoomManager'
 import type { GeocodeResult } from '../../../../utils/geocode'
 import MapSearchBox from '../map/MapSearchBox'
 import type { Listing } from '../../../../store'
+import { isPrivateDocRef, uploadPrivateDoc } from '../../../../utils/privateDocs'
 
 export interface ResProperty {
   id: string
@@ -152,11 +153,8 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
     if (!supabase || !verifyingFor) return
     setUploading(true)
     try {
-      const path = `${currentUserId}/${verifyingFor.id}-${Date.now()}-${file.name}`
-      const { error: uploadError } = await supabase.storage.from('gossip-media').upload(path, file)
-      if (uploadError) throw uploadError
-      const { data } = supabase.storage.from('gossip-media').getPublicUrl(path)
-      setDocUrl(data.publicUrl)
+      // Private bucket: a lease or utility bill must never sit at a public link.
+      setDocUrl(await uploadPrivateDoc(supabase, currentUserId, 'properties', file))
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Upload failed.')
     } finally {
@@ -374,8 +372,12 @@ export default function PropertiesPanel({ properties, listings, currentUserId, o
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Proof Document URL</label>
+                <label className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Proof Document</label>
+                {isPrivateDocRef(docUrl) ? (
+                  <p className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white">Uploaded privately: only you and our reviewers can open it.</p>
+                ) : (
                 <input value={docUrl} onChange={e => setDocUrl(e.target.value)} required className="w-full bg-black border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-gold-primary/40" placeholder="https://... (lease, utility bill, title deed)" />
+                )}
                 <label className="flex items-center gap-2 text-[10px] text-gray-500 font-black uppercase tracking-widest cursor-pointer hover:text-gold-primary transition-colors w-fit">
                   <Upload size={12} />
                   {uploading ? 'Uploading...' : 'Or upload a file'}
