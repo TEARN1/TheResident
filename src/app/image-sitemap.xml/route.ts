@@ -17,7 +17,7 @@ function escapeXml(value: string): string {
 
 /**
  * Dedicated Google Image Sitemap (/image-sitemap.xml) with <image:image> tags
- * covering founder portraits, brand logos, social previews, and verified listing photos.
+ * covering founder portraits, brand logos, social previews, and listing photos.
  */
 export async function GET() {
   const base = siteUrl().replace(/\/+$/, '')
@@ -37,8 +37,8 @@ export async function GET() {
       images: [
         {
           loc: `${base}/logo.png`,
-          title: 'The Resident Crew Official Logo',
-          caption: 'Official square emblem of The Resident Crew — Verified Rooms, Safety Alerts & Local Services in South Africa.',
+          title: 'The Resident Crew Logo',
+          caption: 'Square emblem of The Resident Crew — Rooms, Safety Alerts & Local Services in South Africa.',
         },
         {
           loc: `${base}/opengraph-image`,
@@ -48,7 +48,7 @@ export async function GET() {
         {
           loc: `${base}/screenshots/app-home-hero.png`,
           title: 'The Resident Crew Home & Ecosystem Preview',
-          caption: 'Landing screen highlighting verified South African rooms, live safety alerts, and community tools.',
+          caption: 'Landing screen highlighting South African rooms, live safety alerts, and community tools.',
         },
         {
           loc: `${base}/screenshots/app-live-precinct-map.png`,
@@ -57,13 +57,13 @@ export async function GET() {
         },
         {
           loc: `${base}/screenshots/app-housing-rooms.png`,
-          title: 'The Resident Crew Verified Rooms & Student Housing Hub',
-          caption: 'Search zero-broker verified rooms, roommates, and statutory Rental Housing Act tools.',
+          title: 'The Resident Crew Rooms & Student Housing Hub',
+          caption: 'Search zero-broker rooms, roommates, and statutory Rental Housing Act tools.',
         },
         {
           loc: `${base}/screenshots/app-local-services.png`,
           title: 'The Resident Crew Express Bakkie & Local Services Dispatch',
-          caption: 'Neighbour-vetted moving bakkies, plumbers, electricians, and township trades across South Africa.',
+          caption: 'Neighbour-rated moving bakkies, plumbers, electricians, and township trades across South Africa.',
         },
         {
           loc: `${base}/screenshots/app-taxi-ranks.png`,
@@ -83,7 +83,7 @@ export async function GET() {
         {
           loc: `${base}/founder/portrait.png`,
           title: 'Asemahle TEARN Nkwali Editorial Portrait',
-          caption: 'Official editorial portrait generated for The Resident Crew & TEARN Ventures.',
+          caption: 'Editorial portrait generated for The Resident Crew & TEARN Ventures.',
         },
         {
           loc: `${base}/screenshots/app-founder-ceo.png`,
@@ -97,8 +97,8 @@ export async function GET() {
       images: [
         {
           loc: `${base}/flyer/the-resident-crew-official-flyer.png`,
-          title: 'The Resident Crew Official Promotional Flyer (Obsidian Gold A4)',
-          caption: 'Official high-resolution print and digital flyer with brand logo, Rental Housing Act deposit escrow, and 5-second panic SOS.',
+          title: 'The Resident Crew Promotional Flyer (Obsidian Gold A4)',
+          caption: 'High-resolution print and digital flyer with brand logo, Rental Housing Act deposit escrow, and 5-second panic SOS.',
         },
         {
           loc: `${base}/flyer/the-resident-crew-flyer-campus-cyber.png`,
@@ -123,22 +123,22 @@ export async function GET() {
         {
           loc: `${base}/logo.png`,
           title: 'The Resident Crew Brand Mark (512x512 PNG)',
-          caption: 'Official press logo for The Resident Crew and TEARN Ventures.',
+          caption: 'Press logo for The Resident Crew and TEARN Ventures.',
         },
         {
           loc: `${base}/opengraph-image`,
-          title: 'The Resident Crew Official Press Banner',
+          title: 'The Resident Crew Press Banner',
           caption: 'The Resident Crew product preview for journalists and media outlets.',
         },
         {
           loc: `${base}/screenshots/ad-the-gruvs-1200x630.png`,
           title: 'The Resident Crew x The Gruvs 1200x630 Cross-Promo Banner',
-          caption: 'Official promotional banner showcasing Live Precinct Map, Taxi Fares, and Zero-Broker Rooms for The Gruvs.',
+          caption: 'Promotional banner showcasing Live Precinct Map, Taxi Fares, and Zero-Broker Rooms for The Gruvs.',
         },
         {
           loc: `${base}/screenshots/ad-excellency-academy-1200x630.png`,
           title: 'The Resident Crew x Excellency Academy 1200x630 Cross-Promo Banner',
-          caption: 'Official promotional banner showcasing Verified Student Rooms and Express Moving Bakkies for Excellency Academy.',
+          caption: 'Promotional banner showcasing Student Rooms and Express Moving Bakkies for Excellency Academy.',
         },
         {
           loc: `${base}/screenshots/app-home-hero.png`,
@@ -153,7 +153,7 @@ export async function GET() {
         {
           loc: `${base}/screenshots/app-housing-rooms.png`,
           title: 'The Resident Crew App Screenshot — Housing & Roommate Hub',
-          caption: 'Production screenshot of The Resident Crew verified rooms and Rental Housing Act calculator.',
+          caption: 'Production screenshot of The Resident Crew rooms and Rental Housing Act calculator.',
         },
         {
           loc: `${base}/screenshots/app-local-services.png`,
@@ -183,7 +183,7 @@ export async function GET() {
         {
           loc: `${base}/logo.png`,
           title: 'The Resident Crew Emblem',
-          caption: 'The Resident Crew connects South African neighbours around verified housing, safety, and local trade.',
+          caption: 'The Resident Crew connects South African neighbours around housing, safety, and local trade.',
         },
         {
           loc: `${base}/screenshots/app-home-hero.png`,
@@ -197,12 +197,12 @@ export async function GET() {
       images: [
         {
           loc: `${base}/screenshots/app-housing-rooms.png`,
-          title: 'The Resident Crew Verified Rooms & Student Housing',
-          caption: 'Browse verified rooms to rent, roommates, and Rental Housing Act tools across South Africa.',
+          title: 'The Resident Crew Rooms & Student Housing',
+          caption: 'Browse rooms to rent, roommates, and Rental Housing Act tools across South Africa.',
         },
         {
           loc: `${base}/screenshots/ad-excellency-academy-1200x630.png`,
-          title: 'Verified Student Rooms & Moving Bakkies Banner',
+          title: 'Student Rooms & Moving Bakkies Banner',
           caption: 'Zero-broker student accommodation near Wits, UJ, UP, and TVET campuses.',
         },
       ],
@@ -213,12 +213,12 @@ export async function GET() {
         {
           loc: `${base}/screenshots/app-housing-rooms.png`,
           title: 'Student Accommodation Near South African Universities',
-          caption: 'Verified digs near Wits Braamfontein, UJ Auckland Park, UP Hatfield, UCT Rondebosch, and Stellenbosch.',
+          caption: 'Digs near Wits Braamfontein, UJ Auckland Park, UP Hatfield, UCT Rondebosch, and Stellenbosch.',
         },
         {
           loc: `${base}/screenshots/ad-excellency-academy-1200x630.png`,
           title: 'The Resident Crew x Excellency Academy Student Housing Banner',
-          caption: 'Cross-platform campaign banner helping university learners find verified rooms without broker scams.',
+          caption: 'Cross-platform campaign banner helping university learners find rooms without broker scams.',
         },
       ],
     },
@@ -253,7 +253,7 @@ export async function GET() {
         {
           loc: `${base}/screenshots/ad-the-gruvs-1200x630.png`,
           title: 'The Resident Crew Live Precinct Radar Banner',
-          caption: 'Real-time neighbourhood radar, safety alerts, and verified rooms in South African metros.',
+          caption: 'Real-time neighbourhood radar, safety alerts, and rooms in South African metros.',
         },
       ],
     },
@@ -277,7 +277,7 @@ export async function GET() {
         },
         {
           loc: `${base}/logo.png`,
-          title: 'The Resident Crew Official Logo',
+          title: 'The Resident Crew Logo',
           caption: 'The Resident Crew civic community platform emblem.',
         },
       ],
@@ -306,7 +306,7 @@ export async function GET() {
       images: imgs.map((imgUrl, idx) => ({
         loc: imgUrl,
         title: `${r.title} (${idx + 1})`,
-        caption: `Verified room listing in ${r.suburb || 'South Africa'} on The Resident Crew.`,
+        caption: `Room listing in ${r.suburb || 'South Africa'} on The Resident Crew.`,
       })),
     })
   }

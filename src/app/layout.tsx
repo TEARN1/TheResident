@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: '%s | The Resident Crew',
   },
   description:
-    'Find verified rooms to rent, student accommodation, and trusted local services across South Africa (Braamfontein, Auckland Park, Hatfield, Soweto). Zero broker fees, fair-price checks, and neighbourhood safety alerts.',
+    'Find rooms to rent, student accommodation, and trusted local services across South Africa (Braamfontein, Auckland Park, Hatfield, Soweto). Zero broker fees, fair-price checks, and neighbourhood safety alerts.',
   keywords: [
     'rooms to rent',
     'student accommodation South Africa',
@@ -59,23 +59,23 @@ export const metadata: Metadata = {
     locale: 'en_ZA',
     url: siteUrl(),
     siteName: 'The Resident Crew',
-    title: 'The Resident Crew | Find a Room You Can Trust in South Africa',
+    title: 'The Resident Crew | Rooms to Rent and Neighbourhood Community in South Africa',
     description:
-      'Verified rooms from real landlords, fair-price checks on every listing, and neighbours who have your back across South African suburbs.',
+      'Rooms listed by landlords, a fair-price check against nearby rooms where there is enough data, and neighbours who look out for each other across South African suburbs.',
     images: [
       {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'The Resident Crew — Verified Rooms & Neighbourhood Community in South Africa',
+        alt: 'The Resident Crew — Rooms & Neighbourhood Community in South Africa',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'The Resident Crew | Find a Room You Can Trust in South Africa',
+    title: 'The Resident Crew | Rooms to Rent and Neighbourhood Community in South Africa',
     description:
-      'Verified rooms from real landlords, fair-price checks on every listing, and neighbours who have your back across South African suburbs.',
+      'Rooms listed by landlords, a fair-price check against nearby rooms where there is enough data, and neighbours who look out for each other across South African suburbs.',
     images: ['/opengraph-image'],
     creator: '@TheResidentCrew',
   },

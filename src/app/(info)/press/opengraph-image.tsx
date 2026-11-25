@@ -35,7 +35,7 @@ export default async function Image() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ fontSize: 64, fontWeight: 800, lineHeight: 1.08 }}>
-            Verified Housing, Safety &amp; Local Commerce.
+            Housing, Safety &amp; Local Commerce.
           </div>
           <div style={{ fontSize: 32, fontWeight: 600, color: '#d4af37' }}>
             TEARN Ventures · Founded by Asemahle &quot;TEARN&quot; Nkwali
@@ -43,7 +43,7 @@ export default async function Image() {
         </div>
 
         <div style={{ display: 'flex', fontSize: 24, color: '#cbd5e1' }}>
-          Official Boilerplate · Fact Sheet · Brand Logos · Press Portraits · theresidentcrew.com/press
+          Boilerplate · Fact Sheet · Brand Logos · Press Portraits · theresidentcrew.com/press
         </div>
       </div>
     ),

@@ -70,7 +70,7 @@ export async function GET() {
               Asemahle &quot;TEARN&quot; Nkwali
             </div>
             <div style={{ fontSize: 30, lineHeight: 1.38, color: '#cbd5e1' }}>
-              Architect of South Africa&apos;s connected digital ecosystem for verified housing, live precinct safety, cultural discovery, and workplace skills.
+              Architect of South Africa&apos;s connected digital ecosystem for housing, live precinct safety, cultural discovery, and workplace skills.
             </div>
           </div>
         </div>

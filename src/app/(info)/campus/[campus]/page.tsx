@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!d) return { title: 'Campus not found — The Resident', robots: { index: false } }
   const base = siteUrl()
   const title = `Student Accommodation near ${d.campus.name} — Rooms & Communes | The Resident Crew`
-  const description = `${d.campus.desc} Browse zero-broker student rooms, shared apartments, and neighbour-vetted services in ${d.campus.city}.`
+  const description = `${d.campus.desc} Browse zero-broker student rooms, shared apartments, and neighbour-rated services in ${d.campus.city}.`
   return {
     title,
     description,
@@ -89,7 +89,7 @@ export default async function CampusPage({ params }: Props) {
   const campusFaqs = [
     {
       q: `How do students find rooms near ${d.campus.name} without paying agent fees?`,
-      a: `The Resident Crew connects students directly with verified landlords and resident hosts in ${d.campus.city}, with zero broker commission or middleman markups.`,
+      a: `The Resident Crew connects students directly with landlords and resident hosts in ${d.campus.city}, with zero broker commission or middleman markups.`,
     },
     {
       q: `What safety tools are available for students living near ${d.campus.name}?`,

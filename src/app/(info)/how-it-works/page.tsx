@@ -7,11 +7,11 @@ import { siteUrl } from '../../site-url'
 export const metadata: Metadata = {
   title: 'How The Resident Crew Works — Join Your Suburb in Minutes',
   description:
-    'Sign up free, join your South African suburb, and start finding verified rooms, local plumbers, live safety radar, and spaza shops step by step.',
+    'Sign up free, join your South African suburb, and start finding rooms, local plumbers, live safety radar, and spaza shops step by step.',
   keywords: [
     'how The Resident Crew works',
     'join South African suburb network',
-    'find verified rooms no agent fees',
+    'find rooms no agent fees',
     'neighbourhood safety alerts South Africa',
   ],
   alternates: { canonical: '/how-it-works' },
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     type: 'website',
     title: 'How The Resident Crew Works — Join Your Suburb in Minutes',
     description:
-      'Sign up free, join your suburb, and start finding verified rooms, local services, and safety alerts step by step.',
+      'Sign up free, join your suburb, and start finding rooms, local services, and safety alerts step by step.',
     url: `${siteUrl()}/how-it-works`,
     siteName: 'The Resident Crew',
     locale: 'en_ZA',
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'How The Resident Crew Works — Join Your Suburb in Minutes',
     description:
-      'Sign up free, join your suburb, and start finding verified rooms, local services, and safety alerts.',
+      'Sign up free, join your suburb, and start finding rooms, local services, and safety alerts.',
     images: ['/opengraph-image'],
   },
 }

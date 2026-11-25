@@ -22,8 +22,8 @@ export async function GET() {
     FOUNDER_PROFILE.bioShort,
     `Role: ${FOUNDER_PROFILE.jobTitle} of ${FOUNDER_PROFILE.parentOrgName}, operating out of Johannesburg, South Africa.`,
     `Core Domains: ${FOUNDER_PROFILE.knowsAbout.join(', ')}.`,
-    `Official Profile Page: ${base}/founder`,
-    `Official Portraits: ${FOUNDER_IMAGES.map(img => `${base}${img.path}`).join(', ')}`,
+    `Profile Page: ${base}/founder`,
+    `Portraits: ${FOUNDER_IMAGES.map(img => `${base}${img.path}`).join(', ')}`,
     '',
     '## 2. Connected Platform Ecosystem (TEARN Ventures)',
     ...ECOSYSTEM_PLATFORMS.flatMap(p => [
@@ -33,7 +33,7 @@ export async function GET() {
       ...p.highlights.map(h => `- ${h}`),
       '',
     ]),
-    '## 3. Official Press Boilerplate (The Resident Crew)',
+    '## 3. Press Boilerplate (The Resident Crew)',
     `The Resident Crew (${base}) is South Africa's free community platform uniting rooms to rent, student housing near major campuses, real-time neighbourhood safety alerts, a live neighbourhood map, minibus taxi rank routes, and neighbour-rated local services.`,
     `Press & Media Kit: ${base}/press`,
     `Brand Mark: ${base}/logo.png`,
@@ -46,7 +46,7 @@ export async function GET() {
     '## 5. South African Suburbs & Precincts Indexed',
     ...DEFAULT_AREAS.map(a => `- ${a.name}, ${a.city} — ${base}/area/${a.slug}`),
     '',
-    '## 6. Verified Minibus Taxi Interchanges, Fares & Commuter Hand Signals',
+    '## 6. Minibus Taxi Interchanges, Fares & Commuter Hand Signals',
     ...SA_TAXI_RANKS.flatMap(r => [
       `### ${r.name} (${base}/taxi-ranks/${r.id})`,
       `Address: ${r.address} · Open ${r.operatingHours.opensAt}–${r.operatingHours.closesAt} · Association: ${r.association}`,

@@ -5,12 +5,12 @@ import { siteUrl } from '../site-url'
 export const metadata: Metadata = {
   title: 'Sign In / Sign Up | Join Your Suburb',
   description:
-    'Join The Resident to find verified student accommodation, contact trusted local trades, and connect with your South African neighbourhood.',
+    'Join The Resident to find student accommodation, contact trusted local trades, and connect with your South African neighbourhood.',
   alternates: { canonical: '/auth' },
   openGraph: {
     title: 'Sign In / Sign Up | Join The Resident',
     description:
-      'Join The Resident to find verified student accommodation, contact trusted local trades, and connect with your South African neighbourhood.',
+      'Join The Resident to find student accommodation, contact trusted local trades, and connect with your South African neighbourhood.',
     url: `${siteUrl()}/auth`,
   },
 }

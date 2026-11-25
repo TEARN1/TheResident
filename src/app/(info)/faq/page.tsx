@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 const faqs: { q: string; a: string }[] = [
   {
     q: 'What is The Resident Crew?',
-    a: 'South Africa’s free community operating system for neighbourhoods. Residents use it to find verified rooms to rent, hire neighbour-rated local services, ride smarter with live precinct radar, and send real-time safety alerts.',
+    a: 'South Africa’s free community operating system for neighbourhoods. Residents use it to find rooms to rent, hire neighbour-rated local services, ride smarter with live precinct radar, and send real-time safety alerts.',
   },
   {
     q: 'Are there broker or agent commission fees on rooms?',
@@ -49,7 +49,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: 'How do safety alerts and the 5-second panic beacon work?',
-    a: 'Holding the panic control triggers a rapid alert to your trust circle and nearby verified suburb members on the live radar. Community alerts complement — and never replace — official emergency numbers like 10111 or 112.',
+    a: 'Holding the panic control triggers a rapid alert to your trust circle and nearby suburb members on the live radar. Community alerts complement — and never replace — official emergency numbers like 10111 or 112.',
   },
   {
     q: 'Which suburbs and universities does The Resident Crew cover?',

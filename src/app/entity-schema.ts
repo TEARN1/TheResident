@@ -62,11 +62,11 @@ export const ECOSYSTEM_PLATFORMS: readonly EcosystemPlatform[] = [
     key: 'gruvs',
     name: 'The Gruvs',
     url: 'https://thegruvs.com',
-    category: 'Verified Live Events & Cultural Discovery',
+    category: 'Live Events & Cultural Discovery',
     summary:
-      'Real events, verified, near you — big names and local shows with authentic posters and sources, opening straight in the browser with zero install friction.',
+      'Real events near you — big names and local shows with authentic posters and sources, opening straight in the browser with zero install friction.',
     highlights: [
-      'Verified live event discovery anchored by real venue coordinates across South Africa',
+      'Live event discovery anchored by real venue coordinates across South Africa',
       'Touch Down attendance verification connecting real-world crowds with the resident ecosystem',
     ],
   },
@@ -121,7 +121,7 @@ export const FOUNDER_IMAGES: readonly FounderImageAsset[] = [
     path: '/founder/portrait.png',
     title: 'Asemahle "TEARN" Nkwali — Executive Profile Card (PNG)',
     alt: 'Executive profile card for Asemahle TEARN Nkwali featuring TEARN Ventures ecosystem platforms',
-    caption: 'Official executive profile card for Asemahle "TEARN" Nkwali and TEARN Ventures.',
+    caption: 'Profile card for Asemahle "TEARN" Nkwali and TEARN Ventures.',
     width: 1200,
     height: 1200,
   },
@@ -199,7 +199,7 @@ export function buildGlobalKnowledgeGraph(base: string) {
           url: `${cleanBase}/logo.png`,
           width: 512,
           height: 512,
-          caption: 'The Resident Crew Official Logo',
+          caption: 'The Resident Crew Logo',
         },
         founder: {
           '@id': `${cleanBase}/#founder`,
@@ -218,7 +218,7 @@ export function buildGlobalKnowledgeGraph(base: string) {
             '@type': 'Organization',
             name: 'The Gruvs',
             url: 'https://thegruvs.com',
-            description: "South Africa's verified live event discovery platform.",
+            description: "South African event discovery platform.",
             founder: {
               '@id': `${cleanBase}/#founder`,
             },
@@ -286,7 +286,7 @@ export function buildGlobalKnowledgeGraph(base: string) {
           'Statutory Rental Housing Act deposit calculator and lease tools',
           '5-second grace panic beacon, next-of-kin trust circles, and ward safety alerts',
           'Live neighbourhood map, minibus taxi rank routes, and road closure reports',
-          'Neighbour-vetted local artisans, handymen, bakkie transport, and spaza shops',
+          'Neighbour-rated local artisans, handymen, bakkie transport, and spaza shops',
         ],
         creator: {
           '@id': `${cleanBase}/#founder`,

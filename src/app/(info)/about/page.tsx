@@ -27,7 +27,7 @@ export default function AboutPage() {
     '@id': `${base}/about#webpage`,
     name: 'About The Resident',
     description:
-      'The Resident connects people living on the same streets to trade, find verified accommodation, and keep neighbourhoods safe across South Africa.',
+      'The Resident connects people living on the same streets to trade, find accommodation, and keep neighbourhoods safe across South Africa.',
     url: `${base}/about`,
     isPartOf: { '@id': `${base}/#website` },
     about: { '@id': `${base}/#parent-org` },

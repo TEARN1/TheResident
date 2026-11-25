@@ -130,11 +130,11 @@ export function categoryMetadata(d: CategoryData | null): Metadata {
   const title =
     n > 0
       ? `${d.category}${where} — ${n} local ${n === 1 ? 'listing' : 'listings'} | The Resident Crew`
-      : `${d.category}${where} — Verified Local Directory | The Resident Crew`
+      : `${d.category}${where} — Local Directory | The Resident Crew`
   const description =
     n > 0
       ? `Find ${d.category.toLowerCase()}${where}: ${d.entries.slice(0, 3).map(e => e.name).join(', ')}${n > 3 ? ' and more' : ''}. Listed by residents on The Resident Crew.`
-      : `Find neighbour-vetted ${d.category.toLowerCase()}${where} across South Africa on The Resident Crew.`
+      : `Find neighbour-rated ${d.category.toLowerCase()}${where} across South Africa on The Resident Crew.`
   return {
     title,
     description,
@@ -205,7 +205,7 @@ export function CategoryView({ d }: { d: CategoryData }) {
           </>
         ) : (
           <>
-            Verified {d.category.toLowerCase()} directory{d.area ? <> in {d.area}</> : ' across South Africa'}.
+            Local {d.category.toLowerCase()} directory{d.area ? <> in {d.area}</> : ' across South Africa'}.
           </>
         )}
       </p>
@@ -214,7 +214,7 @@ export function CategoryView({ d }: { d: CategoryData }) {
         <EntryList entries={d.entries} />
       ) : (
         <p style={{ color: 'rgba(255,255,255,0.78)' }}>
-          Be the first local provider listed under {d.category}{d.area ? ` in ${d.area}` : ''} — verified neighbours can publish a public profile in seconds.
+          Be the first local provider listed under {d.category}{d.area ? ` in ${d.area}` : ''} — neighbours can publish a public profile in seconds.
         </p>
       )}
 

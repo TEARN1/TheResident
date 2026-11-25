@@ -11,9 +11,9 @@ export const revalidate = 300
 const base = siteUrl()
 
 export const metadata: Metadata = {
-  title: 'Verified Rooms to Rent in South Africa — Zero Broker Fees | The Resident Crew',
+  title: 'Rooms to Rent in South Africa — Zero Broker Fees | The Resident Crew',
   description:
-    'Browse verified rooms, cottages, communes, and flatshares directly from South African landlords in Braamfontein, Soweto, Hatfield, Rondebosch, and Durban — zero agent fees.',
+    'Browse rooms, cottages, communes, and flatshares directly from South African landlords in Braamfontein, Soweto, Hatfield, Rondebosch, and Durban — zero agent fees.',
   keywords: [
     'rooms to rent South Africa',
     'rooms to rent Johannesburg no agent fees',
@@ -26,17 +26,17 @@ export const metadata: Metadata = {
   alternates: { canonical: '/rooms' },
   openGraph: {
     type: 'website',
-    title: 'Verified Rooms to Rent in South Africa — Zero Broker Fees | The Resident Crew',
+    title: 'Rooms to Rent in South Africa — Zero Broker Fees | The Resident Crew',
     description:
-      'Browse verified rooms, cottages, communes, and flatshares directly from South African landlords with zero broker markups and fair-price checks.',
+      'Browse rooms, cottages, communes, and flatshares directly from South African landlords with zero broker markups and fair-price checks.',
     url: `${base}/rooms`,
     siteName: 'The Resident Crew',
     locale: 'en_ZA',
-    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Verified Rooms to Rent — The Resident Crew' }],
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Rooms to Rent — The Resident Crew' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Verified Rooms to Rent in South Africa — Zero Broker Fees | The Resident Crew',
+    title: 'Rooms to Rent in South Africa — Zero Broker Fees | The Resident Crew',
     description:
       'Zero-broker rooms, student communes, and cottages directly from landlords across South Africa.',
     images: ['/opengraph-image'],
@@ -79,7 +79,7 @@ export default async function RoomsDirectoryPage() {
         '@type': 'CollectionPage',
         '@id': `${pageUrl}#webpage`,
         url: pageUrl,
-        name: 'Verified Rooms to Rent in South Africa — Zero Broker Fees',
+        name: 'Rooms to Rent in South Africa — Zero Broker Fees',
         description:
           'Direct room rentals, student communes, backyard cottages, and shared apartments across South African suburbs.',
         isPartOf: { '@id': `${currentBase}/#website` },
@@ -121,7 +121,7 @@ export default async function RoomsDirectoryPage() {
       />
       <JsonLd data={jsonLd} />
 
-      <h1>Verified rooms to rent in South Africa</h1>
+      <h1>Rooms to rent in South Africa</h1>
       <p className={styles.lede}>
         Zero-broker rooms, cottages, bachelor flats, and student communes listed directly by landlords, with a fair-price check against nearby rooms.
       </p>

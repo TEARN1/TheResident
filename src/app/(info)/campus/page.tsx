@@ -9,7 +9,7 @@ export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'Student Accommodation near Universities in South Africa | The Resident Crew',
-  description: 'Find verified student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
+  description: 'Find student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
   keywords: [
     'student accommodation South Africa',
     'rooms near Wits Braamfontein',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     title: 'Student Accommodation near Universities in South Africa | The Resident Crew',
-    description: 'Find verified student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
+    description: 'Find student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
     url: `${siteUrl()}/campus`,
     siteName: 'The Resident Crew',
     locale: 'en_ZA',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Student Accommodation near Universities in South Africa | The Resident Crew',
-    description: 'Find verified student rooms, communes, and private rentals near major South African universities.',
+    description: 'Find student rooms, communes, and private rentals near major South African universities.',
     images: ['/opengraph-image'],
   },
 }
@@ -43,7 +43,7 @@ export default function CampusIndex() {
     '@type': 'CollectionPage',
     '@id': `${base}/campus#webpage`,
     name: 'Student Accommodation near Universities in South Africa',
-    description: 'Find verified student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
+    description: 'Find student rooms, communes, and private rentals near major South African universities: Wits, UJ, UP Hatfield, UCT, Stellenbosch, UKZN, and TUT.',
     url: `${base}/campus`,
     isPartOf: { '@id': `${base}/#website` },
     publisher: { '@id': `${base}/#parent-org` },
@@ -71,7 +71,7 @@ export default function CampusIndex() {
       <JsonLd data={campusJsonLd} />
       <h1>Student Accommodation by University</h1>
       <p className={styles.lede}>
-        Verified student communes, rooms, and shared apartments near major campuses across South Africa.
+        Student communes, rooms, and shared apartments near major campuses across South Africa.
       </p>
 
       <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>

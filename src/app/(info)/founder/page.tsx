@@ -119,7 +119,7 @@ export default function FounderPage() {
         </p>
         <p>
           Rather than building isolated consumer utilities, Nkwali designed the {FOUNDER_PROFILE.parentOrgName}{' '}
-          ecosystem so neighbourhood housing, street-level safety, vetted local commerce, live events, and workplace
+          ecosystem so neighbourhood housing, street-level safety, local commerce, live events, and workplace
           upskilling reinforce one another through shared trust and real-world accountability.
         </p>
       </section>
@@ -184,9 +184,9 @@ export default function FounderPage() {
       </section>
 
       <section aria-labelledby="gallery-heading">
-        <h2 id="gallery-heading">Official Portraits &amp; Platform Visuals</h2>
+        <h2 id="gallery-heading">Portraits &amp; Platform Visuals</h2>
         <p>
-          Verified media assets representing {FOUNDER_PROFILE.fullName}, {FOUNDER_PROFILE.parentOrgName}, and The
+          Media assets representing {FOUNDER_PROFILE.fullName}, {FOUNDER_PROFILE.parentOrgName}, and The
           Resident Crew platform in South Africa:
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '1rem' }}>
@@ -219,7 +219,7 @@ export default function FounderPage() {
 
       <div className={styles.cta}>
         <p>
-          <strong>Journalists, researchers &amp; partners:</strong> Access official third-person boilerplate, downloadable
+          <strong>Journalists, researchers &amp; partners:</strong> Access third-person boilerplate, downloadable
           brand logos, and fact sheets on our <Link href="/press">Press &amp; Media Kit</Link>.
         </p>
         <p style={{ marginBottom: 0 }}>

@@ -51,11 +51,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const base = siteUrl()
   const cats = d.entries.length > 0
     ? distinct(d.entries, e => e.category).slice(0, 4).join(', ').toLowerCase()
-    : 'handymen, plumbers, cleaning, tuckshops and verified rooms'
+    : 'handymen, plumbers, cleaning, tuckshops and rooms'
   const title = `Rooms, Local Services & Shops in ${d.name}${d.city ? `, ${d.city}` : ''} | The Resident Crew`
   const description = d.entries.length > 0 || d.rooms.length > 0
     ? `${d.entries.length} local services/shops and ${d.rooms.length} open rooms in ${d.name}: ${cats}. Listed by residents on The Resident Crew.`
-    : `Discover verified rooms to rent, local plumbers, spaza shops, and neighbourhood safety updates in ${d.name}${d.city ? `, ${d.city}` : ''} on The Resident Crew.`
+    : `Discover rooms to rent, local plumbers, spaza shops, and neighbourhood safety updates in ${d.name}${d.city ? `, ${d.city}` : ''} on The Resident Crew.`
   return {
     title,
     description,
@@ -160,12 +160,12 @@ export default async function AreaPage({ params }: Props) {
       <p className={styles.lede}>
         {d.entries.length > 0
           ? `${d.entries.length} ${d.entries.length === 1 ? 'listing' : 'listings'} from residents${d.city ? ` in ${d.name}, ${d.city}` : ''}.`
-          : `Community network and verified directory for residents, rooms, and local businesses in ${d.name}${d.city ? `, ${d.city}` : ''}.`}
+          : `Community network and directory for residents, rooms, and local businesses in ${d.name}${d.city ? `, ${d.city}` : ''}.`}
       </p>
 
       {d.rooms.length > 0 ? (
         <section>
-          <h2>Verified Rooms to Rent in {d.name}{d.city ? ` & ${d.city}` : ''}</h2>
+          <h2>Rooms to Rent in {d.name}{d.city ? ` & ${d.city}` : ''}</h2>
           <ul>
             {d.rooms.map(r => (
               <li key={r.id}>
